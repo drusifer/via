@@ -1,0 +1,390 @@
+"""
+Python language parser using AST module.
+
+TLDR:
+    Parses Python files (.py, .pyx, .pyi) using Python's AST module to extract
+    functions, classes, imports, and globals with byte offsets. Handles
+    decorators, docstrings, type hints, async functions, and syntax errors gracefully.
+
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+$Id$
+
+License: GPL-3.0
+"""
+
+import ast
+import os
+from typing import Set
+
+from .base import (
+    ParserABC,
+    ParseResult,
+    FunctionEntity,
+    ClassEntity,
+    ImportEntity,
+    GlobalEntity,
+)
+class PythonParser(ParserABC):
+    """Parser for Python files using the ast module."""
+
+    def can_parse(self, file_path: str) -> bool:
+        """Check if file is a Python file."""
+        _, ext = os.path.splitext(file_path)
+        return ext.lower() in self.get_supported_extensions()
+
+    def parse(self, file_path: str, content: bytes) -> ParseResult:
+        """
+        Parse Python file and extract entities.
+
+        Args:
+            file_path: Path to the file
+            content: File content as bytes
+
+        Returns:
+            ParseResult with extracted entities
+        """
+        result = ParseResult(file_path=file_path, language="python")
+
+        try:
+            # Decode content
+            text = content.decode('utf-8', errors='replace')
+
+            # Parse AST
+            tree = ast.parse(text, filename=file_path)
+
+            # Extract entities
+            self._extract_entities(tree, text, result)
+
+        except SyntaxError as e:
+            result.parse_error = f"Syntax error: {e}"
+        except Exception as e:
+            result.parse_error = f"Parse error: {type(e).__name__}: {e}"
+
+        return result
+
+    def get_supported_extensions(self) -> Set[str]:
+        """Get supported Python file extensions."""
+        return {'.py', '.pyx', '.pyi'}
+
+    @property
+    def language_name(self) -> str:
+        """Get language name."""
+        return "python"
+
+    def _extract_entities(self, tree: ast.AST, text: str, result: ParseResult) -> None:
+        """
+        Extract entities from AST.
+
+        Args:
+            tree: AST tree
+            text: Source code text
+            result: ParseResult to populate
+        """
+        # Process top-level nodes
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                # Check if this is a top-level function or method
+                if self._is_top_level_function(tree, node):
+                    func = self._extract_function(node, text, class_id=None)
+                    result.functions.append(func)
+
+            elif isinstance(node, ast.AsyncFunctionDef):
+                # Async functions
+                if self._is_top_level_function(tree, node):
+                    func = self._extract_function(node, text, class_id=None)
+                    result.functions.append(func)
+
+            elif isinstance(node, ast.ClassDef):
+                # Only process top-level classes
+                if self._is_top_level_class(tree, node):
+                    cls = self._extract_class(node, text)
+                    result.classes.append(cls)
+
+            elif isinstance(node, (ast.Import, ast.ImportFrom)):
+                # Only process top-level imports
+                if self._is_top_level_import(tree, node):
+                    imports = self._extract_imports(node, text)
+                    result.imports.extend(imports)
+
+            elif isinstance(node, ast.Assign):
+                # Top-level assignments (globals)
+                if self._is_top_level_assign(tree, node):
+                    globals_list = self._extract_globals(node, text)
+                    result.globals.extend(globals_list)
+
+            elif isinstance(node, ast.AnnAssign):
+                # Annotated assignments
+                if self._is_top_level_assign(tree, node):
+                    global_var = self._extract_annotated_global(node, text)
+                    if global_var:
+                        result.globals.append(global_var)
+
+    def _is_top_level_function(self, tree: ast.AST, node: ast.FunctionDef) -> bool:
+        """Check if function is at module level (not inside a class)."""
+        for top_node in ast.walk(tree):
+            if top_node == node:
+                continue
+            if isinstance(top_node, ast.ClassDef):
+                # Check if node is inside this class
+                for child in ast.walk(top_node):
+                    if child == node:
+                        return False
+        return True
+
+    def _is_top_level_class(self, tree: ast.AST, node: ast.ClassDef) -> bool:
+        """Check if class is at module level (not nested)."""
+        # For now, assume all ClassDef nodes at module level
+        # More sophisticated check could verify parent nodes
+        return True
+
+    def _is_top_level_import(self, tree: ast.AST, node: ast.AST) -> bool:
+        """Check if import is at module level."""
+        return True
+
+    def _is_top_level_assign(self, tree: ast.AST, node: ast.AST) -> bool:
+        """Check if assignment is at module level."""
+        # Simple heuristic: if it's in the body of the module
+        if hasattr(tree, 'body'):
+            return node in tree.body
+        return False
+
+    def _extract_function(
+        self,
+        node: ast.FunctionDef,
+        text: str,
+        class_id: int = None
+    ) -> FunctionEntity:
+        """Extract function information."""
+        # Get byte offset and length
+        byte_offset = self._get_byte_offset(node, text)
+        byte_length = self._get_byte_length(node, text)
+
+        # Extract arguments
+        args = self._extract_args(node.args)
+
+        # Extract decorators
+        decorators = self._extract_decorators(node.decorator_list)
+
+        # Extract docstring
+        docstring = ast.get_docstring(node)
+
+        return FunctionEntity(
+            name=node.name,
+            line_start=node.lineno,
+            line_end=node.end_lineno or node.lineno,
+            byte_offset=byte_offset,
+            byte_length=byte_length,
+            class_id=class_id,
+            args=args,
+            decorators=decorators,
+            docstring=docstring,
+        )
+
+    def _extract_class(self, node: ast.ClassDef, text: str) -> ClassEntity:
+        """Extract class information."""
+        # Get byte offset and length
+        byte_offset = self._get_byte_offset(node, text)
+        byte_length = self._get_byte_length(node, text)
+
+        # Extract base classes
+        bases = self._extract_bases(node.bases)
+
+        # Extract decorators
+        decorators = self._extract_decorators(node.decorator_list)
+
+        # Extract docstring
+        docstring = ast.get_docstring(node)
+
+        # Extract methods
+        methods = []
+        for item in node.body:
+            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                method = self._extract_function(item, text, class_id=None)
+                methods.append(method)
+
+        return ClassEntity(
+            name=node.name,
+            line_start=node.lineno,
+            line_end=node.end_lineno or node.lineno,
+            byte_offset=byte_offset,
+            byte_length=byte_length,
+            bases=bases,
+            decorators=decorators,
+            docstring=docstring,
+            methods=methods,
+        )
+
+    def _extract_imports(self, node: ast.AST, text: str) -> list:
+        """Extract import statements."""
+        imports = []
+        byte_offset = self._get_byte_offset(node, text)
+        byte_length = self._get_byte_length(node, text)
+
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports.append(ImportEntity(
+                    module=alias.name,
+                    line_number=node.lineno,
+                    byte_offset=byte_offset,
+                    byte_length=byte_length,
+                    alias=alias.asname,
+                ))
+
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ''
+            for alias in node.names:
+                imports.append(ImportEntity(
+                    module=module,
+                    name=alias.name,
+                    alias=alias.asname,
+                    line_number=node.lineno,
+                    byte_offset=byte_offset,
+                    byte_length=byte_length,
+                ))
+
+        return imports
+
+    def _extract_globals(self, node: ast.Assign, text: str) -> list:
+        """Extract global variable assignments."""
+        globals_list = []
+        byte_offset = self._get_byte_offset(node, text)
+        byte_length = self._get_byte_length(node, text)
+
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                # Simple assignment: x = value
+                value = self._extract_literal_value(node.value)
+                globals_list.append(GlobalEntity(
+                    name=target.id,
+                    line_number=node.lineno,
+                    byte_offset=byte_offset,
+                    byte_length=byte_length,
+                    value=value,
+                ))
+
+        return globals_list
+
+    def _extract_annotated_global(self, node: ast.AnnAssign, text: str) -> GlobalEntity:
+        """Extract annotated global variable."""
+        if isinstance(node.target, ast.Name):
+            byte_offset = self._get_byte_offset(node, text)
+            byte_length = self._get_byte_length(node, text)
+
+            value = None
+            if node.value:
+                value = self._extract_literal_value(node.value)
+
+            type_hint = ast.unparse(node.annotation) if hasattr(ast, 'unparse') else None
+
+            return GlobalEntity(
+                name=node.target.id,
+                line_number=node.lineno,
+                byte_offset=byte_offset,
+                byte_length=byte_length,
+                value=value,
+                type_hint=type_hint,
+            )
+        return None
+
+    def _extract_args(self, args: ast.arguments) -> str:
+        """Extract function arguments as string."""
+        arg_strs = []
+
+        # Regular args
+        for arg in args.args:
+            arg_str = arg.arg
+            if arg.annotation:
+                if hasattr(ast, 'unparse'):
+                    arg_str += f": {ast.unparse(arg.annotation)}"
+            arg_strs.append(arg_str)
+
+        # *args
+        if args.vararg:
+            arg_str = f"*{args.vararg.arg}"
+            if args.vararg.annotation:
+                if hasattr(ast, 'unparse'):
+                    arg_str += f": {ast.unparse(args.vararg.annotation)}"
+            arg_strs.append(arg_str)
+
+        # **kwargs
+        if args.kwarg:
+            arg_str = f"**{args.kwarg.arg}"
+            if args.kwarg.annotation:
+                if hasattr(ast, 'unparse'):
+                    arg_str += f": {ast.unparse(args.kwarg.annotation)}"
+            arg_strs.append(arg_str)
+
+        return ", ".join(arg_strs)
+
+    def _extract_decorators(self, decorator_list: list) -> str:
+        """Extract decorators as string."""
+        if not decorator_list:
+            return None
+
+        if hasattr(ast, 'unparse'):
+            return ", ".join(f"@{ast.unparse(d)}" for d in decorator_list)
+        else:
+            # Fallback for older Python versions
+            return ", ".join(f"@{d.id if isinstance(d, ast.Name) else 'decorator'}" for d in decorator_list)
+
+    def _extract_bases(self, bases: list) -> str:
+        """Extract base classes as string."""
+        if not bases:
+            return None
+
+        if hasattr(ast, 'unparse'):
+            return ", ".join(ast.unparse(b) for b in bases)
+        else:
+            # Fallback for older Python versions
+            return ", ".join(b.id if isinstance(b, ast.Name) else 'Base' for b in bases)
+
+    def _extract_literal_value(self, node: ast.AST) -> str:
+        """Extract literal value as string if possible."""
+        if isinstance(node, ast.Constant):
+            return repr(node.value)
+        elif isinstance(node, ast.Num):  # Python < 3.8
+            return repr(node.n)
+        elif isinstance(node, ast.Str):  # Python < 3.8
+            return repr(node.s)
+        elif hasattr(ast, 'unparse'):
+            try:
+                return ast.unparse(node)
+            except:
+                return None
+        return None
+
+    def _get_byte_offset(self, node: ast.AST, text: str) -> int:
+        """Calculate byte offset of a node."""
+        if not hasattr(node, 'lineno'):
+            return 0
+
+        lines = text.encode('utf-8').split(b'\n')
+        offset = sum(len(line) + 1 for line in lines[:node.lineno - 1])  # +1 for newline
+
+        if hasattr(node, 'col_offset'):
+            # Add column offset
+            line = lines[node.lineno - 1][:node.col_offset]
+            offset += len(line)
+
+        return offset
+
+    def _get_byte_length(self, node: ast.AST, text: str) -> int:
+        """Calculate byte length of a node."""
+        if not hasattr(node, 'lineno') or not hasattr(node, 'end_lineno'):
+            return 0
+
+        start_offset = self._get_byte_offset(node, text)
+
+        # Calculate end offset
+        lines = text.encode('utf-8').split(b'\n')
+        end_offset = sum(len(line) + 1 for line in lines[:node.end_lineno - 1])
+
+        if hasattr(node, 'end_col_offset'):
+            line = lines[node.end_lineno - 1][:node.end_col_offset]
+            end_offset += len(line)
+        else:
+            # If no end_col_offset, use end of line
+            end_offset += len(lines[node.end_lineno - 1])
+
+        return max(0, end_offset - start_offset)

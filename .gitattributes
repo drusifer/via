@@ -1,0 +1,7 @@
+# Git attributes for VIA project
+
+# Enable keyword expansion for Python files
+*.py ident
+
+# The $Id$ keyword will be expanded on commit to:
+# $Id: <40-char-SHA> $

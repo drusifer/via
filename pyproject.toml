@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "via"
+version = "0.1.0"
+description = "Python codebase indexing and querying CLI tool"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "pathspec>=0.11.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+via = "via.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["via*"]
+exclude = ["agents*", "tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=via --cov-report=term-missing"
