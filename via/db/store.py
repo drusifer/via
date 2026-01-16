@@ -18,13 +18,14 @@ import os
 import sqlite3
 import time
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Iterator
 
 from .schema import (
     ALL_TABLES,
     CREATE_INDEXES,
     SCHEMA_VERSION,
 )
+from ..core.types import SymbolType, MatchOp, MatchResult
 class DatabaseStore:
     """Manages SQLite database for code index."""
 
@@ -629,6 +630,68 @@ class DatabaseStore:
         self._commit_if_needed()
         return cursor.lastrowid
 
+    def insert_symbol(
+        self,
+        symbol_name: str,
+        symbol_type: str,
+        file_path: str,
+        line_number: int,
+        qualified_name: str,
+        byte_offset: Optional[int] = None,
+        byte_length: Optional[int] = None,
+        parent_name: Optional[str] = None,
+    ) -> int:
+        """
+        Insert a symbol record into the denormalized symbols table.
+
+        Args:
+            symbol_name: Simple symbol name (e.g., 'save', 'User')
+            symbol_type: Symbol type (method, class, function, filepath, filename, import, global)
+            file_path: Relative file path
+            line_number: Starting line number
+            qualified_name: Fully qualified name (e.g., 'models.user.User.save')
+            byte_offset: Byte offset in file (None for files)
+            byte_length: Symbol byte length (None for files)
+            parent_name: Parent class name for methods (None otherwise)
+
+        Returns:
+            Symbol ID
+        """
+        if not self.conn:
+            raise RuntimeError("Database not connected")
+
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO symbols (
+                symbol_name, symbol_type, file_path, line_number,
+                byte_offset, byte_length, qualified_name, parent_name
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (symbol_name, symbol_type, file_path, line_number,
+             byte_offset, byte_length, qualified_name, parent_name)
+        )
+        self._commit_if_needed()
+        return cursor.lastrowid
+
+    def delete_symbols_by_file(self, file_path: str) -> None:
+        """
+        Delete all symbol records for a file.
+
+        Args:
+            file_path: Relative file path
+        """
+        if not self.conn:
+            raise RuntimeError("Database not connected")
+
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "DELETE FROM symbols WHERE file_path = ?",
+            (file_path,)
+        )
+        self._commit_if_needed()
+
     def get_globals_by_file(self, file_id: int) -> List[Dict[str, Any]]:
         """
         Get all globals in a file.
@@ -687,3 +750,82 @@ class DatabaseStore:
         """Commit if not in a transaction."""
         if not self._in_transaction and self.conn:
             self.conn.commit()
+
+    def match(
+        self,
+        symbol_type: SymbolType,
+        match_op: MatchOp,
+        pattern: str,
+        case_sensitive: bool = True,
+        limit: Optional[int] = None
+    ) -> Iterator[MatchResult]:
+        """
+        Match symbols using denormalized symbols table.
+
+        Args:
+            symbol_type: SymbolType enum value
+            match_op: MatchOp enum value
+            pattern: Pattern to match (user provides wildcards/regex)
+            case_sensitive: Whether matching is case-sensitive
+            limit: Optional result limit
+
+        Yields:
+            MatchResult objects with complete position data
+
+        Example:
+            for result in db.match(SymbolType.METHOD, MatchOp.GLOB, '*save()'):
+                print(f"{result.qualified_name} at byte {result.byte_offset}")
+        """
+        if not self.conn:
+            raise RuntimeError("Database not connected")
+
+        # Build WHERE clause
+        where_parts = ["symbol_type = ?"]
+        params = [symbol_type.value]
+
+        # Add name match clause
+        column = "symbol_name"
+        if not case_sensitive:
+            column = "LOWER(symbol_name)"
+            pattern = pattern.lower()
+
+        # Escape pattern if needed
+        if match_op.needs_escaping:
+            pattern = pattern.replace("'", "''")
+
+        where_parts.append(f"{column} {match_op.sql_op} ?")
+        params.append(pattern)
+
+        # Build query
+        query = f"""
+            SELECT
+                symbol_name,
+                symbol_type,
+                file_path,
+                line_number,
+                byte_offset,
+                byte_length,
+                qualified_name,
+                parent_name
+            FROM symbols
+            WHERE {' AND '.join(where_parts)}
+            ORDER BY file_path, line_number
+        """
+
+        # Add limit if specified
+        if limit:
+            query += f"\nLIMIT {limit}"
+
+        # Execute and yield results
+        cursor = self.conn.execute(query, params)
+        for row in cursor:
+            yield MatchResult(
+                symbol_name=row[0],
+                symbol_type=row[1],
+                file_path=row[2],
+                line_number=row[3],
+                byte_offset=row[4],
+                byte_length=row[5],
+                qualified_name=row[6],
+                parent_name=row[7]
+            )

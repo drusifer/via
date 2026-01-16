@@ -34,6 +34,7 @@ from .core.constants import (
     EXIT_KEYBOARD_INTERRUPT,
 )
 from .core.logging import setup_logging
+from .core.types import SymbolType, MatchOp
 from .db.store import DatabaseStore
 from .parsers.registry import ParserRegistry
 from .parsers.python_parser import PythonParser
@@ -110,6 +111,77 @@ def _create_parser() -> argparse.ArgumentParser:
         "--db",
         metavar="PATH",
         help=f"Database path (default: <dir>/{DEFAULT_INDEX_DIR}/{DEFAULT_DB_NAME})",
+    )
+
+    # Match subcommand
+    match_parser = subparsers.add_parser(
+        "match",
+        aliases=["m"],
+        help="Search indexed code using pattern matching",
+        description="Match symbols in the indexed codebase using glob, regex, or SQL LIKE patterns",
+    )
+
+    match_parser.add_argument(
+        "pattern",
+        help="Pattern to match (wildcards depend on match syntax)",
+    )
+
+    match_parser.add_argument(
+        "-t",
+        "--type",
+        required=True,
+        choices=["method", "class", "function", "filepath", "filename", "import", "global"],
+        help="Symbol type to match",
+    )
+
+    # Match syntax flags (mutually exclusive)
+    syntax_group = match_parser.add_mutually_exclusive_group()
+    syntax_group.add_argument(
+        "-g",
+        "--glob",
+        action="store_true",
+        default=True,
+        help="Use glob pattern matching (default, * and ? wildcards)",
+    )
+    syntax_group.add_argument(
+        "-r",
+        "--regex",
+        action="store_true",
+        help="Use regex pattern matching",
+    )
+    syntax_group.add_argument(
+        "-s",
+        "--sql",
+        action="store_true",
+        help="Use SQL LIKE pattern matching (% and _ wildcards)",
+    )
+
+    match_parser.add_argument(
+        "-I",
+        "--case-insensitive",
+        action="store_true",
+        help="Case-insensitive matching",
+    )
+
+    match_parser.add_argument(
+        "-n",
+        "--limit",
+        type=int,
+        metavar="N",
+        help="Limit results to N matches",
+    )
+
+    match_parser.add_argument(
+        "--db",
+        metavar="PATH",
+        help=f"Database path (default: <dir>/{DEFAULT_INDEX_DIR}/{DEFAULT_DB_NAME})",
+    )
+
+    match_parser.add_argument(
+        "-d",
+        "--directory",
+        default=".",
+        help="Directory containing the index (default: current directory)",
     )
 
     return parser
@@ -230,6 +302,86 @@ def _run_index_command(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
 
+def _run_match_command(args: argparse.Namespace) -> int:
+    """
+    Execute the match command.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        Exit code
+    """
+    # Resolve directory
+    target_dir = Path(args.directory).resolve()
+
+    if not target_dir.exists():
+        print(f"Error: Directory does not exist: {target_dir}", file=sys.stderr)
+        return EXIT_ERROR
+
+    # Determine database path
+    if args.db:
+        db_path = Path(args.db)
+    else:
+        index_dir = target_dir / DEFAULT_INDEX_DIR
+        db_path = index_dir / DEFAULT_DB_NAME
+
+    if not db_path.exists():
+        print(f"Error: Database not found: {db_path}", file=sys.stderr)
+        print(f"Run 'via index' first to create the index.", file=sys.stderr)
+        return EXIT_ERROR
+
+    # Determine match operator from flags
+    if args.regex:
+        match_op = MatchOp.REGEXP
+    elif args.sql:
+        match_op = MatchOp.LIKE
+    else:
+        match_op = MatchOp.GLOB  # default
+
+    # Parse symbol type
+    try:
+        symbol_type = SymbolType[args.type.upper()]
+    except KeyError:
+        print(f"Error: Invalid symbol type: {args.type}", file=sys.stderr)
+        return EXIT_ERROR
+
+    try:
+        # Open database
+        with DatabaseStore(str(db_path), str(target_dir)) as db_store:
+            # Execute match
+            results = db_store.match(
+                symbol_type=symbol_type,
+                match_op=match_op,
+                pattern=args.pattern,
+                case_sensitive=not args.case_insensitive,
+                limit=args.limit,
+            )
+
+            # Stream results
+            count = 0
+            for result in results:
+                print(result)
+                count += 1
+
+            # Log count if verbose
+            if count == 0:
+                logging.info("No matches found")
+            else:
+                logging.info(f"Found {count} matches")
+
+        return EXIT_SUCCESS
+
+    except KeyboardInterrupt:
+        print("\n\nSearch interrupted by user", file=sys.stderr)
+        return EXIT_KEYBOARD_INTERRUPT
+
+    except Exception as e:
+        logging.exception("Match command failed with exception")
+        print(f"\nError: Match failed: {e}", file=sys.stderr)
+        return EXIT_ERROR
+
+
 def main() -> int:
     """
     Main entry point for VIA command-line interface.
@@ -257,6 +409,8 @@ def main() -> int:
     # Dispatch to subcommand
     if args.command == "index":
         return _run_index_command(args)
+    elif args.command in ("match", "m"):
+        return _run_match_command(args)
     elif args.command is None:
         parser.print_help()
         return EXIT_SUCCESS

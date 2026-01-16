@@ -24,17 +24,17 @@ This document defines the complete system architecture for the VIA index command
 ## 1. High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLI Layer                             │
-│  (via.cli.index_command)                                    │
-│  - Argument parsing (argparse)                              │
-│  - Verbosity control                                         │
-│  - Signal handling (HUP, INT, TERM)                         │
+┌────────────────────────────────────────────────────────────┐
+│                        CLI Layer                           │
+│  (via.cli.index_command)                                   │
+│  - Argument parsing (argparse)                             │
+│  - Verbosity control                                       │
+│  - Signal handling (HUP, INT, TERM)                        │
 └────────────────┬───────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                     Service Layer                            │
+│                     Service Layer                           │
 │  (via.services.indexing_service)                            │
 │  - IndexingService: Orchestrates indexing                   │
 │  - WatchService: Daemon mode with watchdog                  │

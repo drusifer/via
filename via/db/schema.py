@@ -2,9 +2,10 @@
 Database schema definitions for VIA index.
 
 TLDR:
-    Defines SQL schema for all tables (files, functions, classes, imports,
-    globals, log_statements, markdown_headings) with indexes for performance.
-    Includes metadata and schema_migrations tables for versioning support.
+    Schema v2 uses denormalized symbols table for fast matching (eliminates JOINs).
+    Legacy tables (functions, classes, imports, globals) retained for backward compat.
+    New tables: symbols (denormalized), references (for future relationship queries).
+    Files table retained for metadata only.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -14,7 +15,7 @@ License: GPL-3.0
 """
 
 # Schema version for migrations
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # SQL statements for creating tables
 CREATE_METADATA_TABLE = """
@@ -133,8 +134,37 @@ CREATE TABLE IF NOT EXISTS markdown_headings (
 );
 """
 
+# Schema v2: Denormalized symbols table for fast matching
+CREATE_SYMBOLS_TABLE = """
+CREATE TABLE IF NOT EXISTS symbols (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol_name TEXT NOT NULL,
+    symbol_type TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    line_number INTEGER NOT NULL,
+    byte_offset INTEGER,
+    byte_length INTEGER,
+    qualified_name TEXT NOT NULL,
+    parent_name TEXT
+);
+"""
+
+# Schema v2: Symbol references table for relationship queries (future)
+CREATE_REFERENCES_TABLE = """
+CREATE TABLE IF NOT EXISTS symbol_references (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_symbol_id INTEGER NOT NULL,
+    to_symbol_id INTEGER NOT NULL,
+    reference_type TEXT NOT NULL,
+    line_number INTEGER,
+    FOREIGN KEY (from_symbol_id) REFERENCES symbols(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_symbol_id) REFERENCES symbols(id) ON DELETE CASCADE
+);
+"""
+
 # Index definitions for performance
 CREATE_INDEXES = [
+    # v1 indexes (legacy tables)
     "CREATE INDEX IF NOT EXISTS idx_files_path ON files(path);",
     "CREATE INDEX IF NOT EXISTS idx_files_language ON files(language);",
     "CREATE INDEX IF NOT EXISTS idx_files_parsed ON files(parsed);",
@@ -149,6 +179,15 @@ CREATE_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_globals_file_id ON globals(file_id);",
     "CREATE INDEX IF NOT EXISTS idx_log_statements_file_id ON log_statements(file_id);",
     "CREATE INDEX IF NOT EXISTS idx_markdown_headings_file_id ON markdown_headings(file_id);",
+
+    # v2 indexes (symbols and symbol_references tables)
+    "CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(symbol_name);",
+    "CREATE INDEX IF NOT EXISTS idx_symbols_type ON symbols(symbol_type);",
+    "CREATE INDEX IF NOT EXISTS idx_symbols_type_name ON symbols(symbol_type, symbol_name);",
+    "CREATE INDEX IF NOT EXISTS idx_symbols_file ON symbols(file_path);",
+    "CREATE INDEX IF NOT EXISTS idx_symbol_references_from ON symbol_references(from_symbol_id);",
+    "CREATE INDEX IF NOT EXISTS idx_symbol_references_to ON symbol_references(to_symbol_id);",
+    "CREATE INDEX IF NOT EXISTS idx_symbol_references_type ON symbol_references(reference_type);",
 ]
 
 # All table creation statements in dependency order
@@ -162,4 +201,7 @@ ALL_TABLES = [
     CREATE_GLOBALS_TABLE,
     CREATE_LOG_STATEMENTS_TABLE,
     CREATE_MARKDOWN_HEADINGS_TABLE,
+    # v2 tables
+    CREATE_SYMBOLS_TABLE,
+    CREATE_REFERENCES_TABLE,
 ]

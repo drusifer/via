@@ -24,7 +24,33 @@ from ..core.constants import DEFAULT_MAX_FILE_SIZE, PROGRESS_UPDATE_INTERVAL
 from ..core.discovery import FileDiscovery, DiscoveredFile
 from ..db.store import DatabaseStore
 from ..parsers.registry import ParserRegistry
+
 logger = logging.getLogger(__name__)
+
+
+def _calculate_qualified_name(file_path: str, entity_name: str, parent_class: Optional[str] = None) -> str:
+    """Calculate fully qualified name for an entity.
+
+    Args:
+        file_path: Relative path to file (e.g., 'src/models/user.py')
+        entity_name: Simple entity name (e.g., 'save', 'User')
+        parent_class: Parent class name for methods (None for non-methods)
+
+    Returns:
+        Fully qualified name (e.g., 'models.user.User.save')
+    """
+    # Convert file path to module: src/models/user.py -> models.user
+    module = file_path.replace('.py', '').replace('/', '.')
+
+    # Remove common prefixes
+    if module.startswith('src.'):
+        module = module[4:]
+
+    # Build qualified name
+    if parent_class:
+        return f"{module}.{parent_class}.{entity_name}"
+    else:
+        return f"{module}.{entity_name}"
 @dataclass
 class IndexingStats:
     """Statistics from an indexing operation."""
@@ -256,6 +282,8 @@ class IndexingService:
             self.db_store.delete_classes_by_file(file_id)
             self.db_store.delete_imports_by_file(file_id)
             self.db_store.delete_globals_by_file(file_id)
+            # Delete old symbols for this file
+            self.db_store.delete_symbols_by_file(file_info.path)
 
             # Update file record
             self.db_store.update_file(
@@ -343,6 +371,105 @@ class IndexingService:
                 byte_offset=glob.byte_offset,
                 byte_length=glob.byte_length,
             )
+
+        # Populate symbols table (denormalized for fast matching)
+        # Insert class symbols
+        for cls in parse_result.classes:
+            qualified_name = _calculate_qualified_name(file_info.path, cls.name)
+            self.db_store.insert_symbol(
+                symbol_name=cls.name,
+                symbol_type='class',
+                file_path=file_info.path,
+                line_number=cls.line_start,
+                qualified_name=qualified_name,
+                byte_offset=cls.byte_offset,
+                byte_length=cls.byte_length,
+                parent_name=None,
+            )
+
+            # Insert method symbols
+            for method in cls.methods:
+                qualified_name = _calculate_qualified_name(file_info.path, method.name, parent_class=cls.name)
+                self.db_store.insert_symbol(
+                    symbol_name=method.name,
+                    symbol_type='method',
+                    file_path=file_info.path,
+                    line_number=method.line_start,
+                    qualified_name=qualified_name,
+                    byte_offset=method.byte_offset,
+                    byte_length=method.byte_length,
+                    parent_name=cls.name,
+                )
+
+        # Insert function symbols
+        for func in parse_result.functions:
+            qualified_name = _calculate_qualified_name(file_info.path, func.name)
+            self.db_store.insert_symbol(
+                symbol_name=func.name,
+                symbol_type='function',
+                file_path=file_info.path,
+                line_number=func.line_start,
+                qualified_name=qualified_name,
+                byte_offset=func.byte_offset,
+                byte_length=func.byte_length,
+                parent_name=None,
+            )
+
+        # Insert import symbols
+        for imp in parse_result.imports:
+            # Use module name as the symbol name
+            symbol_name = imp.name if imp.name else imp.module
+            qualified_name = imp.module if not imp.name else f"{imp.module}.{imp.name}"
+            self.db_store.insert_symbol(
+                symbol_name=symbol_name,
+                symbol_type='import',
+                file_path=file_info.path,
+                line_number=imp.line_number,
+                qualified_name=qualified_name,
+                byte_offset=imp.byte_offset,
+                byte_length=imp.byte_length,
+                parent_name=None,
+            )
+
+        # Insert global symbols
+        for glob in parse_result.globals:
+            qualified_name = _calculate_qualified_name(file_info.path, glob.name)
+            self.db_store.insert_symbol(
+                symbol_name=glob.name,
+                symbol_type='global',
+                file_path=file_info.path,
+                line_number=glob.line_number,
+                qualified_name=qualified_name,
+                byte_offset=glob.byte_offset,
+                byte_length=glob.byte_length,
+                parent_name=None,
+            )
+
+        # Insert file path symbols (for filename and filepath matching)
+        # Filename symbol (just the basename)
+        filename = file_info.path.split('/')[-1]
+        self.db_store.insert_symbol(
+            symbol_name=filename,
+            symbol_type='filename',
+            file_path=file_info.path,
+            line_number=0,
+            qualified_name=file_info.path,
+            byte_offset=None,
+            byte_length=None,
+            parent_name=None,
+        )
+
+        # Filepath symbol (full path)
+        self.db_store.insert_symbol(
+            symbol_name=file_info.path,
+            symbol_type='filepath',
+            file_path=file_info.path,
+            line_number=0,
+            qualified_name=file_info.path,
+            byte_offset=None,
+            byte_length=None,
+            parent_name=None,
+        )
 
         return {
             'functions': len(parse_result.functions) + sum(len(c.methods) for c in parse_result.classes),
