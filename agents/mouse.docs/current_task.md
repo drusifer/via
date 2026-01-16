@@ -1,19 +1,36 @@
-**Task**: Sprint 1 Status Assessment
+**Task**: Sprint 3 Task Breakdown
 **Status**: Complete
-**Completed**: 2026-01-11 12:55:00
+**Completed**: 2026-01-16
 
 **Summary**:
-Sprint 1 is 95% complete with MVP functional!
+Created comprehensive task breakdown for Sprint 3 implementation (~68h work, 34 story points).
 
-**Key Achievements**:
-- Story 7 (CLI) completed by @Neo
-- 101/104 tests passing (97%)
-- 80% code coverage
-- All critical path items except final polish complete
+**Document Created**:
+- mouse.docs/SPRINT_3_TASKS.md
 
-**Next Actions**:
-- Option A (Recommended): Quick fix + ship MVP (~15 min)
-- Option B: Full polish (~1-2h)
-- Option C: Phase 2 features (~9h+)
+**Key Details**:
+- **MVP (P0)**: 20 story points, 160h, 6 stories
+  - Phase 1: Pipeline Architecture (40h)
+  - Phase 2: MatchRecord System (40h)
+  - Phase 3: Streaming & Metadata (16h)
+  - Phase 4: List & Table Renderers (24h)
+  - Phase 5: Raw Renderer (16h)
+  - Phase 6: Formatted Renderer (24h)
+- **Optional (P1)**: 15 story points, 120h, 4 stories
+  - Phase 7: Diagram Renderer (40h)
+  - Phase 8: Stats Command (24h)
+  - Phase 9: Usage Renderer (40h)
+  - Phase 10: Theme System (16h)
+- **Testing & Docs**: 24h
 
-**Status**: Ready to ship MVP with minor `.via/` exclusion fix
+**Critical Path**: Pipeline → MatchRecord → Streaming → Renderers
+
+**Breakdown Details**:
+- Each phase broken into tasks with time estimates
+- Files to create/modify specified
+- Implementation steps detailed
+- Acceptance criteria mapped to user stories
+- Test cases outlined
+- Dependencies documented
+
+**Status**: Ready for @Neo to start implementation

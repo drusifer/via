@@ -1,29 +1,29 @@
-**Task**: Sprint 2 Test Implementation
-**Status**: Complete (100%)
-**Started**: 2026-01-15
-**Completed**: 2026-01-15
+**Task**: Sprint 3 Phase 1 - Core Pipeline Implementation
+**Status**: In Progress (75%)
+**Started**: 2026-01-16
 
-**Objectives**:
-- [x] Implement Suite 1: Core Types Unit Tests (test_core_types.py)
-- [x] Implement Suite 2: Database Match Unit Tests (test_database_match.py)
-- [x] Implement Suite 3: CLI Integration Tests (test_cli_match.py)
-- [x] Implement Suite 4: Indexer Symbol Population Tests (test_indexer_symbols.py)
-- [x] Run all tests and verify passing
+**Completed Tasks**:
+- ✅ Task 1.1: Pipeline Parser with argparse (26/26 tests, 95% coverage)
+- ✅ Task 1.2: Pipeline Executor (7/7 tests, 80% coverage)
 
-**Deliverables**:
-- `tests/unit/test_core_types.py` - 18 tests for SymbolType, MatchOp, MatchResult
-- `tests/unit/test_database_match.py` - 28 tests for DatabaseStore.match()
-- `tests/integration/test_cli_match.py` - 18 tests for CLI match command
-- `tests/unit/test_indexer_symbols.py` - 12 tests for indexer symbol population
+**Current Task**: Task 1.3 - Wire Pipeline into CLI Entry Point
 
-**Test Results**:
-- Total tests: 180
-- Passing: 177
-- Skipped: 1 (REGEXP requires SQLite extension)
-- Failing: 2 (Pre-existing Sprint 1 .via/ exclusion issue)
-- Coverage: 79%
+**Progress**:
+- Parser handles shorthand flags: -mg (match glob), -mr (match regex), -rT (render table), etc.
+- Parser splits argv on --via flags for pipeline stages
+- Executor handles match, filter, render stages
+- Iterator-based streaming between stages (zero-copy)
 
-**Notes**:
-- REGEXP test skipped because SQLite doesn't have REGEXP function by default
-- 2 failing tests are Sprint 1 issues where .via/ directory gets indexed
-- All Sprint 2 functionality is fully tested and working
+**Files Created**:
+- via/pipeline/__init__.py
+- via/pipeline/types.py (StageType, PipelineStage)
+- via/pipeline/parser.py (PipelineParser, PipelineParseError)
+- via/pipeline/executor.py (PipelineExecutor)
+- tests/unit/test_pipeline_parser.py (26 tests)
+- tests/unit/test_pipeline_executor.py (7 tests)
+
+**Next Steps**:
+1. Wire pipeline into via/__main__.py
+2. Add backward compatibility for Sprint 2 syntax
+3. Write integration tests for full pipeline
+4. Test with real database

@@ -41,6 +41,7 @@ class FileDiscovery:
         '*.pyo',
         '*.pyd',
         '.git/',
+        '.via/',
         '.svn/',
         '.hg/',
     ]

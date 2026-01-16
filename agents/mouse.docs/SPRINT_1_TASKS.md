@@ -106,7 +106,7 @@ Tasks are organized by story with dependencies clearly marked.
 - [ ] Implement `walk()` generator method
 - [ ] Use `os.walk()` for directory traversal
 - [ ] Apply `.gitignore` filters at each level
-- [ ] Exclude `__pycache__/`, `.pyc`, `.pyo` by default
+- [x] Exclude `__pycache__/`, `.pyc`, `.pyo`, and `.via/` by default
 - [ ] Yield `(file_path, file_stat)` tuples
 - **Depends on**: [S2.2]
 - **Est**: 2h

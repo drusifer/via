@@ -25,7 +25,9 @@ def main():
     if not cmd.startswith("*"):
         cmd = "*" + cmd
 
-    to = ','.join(args.to)
+    to = args.to
+    if type(to) == list:
+      to = ','.join(args.to)
         
     formatted_line = f"[{timestamp}] [**{args.persona}**]->[**{to}**] *{cmd}*:\n\n {args.message}\n\n"
     
