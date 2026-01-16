@@ -13,12 +13,15 @@ $Id$
 License: GPL-3.0
 """
 
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Set, Optional
 
 import pathspec
+
+logger = logging.getLogger(__name__)
 @dataclass
 class DiscoveredFile:
     """Represents a discovered file."""
@@ -78,9 +81,19 @@ class FileDiscovery:
         """
         discovered = []
 
+        logger.debug(f"Starting discovery in: {self.root_dir}")
+        logger.debug(f"Parseable extensions: {self.parseable_extensions}")
+
         for root, dirs, files in os.walk(self.root_dir):
+            rel_root = os.path.relpath(root, self.root_dir)
+            logger.debug(f"Walking: {rel_root} (dirs: {dirs[:5]}{'...' if len(dirs) > 5 else ''})")
+
             # Filter directories
+            original_dirs = list(dirs)
             dirs[:] = [d for d in dirs if self._should_include_dir(root, d)]
+            excluded_dirs = set(original_dirs) - set(dirs)
+            if excluded_dirs:
+                logger.debug(f"  Excluded dirs: {excluded_dirs}")
 
             # Process files
             for filename in files:
@@ -90,41 +103,54 @@ class FileDiscovery:
                     file_info = self._get_file_info(file_path)
                     if file_info:
                         discovered.append(file_info)
+                        logger.debug(f"  Discovered: {os.path.relpath(file_path, self.root_dir)} (parseable={file_info.is_parseable})")
 
+        logger.debug(f"Discovery complete: {len(discovered)} files found")
         return discovered
 
     def _build_gitignore_spec(self) -> pathspec.PathSpec:
         """
         Build pathspec from .gitignore files.
 
+        Only reads the root .gitignore file. Nested .gitignore files are not
+        supported because their patterns would need to be applied relative to
+        their location, which is more complex. For now, we only support the
+        root .gitignore which covers most use cases.
+
         Returns:
             PathSpec object with exclusion patterns
         """
         # Always include default excludes
         patterns = list(self.DEFAULT_EXCLUDES)
+        logger.debug(f"Default exclude patterns: {self.DEFAULT_EXCLUDES}")
 
         if not self.respect_gitignore:
             # Only use default excludes
+            logger.debug("Gitignore disabled, using only default excludes")
             return pathspec.PathSpec.from_lines('gitignore', patterns)
 
-        # Find all .gitignore files in tree
-        gitignore_files = []
-        for root, dirs, files in os.walk(self.root_dir):
-            if '.gitignore' in files:
-                gitignore_files.append(os.path.join(root, '.gitignore'))
+        # Only read the root .gitignore file
+        # (nested .gitignore files have patterns relative to their location,
+        # which we don't handle correctly yet)
+        root_gitignore = os.path.join(self.root_dir, '.gitignore')
 
-        # Read patterns from .gitignore files
-        for gitignore_path in gitignore_files:
+        if os.path.exists(root_gitignore):
             try:
-                with open(gitignore_path, 'r', encoding='utf-8', errors='ignore') as f:
+                with open(root_gitignore, 'r', encoding='utf-8', errors='ignore') as f:
+                    file_patterns = []
                     for line in f:
                         line = line.strip()
                         # Skip empty lines and comments
                         if line and not line.startswith('#'):
                             patterns.append(line)
+                            file_patterns.append(line)
+                    logger.debug(f"Root .gitignore: {len(file_patterns)} patterns")
             except IOError:
-                # Skip unreadable .gitignore files
-                pass
+                logger.debug(f"Root .gitignore: unreadable")
+        else:
+            logger.debug("No root .gitignore found")
+
+        logger.debug(f"Total gitignore patterns: {len(patterns)}")
 
         # Create pathspec
         return pathspec.PathSpec.from_lines('gitignore', patterns)
@@ -144,7 +170,10 @@ class FileDiscovery:
         rel_path = os.path.relpath(dir_path, self.root_dir)
 
         # Check with trailing slash (for directory patterns)
-        return not self.gitignore_spec.match_file(rel_path + '/')
+        matched = self.gitignore_spec.match_file(rel_path + '/')
+        if matched:
+            logger.debug(f"  Dir excluded by gitignore: {rel_path}/")
+        return not matched
 
     def _should_include_file(self, file_path: str) -> bool:
         """

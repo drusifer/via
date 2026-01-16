@@ -9,6 +9,7 @@ def main():
     parser.add_argument("message", help="The message content")
     parser.add_argument("--persona", "-p", default=os.environ.get("USER", "User"), help="Persona name (default: $USER)")
     parser.add_argument("--cmd", "-c", default="chat", help="Command prefix (default: chat)")
+    parser.add_argument("--to", "-t", default="all", help="Name of intended recepient. Can be provided multiple times. (default: all)", nargs='?')
     
     args = parser.parse_args()
     
@@ -23,8 +24,10 @@ def main():
     cmd = args.cmd
     if not cmd.startswith("*"):
         cmd = "*" + cmd
+
+    to = ','.join(args.to)
         
-    formatted_line = f"[{timestamp}] **[{args.persona}]** {cmd}:\n\n {args.message}\n\n"
+    formatted_line = f"[{timestamp}] [**{args.persona}**]->[**{to}**] *{cmd}*:\n\n {args.message}\n\n"
     
     try:
         with open(chat_file, "a") as f:

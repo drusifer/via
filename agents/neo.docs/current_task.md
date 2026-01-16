@@ -1,26 +1,29 @@
-**Task**: Story 7 - CLI Command Implementation
-**Status**: Complete (95%)
-**Started**: 2026-01-11 11:56:00
-**Completed**: 2026-01-11 12:45:00
+**Task**: Sprint 2 Test Implementation
+**Status**: Complete (100%)
+**Started**: 2026-01-15
+**Completed**: 2026-01-15
 
 **Objectives**:
-- [x] Implement argparse for `via index` command with subcommands
-- [x] Add CLI flags: `-w`, `-v/-vv/-vvvv`, `--force`, `--exclude`
-- [x] Wire IndexingService to CLI with progress callback
-- [x] Add error handling and user-friendly messages
-- [x] Add `via --version` command
-- [x] Fix DatabaseStore connection blocker (context manager)
-- [x] Fix ParserRegistry empty extensions bug
-- [x] Create unit tests for CLI (14 tests, all passing)
-- [x] Create integration tests (9 tests, 6 passing)
+- [x] Implement Suite 1: Core Types Unit Tests (test_core_types.py)
+- [x] Implement Suite 2: Database Match Unit Tests (test_database_match.py)
+- [x] Implement Suite 3: CLI Integration Tests (test_cli_match.py)
+- [x] Implement Suite 4: Indexer Symbol Population Tests (test_indexer_symbols.py)
+- [x] Run all tests and verify passing
 
 **Deliverables**:
-- `via/__main__.py` - Full CLI implementation
-- `tests/unit/test_cli_parser.py` - 14 unit tests (100% passing)
-- `tests/integration/test_cli_index.py` - 9 integration tests (67% passing)
+- `tests/unit/test_core_types.py` - 18 tests for SymbolType, MatchOp, MatchResult
+- `tests/unit/test_database_match.py` - 28 tests for DatabaseStore.match()
+- `tests/integration/test_cli_match.py` - 18 tests for CLI match command
+- `tests/unit/test_indexer_symbols.py` - 12 tests for indexer symbol population
 
-**Remaining Issues** (minor):
-- 3 integration tests failing due to .via/ directory not being excluded
-- Logging goes to stderr (verbosity test needs adjustment)
+**Test Results**:
+- Total tests: 180
+- Passing: 177
+- Skipped: 1 (REGEXP requires SQLite extension)
+- Failing: 2 (Pre-existing Sprint 1 .via/ exclusion issue)
+- Coverage: 79%
 
-**Status**: Ready for @Trin QA review
+**Notes**:
+- REGEXP test skipped because SQLite doesn't have REGEXP function by default
+- 2 failing tests are Sprint 1 issues where .via/ directory gets indexed
+- All Sprint 2 functionality is fully tested and working
