@@ -4,6 +4,7 @@ from unittest.mock import Mock, MagicMock
 from via.pipeline.types import StageType, PipelineStage
 from via.pipeline.executor import PipelineExecutor
 from via.core.types import MatchResult, SymbolType, MatchOp
+from via.core.match_record import ClassMatchRecord
 from argparse import Namespace
 
 
@@ -119,7 +120,16 @@ class TestExecuteRenderStage:
         """Render stage consumes iterator and outputs."""
         db = Mock()
         matches = [
-            MatchResult('class', 'User', 'models.User', 'models.py', 10, 100, 50, None)
+            ClassMatchRecord(
+                symbol_type='class',
+                symbol_name='User',
+                qualified_name='models.User',
+                file_path='models.py',
+                line_number=10,
+                byte_offset=100,
+                byte_length=50,
+                total_matches=1,
+            )
         ]
         db.match = Mock(return_value=iter(matches))
 

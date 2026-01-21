@@ -10,12 +10,16 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
     "pathspec>=0.11.0",
+    "pygments>=2.15.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "ruff>=0.4.0",
+    "pylint>=3.0.0",
+    "bandit>=1.7.0",
 ]
 
 [project.scripts]
@@ -32,3 +36,59 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --cov=via --cov-report=term-missing"
+
+# =============================================================================
+# RUFF - Fast Python linter (complexity, dead code, unused imports)
+# =============================================================================
+[tool.ruff]
+target-version = "py38"
+line-length = 100
+src = ["via"]
+
+[tool.ruff.lint]
+select = [
+    "F401",   # unused-import
+    "F841",   # unused-variable
+    "C90",    # mccabe complexity
+    "ERA",    # commented-out code (eradicate)
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+# =============================================================================
+# PYLINT - Duplicate code detection and design rules
+# =============================================================================
+[tool.pylint.main]
+source-roots = ["via"]
+ignore-paths = ["tests", "agents"]
+
+[tool.pylint."messages control"]
+enable = ["duplicate-code"]
+disable = [
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "too-few-public-methods",
+]
+
+[tool.pylint.design]
+max-args = 7
+max-locals = 15
+max-statements = 50
+max-branches = 12
+max-returns = 6
+
+[tool.pylint.similarities]
+min-similarity-lines = 6
+ignore-comments = true
+ignore-docstrings = true
+ignore-imports = true
+
+# =============================================================================
+# BANDIT - Security vulnerability scanner
+# =============================================================================
+[tool.bandit]
+targets = ["via"]
+exclude_dirs = ["tests", "agents"]
+skips = []

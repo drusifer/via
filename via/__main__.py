@@ -39,6 +39,8 @@ from .db.store import DatabaseStore
 from .parsers.registry import ParserRegistry
 from .parsers.python_parser import PythonParser
 from .services.indexing import IndexingService
+from .pipeline.parser import PipelineParser, PipelineParseError
+from .pipeline.executor import PipelineExecutor
 
 
 def _create_parser() -> argparse.ArgumentParser:
@@ -382,6 +384,102 @@ def _run_match_command(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
 
+def _run_pipeline_command(argv: list, directory: str = ".") -> int:
+    """
+    Execute a pipeline command.
+
+    Args:
+        argv: Command line arguments for the pipeline
+        directory: Working directory for database lookup
+
+    Returns:
+        Exit code
+    """
+    # Resolve directory
+    target_dir = Path(directory).resolve()
+
+    # Determine database path
+    index_dir = target_dir / DEFAULT_INDEX_DIR
+    db_path = index_dir / DEFAULT_DB_NAME
+
+    if not db_path.exists():
+        print(f"Error: Database not found: {db_path}", file=sys.stderr)
+        print(f"Run 'via index' first to create the index.", file=sys.stderr)
+        return EXIT_ERROR
+
+    try:
+        # Parse pipeline stages
+        pipeline_parser = PipelineParser()
+        stages = pipeline_parser.parse(argv)
+
+        if not stages:
+            print("Error: No pipeline stages specified", file=sys.stderr)
+            return EXIT_ERROR
+
+        # Open database and execute pipeline
+        with DatabaseStore(str(db_path), str(target_dir)) as db_store:
+            executor = PipelineExecutor(db_store)
+            result = executor.execute(stages)
+
+            # If executor returns iterator (no render stage), print results
+            if result is not None:
+                for record in result:
+                    print(record)
+
+        return EXIT_SUCCESS
+
+    except PipelineParseError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_ERROR
+
+    except KeyboardInterrupt:
+        print("\n\nPipeline interrupted by user", file=sys.stderr)
+        return EXIT_KEYBOARD_INTERRUPT
+
+    except Exception as e:
+        logging.exception("Pipeline execution failed")
+        print(f"\nError: Pipeline failed: {e}", file=sys.stderr)
+        return EXIT_ERROR
+
+
+def _is_pipeline_syntax(argv: list) -> bool:
+    """
+    Check if argv uses pipeline syntax (vs subcommand syntax).
+
+    Pipeline syntax starts with flags like -g, -c, -m, etc.
+    Subcommand syntax starts with 'index', 'match', etc.
+
+    Args:
+        argv: Command line arguments (without program name)
+
+    Returns:
+        True if pipeline syntax detected
+    """
+    if not argv:
+        return False
+
+    first_arg = argv[0]
+
+    # Known subcommands use subcommand syntax
+    if first_arg in ('index', 'match', 'm', '--help', '-h', '--version'):
+        return False
+
+    # Verbosity flags are ambiguous - check what follows
+    if first_arg in ('-v', '-vv', '-vvv', '-vvvv'):
+        # Check if next arg is a subcommand
+        if len(argv) > 1 and argv[1] in ('index', 'match', 'm'):
+            return False
+        # Otherwise treat as pipeline (could be stats verbose)
+        return True
+
+    # Pipeline flags
+    pipeline_flags = {'-g', '-r', '-s', '-c', '-m', '-f', '-i', '-G', '-F', '-N', '-I', '-n'}
+    if first_arg in pipeline_flags or first_arg.startswith('-r') or first_arg == 'stats':
+        return True
+
+    return False
+
+
 def main() -> int:
     """
     Main entry point for VIA command-line interface.
@@ -389,7 +487,13 @@ def main() -> int:
     Returns:
         Exit code (0 for success, non-zero for error)
     """
-    # Parse arguments
+    argv = sys.argv[1:]
+
+    # Check if using pipeline syntax
+    if _is_pipeline_syntax(argv):
+        return _run_pipeline_command(argv)
+
+    # Otherwise use subcommand syntax
     parser = _create_parser()
     args = parser.parse_args()
 

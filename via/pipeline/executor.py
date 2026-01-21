@@ -2,7 +2,9 @@
 from typing import Iterator, Optional, List
 from via.pipeline.types import PipelineStage, StageType
 from via.core.types import MatchResult, SymbolType, MatchOp
+from via.core.match_record import RenderType, FormatType
 from via.db.store import DatabaseStore
+from via.renderers.factory import RendererFactory
 import fnmatch
 import re
 
@@ -153,12 +155,20 @@ class PipelineExecutor:
         """
         args = stage.args
 
-        render_type = args.render_type
+        # Convert string render_type to RenderType enum (default: LIST)
+        render_type_str = getattr(args, 'render_type', None) or 'list'
+        render_type = RenderType(render_type_str)
 
-        # For now, simple list rendering (just print each record)
-        # Full renderer system will be implemented in Phase 4
-        for record in records:
-            print(record)
+        # Convert string format to FormatType enum (default: ASCII)
+        format_str = getattr(args, 'format', None)
+        format_type = FormatType(format_str) if format_str else None
+
+        # Create renderer and render output
+        renderer = RendererFactory.create(render_type, format_type)
+        output = renderer.render(records)
+
+        if output:
+            print(output)
 
     def _execute_stats_stage(self, stage: PipelineStage):
         """Execute stats stage (placeholder for Phase 8).

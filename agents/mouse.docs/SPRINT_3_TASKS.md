@@ -143,18 +143,14 @@ Sprint 3 implements the internal pipeline architecture with polymorphic renderin
 3. Add error handling:
    - Catch `PipelineParseError` and print helpful message
    - Exit with code 1 on errors
-4. Preserve backward compatibility:
-   - `via match -t class -g '*'` should still work (treated as single-stage pipeline)
 
 **Acceptance Criteria**:
 - AC1: New pipeline syntax works: `via -mg -c '*' --via -rT`
-- AC2: Old syntax works: `via match -t class -g '*'`
-- AC3: Error messages are helpful and actionable
-- AC4: Exit codes correct (0 success, 1 error)
+- AC2: Error messages are helpful and actionable
+- AC3: Exit codes correct (0 success, 1 error)
 
 **Tests**:
 - `test_cli_pipeline_execution()`
-- `test_cli_backward_compatibility()`
 - `test_cli_error_handling()`
 
 **Estimated**: 4h
@@ -210,14 +206,14 @@ Sprint 3 implements the internal pipeline architecture with polymorphic renderin
      - `column_widths: Optional[Dict[str, int]]`
      - `total_matches: Optional[int]`
    - Abstract method: `supports_render_type(render_type: RenderType) -> bool`
-   - Implement `__str__()`: Sprint 2 compatible list format
+   - Implement `__str__()`: Standard list format
      - Format: `type:file:line:qualified:@byte+len`
 
 **Acceptance Criteria**:
 - AC1: Base MatchRecord class is abstract (can't instantiate)
 - AC2: All required fields present
 - AC3: Metadata fields optional (default None)
-- AC4: `__str__()` outputs Sprint 2 compatible format
+- AC4: `__str__()` outputs standard list format
 - AC5: Enums defined for all render types and formats
 
 **Tests**:
@@ -331,7 +327,6 @@ Sprint 3 implements the internal pipeline architecture with polymorphic renderin
 **Tests**:
 - `test_match_returns_matchrecords()`
 - `test_match_creates_correct_record_type()`
-- `test_backward_compatibility_with_sprint2()`
 
 **Estimated**: 8h
 
@@ -344,7 +339,7 @@ Sprint 3 implements the internal pipeline architecture with polymorphic renderin
 
 **Test Cases**:
 1. `test_match_returns_correct_record_types()`: Verify factory creates right classes
-2. `test_record_str_format_compatible_with_sprint2()`: Backward compatibility
+2. `test_record_str_format()`: Verify standard output format
 3. `test_supports_render_type_for_all_types()`: Each type reports correctly
 4. `test_lazy_load_methods_for_classes()`: ClassMatchRecord.get_methods()
 
@@ -484,7 +479,7 @@ Sprint 3 implements the internal pipeline architecture with polymorphic renderin
 
 **Acceptance Criteria**:
 - AC1: Outputs one line per record
-- AC2: Format matches Sprint 2 output: `type:file:line:qualified:@byte+len`
+- AC2: Format: `type:file:line:qualified:@byte+len`
 - AC3: Shows "... (N more)" when results limited
 - AC4: Streams records (O(1) memory)
 

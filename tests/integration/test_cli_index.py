@@ -22,6 +22,7 @@ from pathlib import Path
 
 from via.db.store import DatabaseStore
 from via.core.constants import EXIT_SUCCESS
+from via.core.types import SymbolType, MatchOp
 
 
 class TestCLIIndexCommand:
@@ -175,7 +176,7 @@ GREETING = "Welcome"
 
         assert result.returncode == EXIT_SUCCESS
 
-        # Query database
+        # Query database using match API
         db_path = temp_project / ".via" / "index.db"
         with DatabaseStore(str(db_path), str(temp_project)) as db:
             # Check files
@@ -183,26 +184,29 @@ GREETING = "Welcome"
             assert len(files) == 1
             assert files[0]['path'].endswith('sample.py')
 
-            # Check functions
-            functions = db.get_all_functions()
-            assert len(functions) == 2  # hello + __init__
-            func_names = {f['name'] for f in functions}
-            assert 'hello' in func_names
-            assert '__init__' in func_names
+            # Check functions using match
+            functions = list(db.match(SymbolType.FUNCTION, MatchOp.GLOB, '*'))
+            assert len(functions) == 1
+            assert functions[0].symbol_name == 'hello'
 
-            # Check classes
-            classes = db.get_all_classes()
+            # Check methods using match
+            methods = list(db.match(SymbolType.METHOD, MatchOp.GLOB, '*'))
+            assert len(methods) == 1
+            assert methods[0].symbol_name == '__init__'
+
+            # Check classes using match
+            classes = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*'))
             assert len(classes) == 1
-            assert classes[0]['name'] == 'Person'
+            assert classes[0].symbol_name == 'Person'
 
-            # Check imports
-            imports = db.get_all_imports()
+            # Check imports using match
+            imports = list(db.match(SymbolType.IMPORT, MatchOp.GLOB, '*'))
             assert len(imports) == 2
 
-            # Check globals
-            globals_list = db.get_all_globals()
+            # Check globals using match
+            globals_list = list(db.match(SymbolType.GLOBAL, MatchOp.GLOB, '*'))
             assert len(globals_list) == 1
-            assert globals_list[0]['name'] == 'GREETING'
+            assert globals_list[0].symbol_name == 'GREETING'
 
     def test_index_empty_directory(self, tmp_path):
         """Test indexing empty directory succeeds."""

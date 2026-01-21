@@ -26,6 +26,7 @@ from .schema import (
     SCHEMA_VERSION,
 )
 from ..core.types import SymbolType, MatchOp, MatchResult
+from ..core.match_record import MatchRecord, MatchRecordFactory
 class DatabaseStore:
     """Manages SQLite database for code index."""
 
@@ -41,6 +42,7 @@ class DatabaseStore:
         self.index_root = os.path.abspath(index_root)
         self.conn: Optional[sqlite3.Connection] = None
         self._in_transaction = False
+        self._record_factory = MatchRecordFactory()
 
     def connect(self) -> None:
         """Connect to database and enable foreign keys."""
@@ -751,6 +753,50 @@ class DatabaseStore:
         if not self._in_transaction and self.conn:
             self.conn.commit()
 
+    def _get_match_metadata(
+        self,
+        where_clause: str,
+        params: List[Any]
+    ) -> Dict[str, Any]:
+        """
+        Compute metadata for match results before streaming.
+
+        Runs a single aggregation query to get total count and max column widths.
+        This metadata is attached to every record for streaming renderers.
+
+        Args:
+            where_clause: SQL WHERE clause (without WHERE keyword)
+            params: Query parameters
+
+        Returns:
+            Dict with 'total_matches' and 'column_widths'
+        """
+        query = f"""
+            SELECT
+                COUNT(*) as total,
+                MAX(LENGTH(symbol_name)) as max_symbol_name,
+                MAX(LENGTH(qualified_name)) as max_qualified_name,
+                MAX(LENGTH(file_path)) as max_file_path,
+                MAX(LENGTH(symbol_type)) as max_symbol_type,
+                MAX(LENGTH(COALESCE(parent_name, ''))) as max_parent_name
+            FROM symbols
+            WHERE {where_clause}
+        """
+
+        cursor = self.conn.execute(query, params)
+        row = cursor.fetchone()
+
+        return {
+            'total_matches': row[0],
+            'column_widths': {
+                'symbol_name': row[1] or 0,
+                'qualified_name': row[2] or 0,
+                'file_path': row[3] or 0,
+                'symbol_type': row[4] or 0,
+                'parent_name': row[5] or 0,
+            }
+        }
+
     def match(
         self,
         symbol_type: SymbolType,
@@ -758,7 +804,7 @@ class DatabaseStore:
         pattern: str,
         case_sensitive: bool = True,
         limit: Optional[int] = None
-    ) -> Iterator[MatchResult]:
+    ) -> Iterator[MatchRecord]:
         """
         Match symbols using denormalized symbols table.
 
@@ -767,10 +813,10 @@ class DatabaseStore:
             match_op: MatchOp enum value
             pattern: Pattern to match (user provides wildcards/regex)
             case_sensitive: Whether matching is case-sensitive
-            limit: Optional result limit
+            limit: Optional result limit (0 = unlimited, None = default 10)
 
         Yields:
-            MatchResult objects with complete position data
+            MatchRecord objects with complete position data and metadata
 
         Example:
             for result in db.match(SymbolType.METHOD, MatchOp.GLOB, '*save()'):
@@ -781,7 +827,7 @@ class DatabaseStore:
 
         # Build WHERE clause
         where_parts = ["symbol_type = ?"]
-        params = [symbol_type.value]
+        params: List[Any] = [symbol_type.value]
 
         # Add name match clause
         column = "symbol_name"
@@ -796,7 +842,12 @@ class DatabaseStore:
         where_parts.append(f"{column} {match_op.sql_op} ?")
         params.append(pattern)
 
-        # Build query
+        where_clause = ' AND '.join(where_parts)
+
+        # Get metadata BEFORE streaming results (for column widths, total count)
+        metadata = self._get_match_metadata(where_clause, params)
+
+        # Build results query
         query = f"""
             SELECT
                 symbol_name,
@@ -808,24 +859,25 @@ class DatabaseStore:
                 qualified_name,
                 parent_name
             FROM symbols
-            WHERE {' AND '.join(where_parts)}
+            WHERE {where_clause}
             ORDER BY file_path, line_number
         """
 
-        # Add limit if specified
-        if limit:
+        # Add limit if specified (0 means unlimited)
+        if limit is not None and limit > 0:
             query += f"\nLIMIT {limit}"
 
-        # Execute and yield results
+        # Execute and yield results using factory with metadata
         cursor = self.conn.execute(query, params)
         for row in cursor:
-            yield MatchResult(
-                symbol_name=row[0],
-                symbol_type=row[1],
-                file_path=row[2],
-                line_number=row[3],
-                byte_offset=row[4],
-                byte_length=row[5],
-                qualified_name=row[6],
-                parent_name=row[7]
-            )
+            row_dict = {
+                'symbol_name': row[0],
+                'symbol_type': row[1],
+                'file_path': row[2],
+                'line_number': row[3],
+                'byte_offset': row[4],
+                'byte_length': row[5],
+                'qualified_name': row[6],
+                'parent_name': row[7],
+            }
+            yield self._record_factory.create_from_row(row_dict, metadata)
