@@ -33,6 +33,20 @@ from .formatters.code_formatters import (
 from ..core.match_record import RenderType, FormatType
 
 
+# Lookup tables for formatter classes (reduces cyclomatic complexity)
+TABLE_FORMATTERS = {
+    FormatType.ASCII: AsciiTableFormatter,
+    FormatType.MD: MarkdownTableFormatter,
+    FormatType.HTML: HtmlTableFormatter,
+}
+
+CODE_FORMATTERS = {
+    FormatType.ASCII: AsciiCodeFormatter,
+    FormatType.MD: MarkdownCodeFormatter,
+    FormatType.HTML: HtmlCodeFormatter,
+}
+
+
 class RendererFactory:
     """Factory for creating renderer instances."""
 
@@ -45,7 +59,7 @@ class RendererFactory:
 
         Args:
             render_type: The type of renderer to create
-            format_type: Optional format type (for TABLE renderer)
+            format_type: Optional format type (for TABLE/FORMATTED renderers)
 
         Returns:
             Renderer instance
@@ -56,35 +70,20 @@ class RendererFactory:
         if render_type == RenderType.LIST:
             return ListRenderer()
 
-        if render_type == RenderType.TABLE:
-            # Default to ASCII format
-            if format_type is None:
-                format_type = FormatType.ASCII
-
-            if format_type == FormatType.ASCII:
-                return TableRenderer(AsciiTableFormatter())
-            elif format_type == FormatType.MD:
-                return TableRenderer(MarkdownTableFormatter())
-            elif format_type == FormatType.HTML:
-                return TableRenderer(HtmlTableFormatter())
-            else:
-                raise ValueError(f"Unsupported format type for TABLE: {format_type}")
-
         if render_type == RenderType.RAW:
             return RawRenderer()
 
+        if render_type == RenderType.TABLE:
+            formatter_cls = TABLE_FORMATTERS.get(format_type or FormatType.ASCII, AsciiTableFormatter)
+            return TableRenderer(formatter_cls())
+
         if render_type == RenderType.FORMATTED:
-            # Default to ASCII format
-            if format_type is None:
-                format_type = FormatType.ASCII
+            formatter_cls = CODE_FORMATTERS.get(format_type or FormatType.ASCII, AsciiCodeFormatter)
+            return FormattedRenderer(formatter_cls())
 
-            if format_type == FormatType.ASCII:
-                return FormattedRenderer(AsciiCodeFormatter())
-            elif format_type == FormatType.MD:
-                return FormattedRenderer(MarkdownCodeFormatter())
-            elif format_type == FormatType.HTML:
-                return FormattedRenderer(HtmlCodeFormatter())
-            else:
-                return FormattedRenderer(AsciiCodeFormatter())
-
-        raise ValueError(f"Unsupported render type: {render_type}")
+        # Show helpful error for unimplemented render types
+        implemented = ['list (-oL)', 'table (-oT)', 'raw (-oR)', 'formatted (-oF)']
+        raise ValueError(
+            f"Render type '{render_type.value}' is not implemented yet. "
+            f"Available: {', '.join(implemented)}"
+        )

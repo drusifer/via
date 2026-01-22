@@ -81,44 +81,49 @@ class PythonParser(ParserABC):
             text: Source code text
             result: ParseResult to populate
         """
-        # Process top-level nodes
+        # Handler dispatch table: node_type -> (handler_method, top_level_checker)
+        handlers = {
+            ast.FunctionDef: (self._handle_function, self._is_top_level_function),
+            ast.AsyncFunctionDef: (self._handle_function, self._is_top_level_function),
+            ast.ClassDef: (self._handle_class, self._is_top_level_class),
+            ast.Import: (self._handle_import, self._is_top_level_import),
+            ast.ImportFrom: (self._handle_import, self._is_top_level_import),
+            ast.Assign: (self._handle_assign, self._is_top_level_assign),
+            ast.AnnAssign: (self._handle_ann_assign, self._is_top_level_assign),
+        }
+
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
-                # Check if this is a top-level function or method
-                if self._is_top_level_function(tree, node):
-                    func = self._extract_function(node, text, class_id=None)
-                    result.functions.append(func)
+            handler_info = handlers.get(type(node))
+            if handler_info:
+                handler, is_top_level = handler_info
+                if is_top_level(tree, node):
+                    handler(node, text, result)
 
-            elif isinstance(node, ast.AsyncFunctionDef):
-                # Async functions
-                if self._is_top_level_function(tree, node):
-                    func = self._extract_function(node, text, class_id=None)
-                    result.functions.append(func)
+    def _handle_function(self, node, text: str, result: ParseResult) -> None:
+        """Handle FunctionDef and AsyncFunctionDef nodes."""
+        func = self._extract_function(node, text, class_id=None)
+        result.functions.append(func)
 
-            elif isinstance(node, ast.ClassDef):
-                # Only process top-level classes
-                if self._is_top_level_class(tree, node):
-                    cls = self._extract_class(node, text)
-                    result.classes.append(cls)
+    def _handle_class(self, node: ast.ClassDef, text: str, result: ParseResult) -> None:
+        """Handle ClassDef nodes."""
+        cls = self._extract_class(node, text)
+        result.classes.append(cls)
 
-            elif isinstance(node, (ast.Import, ast.ImportFrom)):
-                # Only process top-level imports
-                if self._is_top_level_import(tree, node):
-                    imports = self._extract_imports(node, text)
-                    result.imports.extend(imports)
+    def _handle_import(self, node, text: str, result: ParseResult) -> None:
+        """Handle Import and ImportFrom nodes."""
+        imports = self._extract_imports(node, text)
+        result.imports.extend(imports)
 
-            elif isinstance(node, ast.Assign):
-                # Top-level assignments (globals)
-                if self._is_top_level_assign(tree, node):
-                    globals_list = self._extract_globals(node, text)
-                    result.globals.extend(globals_list)
+    def _handle_assign(self, node: ast.Assign, text: str, result: ParseResult) -> None:
+        """Handle Assign nodes (globals)."""
+        globals_list = self._extract_globals(node, text)
+        result.globals.extend(globals_list)
 
-            elif isinstance(node, ast.AnnAssign):
-                # Annotated assignments
-                if self._is_top_level_assign(tree, node):
-                    global_var = self._extract_annotated_global(node, text)
-                    if global_var:
-                        result.globals.append(global_var)
+    def _handle_ann_assign(self, node: ast.AnnAssign, text: str, result: ParseResult) -> None:
+        """Handle AnnAssign nodes (annotated globals)."""
+        global_var = self._extract_annotated_global(node, text)
+        if global_var:
+            result.globals.append(global_var)
 
     def _is_top_level_function(self, tree: ast.AST, node: ast.FunctionDef) -> bool:
         """Check if function is at module level (not inside a class)."""

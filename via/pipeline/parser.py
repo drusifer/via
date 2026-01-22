@@ -94,8 +94,8 @@ class PipelineParser:
 
     def _is_render_stage(self, args: List[str]) -> bool:
         """Check if args indicate a render stage."""
-        # Check for render flags like -rL, -rT, -rD, etc.
-        return any(arg.startswith('-r') and len(arg) > 2 for arg in args)
+        # Check for output flags like -oL, -oT, -oD, etc.
+        return any(arg.startswith('-o') and len(arg) > 2 for arg in args)
 
     def _parse_match_stage(self, args: List[str]) -> PipelineStage:
         """Parse match stage using argparse.
@@ -119,7 +119,7 @@ class PipelineParser:
 
             parsed_args = self.match_parser.parse_args(args)
             return PipelineStage(StageType.MATCH, parsed_args)
-        except (SystemExit, argparse.ArgumentError) as e:
+        except (SystemExit, argparse.ArgumentError):
             raise PipelineParseError(f"Invalid match stage arguments: {args}")
 
     def _parse_render_stage(self, args: List[str]) -> PipelineStage:
@@ -144,7 +144,7 @@ class PipelineParser:
 
             parsed_args = self.render_parser.parse_args(args)
             return PipelineStage(StageType.RENDER, parsed_args)
-        except (SystemExit, argparse.ArgumentError) as e:
+        except (SystemExit, argparse.ArgumentError):
             raise PipelineParseError(f"Invalid render stage arguments: {args}")
 
     def _parse_stats_stage(self, args: List[str]) -> PipelineStage:
@@ -166,7 +166,7 @@ class PipelineParser:
 
             parsed_args = self.stats_parser.parse_args(args)
             return PipelineStage(StageType.STATS, parsed_args)
-        except (SystemExit, argparse.ArgumentError) as e:
+        except (SystemExit, argparse.ArgumentError):
             raise PipelineParseError(f"Invalid stats stage arguments: {args}")
 
     def _expand_combined_flags(self, args: List[str]) -> List[str]:
@@ -217,14 +217,14 @@ class PipelineParser:
 
                     # Skip to after pattern
                     i = pattern_idx
-            elif arg.startswith('-r') and len(arg) >= 3 and not arg.startswith('--'):
-                # Render shorthand: -rTm, -rDh, etc.
+            elif arg.startswith('-o') and len(arg) >= 3 and not arg.startswith('--'):
+                # Output shorthand: -oTm, -oDh, etc.
                 if len(arg) == 3:
-                    # Just render type: -rT
+                    # Just output type: -oT
                     expanded.append(arg)
                 elif len(arg) == 4:
-                    # Render type + format: -rTm -> -rT -m
-                    expanded.append(f'-r{arg[2]}')  # -rT
+                    # Output type + format: -oTm -> -oT -m
+                    expanded.append(f'-o{arg[2]}')  # -oT
                     expanded.append(f'-{arg[3]}')    # -m
                 else:
                     # Unknown format, keep as-is
@@ -279,14 +279,14 @@ class PipelineParser:
             exit_on_error=False
         )
 
-        # Render type (mutually exclusive)
-        render_group = parser.add_mutually_exclusive_group()
-        render_group.add_argument('-rL', '--list', dest='render_type', action='store_const', const='list')
-        render_group.add_argument('-rT', '--table', dest='render_type', action='store_const', const='table')
-        render_group.add_argument('-rD', '--diagram', dest='render_type', action='store_const', const='diagram')
-        render_group.add_argument('-rU', '--usage', dest='render_type', action='store_const', const='usage')
-        render_group.add_argument('-rR', '--raw', dest='render_type', action='store_const', const='raw')
-        render_group.add_argument('-rF', '--formatted', dest='render_type', action='store_const', const='formatted')
+        # Output type (mutually exclusive) - use -o to avoid collision with -r (regex)
+        output_group = parser.add_mutually_exclusive_group()
+        output_group.add_argument('-oL', '--list', dest='render_type', action='store_const', const='list')
+        output_group.add_argument('-oT', '--table', dest='render_type', action='store_const', const='table')
+        output_group.add_argument('-oD', '--diagram', dest='render_type', action='store_const', const='diagram')
+        output_group.add_argument('-oU', '--usage', dest='render_type', action='store_const', const='usage')
+        output_group.add_argument('-oR', '--raw', dest='render_type', action='store_const', const='raw')
+        output_group.add_argument('-oF', '--formatted', dest='render_type', action='store_const', const='formatted')
 
         # Output format
         format_group = parser.add_mutually_exclusive_group()
@@ -302,6 +302,10 @@ class PipelineParser:
 
         # Theme
         parser.add_argument('--theme', type=str)
+
+        # Delimiters (enabled by default for renderers that support comments)
+        parser.add_argument('--nodelims', dest='nodelims', action='store_true', default=False,
+                          help='Disable delimiter headers between matches')
 
         return parser
 

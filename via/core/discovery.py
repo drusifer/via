@@ -16,7 +16,6 @@ License: GPL-3.0
 import logging
 import os
 from dataclasses import dataclass
-from pathlib import Path
 from typing import List, Set, Optional
 
 import pathspec

@@ -265,7 +265,6 @@ class MarkdownCodeFormatter(CodeFormatter):
         # Add line numbers as comments if requested
         if show_line_numbers:
             lines = source.split('\n')
-            width = len(str(start_line + len(lines) - 1))
             numbered_lines = []
             for i, line in enumerate(lines):
                 line_num = start_line + i

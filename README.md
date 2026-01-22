@@ -1,279 +1,162 @@
 # VIA - Python Codebase Indexing and Query Tool
 
-VIA is a command-line tool for indexing and searching Python codebases. It parses your Python files, extracts code entities (classes, methods, functions, imports, globals), and stores them in a SQLite database for fast pattern-based searching.
+VIA is a command-line tool for indexing and searching Python codebases. It parses Python files using AST, extracts code entities (classes, methods, functions, imports, globals), and stores them in a SQLite database for fast pattern-based searching with multiple output formats.
 
 ## Features
 
-- **Fast Indexing**: Indexes Python files with AST parsing, capturing classes, methods, functions, imports, and globals
-- **Pattern Matching**: Search using glob patterns (`*`, `?`), SQL LIKE (`%`, `_`), or regex
-- **Entity Type Filtering**: Filter by method, class, function, import, global, filename, or filepath
-- **Incremental Updates**: Only re-indexes changed files (based on mtime)
-- **Streaming Output**: Results stream to stdout for piping to `grep`, `less`, `wc`, etc.
-- **Byte Positions**: Includes byte offset and length for editor integration
-
-## Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/via.git
-cd via
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# or: venv\Scripts\activate  # Windows
-
-# Install in development mode
-pip install -e .
-```
+- **Fast Indexing**: AST-based parsing of Python files with incremental updates
+- **Pattern Matching**: Search using glob (`*`), SQL LIKE (`%`), or regex patterns
+- **Multiple Output Formats**: List, table, raw source, or syntax-highlighted
+- **Context Lines**: Show surrounding code with `-A`, `-B`, `-C` flags
+- **Streaming Architecture**: O(1) memory usage for large result sets
+- **Pipeline Syntax**: Chain match and render stages with `--via`
 
 ## Quick Start
 
-### 1. Index Your Codebase
+```bash
+# Install
+git clone https://github.com/your-org/via.git && cd via
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+
+# Index and search
+via index .
+via -g '*' -c                    # All classes
+via -g 'test_*' -f -n 5          # First 5 test functions
+via -g '*Manager' -c --via -oT   # Manager classes as table
+via -g 'User' -c --via -oF       # User class with syntax highlighting
+```
+
+## Documentation
+
+- **[User Guide](docs/USER_GUIDE.md)** - Complete usage examples and reference
+- **[Architecture](agents/morpheus.docs/VIA_ARCHITECTURE.md)** - System design
+- **[Sprint 3 Architecture](agents/morpheus.docs/SPRINT_3_ARCHITECTURE.md)** - Pipeline & renderer system
+
+## Development
+
+### Setup
 
 ```bash
-# Index the current directory
-via index
-
-# Index a specific directory
-via index /path/to/project
-
-# Force re-index all files
-via index --force
+git clone https://github.com/your-org/via.git
+cd via
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 ```
 
-### 2. Search Your Code
+### Testing
 
 ```bash
-# Find all methods ending with "save"
-via match -t method -g "*save"
+# Run all tests
+make test
 
-# Find classes named "User" (case-insensitive)
-via match -t class -g "user" -I
+# Run with coverage
+pytest tests/ --cov=via --cov-report=html
 
-# Find functions starting with "test_"
-via match -t function -g "test_*"
+# Run specific test file
+pytest tests/unit/test_pipeline_parser.py -v
 
-# Find imports containing "json"
-via match -t import -s "%json%"
-
-# Limit results to 10
-via match -t method -g "*" -n 10
+# Linting
+make lint-fast    # Ruff only
+make lint         # Ruff + Bandit
 ```
 
-## Commands
+### Project Structure
 
-### `via index`
+```
+via/
+├── via/                    # Main package
+│   ├── __main__.py         # CLI entry point
+│   ├── core/               # Core types and records
+│   │   ├── types.py        # SymbolType, MatchOp, MatchResult
+│   │   ├── match_record.py # Polymorphic MatchRecord classes
+│   │   └── discovery.py    # File discovery
+│   ├── db/                 # Database layer
+│   │   └── store.py        # SQLite operations
+│   ├── parsers/            # AST parsing
+│   │   └── python_parser.py
+│   ├── pipeline/           # Pipeline system (Sprint 3)
+│   │   ├── parser.py       # Argparse-based pipeline parser
+│   │   ├── executor.py     # Stage execution
+│   │   └── types.py        # StageType, PipelineStage
+│   ├── renderers/          # Output renderers
+│   │   ├── base.py         # Renderer ABC
+│   │   ├── list.py         # ListRenderer
+│   │   ├── table.py        # TableRenderer
+│   │   ├── raw.py          # RawRenderer (source extraction)
+│   │   ├── formatted.py    # FormattedRenderer (Pygments)
+│   │   └── factory.py      # RendererFactory
+│   └── services/           # Business logic
+│       └── indexing.py     # Indexing service
+├── tests/
+│   ├── unit/               # Unit tests
+│   ├── integration/        # Integration tests
+│   └── acceptance/         # UAT tests
+└── agents/                 # Bob System (AI agents)
+```
 
-Index Python files in a directory tree.
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         CLI                                  │
+│                    (__main__.py)                             │
+├─────────────────────────────────────────────────────────────┤
+│  Pipeline Parser          │       Pipeline Executor          │
+│  (argparse stages)        │       (match → filter → render)  │
+├─────────────────────────────────────────────────────────────┤
+│  MatchRecord System                                          │
+│  (ClassMatchRecord, MethodMatchRecord, FunctionMatchRecord,  │
+│   FileMatchRecord, ImportMatchRecord, GlobalMatchRecord)     │
+├─────────────────────────────────────────────────────────────┤
+│  Renderers                │       Database Store             │
+│  (List, Table, Raw,       │       (SQLite + metadata)        │
+│   Formatted, Diagram)     │                                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Design Decisions
+
+1. **Streaming Architecture**: Renderers process Iterator[MatchRecord], not List
+2. **Metadata-First**: Column widths computed before streaming for consistent tables
+3. **Polymorphic Records**: Each symbol type has its own MatchRecord subclass
+4. **Pipeline Syntax**: `via -g PATTERN FLAGS --via OUTPUT_FLAGS`
+
+### Running Specific Test Suites
 
 ```bash
-via index [DIRECTORY] [OPTIONS]
+# Pipeline tests
+pytest tests/unit/test_pipeline_parser.py tests/unit/test_pipeline_executor.py -v
 
-Options:
-  DIRECTORY          Directory to index (default: current directory)
-  -w, --watch        Watch for file changes (NOT IMPLEMENTED YET)
-  --force            Force re-index all files (ignore mtime)
-  --exclude PATTERN  Additional patterns to exclude
-  --db PATH          Custom database path
-  -v, -vv, -vvv      Increase verbosity level
+# Renderer tests
+pytest tests/unit/test_renderers.py tests/unit/test_raw_renderer.py tests/unit/test_formatted_renderer.py -v
+
+# Integration tests
+pytest tests/integration/ -v
+
+# UAT tests
+pytest tests/acceptance/ -v
 ```
 
-**Examples:**
+### Code Quality
 
 ```bash
-via index                    # Index current directory
-via index src/               # Index src/ directory
-via index --force            # Re-index everything
-via index -vv                # Verbose output
+# Check for issues
+ruff check via/
+
+# Auto-fix
+ruff check via/ --fix
+
+# Security scan
+bandit -r via/ -ll
 ```
-
-### `via match` (alias: `via m`)
-
-Search indexed code using pattern matching.
-
-```bash
-via match PATTERN [OPTIONS]
-
-Required:
-  PATTERN            Pattern to match
-  -t, --type TYPE    Symbol type to match
-
-Options:
-  -g, --glob         Use glob pattern matching (default)
-  -r, --regex        Use regex pattern matching
-  -s, --sql          Use SQL LIKE pattern matching
-  -I, --case-insensitive  Case-insensitive matching
-  -n, --limit N      Limit results to N matches
-  -d, --directory    Directory containing the index
-  --db PATH          Custom database path
-```
-
-**Symbol Types:**
-
-| Type | Description | Example |
-|------|-------------|---------|
-| `method` | Class methods | `User.save()` |
-| `class` | Classes | `class User` |
-| `function` | Top-level functions | `def calculate()` |
-| `import` | Import statements | `import json` |
-| `global` | Global variables | `MAX_SIZE = 100` |
-| `filename` | File names | `user.py` |
-| `filepath` | Full file paths | `src/models/user.py` |
-
-**Pattern Syntax:**
-
-| Flag | Syntax | Wildcards | Example |
-|------|--------|-----------|---------|
-| `-g` (default) | Glob | `*` (any), `?` (single) | `*ToString`, `sav?` |
-| `-s` | SQL LIKE | `%` (any), `_` (single) | `%save%`, `sav_` |
-| `-r` | Regex | Full regex | `^test_.*$` |
-
-## Output Format
-
-Results are printed one per line in the format:
-
-```
-type:file_path:line_number:qualified_name:@byte_offset+byte_length
-```
-
-**Example Output:**
-
-```
-method:src/models/user.py:45:models.user.User.save:@1234+56
-method:src/models/post.py:78:models.post.Post.save:@2345+48
-function:src/utils/helpers.py:12:utils.helpers.calculate_hash:@456+120
-```
-
-For symbols without byte positions (filename, filepath):
-
-```
-filename:src/models/user.py:0:src/models/user.py
-```
-
-## Usage Examples
-
-### Find Methods
-
-```bash
-# All methods
-via match -t method -g "*"
-
-# Methods ending with "ToString"
-via match -t method -g "*ToString"
-
-# Methods in a specific pattern
-via match -t method -s "%init%"
-```
-
-### Find Classes
-
-```bash
-# All classes
-via match -t class -g "*"
-
-# Classes starting with "Base"
-via match -t class -g "Base*"
-
-# Case-insensitive search for "manager"
-via match -t class -g "*manager*" -I
-```
-
-### Find Functions
-
-```bash
-# All test functions
-via match -t function -g "test_*"
-
-# Functions containing "calculate"
-via match -t function -s "%calculate%"
-```
-
-### Find Imports
-
-```bash
-# All imports
-via match -t import -g "*"
-
-# Find json imports
-via match -t import -g "json"
-
-# Find typing imports
-via match -t import -s "%typing%"
-```
-
-### Find Globals
-
-```bash
-# All globals
-via match -t global -g "*"
-
-# Find constants (UPPER_CASE pattern)
-via match -t global -g "*_*"
-```
-
-### Pipeline Examples
-
-```bash
-# Count matching results
-via match -t method -g "*" | wc -l
-
-# Filter results with grep
-via match -t function -g "*" | grep "test_"
-
-# Browse results with less
-via match -t class -g "*" | less
-
-# Extract just file paths
-via match -t method -g "*save*" | cut -d: -f2 | sort -u
-```
-
-## Configuration
-
-### Database Location
-
-By default, VIA stores its index in `.via/index.db` within the indexed directory:
-
-```
-project/
-  .via/
-    index.db
-  src/
-    ...
-```
-
-Use `--db` to specify a custom path:
-
-```bash
-via index --db /tmp/myproject.db
-via match -t method -g "*" --db /tmp/myproject.db
-```
-
-### Ignored Files
-
-VIA respects `.gitignore` files and automatically excludes:
-- `__pycache__/` directories
-- `*.pyc` files
-- `.via/` directory
-- Files over 10MB
 
 ## Requirements
 
 - Python 3.9+
 - SQLite 3.x (included with Python)
-
-## Development
-
-```bash
-# Run tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ --cov=via
-
-# Type checking
-mypy via/
-```
+- Pygments (for syntax highlighting)
 
 ## License
 

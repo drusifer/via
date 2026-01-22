@@ -18,21 +18,21 @@ class TestSplitOnVia:
     def test_two_stages_with_via(self):
         """Two stages separated by --via."""
         parser = PipelineParser()
-        argv = ['-mg', '-c', '*', '--via', '-rT']
+        argv = ['-mg', '-c', '*', '--via', '-oT']
         segments = parser._split_on_via(argv)
         assert len(segments) == 2
         assert segments[0] == ['-mg', '-c', '*']
-        assert segments[1] == ['-rT']
+        assert segments[1] == ['-oT']
 
     def test_three_stages_with_via(self):
         """Three stages separated by --via flags."""
         parser = PipelineParser()
-        argv = ['-mg', '-c', '*', '--via', '-mr', '-m', '__*__', '--via', '-rDm']
+        argv = ['-mg', '-c', '*', '--via', '-mr', '-m', '__*__', '--via', '-oDm']
         segments = parser._split_on_via(argv)
         assert len(segments) == 3
         assert segments[0] == ['-mg', '-c', '*']
         assert segments[1] == ['-mr', '-m', '__*__']
-        assert segments[2] == ['-rDm']
+        assert segments[2] == ['-oDm']
 
     def test_empty_argv(self):
         """Empty argv returns empty list."""
@@ -104,40 +104,40 @@ class TestParseRenderStage:
     """Test parsing render stages."""
 
     def test_render_table_markdown(self):
-        """Parse render table markdown: -rTm"""
+        """Parse render table markdown: -oTm"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-rTm'])
+        stage = parser._parse_stage(['-oTm'])
         assert stage.stage_type == StageType.RENDER
         assert stage.args.render_type == 'table'
         assert stage.args.format == 'md'
 
     def test_render_list(self):
-        """Parse render list: -rL"""
+        """Parse render list: -oL"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-rL'])
+        stage = parser._parse_stage(['-oL'])
         assert stage.stage_type == StageType.RENDER
         assert stage.args.render_type == 'list'
 
     def test_render_with_context(self):
-        """Parse render with context: -rR -C 5"""
+        """Parse render with context: -oR -C 5"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-rR', '-C', '5'])
+        stage = parser._parse_stage(['-oR', '-C', '5'])
         assert stage.stage_type == StageType.RENDER
         assert stage.args.render_type == 'raw'
         assert stage.args.context == 5
 
     def test_render_with_before_after_context(self):
-        """Parse render with -A and -B: -rR -A 3 -B 2"""
+        """Parse render with -A and -B: -oR -A 3 -B 2"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-rR', '-A', '3', '-B', '2'])
+        stage = parser._parse_stage(['-oR', '-A', '3', '-B', '2'])
         assert stage.stage_type == StageType.RENDER
         assert stage.args.after_context == 3
         assert stage.args.before_context == 2
 
     def test_render_with_theme(self):
-        """Parse render with theme: -rF --theme monokai"""
+        """Parse render with theme: -oF --theme monokai"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-rF', '--theme', 'monokai'])
+        stage = parser._parse_stage(['-oF', '--theme', 'monokai'])
         assert stage.stage_type == StageType.RENDER
         assert stage.args.render_type == 'formatted'
         assert stage.args.theme == 'monokai'
@@ -147,9 +147,9 @@ class TestParseMultiStage:
     """Test parsing multi-stage pipelines."""
 
     def test_two_stage_pipeline(self):
-        """Parse two-stage pipeline: -mg -c '*' --via -rT"""
+        """Parse two-stage pipeline: -mg -c '*' --via -oT"""
         parser = PipelineParser()
-        argv = ['-mg', '-c', '*', '--via', '-rT']
+        argv = ['-mg', '-c', '*', '--via', '-oT']
         stages = parser.parse(argv)
         assert len(stages) == 2
         assert stages[0].stage_type == StageType.MATCH
@@ -158,7 +158,7 @@ class TestParseMultiStage:
     def test_three_stage_pipeline(self):
         """Parse three-stage pipeline: match -> match -> render"""
         parser = PipelineParser()
-        argv = ['-mg', '-c', '*Match*', '--via', '-mr', '-m', '__*__', '--via', '-rDm']
+        argv = ['-mg', '-c', '*Match*', '--via', '-mr', '-m', '__*__', '--via', '-oDm']
         stages = parser.parse(argv)
         assert len(stages) == 3
         assert stages[0].stage_type == StageType.MATCH

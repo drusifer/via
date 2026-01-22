@@ -13,10 +13,12 @@ $Id$
 License: GPL-3.0
 """
 
+import os
 from typing import Iterator, Optional
 
 from .base import Renderer
 from .formatters.code_formatters import CodeFormatter, AsciiCodeFormatter
+from .utils.source_extraction import extract_source
 from ..core.match_record import MatchRecord
 
 
@@ -50,6 +52,7 @@ class FormattedRenderer(Renderer):
                 context: Lines to show before and after (-C)
                 theme: Color theme name
                 show_line_numbers: Whether to show line numbers
+                nodelims: Disable delimiter headers (default: False)
 
         Returns:
             Syntax-highlighted source code string
@@ -60,6 +63,7 @@ class FormattedRenderer(Renderer):
         context = options.get('context', 0)
         theme = options.get('theme')
         show_line_numbers = options.get('show_line_numbers', False)
+        nodelims = options.get('nodelims', False)
 
         # -C overrides -A and -B
         if context:
@@ -74,12 +78,13 @@ class FormattedRenderer(Renderer):
                 continue
 
             # Extract source
-            source = self._extract_source(
+            source = extract_source(
                 record.file_path,
                 record.byte_offset,
                 record.byte_length,
                 before_context,
-                after_context
+                after_context,
+                read_full_file=False  # FormattedRenderer requires byte_offset
             )
 
             if not source:
@@ -97,86 +102,18 @@ class FormattedRenderer(Renderer):
                 show_line_numbers=show_line_numbers
             )
 
-            # Add header
-            header = self._format_header(record)
-            outputs.append(f'{header}\n{formatted}')
+            if nodelims:
+                outputs.append(formatted)
+            else:
+                # Calculate end line from source
+                line_count = source.count('\n') + 1
+                end_line = record.line_number + line_count - 1
+
+                # Add delimiter header
+                header = self._format_header(record, end_line)
+                outputs.append(f'{header}\n{formatted}')
 
         return '\n\n'.join(outputs)
-
-    def _extract_source(
-        self,
-        file_path: str,
-        byte_offset: Optional[int],
-        byte_length: Optional[int],
-        before_context: int = 0,
-        after_context: int = 0
-    ) -> str:
-        """Extract source code from file.
-
-        Args:
-            file_path: Path to source file
-            byte_offset: Starting byte offset
-            byte_length: Number of bytes to read
-            before_context: Lines to include before match
-            after_context: Lines to include after match
-
-        Returns:
-            Extracted source code string
-        """
-        try:
-            with open(file_path, 'rb') as f:
-                content = f.read()
-        except (IOError, OSError):
-            return ''
-
-        # If no byte_offset, can't extract specific symbol
-        if byte_offset is None:
-            return ''
-
-        # Extract the matched region
-        start = byte_offset
-        end = byte_offset + (byte_length or 0)
-
-        # Add context lines if requested
-        if before_context > 0:
-            start = self._find_context_start(content, start, before_context)
-        if after_context > 0:
-            end = self._find_context_end(content, end, after_context)
-
-        # Extract and decode
-        extracted = content[start:end]
-        return extracted.decode('utf-8', errors='replace')
-
-    def _find_context_start(self, content: bytes, start: int, num_lines: int) -> int:
-        """Find start position including N context lines before."""
-        pos = start
-        lines_found = 0
-
-        while pos > 0 and lines_found <= num_lines:
-            pos -= 1
-            if content[pos:pos+1] == b'\n':
-                lines_found += 1
-
-        if content[pos:pos+1] == b'\n':
-            pos += 1
-
-        return pos
-
-    def _find_context_end(self, content: bytes, end: int, num_lines: int) -> int:
-        """Find end position including N context lines after."""
-        pos = end
-        content_len = len(content)
-
-        if pos < content_len and content[pos:pos+1] == b'\n':
-            pos += 1
-
-        lines_found = 0
-        while pos < content_len and lines_found < num_lines:
-            if content[pos:pos+1] == b'\n':
-                lines_found += 1
-            pos += 1
-
-        return pos
 
     def _get_language(self, file_path: str) -> str:
         """Get programming language from file extension.
@@ -214,18 +151,24 @@ class FormattedRenderer(Renderer):
         }
 
         # Get extension
-        import os
         _, ext = os.path.splitext(file_path.lower())
 
         return ext_map.get(ext, 'text')
 
-    def _format_header(self, record: MatchRecord) -> str:
-        """Format header with symbol info.
+    def _format_header(self, record: MatchRecord, end_line: int) -> str:
+        """Format the delimiter header for a match.
 
         Args:
-            record: MatchRecord to format header for
+            record: The match record
+            end_line: Calculated end line number
 
         Returns:
-            Header string
+            Formatted header string
         """
-        return f'# {record.qualified_name} ({record.file_path}:{record.line_number})'
+        divider = '#' * 60
+        return (
+            f"{divider}\n"
+            f"# {record.file_path}:{record.line_number}-{end_line}\n"
+            f"#     {record.symbol_type} *{record.symbol_name}*\n"
+            f"{divider}"
+        )

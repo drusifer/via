@@ -39,9 +39,10 @@ class MatchOp(Enum):
     - op_name: Display name for the operator
     - sql_op: The SQL operator string (=, GLOB, LIKE, REGEXP)
     - needs_escaping: Whether single quotes in patterns need escaping
+
+    Tuple format: (op_name, sql_operator, needs_escaping)
     """
 
-    # (op_name, sql_operator, needs_escaping)
     EXACT = ('exact', '=', True)
     GLOB = ('glob', 'GLOB', True)
     LIKE = ('like', 'LIKE', True)

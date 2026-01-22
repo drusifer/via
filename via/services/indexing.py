@@ -15,10 +15,9 @@ License: GPL-3.0
 """
 
 import logging
-import os
 import time
 from dataclasses import dataclass
-from typing import Optional, Callable, List
+from typing import Optional, Callable
 
 from ..core.constants import DEFAULT_MAX_FILE_SIZE, PROGRESS_UPDATE_INTERVAL
 from ..core.discovery import FileDiscovery, DiscoveredFile
@@ -270,21 +269,37 @@ class IndexingService:
         Returns:
             Dict with entity counts
         """
-        # Check if file already exists
+        file_id = self._upsert_file(file_info, parse_result)
+        self._store_entities(file_id, file_info, parse_result)
+        self._store_symbols(file_info, parse_result)
+
+        return {
+            'functions': len(parse_result.functions) + sum(len(c.methods) for c in parse_result.classes),
+            'classes': len(parse_result.classes),
+            'imports': len(parse_result.imports),
+            'globals': len(parse_result.globals),
+        }
+
+    def _upsert_file(self, file_info: DiscoveredFile, parse_result) -> int:
+        """Insert or update file record, clearing old entities if updating.
+
+        Args:
+            file_info: File information
+            parse_result: Parse result with language info
+
+        Returns:
+            file_id for the inserted/updated file
+        """
         existing = self.db_store.get_file_by_path(file_info.path)
 
         if existing:
-            # Update existing file
             file_id = existing['id']
-
             # Delete old entities (will be replaced)
             self.db_store.delete_functions_by_file(file_id)
             self.db_store.delete_classes_by_file(file_id)
             self.db_store.delete_imports_by_file(file_id)
             self.db_store.delete_globals_by_file(file_id)
-            # Delete old symbols for this file
             self.db_store.delete_symbols_by_file(file_info.path)
-
             # Update file record
             self.db_store.update_file(
                 file_id=file_id,
@@ -294,7 +309,6 @@ class IndexingService:
                 parsed=True,
             )
         else:
-            # Insert new file
             file_id = self.db_store.insert_file(
                 path=file_info.path,
                 language=parse_result.language,
@@ -302,9 +316,17 @@ class IndexingService:
                 mtime=file_info.mtime,
                 parsed=True,
             )
+        return file_id
 
+    def _store_entities(self, file_id: int, file_info: DiscoveredFile, parse_result) -> None:
+        """Store classes, methods, functions, imports, and globals.
+
+        Args:
+            file_id: Database file ID
+            file_info: File information
+            parse_result: Parse result with entities
+        """
         # Store classes first (needed for method linking)
-        class_id_map = {}  # Map class name to class_id
         for cls in parse_result.classes:
             class_id = self.db_store.insert_class(
                 file_id=file_id,
@@ -317,8 +339,6 @@ class IndexingService:
                 decorators=cls.decorators,
                 docstring=cls.docstring,
             )
-            class_id_map[cls.name] = class_id
-
             # Store methods
             for method in cls.methods:
                 self.db_store.insert_function(
@@ -372,8 +392,14 @@ class IndexingService:
                 byte_length=glob.byte_length,
             )
 
-        # Populate symbols table (denormalized for fast matching)
-        # Insert class symbols
+    def _store_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Populate symbols table (denormalized for fast matching).
+
+        Args:
+            file_info: File information
+            parse_result: Parse result with entities
+        """
+        # Insert class and method symbols
         for cls in parse_result.classes:
             qualified_name = _calculate_qualified_name(file_info.path, cls.name)
             self.db_store.insert_symbol(
@@ -386,8 +412,6 @@ class IndexingService:
                 byte_length=cls.byte_length,
                 parent_name=None,
             )
-
-            # Insert method symbols
             for method in cls.methods:
                 qualified_name = _calculate_qualified_name(file_info.path, method.name, parent_class=cls.name)
                 self.db_store.insert_symbol(
@@ -417,7 +441,6 @@ class IndexingService:
 
         # Insert import symbols
         for imp in parse_result.imports:
-            # Use module name as the symbol name
             symbol_name = imp.name if imp.name else imp.module
             qualified_name = imp.module if not imp.name else f"{imp.module}.{imp.name}"
             self.db_store.insert_symbol(
@@ -446,37 +469,28 @@ class IndexingService:
             )
 
         # Insert file path symbols (for filename and filepath matching)
-        # Filename symbol (just the basename)
+        # Both match on basename for usability; filepath shows full path in output
         filename = file_info.path.split('/')[-1]
         self.db_store.insert_symbol(
             symbol_name=filename,
             symbol_type='filename',
             file_path=file_info.path,
             line_number=0,
-            qualified_name=file_info.path,
+            qualified_name=filename,  # Just filename for -N output
             byte_offset=None,
             byte_length=None,
             parent_name=None,
         )
-
-        # Filepath symbol (full path)
         self.db_store.insert_symbol(
-            symbol_name=file_info.path,
+            symbol_name=filename,  # Match on basename, not full path
             symbol_type='filepath',
             file_path=file_info.path,
             line_number=0,
-            qualified_name=file_info.path,
+            qualified_name=file_info.path,  # Full path for -F output
             byte_offset=None,
             byte_length=None,
             parent_name=None,
         )
-
-        return {
-            'functions': len(parse_result.functions) + sum(len(c.methods) for c in parse_result.classes),
-            'classes': len(parse_result.classes),
-            'imports': len(parse_result.imports),
-            'globals': len(parse_result.globals),
-        }
 
     def _store_unparsed_file(self, file_info: DiscoveredFile) -> None:
         """Store file as unparsed."""

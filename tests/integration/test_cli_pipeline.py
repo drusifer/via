@@ -191,9 +191,9 @@ class TestPipelineWithRender:
     """Test pipeline with render stages."""
 
     def test_match_and_render_list(self, indexed_project):
-        """Test match with list render: via -g '*' -c --via -rL"""
+        """Test match with list render: via -g '*' -c --via -oL"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-c", "--via", "-rL"],
+            [sys.executable, "-m", "via", "-g", "*", "-c", "--via", "-oL"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,

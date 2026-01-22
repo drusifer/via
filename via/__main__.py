@@ -15,10 +15,8 @@ License: GPL-3.0
 
 import argparse
 import logging
-import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 from .core.constants import (
     VERSION,
@@ -50,9 +48,52 @@ def _create_parser() -> argparse.ArgumentParser:
     Returns:
         Configured ArgumentParser
     """
+    epilog = """\
+Pipeline Syntax (recommended):
+  via -g PATTERN [TYPE_FLAGS] [OPTIONS] [--via OUTPUT_FLAGS]
+
+  Match flags:
+    -g PATTERN    Glob pattern match (default)
+    -r PATTERN    Regex pattern match
+    -s PATTERN    SQL LIKE pattern match
+
+  Type flags (optional - omit to search all types):
+    -c            Classes
+    -m            Methods
+    -f            Functions
+    -i            Imports
+    -G            Globals
+    -F            Files (filepath)
+    -N            Files (filename)
+
+  Options:
+    -n LIMIT      Limit results (default: 10, 0 = unlimited)
+    -I            Case-insensitive match
+
+  Output flags (after --via):
+    -oL           List output (one per line)
+    -oT           Table output (ASCII table)
+    -oR           Raw source code
+    -oF           Formatted with syntax highlighting
+    -B N          Lines before match (context)
+    -A N          Lines after match (context)
+    -C N          Lines before and after (context)
+    --nodelims    Disable delimiter headers between matches
+
+Examples:
+  via index .                      Index current directory
+  via -g '*main*'                  All symbols matching *main*
+  via -g '*' -c                    All classes
+  via -g 'Test*' -f -n 10          First 10 functions matching Test*
+  via -g '*' -c --via -oT          Classes in table format
+  via -g 'User*' -c --via -oF      Classes with syntax highlighting
+  via -g '*' -f --via -oR -C 3     Functions with 3 lines context
+"""
+
     parser = argparse.ArgumentParser(
         prog="via",
         description="VIA - Python codebase indexing and querying tool",
+        epilog=epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -187,6 +228,22 @@ def _create_parser() -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+def _determine_match_op(args: argparse.Namespace) -> MatchOp:
+    """Determine match operator from command-line flags.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        MatchOp enum value
+    """
+    if args.regex:
+        return MatchOp.REGEXP
+    if args.sql:
+        return MatchOp.LIKE
+    return MatchOp.GLOB
 
 
 def _progress_callback(message: str, current: int, total: int) -> None:
@@ -334,12 +391,7 @@ def _run_match_command(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
     # Determine match operator from flags
-    if args.regex:
-        match_op = MatchOp.REGEXP
-    elif args.sql:
-        match_op = MatchOp.LIKE
-    else:
-        match_op = MatchOp.GLOB  # default
+    match_op = _determine_match_op(args)
 
     # Parse symbol type
     try:

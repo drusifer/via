@@ -14,7 +14,7 @@ License: GPL-3.0
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict
 
 from ...core.match_record import MatchRecord
 

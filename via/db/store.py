@@ -17,7 +17,6 @@ License: GPL-3.0
 import os
 import sqlite3
 import time
-from pathlib import Path
 from typing import Optional, List, Dict, Any, Iterator
 
 from .schema import (
@@ -25,7 +24,7 @@ from .schema import (
     CREATE_INDEXES,
     SCHEMA_VERSION,
 )
-from ..core.types import SymbolType, MatchOp, MatchResult
+from ..core.types import SymbolType, MatchOp
 from ..core.match_record import MatchRecord, MatchRecordFactory
 class DatabaseStore:
     """Manages SQLite database for code index."""
@@ -799,7 +798,7 @@ class DatabaseStore:
 
     def match(
         self,
-        symbol_type: SymbolType,
+        symbol_type: Optional[SymbolType],
         match_op: MatchOp,
         pattern: str,
         case_sensitive: bool = True,
@@ -809,7 +808,7 @@ class DatabaseStore:
         Match symbols using denormalized symbols table.
 
         Args:
-            symbol_type: SymbolType enum value
+            symbol_type: SymbolType enum value, or None to match all types
             match_op: MatchOp enum value
             pattern: Pattern to match (user provides wildcards/regex)
             case_sensitive: Whether matching is case-sensitive
@@ -826,8 +825,13 @@ class DatabaseStore:
             raise RuntimeError("Database not connected")
 
         # Build WHERE clause
-        where_parts = ["symbol_type = ?"]
-        params: List[Any] = [symbol_type.value]
+        where_parts: List[str] = []
+        params: List[Any] = []
+
+        # Add symbol type filter only if specified
+        if symbol_type is not None:
+            where_parts.append("symbol_type = ?")
+            params.append(symbol_type.value)
 
         # Add name match clause
         column = "symbol_name"
