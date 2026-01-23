@@ -26,6 +26,9 @@ class ListRenderer(Renderer):
     type:file:line:qualified:@byte+len
     """
 
+    HELP = "-oL, --list: One result per line (default)"
+    FLAG = "-oL"
+
     def render(self, records: Iterator[MatchRecord], **options) -> str:
         """Render records as simple list.
 

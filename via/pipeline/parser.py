@@ -89,7 +89,7 @@ class PipelineParser:
 
     def _is_match_stage(self, args: List[str]) -> bool:
         """Check if args indicate a match stage."""
-        match_flags = {'-m', '-g', '-r', '-s', '-c', '-f', '-i', '-G', '-F', '-N'}
+        match_flags = {'-m', '-g', '-r', '-s', '-c', '-f', '-i', '-G', '-F', '-N', '-H'}
         return any(arg in match_flags for arg in args)
 
     def _is_render_stage(self, args: List[str]) -> bool:
@@ -247,7 +247,7 @@ class PipelineParser:
 
         # Symbol type (mutually exclusive via action='store_const')
         parser.add_argument('-t', '--type', dest='symbol_type',
-                          choices=['class', 'method', 'function', 'import', 'global', 'filepath', 'filename'])
+                          choices=['class', 'method', 'function', 'import', 'global', 'filepath', 'filename', 'header'])
         parser.add_argument('-c', '--class', dest='symbol_type', action='store_const', const='class')
         parser.add_argument('-m', '--method', dest='symbol_type', action='store_const', const='method')
         parser.add_argument('-f', '--function', dest='symbol_type', action='store_const', const='function')
@@ -255,6 +255,7 @@ class PipelineParser:
         parser.add_argument('-G', '--global', dest='symbol_type', action='store_const', const='global')
         parser.add_argument('-F', '--file', dest='symbol_type', action='store_const', const='filepath')
         parser.add_argument('-N', '--filename', dest='symbol_type', action='store_const', const='filename')
+        parser.add_argument('-H', '--header', dest='symbol_type', action='store_const', const='header')
 
         # Match syntax (mutually exclusive)
         syntax_group = parser.add_mutually_exclusive_group()
@@ -265,6 +266,8 @@ class PipelineParser:
         # Options
         parser.add_argument('-I', '--case-insensitive', dest='case_insensitive', action='store_true', default=False)
         parser.add_argument('-n', '--limit', type=int, default=10)
+        parser.add_argument('-Q', '--qualified', dest='match_qualified', action='store_true', default=False,
+                          help='Match against qualified_name instead of symbol_name')
 
         return parser
 

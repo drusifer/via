@@ -1,3 +1,29 @@
+def find_index_db(start_path, return_root=False):
+    """
+    Walk up the directory tree from start_path to find .via/index.db.
+    
+    Args:
+        start_path: Starting directory path
+        return_root: If True, also return the project root directory
+    
+    Returns:
+        If return_root is False: Path to index.db if found, else None
+        If return_root is True: tuple of (Path to index.db, project root) if found, else (None, None)
+    """
+    from pathlib import Path
+    current = Path(start_path).resolve()
+    while True:
+        candidate = current / ".via" / "index.db"
+        if candidate.exists():
+            if return_root:
+                return candidate, current
+            return candidate
+        if current.parent == current:
+            # Reached root
+            if return_root:
+                return None, None
+            return None
+        current = current.parent
 """
 File discovery with .gitignore support.
 

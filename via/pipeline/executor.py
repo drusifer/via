@@ -10,6 +10,22 @@ import fnmatch
 import re
 
 
+def _safe_print(text: str, file=None) -> None:
+    """Print text safely, handling Unicode encoding errors.
+
+    Some terminals use latin-1 or ASCII encoding which can't handle
+    Unicode characters like emojis. This handles such cases gracefully.
+    """
+    if file is None:
+        file = sys.stdout
+    try:
+        print(text, file=file)
+    except UnicodeEncodeError:
+        encoding = getattr(file, 'encoding', 'utf-8') or 'utf-8'
+        safe_text = text.encode(encoding, errors='replace').decode(encoding)
+        print(safe_text, file=file)
+
+
 # Mapping of symbol types to their supported render types (for error messages)
 SYMBOL_RENDER_SUPPORT: Dict[str, Set[RenderType]] = {
     'class': {RenderType.LIST, RenderType.TABLE, RenderType.DIAGRAM,
@@ -99,13 +115,14 @@ class PipelineExecutor:
         pattern = args.pattern
         case_sensitive = not args.case_insensitive
         limit = args.limit
+        match_qualified = getattr(args, 'match_qualified', False)
 
         # Determine match operator (GLOB is default)
         # argparse sets pattern regardless of which flag was used
         match_op = MatchOp.GLOB  # Default
 
         # Query database
-        results = self.db.match(symbol_type, match_op, pattern, case_sensitive, limit)
+        results = self.db.match(symbol_type, match_op, pattern, case_sensitive, limit, match_qualified)
 
         # Return iterator
         return results
@@ -213,7 +230,7 @@ class PipelineExecutor:
         output = renderer.render(filter_supported(records), **render_options)
 
         if output:
-            print(output)
+            _safe_print(output)
 
         # Show helpful message for skipped types
         if skipped_types:

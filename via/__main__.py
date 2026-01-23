@@ -18,6 +18,30 @@ import logging
 import sys
 from pathlib import Path
 
+
+def _safe_print(text: str, file=None) -> None:
+    """Print text safely, handling Unicode encoding errors.
+
+    Some terminals use latin-1 or ASCII encoding which can't handle
+    Unicode characters like emojis (✅). This function handles such
+    cases gracefully by replacing unencodable characters.
+
+    Args:
+        text: The text to print
+        file: Output file (default: sys.stdout)
+    """
+    if file is None:
+        file = sys.stdout
+
+    try:
+        print(text, file=file)
+    except UnicodeEncodeError:
+        # Terminal encoding can't handle some characters
+        # Replace unencodable chars with their unicode escape or '?'
+        encoding = getattr(file, 'encoding', 'utf-8') or 'utf-8'
+        safe_text = text.encode(encoding, errors='replace').decode(encoding)
+        print(safe_text, file=file)
+
 from .core.constants import (
     VERSION,
     DEFAULT_INDEX_DIR,
@@ -36,9 +60,90 @@ from .core.types import SymbolType, MatchOp
 from .db.store import DatabaseStore
 from .parsers.registry import ParserRegistry
 from .parsers.python_parser import PythonParser
+from .parsers.markdown_parser import MarkdownParser
+from .commands.stats import StatsCommand
 from .services.indexing import IndexingService
 from .pipeline.parser import PipelineParser, PipelineParseError
 from .pipeline.executor import PipelineExecutor
+
+
+def _build_pipeline_help() -> str:
+    """Build pipeline help dynamically from interfaces.
+
+    Queries MatchRecord types and Renderers for their HELP strings
+    to build a comprehensive help message.
+    """
+    from .core.match_record import (
+        ClassMatchRecord, MethodMatchRecord, FunctionMatchRecord,
+        FileMatchRecord, ImportMatchRecord, GlobalMatchRecord, HeaderMatchRecord
+    )
+    from .renderers.list import ListRenderer
+    from .renderers.table import TableRenderer
+    from .renderers.raw import RawRenderer
+    from .renderers.formatted import FormattedRenderer
+    from .renderers.diagram import DiagramRenderer
+    from .renderers.usage import UsageRenderer
+
+    # Type flags with their HELP strings
+    type_flags = [
+        ("-c, --class", ClassMatchRecord.get_help()),
+        ("-m, --method", MethodMatchRecord.get_help()),
+        ("-f, --function", FunctionMatchRecord.get_help()),
+        ("-i, --import", ImportMatchRecord.get_help()),
+        ("-G, --global", GlobalMatchRecord.get_help()),
+        ("-F, --filepath", FileMatchRecord.get_help()),
+        ("-N, --filename", "File name only (basename)"),
+        ("-H, --header", HeaderMatchRecord.get_help()),
+        ("-t, --type TYPE", "Explicit type selection"),
+    ]
+
+    # Output renderers with their HELP strings
+    renderers = [
+        ListRenderer, TableRenderer, RawRenderer,
+        FormattedRenderer, DiagramRenderer, UsageRenderer
+    ]
+
+    type_help = "\n".join(f"  {flag:20} {desc}" for flag, desc in type_flags)
+    output_help = "\n".join(f"  {r.HELP}" for r in renderers)
+
+    return f"""\
+Pipeline Syntax (alternative to subcommands):
+  via -g PATTERN [TYPE] [OPTIONS] [--via OUTPUT]
+
+Match Flags:
+  -g, --glob PATTERN    Match using glob pattern (default)
+  -s, --sql PATTERN     Match using SQL LIKE pattern
+  -r, --regex PATTERN   Match using regex pattern
+
+Type Flags (mutually exclusive):
+{type_help}
+
+Options:
+  -n, --limit N         Limit results to N matches
+  -I, --case-insensitive  Case-insensitive matching
+  -Q, --qualified       Match against qualified_name instead of symbol_name
+
+Output Flags (after --via):
+{output_help}
+
+Format Modifiers:
+  --ascii               ASCII output (default)
+  --md                  Markdown output
+  --html                HTML output
+
+Context Lines (for -oR, -oF):
+  -A N                  Show N lines after match
+  -B N                  Show N lines before match
+  -C N                  Show N lines before and after
+
+Examples:
+  via -g '*Test*' -c              # Classes matching *Test*
+  via -g 'parse' -f -n 10         # First 10 functions with 'parse'
+  via -g '*' -c --via -oD --md    # Class diagram in Markdown
+  via -g '*match*' -f --via -oU   # Find usages of functions
+  via -g '*Install*' -H           # Headers containing 'Install'
+  via stats                       # Show database statistics
+"""
 
 
 def _create_parser() -> argparse.ArgumentParser:
@@ -48,52 +153,10 @@ def _create_parser() -> argparse.ArgumentParser:
     Returns:
         Configured ArgumentParser
     """
-    epilog = """\
-Pipeline Syntax (recommended):
-  via -g PATTERN [TYPE_FLAGS] [OPTIONS] [--via OUTPUT_FLAGS]
-
-  Match flags:
-    -g PATTERN    Glob pattern match (default)
-    -r PATTERN    Regex pattern match
-    -s PATTERN    SQL LIKE pattern match
-
-  Type flags (optional - omit to search all types):
-    -c            Classes
-    -m            Methods
-    -f            Functions
-    -i            Imports
-    -G            Globals
-    -F            Files (filepath)
-    -N            Files (filename)
-
-  Options:
-    -n LIMIT      Limit results (default: 10, 0 = unlimited)
-    -I            Case-insensitive match
-
-  Output flags (after --via):
-    -oL           List output (one per line)
-    -oT           Table output (ASCII table)
-    -oR           Raw source code
-    -oF           Formatted with syntax highlighting
-    -B N          Lines before match (context)
-    -A N          Lines after match (context)
-    -C N          Lines before and after (context)
-    --nodelims    Disable delimiter headers between matches
-
-Examples:
-  via index .                      Index current directory
-  via -g '*main*'                  All symbols matching *main*
-  via -g '*' -c                    All classes
-  via -g 'Test*' -f -n 10          First 10 functions matching Test*
-  via -g '*' -c --via -oT          Classes in table format
-  via -g 'User*' -c --via -oF      Classes with syntax highlighting
-  via -g '*' -f --via -oR -C 3     Functions with 3 lines context
-"""
-
     parser = argparse.ArgumentParser(
         prog="via",
         description="VIA - Python codebase indexing and querying tool",
-        epilog=epilog,
+        epilog=_build_pipeline_help(),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -116,116 +179,35 @@ Examples:
     # Subcommands
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # Index subcommand
+    # --- Index subcommand ---
+    from .commands.index import IndexCommand
     index_parser = subparsers.add_parser(
         "index",
+        aliases=["i"],
         help="Index a directory tree",
-        description="Index Python files in a directory tree, respecting .gitignore rules",
+        description=IndexCommand.get_help(),
     )
+    IndexCommand.add_arguments(index_parser)
 
-    index_parser.add_argument(
-        "directory",
-        nargs="?",
-        default=".",
-        help="Directory to index (default: current directory)",
-    )
-
-    index_parser.add_argument(
-        "-w",
-        "--watch",
-        action="store_true",
-        help="Watch for file changes and re-index automatically (NOT IMPLEMENTED YET)",
-    )
-
-    index_parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force re-index of all files (ignore mtime checks)",
-    )
-
-    index_parser.add_argument(
-        "--exclude",
-        action="append",
-        metavar="PATTERN",
-        help="Additional patterns to exclude (can be specified multiple times)",
-    )
-
-    index_parser.add_argument(
-        "--db",
-        metavar="PATH",
-        help=f"Database path (default: <dir>/{DEFAULT_INDEX_DIR}/{DEFAULT_DB_NAME})",
-    )
-
-    # Match subcommand
+    # --- Match subcommand ---
+    from .commands.match import MatchCommand
     match_parser = subparsers.add_parser(
         "match",
         aliases=["m"],
         help="Search indexed code using pattern matching",
-        description="Match symbols in the indexed codebase using glob, regex, or SQL LIKE patterns",
+        description=MatchCommand.get_help(),
     )
+    MatchCommand.add_arguments(match_parser)
 
-    match_parser.add_argument(
-        "pattern",
-        help="Pattern to match (wildcards depend on match syntax)",
+    # --- Stats subcommand ---
+    from .commands.stats import StatsCommand
+    stats_parser = subparsers.add_parser(
+        "stats",
+        aliases=["s"],
+        help="Show database statistics",
+        description=StatsCommand.get_help(),
     )
-
-    match_parser.add_argument(
-        "-t",
-        "--type",
-        required=True,
-        choices=["method", "class", "function", "filepath", "filename", "import", "global"],
-        help="Symbol type to match",
-    )
-
-    # Match syntax flags (mutually exclusive)
-    syntax_group = match_parser.add_mutually_exclusive_group()
-    syntax_group.add_argument(
-        "-g",
-        "--glob",
-        action="store_true",
-        default=True,
-        help="Use glob pattern matching (default, * and ? wildcards)",
-    )
-    syntax_group.add_argument(
-        "-r",
-        "--regex",
-        action="store_true",
-        help="Use regex pattern matching",
-    )
-    syntax_group.add_argument(
-        "-s",
-        "--sql",
-        action="store_true",
-        help="Use SQL LIKE pattern matching (% and _ wildcards)",
-    )
-
-    match_parser.add_argument(
-        "-I",
-        "--case-insensitive",
-        action="store_true",
-        help="Case-insensitive matching",
-    )
-
-    match_parser.add_argument(
-        "-n",
-        "--limit",
-        type=int,
-        metavar="N",
-        help="Limit results to N matches",
-    )
-
-    match_parser.add_argument(
-        "--db",
-        metavar="PATH",
-        help=f"Database path (default: <dir>/{DEFAULT_INDEX_DIR}/{DEFAULT_DB_NAME})",
-    )
-
-    match_parser.add_argument(
-        "-d",
-        "--directory",
-        default=".",
-        help="Directory containing the index (default: current directory)",
-    )
+    StatsCommand.add_arguments(stats_parser)
 
     return parser
 
@@ -310,9 +292,10 @@ def _run_index_command(args: argparse.Namespace) -> int:
             # Initialize schema
             db_store.initialize_schema()
 
-            # Initialize parser registry and register Python parser
+            # Initialize parser registry and register parsers
             parser_registry = ParserRegistry()
             parser_registry.register(PythonParser())
+            parser_registry.register(MarkdownParser())
 
             # Initialize indexing service
             indexing_service = IndexingService(db_store, parser_registry)
@@ -342,12 +325,20 @@ def _run_index_command(args: argparse.Namespace) -> int:
             print(f"Entities extracted:")
             print(f"  Functions:             {stats.functions}")
             print(f"  Classes:               {stats.classes}")
+            print(f"  Methods:               {getattr(stats, 'methods', 0)}")
             print(f"  Imports:               {stats.imports}")
             print(f"  Globals:               {stats.globals}")
+            print(f"  Headers:               {getattr(stats, 'headers', 0)}")
             print("=" * 60)
 
             if stats.failed_files > 0:
                 print(f"\nWarning: {stats.failed_files} files failed to index", file=sys.stderr)
+
+            # After indexing, run stats command for normalized output
+            from via.commands.stats import StatsCommand
+            print("\nVIA STATS (normalized):")
+            stats_cmd = StatsCommand(db_store)
+            print(stats_cmd.execute(verbose=0, as_json=False))
 
         return EXIT_SUCCESS
 
@@ -436,6 +427,52 @@ def _run_match_command(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
 
+def _run_stats_command(args: argparse.Namespace) -> int:
+    """
+    Execute the stats command.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        Exit code
+    """
+    # Resolve directory
+    target_dir = Path(args.directory).resolve()
+
+    if not target_dir.exists():
+        print(f"Error: Directory does not exist: {target_dir}", file=sys.stderr)
+        return EXIT_ERROR
+
+    # Determine database path
+    if args.db:
+        db_path = Path(args.db)
+    else:
+        index_dir = target_dir / DEFAULT_INDEX_DIR
+        db_path = index_dir / DEFAULT_DB_NAME
+
+    if not db_path.exists():
+        print(f"Error: Database not found: {db_path}", file=sys.stderr)
+        print(f"Run 'via index' first to create the index.", file=sys.stderr)
+        return EXIT_ERROR
+
+    try:
+        with DatabaseStore(str(db_path), str(target_dir)) as db_store:
+            cmd = StatsCommand(db_store)
+            result = cmd.execute(
+                verbose=args.verbose,
+                as_json=args.json
+            )
+            print(result)
+
+        return EXIT_SUCCESS
+
+    except Exception as e:
+        logging.exception("Stats command failed with exception")
+        print(f"\nError: Stats failed: {e}", file=sys.stderr)
+        return EXIT_ERROR
+
+
 def _run_pipeline_command(argv: list, directory: str = ".") -> int:
     """
     Execute a pipeline command.
@@ -476,7 +513,7 @@ def _run_pipeline_command(argv: list, directory: str = ".") -> int:
             # If executor returns iterator (no render stage), print results
             if result is not None:
                 for record in result:
-                    print(record)
+                    _safe_print(str(record))
 
         return EXIT_SUCCESS
 
@@ -513,7 +550,7 @@ def _is_pipeline_syntax(argv: list) -> bool:
     first_arg = argv[0]
 
     # Known subcommands use subcommand syntax
-    if first_arg in ('index', 'match', 'm', '--help', '-h', '--version'):
+    if first_arg in ('index', 'match', 'm', 'stats', '--help', '-h', '--version'):
         return False
 
     # Verbosity flags are ambiguous - check what follows
@@ -563,10 +600,12 @@ def main() -> int:
     setup_logging(verbosity)
 
     # Dispatch to subcommand
-    if args.command == "index":
+    if args.command in ("index", "i"):
         return _run_index_command(args)
     elif args.command in ("match", "m"):
         return _run_match_command(args)
+    elif args.command in ("stats", "s"):
+        return _run_stats_command(args)
     elif args.command is None:
         parser.print_help()
         return EXIT_SUCCESS

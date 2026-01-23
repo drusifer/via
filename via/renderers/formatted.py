@@ -33,6 +33,9 @@ class FormattedRenderer(Renderer):
     (class, method, function, global). Includes header with symbol info.
     """
 
+    HELP = "-oF, --formatted: Syntax-highlighted source (Pygments)"
+    FLAG = "-oF"
+
     def __init__(self, formatter: Optional[CodeFormatter] = None):
         """Initialize with optional code formatter.
 

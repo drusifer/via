@@ -14,6 +14,7 @@ License: GPL-3.0
 """
 
 from abc import ABC, abstractmethod
+from .interfaces import ArgumentProvider, HelpProvider
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Dict, Any, List
@@ -37,8 +38,9 @@ class FormatType(Enum):
     PNG = 'png'
 
 
+
 @dataclass
-class MatchRecord(ABC):
+class MatchRecord(ABC, ArgumentProvider, HelpProvider):
     """Abstract base class for match records.
 
     All match records share common fields for symbol data and optional
@@ -58,6 +60,15 @@ class MatchRecord(ABC):
     # Rendering metadata fields (populated by DatabaseStore)
     column_widths: Optional[Dict[str, int]] = None
     total_matches: Optional[int] = None
+
+    @classmethod
+    def add_arguments(cls, parser):
+        # Placeholder: to be implemented per record type
+        pass
+
+    @classmethod
+    def get_help(cls) -> str:
+        return getattr(cls, "HELP", f"{cls.__name__}: match record type.")
 
     @abstractmethod
     def supports_render_type(self, render_type: RenderType) -> bool:
@@ -80,7 +91,7 @@ class MatchRecord(ABC):
 
         return output
 
-
+# Add HELP strings for each record type
 @dataclass
 class ClassMatchRecord(MatchRecord):
     """Match record for class symbols.
@@ -88,6 +99,7 @@ class ClassMatchRecord(MatchRecord):
     Classes support all render types including DIAGRAM for inheritance
     visualization.
     """
+    HELP = "Class symbol: supports all render types including DIAGRAM for inheritance."
     # Optional lazy-loaded data for diagram rendering
     base_classes: Optional[List[str]] = None
     methods: Optional[List[str]] = None
@@ -111,6 +123,7 @@ class MethodMatchRecord(MatchRecord):
     Methods support most render types except DIAGRAM (only classes
     can be shown in inheritance diagrams).
     """
+    HELP = "Method symbol: supports all except DIAGRAM."
 
     def supports_render_type(self, render_type: RenderType) -> bool:
         """Methods support all except DIAGRAM."""
@@ -129,6 +142,7 @@ class FunctionMatchRecord(MatchRecord):
 
     Functions support most render types except DIAGRAM.
     """
+    HELP = "Function symbol: supports all except DIAGRAM."
 
     def supports_render_type(self, render_type: RenderType) -> bool:
         """Functions support all except DIAGRAM."""
@@ -148,6 +162,7 @@ class FileMatchRecord(MatchRecord):
     Files have limited render support - no DIAGRAM, USAGE, or FORMATTED
     since they don't contain code symbols.
     """
+    HELP = "File path symbol: supports LIST, TABLE, RAW only."
 
     def supports_render_type(self, render_type: RenderType) -> bool:
         """Files support LIST, TABLE, RAW only."""
@@ -165,6 +180,7 @@ class ImportMatchRecord(MatchRecord):
     Imports support USAGE to show where they're used but not DIAGRAM
     or FORMATTED.
     """
+    HELP = "Import symbol: supports LIST, TABLE, USAGE, RAW."
 
     def supports_render_type(self, render_type: RenderType) -> bool:
         """Imports support LIST, TABLE, USAGE, RAW."""
@@ -183,9 +199,31 @@ class GlobalMatchRecord(MatchRecord):
     Globals support FORMATTED for syntax highlighting but not DIAGRAM
     or USAGE.
     """
+    HELP = "Global variable symbol: supports LIST, TABLE, RAW, FORMATTED."
 
     def supports_render_type(self, render_type: RenderType) -> bool:
         """Globals support LIST, TABLE, RAW, FORMATTED."""
+        return render_type in {
+            RenderType.LIST,
+            RenderType.TABLE,
+            RenderType.RAW,
+            RenderType.FORMATTED,
+        }
+
+
+@dataclass
+class HeaderMatchRecord(MatchRecord):
+    """Match record for markdown header symbols.
+
+    Headers support LIST, TABLE, RAW, and FORMATTED for viewing
+    markdown content. qualified_name contains the ancestor path
+    (e.g., "Guide > Getting Started > Installation").
+    """
+    HELP = "Markdown header symbol: supports LIST, TABLE, RAW, FORMATTED."
+    header_level: int = 1  # 1-6 for h1-h6
+
+    def supports_render_type(self, render_type: RenderType) -> bool:
+        """Headers support LIST, TABLE, RAW, FORMATTED."""
         return render_type in {
             RenderType.LIST,
             RenderType.TABLE,
@@ -208,6 +246,7 @@ class MatchRecordFactory:
         'filename': FileMatchRecord,  # Same as filepath
         'import': ImportMatchRecord,
         'global': GlobalMatchRecord,
+        'header': HeaderMatchRecord,
     }
 
     def create_from_row(

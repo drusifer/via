@@ -278,6 +278,7 @@ class IndexingService:
             'classes': len(parse_result.classes),
             'imports': len(parse_result.imports),
             'globals': len(parse_result.globals),
+            'headers': len(parse_result.markdown_headings),
         }
 
     def _upsert_file(self, file_info: DiscoveredFile, parse_result) -> int:
@@ -491,6 +492,35 @@ class IndexingService:
             byte_length=None,
             parent_name=None,
         )
+
+        # Insert header symbols with hierarchical qualified names
+        header_stack: list = []  # [(level, text), ...]
+        for heading in parse_result.markdown_headings:
+            # Pop headers at same or higher level from stack
+            while header_stack and header_stack[-1][0] >= heading.level:
+                header_stack.pop()
+
+            # Build qualified name from ancestor stack
+            ancestors = [text for _, text in header_stack]
+            ancestors.append(heading.text)
+            qualified_name = ' > '.join(ancestors)
+
+            # Get parent (immediate ancestor)
+            parent_name = header_stack[-1][1] if header_stack else None
+
+            # Push current header to stack
+            header_stack.append((heading.level, heading.text))
+
+            self.db_store.insert_symbol(
+                symbol_name=heading.text,
+                symbol_type='header',
+                file_path=file_info.path,
+                line_number=heading.line_number,
+                qualified_name=qualified_name,
+                byte_offset=heading.byte_offset,
+                byte_length=heading.byte_length,
+                parent_name=parent_name,
+            )
 
     def _store_unparsed_file(self, file_info: DiscoveredFile) -> None:
         """Store file as unparsed."""

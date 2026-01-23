@@ -1,0 +1,18 @@
+{
+  "coreTools": [
+    "read_file",
+    "list_directory",
+    "pwd",
+    "run_shell_command(make)",
+    "run_shell_command(tail)",
+    "run_shell_command(via)",
+    "run_shell_command(agent/tools/chat.py)"
+  ],
+  "toolPermissions": {
+    "alwaysAllow": [
+      "read_file",
+      "list_directory",
+      "pwd"
+    ]
+  }
+}

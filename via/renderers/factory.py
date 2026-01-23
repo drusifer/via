@@ -20,6 +20,8 @@ from .list import ListRenderer
 from .table import TableRenderer
 from .raw import RawRenderer
 from .formatted import FormattedRenderer
+from .diagram import DiagramRenderer
+from .usage import UsageRenderer
 from .formatters.table_formatters import (
     AsciiTableFormatter,
     MarkdownTableFormatter,
@@ -29,6 +31,16 @@ from .formatters.code_formatters import (
     AsciiCodeFormatter,
     HtmlCodeFormatter,
     MarkdownCodeFormatter,
+)
+from .formatters.diagram_formatters import (
+    MermaidAsciiFormatter,
+    MermaidMarkdownFormatter,
+    MermaidHtmlFormatter,
+)
+from .formatters.usage_formatters import (
+    AsciiUsageFormatter,
+    MarkdownUsageFormatter,
+    HtmlUsageFormatter,
 )
 from ..core.match_record import RenderType, FormatType
 
@@ -44,6 +56,18 @@ CODE_FORMATTERS = {
     FormatType.ASCII: AsciiCodeFormatter,
     FormatType.MD: MarkdownCodeFormatter,
     FormatType.HTML: HtmlCodeFormatter,
+}
+
+DIAGRAM_FORMATTERS = {
+    FormatType.ASCII: MermaidAsciiFormatter,
+    FormatType.MD: MermaidMarkdownFormatter,
+    FormatType.HTML: MermaidHtmlFormatter,
+}
+
+USAGE_FORMATTERS = {
+    FormatType.ASCII: AsciiUsageFormatter,
+    FormatType.MD: MarkdownUsageFormatter,
+    FormatType.HTML: HtmlUsageFormatter,
 }
 
 
@@ -81,8 +105,16 @@ class RendererFactory:
             formatter_cls = CODE_FORMATTERS.get(format_type or FormatType.ASCII, AsciiCodeFormatter)
             return FormattedRenderer(formatter_cls())
 
+        if render_type == RenderType.DIAGRAM:
+            formatter_cls = DIAGRAM_FORMATTERS.get(format_type or FormatType.ASCII, MermaidAsciiFormatter)
+            return DiagramRenderer(formatter_cls())
+
+        if render_type == RenderType.USAGE:
+            formatter_cls = USAGE_FORMATTERS.get(format_type or FormatType.ASCII, AsciiUsageFormatter)
+            return UsageRenderer(formatter_cls())
+
         # Show helpful error for unimplemented render types
-        implemented = ['list (-oL)', 'table (-oT)', 'raw (-oR)', 'formatted (-oF)']
+        implemented = ['list (-oL)', 'table (-oT)', 'raw (-oR)', 'formatted (-oF)', 'diagram (-oD)', 'usage (-oU)']
         raise ValueError(
             f"Render type '{render_type.value}' is not implemented yet. "
             f"Available: {', '.join(implemented)}"

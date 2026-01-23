@@ -15,7 +15,8 @@ License: GPL-3.0
 
 import pytest
 import sys
-from via.__main__ import _create_parser
+import io
+from via.__main__ import _create_parser, _safe_print
 from via.core.constants import EXIT_SUCCESS
 
 
@@ -184,3 +185,59 @@ class TestCLIParser:
         # index --help should also work
         with pytest.raises(SystemExit):
             parser.parse_args(['index', '--help'])
+
+
+class TestSafePrint:
+    """Tests for Unicode-safe printing."""
+
+    def test_safe_print_ascii_text(self):
+        """Test _safe_print with plain ASCII text."""
+        output = io.StringIO()
+        _safe_print("Hello, world!", file=output)
+        assert output.getvalue() == "Hello, world!\n"
+
+    def test_safe_print_unicode_text(self):
+        """Test _safe_print with Unicode characters."""
+        output = io.StringIO()
+        _safe_print("Hello ✅ world 🌍", file=output)
+        assert "Hello" in output.getvalue()
+        assert "world" in output.getvalue()
+
+    def test_safe_print_with_emoji_in_header(self):
+        """Test _safe_print with emoji (like in markdown headers)."""
+        output = io.StringIO()
+        text = "header:/path/to/file.md:10:Section ✅ Complete:@100+50"
+        _safe_print(text, file=output)
+        assert "header:" in output.getvalue()
+        assert "/path/to/file.md" in output.getvalue()
+
+    def test_safe_print_latin1_fallback(self):
+        """Test _safe_print handles encoding errors gracefully."""
+        # Create a mock file with latin-1 encoding that will fail on emoji
+        class Latin1File:
+            encoding = 'latin-1'
+            def __init__(self):
+                self.content = ""
+            def write(self, text):
+                # Simulate latin-1 encoding behavior
+                self.content += text.encode('latin-1', errors='replace').decode('latin-1')
+
+        mock_file = Latin1File()
+        # This should not raise an error
+        _safe_print("Test ✅ emoji", file=mock_file)
+        assert "Test" in mock_file.content
+
+    def test_safe_print_empty_string(self):
+        """Test _safe_print with empty string."""
+        output = io.StringIO()
+        _safe_print("", file=output)
+        assert output.getvalue() == "\n"
+
+    def test_safe_print_multiline(self):
+        """Test _safe_print with multiline text."""
+        output = io.StringIO()
+        _safe_print("Line 1\nLine 2\nLine 3", file=output)
+        result = output.getvalue()
+        assert "Line 1" in result
+        assert "Line 2" in result
+        assert "Line 3" in result

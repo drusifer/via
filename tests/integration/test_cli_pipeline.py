@@ -239,3 +239,19 @@ class TestPipelineErrorHandling:
         )
         assert result.returncode != 0
         assert "database" in result.stderr.lower() or "index" in result.stderr.lower()
+
+
+class TestChainedPipeline:
+    """Test chained pipeline execution."""
+
+    def test_chained_match_with_regex(self, indexed_project):
+        """Test chained match with regex: via -g '*' -m --via -r '^test.*' -m"""
+        result = subprocess.run(
+            [sys.executable, "-m", "via", "-g", "*", "-m", "--via", "-r", "^test.*", "-m"],
+            cwd=str(indexed_project),
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
+        assert "test_method" in result.stdout
+        assert "another_method" not in result.stdout

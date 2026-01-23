@@ -47,9 +47,13 @@ class TestSymbolTypeEnum:
         """Test GLOBAL enum value."""
         assert SymbolType.GLOBAL.value == 'global'
 
+    def test_header_type(self):
+        """Test HEADER enum value."""
+        assert SymbolType.HEADER.value == 'header'
+
     def test_symbol_type_count(self):
-        """Test that we have exactly 7 symbol types."""
-        assert len(SymbolType) == 7
+        """Test that we have exactly 8 symbol types."""
+        assert len(SymbolType) == 8
 
 
 class TestMatchOpEnum:

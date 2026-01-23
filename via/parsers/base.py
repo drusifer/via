@@ -14,6 +14,7 @@ License: GPL-3.0
 """
 
 from abc import ABC, abstractmethod
+from ..core.interfaces import ArgumentProvider, HelpProvider
 from dataclasses import dataclass, field
 from typing import List, Optional, Set
 @dataclass
@@ -93,8 +94,18 @@ class MarkdownHeadingEntity:
     line_number: int
     byte_offset: int
     byte_length: int
-class ParserABC(ABC):
+
+class ParserABC(ABC, ArgumentProvider, HelpProvider):
     """Abstract base class for language parsers."""
+
+    @classmethod
+    def add_arguments(cls, parser):
+        # Placeholder: to be implemented per parser
+        pass
+
+    @classmethod
+    def get_help(cls) -> str:
+        return getattr(cls, "HELP", f"{cls.__name__}: parser.")
 
     @abstractmethod
     def can_parse(self, file_path: str) -> bool:

@@ -802,7 +802,8 @@ class DatabaseStore:
         match_op: MatchOp,
         pattern: str,
         case_sensitive: bool = True,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
+        match_qualified: bool = False
     ) -> Iterator[MatchRecord]:
         """
         Match symbols using denormalized symbols table.
@@ -813,6 +814,7 @@ class DatabaseStore:
             pattern: Pattern to match (user provides wildcards/regex)
             case_sensitive: Whether matching is case-sensitive
             limit: Optional result limit (0 = unlimited, None = default 10)
+            match_qualified: If True, match against qualified_name instead of symbol_name
 
         Yields:
             MatchRecord objects with complete position data and metadata
@@ -834,9 +836,10 @@ class DatabaseStore:
             params.append(symbol_type.value)
 
         # Add name match clause
-        column = "symbol_name"
+        base_column = "qualified_name" if match_qualified else "symbol_name"
+        column = base_column
         if not case_sensitive:
-            column = "LOWER(symbol_name)"
+            column = f"LOWER({base_column})"
             pattern = pattern.lower()
 
         # Escape pattern if needed
@@ -885,3 +888,61 @@ class DatabaseStore:
                 'parent_name': row[7],
             }
             yield self._record_factory.create_from_row(row_dict, metadata)
+
+    def count_symbols(self) -> int:
+        """Count total symbols in database.
+
+        Returns:
+            Total number of symbols
+        """
+        if not self.conn:
+            raise RuntimeError("Database not connected")
+
+        cursor = self.conn.execute("SELECT COUNT(*) FROM symbols")
+        row = cursor.fetchone()
+        return row[0] if row else 0
+
+    def count_files(self) -> int:
+        """Count unique files in database.
+
+        Returns:
+            Number of unique files
+        """
+        if not self.conn:
+            raise RuntimeError("Database not connected")
+
+        cursor = self.conn.execute("SELECT COUNT(DISTINCT file_path) FROM symbols")
+        row = cursor.fetchone()
+        return row[0] if row else 0
+
+    def count_by_type(self) -> Dict[str, int]:
+        """Count symbols by type, including markdown headers."""
+        if not self.conn:
+            raise RuntimeError("Database not connected")
+
+        cursor = self.conn.execute(
+            "SELECT symbol_type, COUNT(*) FROM symbols GROUP BY symbol_type ORDER BY COUNT(*) DESC"
+        )
+        counts = {row[0]: row[1] for row in cursor.fetchall()}
+        # Normalize: always include 'header' (markdown)
+        if 'header' not in counts:
+            counts['header'] = 0
+        return counts
+
+    def top_files_by_symbols(self, limit: int = 10) -> List[tuple]:
+        """Get files with most symbols.
+
+        Args:
+            limit: Maximum number of files to return
+
+        Returns:
+            List of (file_path, count) tuples
+        """
+        if not self.conn:
+            raise RuntimeError("Database not connected")
+
+        cursor = self.conn.execute(
+            "SELECT file_path, COUNT(*) as cnt FROM symbols GROUP BY file_path ORDER BY cnt DESC LIMIT ?",
+            (limit,)
+        )
+        return [(row[0], row[1]) for row in cursor.fetchall()]

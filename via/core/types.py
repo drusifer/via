@@ -30,6 +30,7 @@ class SymbolType(Enum):
     FILENAME = 'filename'
     IMPORT = 'import'
     GLOBAL = 'global'
+    HEADER = 'header'
 
 
 class MatchOp(Enum):

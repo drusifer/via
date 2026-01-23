@@ -28,6 +28,9 @@ class RawRenderer(Renderer):
     context around the extracted code.
     """
 
+    HELP = "-oR, --raw: Raw source code extraction"
+    FLAG = "-oR"
+
     def render(self, records: Iterator[MatchRecord], **options) -> str:
         """Render records as raw source code.
 

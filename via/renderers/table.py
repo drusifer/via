@@ -27,6 +27,9 @@ class TableRenderer(Renderer):
     Streams records using pre-computed column widths from metadata.
     """
 
+    HELP = "-oT, --table: ASCII/Markdown/HTML table output"
+    FLAG = "-oT"
+
     def __init__(self, formatter: TableFormatter):
         """Initialize with a table formatter.
 
