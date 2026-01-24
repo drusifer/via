@@ -91,9 +91,9 @@ class TestPipelineExecution:
     """Test pipeline CLI execution."""
 
     def test_simple_match_pipeline(self, indexed_project):
-        """Test simple match pipeline: via -g '*' -c"""
+        """Test simple match pipeline: via -mg '*' -tc"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-c"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,
@@ -103,9 +103,9 @@ class TestPipelineExecution:
         assert "HelperClass" in result.stdout
 
     def test_match_with_limit(self, indexed_project):
-        """Test match with limit: via -g '*' -c -n 1"""
+        """Test match with limit: via -mg '*' -tc -n 1"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-c", "-n", "1"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc", "-n", "1"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,
@@ -116,9 +116,9 @@ class TestPipelineExecution:
         assert len(lines) == 1
 
     def test_match_functions(self, indexed_project):
-        """Test match functions: via -g '*' -f"""
+        """Test match functions: via -mg '*' -tf"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-f"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tf"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,
@@ -128,9 +128,9 @@ class TestPipelineExecution:
         assert "helper_function" in result.stdout
 
     def test_match_methods(self, indexed_project):
-        """Test match methods: via -g '*' -m"""
+        """Test match methods: via -mg '*' -tm"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-m"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tm"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,
@@ -140,9 +140,9 @@ class TestPipelineExecution:
         assert "another_method" in result.stdout
 
     def test_match_with_pattern(self, indexed_project):
-        """Test match with pattern filter: via -g 'Test*' -c"""
+        """Test match with pattern filter: via -mg 'Test*' -tc"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "Test*", "-c"],
+            [sys.executable, "-m", "via", "-mg", "Test*", "-tc"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,
@@ -152,9 +152,9 @@ class TestPipelineExecution:
         assert "HelperClass" not in result.stdout
 
     def test_match_case_insensitive(self, indexed_project):
-        """Test case insensitive match: via -g 'test*' -c -I"""
+        """Test case insensitive match: via -mg 'test*' -tc -I"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "test*", "-c", "-I"],
+            [sys.executable, "-m", "via", "-mg", "test*", "-tc", "-I"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,
@@ -163,9 +163,9 @@ class TestPipelineExecution:
         assert "TestClass" in result.stdout
 
     def test_match_imports(self, indexed_project):
-        """Test match imports: via -g '*' -i"""
+        """Test match imports: via -mg '*' -ti"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-i"],
+            [sys.executable, "-m", "via", "-mg", "*", "-ti"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,
@@ -175,9 +175,9 @@ class TestPipelineExecution:
         assert "os" in result.stdout
 
     def test_match_globals(self, indexed_project):
-        """Test match globals: via -g '*' -G"""
+        """Test match globals: via -mg '*' -tg"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-G"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tg"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,
@@ -188,12 +188,12 @@ class TestPipelineExecution:
 
 
 class TestPipelineWithRender:
-    """Test pipeline with render stages."""
+    """Test pipeline with render output flags."""
 
     def test_match_and_render_list(self, indexed_project):
-        """Test match with list render: via -g '*' -c --via -oL"""
+        """Test match with list render: via -mg '*' -tc -oL"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-c", "--via", "-oL"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc", "-oL"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,
@@ -232,7 +232,7 @@ class TestPipelineErrorHandling:
         empty_dir.mkdir()
 
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-c"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc"],
             cwd=str(empty_dir),
             capture_output=True,
             text=True,
@@ -245,9 +245,9 @@ class TestChainedPipeline:
     """Test chained pipeline execution."""
 
     def test_chained_match_with_regex(self, indexed_project):
-        """Test chained match with regex: via -g '*' -m --via -r '^test.*' -m"""
+        """Test chained match with regex: via -mg '*' -tm --via -mr '^test.*' -tm"""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-m", "--via", "-r", "^test.*", "-m"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tm", "--via", "-mr", "^test.*", "-tm"],
             cwd=str(indexed_project),
             capture_output=True,
             text=True,

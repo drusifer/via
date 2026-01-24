@@ -68,54 +68,29 @@ from .pipeline.executor import PipelineExecutor
 
 
 def _build_pipeline_help() -> str:
-    """Build pipeline help dynamically from interfaces.
+    """Build pipeline help dynamically from flag groups.
 
-    Queries MatchRecord types and Renderers for their HELP strings
-    to build a comprehensive help message.
+    Uses the new flag groups for consistent prefix-based CLI:
+    - Match: -mg (glob), -mr (regex), -ms (sql)
+    - Type: -tc (class), -tf (function), -tm (method), etc.
+    - Output: -oL (list), -oT (table), -oD (diagram), etc.
+    - Format: -fa (ascii), -fm (markdown), -fh (html), -fp (png)
     """
-    from .core.match_record import (
-        ClassMatchRecord, MethodMatchRecord, FunctionMatchRecord,
-        FileMatchRecord, ImportMatchRecord, GlobalMatchRecord, HeaderMatchRecord
-    )
-    from .renderers.list import ListRenderer
-    from .renderers.table import TableRenderer
-    from .renderers.raw import RawRenderer
-    from .renderers.formatted import FormattedRenderer
-    from .renderers.diagram import DiagramRenderer
-    from .renderers.usage import UsageRenderer
+    from .core.flag_groups import MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS, FORMAT_FLAGS
 
-    # Type flags with their HELP strings
-    type_flags = [
-        ("-c, --class", ClassMatchRecord.get_help()),
-        ("-m, --method", MethodMatchRecord.get_help()),
-        ("-f, --function", FunctionMatchRecord.get_help()),
-        ("-i, --import", ImportMatchRecord.get_help()),
-        ("-G, --global", GlobalMatchRecord.get_help()),
-        ("-F, --filepath", FileMatchRecord.get_help()),
-        ("-N, --filename", "File name only (basename)"),
-        ("-H, --header", HeaderMatchRecord.get_help()),
-        ("-t, --type TYPE", "Explicit type selection"),
-    ]
-
-    # Output renderers with their HELP strings
-    renderers = [
-        ListRenderer, TableRenderer, RawRenderer,
-        FormattedRenderer, DiagramRenderer, UsageRenderer
-    ]
-
-    type_help = "\n".join(f"  {flag:20} {desc}" for flag, desc in type_flags)
-    output_help = "\n".join(f"  {r.HELP}" for r in renderers)
+    match_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in MATCH_FLAGS)
+    type_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in TYPE_FLAGS)
+    output_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in OUTPUT_FLAGS)
+    format_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in FORMAT_FLAGS)
 
     return f"""\
 Pipeline Syntax (alternative to subcommands):
-  via -g PATTERN [TYPE] [OPTIONS] [--via OUTPUT]
+  via -m<X> PATTERN -t<Y> [OPTIONS] [--via -o<Z> -f<W>]
 
-Match Flags:
-  -g, --glob PATTERN    Match using glob pattern (default)
-  -s, --sql PATTERN     Match using SQL LIKE pattern
-  -r, --regex PATTERN   Match using regex pattern
+Match Syntax Flags (-m<X>):
+{match_help}
 
-Type Flags (mutually exclusive):
+Symbol Type Flags (-t<X>):
 {type_help}
 
 Options:
@@ -123,13 +98,11 @@ Options:
   -I, --case-insensitive  Case-insensitive matching
   -Q, --qualified       Match against qualified_name instead of symbol_name
 
-Output Flags (after --via):
+Output Flags (after --via, -o<X>):
 {output_help}
 
-Format Modifiers:
-  --ascii               ASCII output (default)
-  --md                  Markdown output
-  --html                HTML output
+Format Flags (-f<X>):
+{format_help}
 
 Context Lines (for -oR, -oF):
   -A N                  Show N lines after match
@@ -137,12 +110,12 @@ Context Lines (for -oR, -oF):
   -C N                  Show N lines before and after
 
 Examples:
-  via -g '*Test*' -c              # Classes matching *Test*
-  via -g 'parse' -f -n 10         # First 10 functions with 'parse'
-  via -g '*' -c --via -oD --md    # Class diagram in Markdown
-  via -g '*match*' -f --via -oU   # Find usages of functions
-  via -g '*Install*' -H           # Headers containing 'Install'
-  via stats                       # Show database statistics
+  via -mg '*Test*' -tc              # Classes matching *Test*
+  via -mg 'parse' -tf -n 10         # First 10 functions with 'parse'
+  via -mg '*' -tc --via -oD -fm     # Class diagram in Markdown
+  via -mr '^test_.*' -tf --via -oU  # Find usages of test functions
+  via -mg '*Install*' -tH           # Headers containing 'Install'
+  via stats                         # Show database statistics
 """
 
 
@@ -535,7 +508,7 @@ def _is_pipeline_syntax(argv: list) -> bool:
     """
     Check if argv uses pipeline syntax (vs subcommand syntax).
 
-    Pipeline syntax starts with flags like -g, -c, -m, etc.
+    Pipeline syntax starts with flags like -mg, -tc, -tm, etc.
     Subcommand syntax starts with 'index', 'match', etc.
 
     Args:
@@ -561,9 +534,21 @@ def _is_pipeline_syntax(argv: list) -> bool:
         # Otherwise treat as pipeline (could be stats verbose)
         return True
 
-    # Pipeline flags
-    pipeline_flags = {'-g', '-r', '-s', '-c', '-m', '-f', '-i', '-G', '-F', '-N', '-I', '-n'}
-    if first_arg in pipeline_flags or first_arg.startswith('-r') or first_arg == 'stats':
+    # New flag groups: -m<X> match, -t<X> type, -o<X> output, -f<X> format
+    # Check for any flag in argv that matches our flag groups
+    from .core.flag_groups import get_match_short_flags, get_type_short_flags
+    match_flags = get_match_short_flags()  # {'-mg', '-mr', '-ms'}
+    type_flags = get_type_short_flags()    # {'-tc', '-tf', '-tm', ...}
+
+    for arg in argv:
+        if arg in match_flags or arg in type_flags:
+            return True
+        # Also check long forms
+        if arg.startswith('--match-') or arg.startswith('--type-'):
+            return True
+
+    # Stats command can also be pipeline
+    if first_arg == 'stats':
         return True
 
     return False

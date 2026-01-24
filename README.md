@@ -24,7 +24,7 @@ via index .
 via -g '*' -c                    # All classes
 via -g 'test_*' -f -n 5          # First 5 test functions
 via -g '*Manager' -c --via -oT   # Manager classes as table
-via -g 'User' -c --via -oF       # User class with syntax highlighting
+via -mg 'User' -tc -oF       # User class with syntax highlighting
 ```
 
 ## Documentation
@@ -121,7 +121,7 @@ via/
 1. **Streaming Architecture**: Renderers process Iterator[MatchRecord], not List
 2. **Metadata-First**: Column widths computed before streaming for consistent tables
 3. **Polymorphic Records**: Each symbol type has its own MatchRecord subclass
-4. **Pipeline Syntax**: `via -g PATTERN FLAGS --via OUTPUT_FLAGS`
+4. **Pipeline Syntax**: `via -m<X> PATTERN -t<Y> [-o<Z>] [-f<W>] [OPTIONS]`
 
 ### Running Specific Test Suites
 

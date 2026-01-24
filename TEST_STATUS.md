@@ -189,7 +189,7 @@ class MatchCommand(ArgumentProvider, HelpProvider):
             # Each type can contribute arguments
         # Register common match arguments
         parser.add_argument('-t', '--type', ...)
-        parser.add_argument('-g', '--glob', ...)
+        parser.add_argument('-mg', '--mglob', ...)
         # etc.
 ```
 
@@ -226,7 +226,7 @@ python -m via s --help      # stats
 
 # Test abbreviations
 python -m via i /path/to/project
-python -m via m -t class -g '*'
+python -m via m -t class -mg '*'
 python -m via s --json
 ```
 

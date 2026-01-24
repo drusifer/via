@@ -19,7 +19,7 @@ Sprint 3 implements an **internal pipeline architecture** that chains operations
 ### Current Limitations (Sprint 2)
 ```bash
 # Users must use Unix pipes to combine operations
-via match -t class --glob '*Match*' | via render --table --md
+via match -tc --mglob '*Match*' | via render --table --md
 
 # Verbose and hard to discover
 # Requires understanding of input format
@@ -29,10 +29,10 @@ via match -t class --glob '*Match*' | via render --table --md
 ### Solution (Sprint 3)
 ```bash
 # Single command for match + render (most common case)
-via -mg -c '*Match*' -rTm
+via -mg -tc '*Match*' -oT -fm
 
 # Internal pipeline for filtering (optional)
-via -mg -c '*Match*' --via -mr '^__.*__$' --via -rDm
+via -mg -tc '*Match*' --via -mr '^__.*__$' -oD -fm
 ```
 
 ---
@@ -46,14 +46,14 @@ The main `via` command supports **two modes**:
 **Mode A: Single Stage (No Pipeline)** - Most Common (~90% of use cases)
 ```bash
 # Match + optional render in one command
-via -mg -c '*Match*'          # Match, default list render
-via -mg -c '*Match*' -rTm     # Match, render as table in markdown
+via -mg -tc '*Match*'          # Match, default list render
+via -mg -tc '*Match*' -oT -fm     # Match, render as table in markdown
 ```
 
 **Mode B: Multi-Stage Pipeline (Optional)** - Advanced (~10% of use cases)
 ```bash
 # Chain multiple filtering stages with --via
-via -mg -c '*Match*' --via -mr -m '^__.*__$' --via -rDm
+via -mg -tc '*Match*' --via -mr -tm '^__.*__$' -oD -fm
 
 # Explanation:
 # Stage 1: Match classes matching glob '*Match*'
@@ -69,22 +69,22 @@ via -mg -c '*Match*' --via -mr -m '^__.*__$' --via -rDm
 - **Mode**: Single-stage or pipeline first stage
 - **Input**: Database (first stage only) or previous results (pipeline)
 - **Output**: MatchRecords stream
-- **Flags**: `-m` `-g/-r/-s` `-t` `-I` `-n`
-- **Example**: `-mg -c '*Match*'` = match classes with glob pattern
+- **Flags**: `-m` `-mg/-r/-s` `-t` `-I` `-n`
+- **Example**: `-mg -tc '*Match*'` = match classes with glob pattern
 
 **Stage 2+: Match (Optional)** (Filter previous results)
 - **Mode**: Pipeline only (requires `--via`)
 - **Input**: Previous stage's MatchRecords
 - **Output**: Filtered MatchRecords stream
 - **Flags**: Same as Stage 1
-- **Example**: `-mr -m '^__.*__$'` = filter to methods matching regex
+- **Example**: `-mr -tm '^__.*__$'` = filter to methods matching regex
 
 **Render: INTEGRATED** (NOT a separate stage!)
 - **Mode**: Part of any match stage (can appear on Stage 1, Stage 2, or last stage)
 - **Input**: MatchRecords from current stage
 - **Output**: Formatted strings
 - **Flags**: `-r` render_type `-a/-m/-h/-p` format `-A/-B/-C` context
-- **Example**: `-rTm` = render table in markdown format
+- **Example**: `-oT -fm` = render table in markdown format
 
 ### 3. Shorthand Flags Reference
 
@@ -95,9 +95,9 @@ via -mg -c '*Match*' --via -mr -m '^__.*__$' --via -rDm
 
 **Match Syntax** (mutually exclusive):
 ```
--g PATTERN = --glob       (shell wildcards: *, ?)
--r PATTERN = --regex      (Python regex)
--s PATTERN = --sql        (SQL LIKE: %, _)
+-mg PATTERN = --mglob       (shell wildcards: *, ?)
+-r PATTERN = --mregex      (Python regex)
+-s PATTERN = --msql        (SQL LIKE: %, _)
 ```
 
 **Symbol Types** (use with `-t` or directly):
@@ -106,7 +106,7 @@ via -mg -c '*Match*' --via -mr -m '^__.*__$' --via -rDm
 -m = --method
 -f = --function
 -i = --import
--G = --global
+-G = --mglobal
 -F = --file or --filepath
 -N = --filename
 -h = --header
@@ -114,11 +114,11 @@ via -mg -c '*Match*' --via -mr -m '^__.*__$' --via -rDm
 
 **Render Types** (use with `-r` in output format):
 ```
--rL = --list       (simple list: type:file:line:name)
--rT = --table      (tabular view with columns)
--rD = --diagram    (UML/mermaid diagram - classes only)
--rU = --usage      (usage/references patterns)
--rR = --raw        (source code with syntax highlighting)
+-oL = --list       (simple list: type:file:line:name)
+-oT = --table      (tabular view with columns)
+-oD = --diagram    (UML/mermaid diagram - classes only)
+-oU = --usage      (usage/references patterns)
+-oR = --raw        (source code with syntax highlighting)
 ```
 
 **Output Formats**:
@@ -129,7 +129,7 @@ via -mg -c '*Match*' --via -mr -m '^__.*__$' --via -rDm
 -p = --png         (image - requires rendering)
 ```
 
-**Context Control** (for `-rR` raw format):
+**Context Control** (for `-oR` raw format):
 ```
 -A N = --after N   (show N lines after symbol)
 -B N = --before N  (show N lines before symbol)
@@ -142,25 +142,25 @@ via -mg -c '*Match*' --via -mr -m '^__.*__$' --via -rDm
 
 ### Example 1: Simple Match (No Render) - Defaults to List
 ```bash
-via -mg -c '*Match*'
+via -mg -tc '*Match*'
 ```
 **Output**: List of classes matching glob pattern
 
 ### Example 2: Match + Render Table (Most Common)
 ```bash
-via -mg -c '*Match*' -rTm
+via -mg -tc '*Match*' -oT -fm
 ```
 **Output**: Classes rendered as markdown table
 
 ### Example 3: Match + Raw Code with Context
 ```bash
-via -mg -f 'calculate*' -rR -B 3 -A 3
+via -mg -tf 'calculate*' -oR -B 3 -A 3
 ```
 **Output**: Functions matching glob, raw code with 3 lines before/after
 
 ### Example 4: Match + Filter (Uses --via)
 ```bash
-via -mg -c '*Match*' --via -mr -m '^__.*__$'
+via -mg -tc '*Match*' --via -mr -tm '^__.*__$'
 ```
 **Output**: 
 - Stage 1: Find all classes matching `*Match*`
@@ -168,13 +168,13 @@ via -mg -c '*Match*' --via -mr -m '^__.*__$'
 
 ### Example 5: Full Pipeline (Match + Filter + Render)
 ```bash
-via -mg -c '*Match*' --via -mr -m '^__.*__$' -rDm
+via -mg -tc '*Match*' --via -mr -tm '^__.*__$' -oD -fm
 ```
 **Output**: Diagram showing methods of matching classes in markdown format
 
 ### Example 6: Complex Multi-Stage
 ```bash
-via -mg '*' --via -mr -g 'test_*' --via -rL
+via -mg '*' --via -mr -mg 'test_*' -oL
 ```
 **Output**:
 - Stage 1: Match all entities
@@ -191,7 +191,7 @@ via -mg '*' --via -mr -g 'test_*' --via -rL
 **Goal**: Match command can output any render format without needing separate command
 
 **Changes to `via/commands/match.py`**:
-1. Add render type arguments (`-rL`, `-rT`, `-rD`, `-rU`, `-rR`)
+1. Add render type arguments (`-oL`, `-oT`, `-oD`, `-oU`, `-oR`)
 2. Add format arguments (`-a`, `-m`, `-h`, `-p`)
 3. Add context arguments (`-A`, `-B`, `-C`)
 4. Update `execute()` to apply rendering
@@ -202,16 +202,16 @@ via -mg '*' --via -mr -g 'test_*' --via -rL
 def add_arguments(cls, parser):
     # Existing match arguments
     parser.add_argument('-m', action='store_true', help='Match mode')
-    parser.add_argument('-g', '--glob', dest='pattern')
+    parser.add_argument('-mg', '--mglob', dest='pattern')
     parser.add_argument('-t', '--type', dest='symbol_type')
     
     # NEW: Render type (mutually exclusive)
     render_group = parser.add_mutually_exclusive_group()
-    render_group.add_argument('-rL', '--list', dest='render_type', action='store_const', const='list')
-    render_group.add_argument('-rT', '--table', dest='render_type', action='store_const', const='table')
-    render_group.add_argument('-rD', '--diagram', dest='render_type', action='store_const', const='diagram')
-    render_group.add_argument('-rU', '--usage', dest='render_type', action='store_const', const='usage')
-    render_group.add_argument('-rR', '--raw', dest='render_type', action='store_const', const='raw')
+    render_group.add_argument('-oL', '--list', dest='render_type', action='store_const', const='list')
+    render_group.add_argument('-oT', '--table', dest='render_type', action='store_const', const='table')
+    render_group.add_argument('-oD', '--diagram', dest='render_type', action='store_const', const='diagram')
+    render_group.add_argument('-oU', '--usage', dest='render_type', action='store_const', const='usage')
+    render_group.add_argument('-oR', '--raw', dest='render_type', action='store_const', const='raw')
     
     # NEW: Output format (mutually exclusive)
     format_group = parser.add_mutually_exclusive_group()
@@ -352,10 +352,10 @@ def pipeline_main(stages: List[List[str]]):
 
 | Scenario | Single Stage | Pipeline | Example |
 |----------|--------------|----------|---------|
-| **Match only** | ✅ | ❌ | `via -mg -c '*'` |
-| **Match + render** | ✅ | ❌ | `via -mg -c '*' -rTm` |
-| **Match + filter** | ❌ | ✅ | `via -mg -c '*' --via -mr '^__'` |
-| **Match + filter + render** | ❌ | ✅ | `via -mg -c '*' --via -mr '^__' -rDm` |
+| **Match only** | ✅ | ❌ | `via -mg -tc '*'` |
+| **Match + render** | ✅ | ❌ | `via -mg -tc '*' -oT -fm` |
+| **Match + filter** | ❌ | ✅ | `via -mg -tc '*' --via -mr '^__'` |
+| **Match + filter + render** | ❌ | ✅ | `via -mg -tc '*' --via -mr '^__' -oD -fm` |
 | **Complexity** | Simple | Advanced | - |
 | **Use Cases** | ~90% | ~10% | - |
 
@@ -395,7 +395,7 @@ Each MatchRecord type declares what render types it supports:
 ## Key Design Principles
 
 ✅ **Render is integrated** — not a separate command or stage  
-✅ **Single command for common case** — `via -mg -c '*' -rTm` (no `--via` needed)  
+✅ **Single command for common case** — `via -mg -tc '*' -oT -fm` (no `--via` needed)  
 ✅ **Pipeline only for filtering** — use `--via` when you need multiple match stages  
 ✅ **Backward compatible** — existing `via match ...` syntax still works  
 ✅ **No Unix pipes needed** — internal pipeline is self-contained  

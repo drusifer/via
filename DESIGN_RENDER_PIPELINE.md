@@ -12,15 +12,15 @@
 ### Problem: Unix Pipes are Verbose
 ```bash
 # Old approach (verbose, hard to discover)
-via match -t class --glob '*Match*' | \
-  via match -t method --regex '^__.*__$' | \
+via match -tc --mglob '*Match*' | \
+  via match -tm --mregex '^__.*__$' | \
   via render --type diagram --format md
 ```
 
 ### Solution: Internal Pipeline with `--via` Flag
 ```bash
 # New approach (compact, self-contained)
-via -mg -c '*Match*' --via -mr -m '^__.*__$' --via -rDm
+via -mg -tc '*Match*' --via -mr -tm '^__.*__$' -oD -fm
 ```
 
 ---
@@ -34,7 +34,7 @@ The main `via` command supports **two modes**:
 **Mode A: Single Stage (No Pipeline)**
 ```bash
 # Match + Render in one command (most common)
-via -mg -c '*Match*' -rTm
+via -mg -tc '*Match*' -oT -fm
 ```
 
 **Mode B: Multi-Stage Pipeline (Optional)**
@@ -44,35 +44,35 @@ via [STAGE1_FLAGS] --via [STAGE2_FLAGS] --via [STAGE3_FLAGS]
 ```
 
 **Key Insight**: Rendering is NOT a separate stage—it's part of the MATCH command!
-- Match flags: `-m` `-g/-r/-s` `-t` `-I` `-n`
+- Match flags: `-m` `-mg/-r/-s` `-t` `-I` `-n`
 - Render flags: `-r` render_type format (applied to match output)
 - Only use `--via` when you need to FILTER previous results
 
 ### 2. Three Pipeline Stage Types
 
 **Stage 1: Match** (Search indexed database)
-- Flags: `-m` (match mode), `-g/-r/-s` (glob/regex/sql), `-t` (type), `-I` (case-insensitive), `-n` (limit)
-- Example: `-mg -c '*Match*'` = match classes with glob pattern `*Match*`
+- Flags: `-m` (match mode), `-mg/-r/-s` (glob/regex/sql), `-t` (type), `-I` (case-insensitive), `-n` (limit)
+- Example: `-mg -tc '*Match*'` = match classes with glob pattern `*Match*`
 
 **Stage 2+: Match** (Filter previous results) - OPTIONAL
 - Same flags as Stage 1
 - Operates on OUTPUT of previous stage (not entire index)
 - Only needed for chained filtering
-- Example: `-mr -m '^__.*__$'` = from previous results, match methods with regex `^__.*__$`
+- Example: `-mr -tm '^__.*__$'` = from previous results, match methods with regex `^__.*__$`
 
 **Render Stage: INTEGRATED** (NOT separate!)
 - Part of first stage, not a separate `--via` stage
 - Flags: `-r` (enable render), render_type, format, context
-- Example: `-rTm` = render Table, markdown format
+- Example: `-oT -fm` = render Table, markdown format
 - Applied AFTER matching but BEFORE any filtering
 
 ### 3. Shorthand Flags
 
 **Match Syntax**:
 ```
--g = --glob       (shell wildcards: *, ?)
--r = --regex      (Python regex)
--s = --sql        (SQL LIKE: %, _)
+-mg = --mglob       (shell wildcards: *, ?)
+-r = --mregex      (Python regex)
+-s = --msql        (SQL LIKE: %, _)
 ```
 
 **Symbol Types** (with `-t` or direct):
@@ -81,7 +81,7 @@ via [STAGE1_FLAGS] --via [STAGE2_FLAGS] --via [STAGE3_FLAGS]
 -f = --function
 -m = --method
 -i = --import
--G = --global
+-G = --mglobal
 -F = --file or --filepath
 -N = --filename
 -h = --header
@@ -111,17 +111,17 @@ via [STAGE1_FLAGS] --via [STAGE2_FLAGS] --via [STAGE3_FLAGS]
 ### Example 1: Match + Render (Most Common - NO Pipeline!)
 ```bash
 # Long form
-via match -t class --glob '*Match*' -r --table --md
+via match -tc --mglob '*Match*' -mr --table --md
 
 # Short form (same thing, no --via needed!)
-via -mg -c '*Match*' -rTm
+via -mg -tc '*Match*' -oT -fm
 ```
 
 Output: Classes matching `*Match*` rendered as markdown table
 
 ### Example 2: Match Only (No Render)
 ```bash
-via -mg -c '*Match*'
+via -mg -tc '*Match*'
 ```
 
 Output: List format (default)
@@ -129,7 +129,7 @@ Output: List format (default)
 ### Example 3: Match + Filter (Uses --via)
 ```bash
 # Find classes matching *Match*, then find their dunder methods
-via -mg -c '*Match*' --via -mr -m '^__.*__$'
+via -mg -tc '*Match*' --via -mr -tm '^__.*__$'
 
 # Explanation:
 # Stage 1: Find all classes matching *Match*
@@ -141,7 +141,7 @@ Output: Filtered methods list
 ### Example 4: Match + Filter + Render (Full Pipeline)
 ```bash
 # Match -> Filter -> Render
-via -mg -c '*Match*' --via -mr -m '^__.*__$' -rDm
+via -mg -tc '*Match*' --via -mr -tm '^__.*__$' -oD -fm
 
 # Stages:
 # 1. Find all classes matching *Match*
@@ -154,7 +154,7 @@ Output: Diagram of filtered methods
 ### Example 5: With Context
 ```bash
 # Match functions, render raw code with 3 lines before/after
-via -mg -f 'calculate*' -rR -B 3 -A 3
+via -mg -tf 'calculate*' -oR -B 3 -A 3
 
 # Context flags:
 # -A N = N lines after
@@ -219,11 +219,11 @@ class RenderCommand(ArgumentProvider, HelpProvider):
     Render match results using different output formats.
     
     Render types (use with -r):
-      -L, --list       : Simple list (type:file:line:name)
-      -T, --table      : Tabular format
-      -D, --diagram    : UML/mermaid diagram (classes only)
-      -U, --usage      : Show usage/references
-      -R, --raw        : Source code with syntax highlighting
+      -oL, --list       : Simple list (type:file:line:name)
+      -oT, --table      : Tabular format
+      -oD, --diagram    : UML/mermaid diagram (classes only)
+      -oU, --usage      : Show usage/references
+      -oR, --raw        : Source code with syntax highlighting
     
     Output formats (use with format flag):
       -a, --ascii      : Terminal output with colors
@@ -371,10 +371,10 @@ class FileMatchRecord(MatchRecord):
 via [FLAGS] [--via [FLAGS]] [--via [FLAGS]]
 
 Examples:
-  via -mg -c '*Match*'                           # Simple match
-  via -mg -c '*Match*' --via -rTm                # Match + render table
-  via -mg -c '*Match*' --via -mr '^__.*__$'      # Match + filter
-  via -mg '*' --via -mr '_.*' --via -rDm        # Full pipeline
+  via -mg -tc '*Match*'                           # Simple match
+  via -mg -tc '*Match*' -oT -fm                # Match + render table
+  via -mg -tc '*Match*' --via -mr '^__.*__$'      # Match + filter
+  via -mg '*' --via -mr '_.*' -oD -fm        # Full pipeline
 ```
 
 ---

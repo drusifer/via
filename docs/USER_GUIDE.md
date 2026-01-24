@@ -22,7 +22,7 @@ A complete guide to using VIA for indexing and searching Python codebases.
 # Clone and install
 git clone https://github.com/your-org/via.git
 cd via
-python -m venv .venv
+python -tm venv .venv
 source .venv/bin/activate
 pip install -e .
 
@@ -40,13 +40,13 @@ cd /path/to/your/python/project
 via index .
 
 # 2. Search for symbols
-via -g '*' -c              # All classes
-via -g 'test_*' -f         # Test functions
-via -g '*save*' -m         # Methods containing "save"
+via -mg '*' -tc              # All classes
+via -mg 'test_*' -tf         # Test functions
+via -mg '*save*' -tm         # Methods containing "save"
 
 # 3. View source code
-via -g 'User' -c --via -oF    # Class with syntax highlighting
-via -g 'main' -f --via -oR    # Function as raw source
+via -mg 'User' -tc -oF    # Class with syntax highlighting
+via -mg 'main' -tf -oR    # Function as raw source
 ```
 
 ---
@@ -102,16 +102,20 @@ Files indexed: 2, Files skipped: 48
 The recommended way to search uses **pipeline syntax**:
 
 ```
-via -g PATTERN [TYPE_FLAGS] [OPTIONS] [--via OUTPUT_FLAGS]
+via -m<X> PATTERN [-t<Y>...] [-o<Z>] [-f<W>] [OPTIONS]
+
+**Note on filtering**: The `--via` flag is used to chain additional match filters. For example, `via -mg '*' -tc --via -mr 'Test.*'` will first find all classes, and then filter those results to classes matching the regex 'Test.*'.
+
+**Note on multiple types**: You can specify multiple type flags to search for symbols of different types. For example, `via -mg '*' -tc -tf` will search for all classes and functions.
 ```
 
 ### Pattern Flags
 
 | Flag | Type | Wildcards | Example |
 |------|------|-----------|---------|
-| `-g` | Glob (default) | `*` any, `?` single | `-g '*save*'` |
-| `-s` | SQL LIKE | `%` any, `_` single | `-s '%save%'` |
-| `-r` | Regex | Full regex | `-r '^test_.*'` |
+| `-mg` | Glob (default) | `*` any, `?` single | `-g '*save*'` |
+| `-ms` | SQL LIKE | `%` any, `_` single | `-s '%save%'` |
+| `-mr` | Regex | Full regex | `-r '^test_.*'` |
 
 ### Type Flags
 
@@ -139,27 +143,38 @@ via -g PATTERN [TYPE_FLAGS] [OPTIONS] [--via OUTPUT_FLAGS]
 
 ```bash
 # All classes
-via -g '*' -c
+via -mg '*' -tc
 
 # Classes ending with "Manager"
-via -g '*Manager' -c
+via -mg '*Manager' -tc
 
 # Test functions (first 5)
-via -g 'test_*' -f -n 5
+via -mg 'test_*' -tf -n 5
 
 # Methods containing "save" (case-insensitive)
-via -g '*save*' -m -I
+via -mg '*save*' -tm -I
 
 # All symbols matching "main"
-via -g '*main*'
+via -mg '*main*'
 
 # Unlimited results
-via -g '*' -f -n 0
+via -mg '*' -tf -n 0
 ```
 
 ---
 
 ## Output Formats
+
+
+### Format Flags (-f<X>)
+
+| Flag | Format |
+|------|--------|
+| `-fa` | ASCII (terminal colors) |
+| `-fm` | Markdown |
+| `-fh` | HTML |
+| `-fp` | PNG image |
+
 
 Add `--via` followed by output flags to change format:
 
@@ -173,7 +188,7 @@ Add `--via` followed by output flags to change format:
 ### List Output (Default)
 
 ```bash
-via -g '*' -c -n 3
+via -mg '*' -tc -n 3
 ```
 
 Output:
@@ -186,7 +201,7 @@ class:via/db/store.py:42:DatabaseStore:@1456+8900
 ### Table Output
 
 ```bash
-via -g '*Record' -c --via -oT
+via -mg '*Record' -tc -oT
 ```
 
 Output:
@@ -201,7 +216,7 @@ Output:
 ### Raw Source Output
 
 ```bash
-via -g 'extract_source' -f --via -oR
+via -mg 'extract_source' -tf -oR
 ```
 
 Output:
@@ -225,7 +240,7 @@ def extract_source(
 ### Formatted Output (Syntax Highlighting)
 
 ```bash
-via -g 'Renderer' -c --via -oF -n 1
+via -mg 'Renderer' -tc -oF -n 1
 ```
 
 Output shows syntax-highlighted Python code with ANSI colors.
@@ -246,13 +261,13 @@ Show surrounding code with raw (`-oR`) or formatted (`-oF`) output:
 
 ```bash
 # Show 3 lines before the match
-via -g 'main' -f --via -oR -B 3
+via -mg 'main' -tf -oR -B 3
 
 # Show 5 lines after the match
-via -g 'User' -c --via -oF -A 5
+via -mg 'User' -tc -oF -A 5
 
 # Show 2 lines on each side
-via -g 'save' -m --via -oR -C 2
+via -mg 'save' -tm -oR -C 2
 ```
 
 ### Disable Headers
@@ -260,7 +275,7 @@ via -g 'save' -m --via -oR -C 2
 Use `--nodelims` to remove the delimiter headers between matches:
 
 ```bash
-via -g '*' -f --via -oR --nodelims
+via -mg '*' -tf -oR --nodelims
 ```
 
 ---
@@ -289,87 +304,87 @@ via match '%User%' -t class -s -I
 ### Find All Test Functions
 
 ```bash
-via -g 'test_*' -f
+via -mg 'test_*' -tf
 ```
 
 ### Find Classes in a Module Pattern
 
 ```bash
-via -g '*Handler' -c --via -oT
+via -mg '*Handler' -tc -oT
 ```
 
 ### View a Specific Class Implementation
 
 ```bash
-via -g 'DatabaseStore' -c --via -oF
+via -mg 'DatabaseStore' -tc -oF
 ```
 
 ### Find Methods and Show Context
 
 ```bash
-via -g '*save*' -m --via -oR -C 5
+via -mg '*save*' -tm -oR -C 5
 ```
 
 ### Count Symbols
 
 ```bash
 # Count all classes
-via -g '*' -c -n 0 | wc -l
+via -mg '*' -tc -n 0 | wc -l
 
 # Count all methods
-via -g '*' -m -n 0 | wc -l
+via -mg '*' -tm -n 0 | wc -l
 
 # Count test functions
-via -g 'test_*' -f -n 0 | wc -l
+via -mg 'test_*' -tf -n 0 | wc -l
 ```
 
 ### Find Unique Files with Matches
 
 ```bash
-via -g '*save*' -m -n 0 | cut -d: -f2 | sort -u
+via -mg '*save*' -tm -n 0 | cut -d: -tf2 | sort -u
 ```
 
 ### Search Imports
 
 ```bash
 # Find all typing imports
-via -g '*typing*' -i
+via -mg '*typing*' -ti
 
 # Find json imports
-via -g 'json' -i
+via -mg 'json' -ti
 ```
 
 ### Find Global Constants
 
 ```bash
 # Find all globals
-via -g '*' -G
+via -mg '*' -tg
 
 # Find uppercase constants
-via -g '*_*' -G
+via -mg '*_*' -tg
 ```
 
 ### Find Files by Name
 
 ```bash
 # Find test files
-via -g '*test*' -N
+via -mg '*test*' -tN
 
 # Find files in tests directory
-via -g '*tests*' -F
+via -mg '*tests*' -tF
 ```
 
 ### Complex Pipeline: Search and Format
 
 ```bash
 # Find all Renderer classes with syntax highlighting
-via -g '*Renderer' -c --via -oF
+via -mg '*Renderer' -tc -oF
 
 # Find save methods, show as table
-via -g '*save*' -m --via -oT
+via -mg '*save*' -tm -oT
 
 # Find functions, show raw source with 3 lines context
-via -g 'main' -f --via -oR -C 3
+via -mg 'main' -tf -oR -C 3
 ```
 
 ---
@@ -381,17 +396,17 @@ via -g 'main' -f --via -oR -C 3
 Run `via index .` first:
 
 ```bash
-$ via -g '*' -c
+$ via -mg '*' -tc
 Error: Database not found
 
 $ via index .
-$ via -g '*' -c
+$ via -mg '*' -tc
 # Now works
 ```
 
 ### No Results
 
-1. **Broaden pattern**: Try `via -g '*' -c` to see if anything matches
+1. **Broaden pattern**: Try `via -mg '*' -tc` to see if anything matches
 2. **Check type**: Try different type flags (`-c`, `-m`, `-f`)
 3. **Case sensitivity**: Add `-I` for case-insensitive
 4. **Re-index**: Run `via index . --force`
@@ -401,11 +416,11 @@ $ via -g '*' -c
 SQLite REGEXP requires an extension that may not be installed:
 
 ```bash
-$ via -r '^test_.*' -f
+$ via -mr '^test_.*' -tf
 Error: no such function: REGEXP
 
 # Use glob instead
-$ via -g 'test_*' -f
+$ via -mg 'test_*' -tf
 ```
 
 ### Slow Indexing
@@ -429,30 +444,30 @@ via index . -vvv             # Very verbose
 ### Search Commands
 
 ```bash
-via -g PATTERN               # Search all types
-via -g PATTERN -c            # Search classes
-via -g PATTERN -m            # Search methods
-via -g PATTERN -f            # Search functions
-via -g PATTERN -i            # Search imports
-via -g PATTERN -G            # Search globals
-via -g PATTERN -F            # Search filepaths
-via -g PATTERN -N            # Search filenames
+via -mg PATTERN               # Search all types
+via -mg PATTERN -tc            # Search classes
+via -mg PATTERN -tm            # Search methods
+via -mg PATTERN -tf            # Search functions
+via -mg PATTERN -ti            # Search imports
+via -mg PATTERN -tg            # Search globals
+via -mg PATTERN -tF            # Search filepaths
+via -mg PATTERN -tN            # Search filenames
 ```
 
 ### Output Commands
 
 ```bash
-via ... --via -oL            # List output
-via ... --via -oT            # Table output
-via ... --via -oR            # Raw source
-via ... --via -oF            # Formatted source
-via ... --via -oR -C 3       # With context lines
+via ... -oL            # List output
+via ... -oT            # Table output
+via ... -oR            # Raw source
+via ... -oF            # Formatted source
+via ... -oR -C 3       # With context lines
 ```
 
 ### Pattern Types
 
 ```bash
--g 'pattern'                 # Glob: * ?
--s 'pattern'                 # SQL LIKE: % _
--r 'pattern'                 # Regex (if available)
+-mg 'pattern'                 # Glob: * ?
+-ms 'pattern'                 # SQL LIKE: % _
+-mr 'pattern'                 # Regex (if available)
 ```

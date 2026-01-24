@@ -265,11 +265,11 @@ class TestUAT1BasicPipelineSyntax:
     def test_uat_1_1_match_classes_with_glob(self, uat_project):
         """UAT-1.1: Match classes with glob pattern.
 
-        Command: via -g '*' -c
+        Command: via -mg '*' -tc
         Expected: Lists all classes
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-c"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -282,11 +282,11 @@ class TestUAT1BasicPipelineSyntax:
     def test_uat_1_2_match_functions_with_limit(self, uat_project):
         """UAT-1.2: Match functions with limit.
 
-        Command: via -g '*' -f -n 5
-        Expected: Lists at most 5 functions
+        Command: via -mg '*' -tf -n 2
+        Expected: Lists at most 2 functions
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-f", "-n", "2"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tf", "-n", "2"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -299,11 +299,11 @@ class TestUAT1BasicPipelineSyntax:
     def test_uat_1_3_match_with_regex(self, uat_project):
         """UAT-1.3: Match with regex pattern (uses Python-side filtering).
 
-        Command: via -r 'test_.*' -f
+        Command: via -mr 'test_.*' -tf
         Expected: Lists test functions
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-r", "test_.*", "-f"],
+            [sys.executable, "-m", "via", "-mr", "test_.*", "-tf"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -314,11 +314,11 @@ class TestUAT1BasicPipelineSyntax:
     def test_uat_1_4_match_methods(self, uat_project):
         """UAT-1.4: Match methods.
 
-        Command: via -g '*' -m
+        Command: via -mg '*' -tm
         Expected: Lists all methods
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-m"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tm"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -341,11 +341,11 @@ class TestUAT2RenderPipeline:
     def test_uat_2_1_list_render(self, uat_project):
         """UAT-2.1: List render output.
 
-        Command: via -g '*' -c --via -oL
+        Command: via -mg '*' -tc -oL
         Expected: One class per line
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-c", "--via", "-oL"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc", "-oL"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -357,11 +357,11 @@ class TestUAT2RenderPipeline:
     def test_uat_2_2_table_render(self, uat_project):
         """UAT-2.2: Table render output.
 
-        Command: via -g '*' -c --via -oT
+        Command: via -mg '*' -tc -oT
         Expected: ASCII table format with columns
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-c", "--via", "-oT"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc", "-oT"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -375,11 +375,11 @@ class TestUAT2RenderPipeline:
     def test_uat_2_3_raw_render(self, uat_project):
         """UAT-2.3: Raw source code render.
 
-        Command: via -g 'Index*' -c --via -oR
+        Command: via -mg 'Index*' -tc -oR
         Expected: Raw source code output
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "Index*", "-c", "--via", "-oR"],
+            [sys.executable, "-m", "via", "-mg", "Index*", "-tc", "-oR"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -392,11 +392,11 @@ class TestUAT2RenderPipeline:
     def test_uat_2_4_formatted_render(self, uat_project):
         """UAT-2.4: Formatted render with syntax highlighting.
 
-        Command: via -g 'Index*' -c --via -oF
+        Command: via -mg 'Index*' -tc -oF
         Expected: Syntax highlighted output (contains ANSI codes or formatted)
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "Index*", "-c", "--via", "-oF"],
+            [sys.executable, "-m", "via", "-mg", "Index*", "-tc", "-oF"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -417,12 +417,12 @@ class TestUAT3ContextLines:
     def test_uat_3_1_before_context(self, uat_project):
         """UAT-3.1: Before context lines.
 
-        Command: via -g 'test_pipeline*' -f --via -oR -B 3
+        Command: via -mg 'test_pipeline*' -tf -oR -B 3
         Expected: Shows 3 lines before match
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "test_pipeline*", "-f",
-             "--via", "-oR", "-B", "3"],
+            [sys.executable, "-m", "via", "-mg", "test_pipeline*", "-tf",
+             "-oR", "-B", "3"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -434,12 +434,12 @@ class TestUAT3ContextLines:
     def test_uat_3_2_after_context(self, uat_project):
         """UAT-3.2: After context lines.
 
-        Command: via -g 'test_pipeline*' -f --via -oR -A 3
+        Command: via -mg 'test_pipeline*' -tf -oR -A 3
         Expected: Shows 3 lines after match
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "test_pipeline*", "-f",
-             "--via", "-oR", "-A", "3"],
+            [sys.executable, "-m", "via", "-mg", "test_pipeline*", "-tf",
+             "-oR", "-A", "3"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -451,12 +451,12 @@ class TestUAT3ContextLines:
     def test_uat_3_3_both_context(self, uat_project):
         """UAT-3.3: Both before and after context.
 
-        Command: via -g 'helper*' -f --via -oF -C 2
+        Command: via -mg 'helper*' -tf -oF -C 2
         Expected: Shows 2 lines before and after
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "helper*", "-f",
-             "--via", "-oF", "-C", "2"],
+            [sys.executable, "-m", "via", "-mg", "helper*", "-tf",
+             "-oF", "-C", "2"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -546,11 +546,10 @@ def test_func():
 class TestAdditionalRegressions:
     """Additional regression tests for Sprint 3."""
 
-    def test_chained_pipeline_stages(self, uat_project):
-        """Test two-stage pipeline (match -> render)."""
+    def test_match_with_list_output(self, uat_project):
+        """Test match with list output (single invocation)."""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "Index*", "-c",
-             "--via", "-oL"],
+            [sys.executable, "-m", "via", "-mg", "Index*", "-tc", "-oL"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -562,7 +561,7 @@ class TestAdditionalRegressions:
     def test_unlimited_results(self, uat_project):
         """Test -n 0 for unlimited results."""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "*", "-f", "-n", "0"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tf", "-n", "0"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,
@@ -577,7 +576,7 @@ class TestAdditionalRegressions:
     def test_case_insensitive_match(self, uat_project):
         """Test case insensitive matching with -I flag."""
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-g", "indexmanager", "-c", "-I"],
+            [sys.executable, "-m", "via", "-mg", "indexmanager", "-tc", "-I"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,

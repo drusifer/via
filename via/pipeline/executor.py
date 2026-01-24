@@ -69,6 +69,9 @@ class PipelineExecutor:
     def execute(self, stages: List[PipelineStage]) -> Optional[Iterator[MatchRecord]]:
         """Execute all stages, return final iterator or None if terminal stage.
 
+        In the new design, output flags (-oL, -oT, etc.) are part of MATCH stages.
+        The last MATCH stage's render_type determines how output is rendered.
+
         Args:
             stages: List of PipelineStage objects to execute
 
@@ -76,6 +79,7 @@ class PipelineExecutor:
             Iterator of MatchRecord if no terminal stage, None otherwise
         """
         result_iter = None
+        last_match_stage = None
 
         for stage in stages:
             if stage.stage_type == StageType.MATCH:
@@ -85,9 +89,10 @@ class PipelineExecutor:
                 # Subsequent match stages filter previous results
                 else:
                     result_iter = self._execute_filter_stage(stage, result_iter)
+                last_match_stage = stage
 
             elif stage.stage_type == StageType.RENDER:
-                # Render consumes iterator and outputs formatted results
+                # Legacy: Render consumes iterator and outputs formatted results
                 self._execute_render_stage(stage, result_iter)
                 return None  # Render is terminal stage
 
@@ -95,8 +100,15 @@ class PipelineExecutor:
                 self._execute_stats_stage(stage)
                 return None  # Stats is terminal stage
 
-        # No render stage - return iterator for caller to consume
-        # (or default to list output if result_iter exists)
+        # Check if last match stage has render_type (new design)
+        if last_match_stage and hasattr(last_match_stage.args, 'render_type'):
+            render_type = getattr(last_match_stage.args, 'render_type', None)
+            if render_type:
+                # Render using the match stage's args
+                self._execute_render_stage(last_match_stage, result_iter)
+                return None
+
+        # No render type specified - return iterator for caller to consume
         return result_iter
 
     def _execute_match_stage(self, stage: PipelineStage) -> Iterator[MatchRecord]:
@@ -110,27 +122,66 @@ class PipelineExecutor:
         """
         args = stage.args
 
-        # Extract arguments - symbol_type can be None to match all types
-        symbol_type = SymbolType(args.symbol_type) if args.symbol_type else None
+        # Extract arguments - check for symbol_types list (OR'd) or symbol_type (single)
+        symbol_types = getattr(args, 'symbol_types', None) or []
+        symbol_type = args.symbol_type if hasattr(args, 'symbol_type') else None
+
         pattern = args.pattern
         case_sensitive = not args.case_insensitive
         limit = args.limit
         match_qualified = getattr(args, 'match_qualified', False)
 
         # Determine match operator from match_syntax attribute
-        match_syntax = getattr(args, 'match_syntax', 'glob')
-        if match_syntax == 'regex':
+        # match_syntax is the suffix from flag groups: 'g' (glob), 'r' (regex), 's' (sql)
+        match_syntax = getattr(args, 'match_syntax', 'g')
+        if match_syntax == 'r':
             match_op = MatchOp.REGEXP
-        elif match_syntax == 'sql':
+        elif match_syntax == 's':
             match_op = MatchOp.LIKE
         else:
             match_op = MatchOp.GLOB
 
-        # Query database
-        results = self.db.match(symbol_type, match_op, pattern, case_sensitive, limit, match_qualified)
+        # Handle multiple symbol types (OR'd together)
+        if len(symbol_types) > 1:
+            return self._match_multiple_types(
+                symbol_types, pattern, match_op, case_sensitive, limit, match_qualified
+            )
 
-        # Return iterator
+        # Single type or all types
+        st = SymbolType(symbol_type) if symbol_type else None
+        results = self.db.match(st, match_op, pattern, case_sensitive, limit, match_qualified)
         return results
+
+    def _match_multiple_types(
+        self,
+        symbol_types: List[str],
+        pattern: str,
+        match_op: MatchOp,
+        case_sensitive: bool,
+        limit: int,
+        match_qualified: bool
+    ) -> Iterator[MatchRecord]:
+        """Query database for multiple symbol types (OR'd together).
+
+        Args:
+            symbol_types: List of symbol type strings to match
+            pattern: Pattern to match
+            match_op: Match operator
+            case_sensitive: Whether to match case-sensitively
+            limit: Max results per type
+            match_qualified: Whether to match qualified names
+
+        Yields:
+            MatchRecord objects from database
+        """
+        count = 0
+        for type_str in symbol_types:
+            st = SymbolType(type_str)
+            for record in self.db.match(st, match_op, pattern, case_sensitive, limit, match_qualified):
+                yield record
+                count += 1
+                if count >= limit:
+                    return
 
     def _execute_filter_stage(
         self,
@@ -148,22 +199,34 @@ class PipelineExecutor:
         """
         args = stage.args
 
-        target_type = args.symbol_type
+        # Handle multiple symbol types (OR'd) or single type
+        symbol_types = getattr(args, 'symbol_types', None) or []
+        target_type = args.symbol_type if hasattr(args, 'symbol_type') else None
+
+        # Build set of allowed types
+        if len(symbol_types) > 1:
+            allowed_types = set(symbol_types)
+        elif target_type:
+            allowed_types = {target_type}
+        else:
+            allowed_types = None  # Allow all types
+
         pattern = args.pattern
         case_sensitive = not args.case_insensitive
 
         # Determine match operator from match_syntax attribute
-        match_syntax = getattr(args, 'match_syntax', 'glob')
-        if match_syntax == 'regex':
+        # match_syntax is the suffix from flag groups: 'g' (glob), 'r' (regex), 's' (sql)
+        match_syntax = getattr(args, 'match_syntax', 'g')
+        if match_syntax == 'r':
             match_op = MatchOp.REGEXP
-        elif match_syntax == 'sql':
+        elif match_syntax == 's':
             match_op = MatchOp.LIKE
         else:
             match_op = MatchOp.GLOB
 
         for record in prev_results:
-            # Filter by type
-            if record.symbol_type != target_type:
+            # Filter by type if specified
+            if allowed_types and record.symbol_type not in allowed_types:
                 continue
 
             # Apply pattern match

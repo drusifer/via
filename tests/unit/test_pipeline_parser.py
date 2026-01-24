@@ -10,29 +10,29 @@ class TestSplitOnVia:
     def test_single_stage_no_via(self):
         """Single stage with no --via flag."""
         parser = PipelineParser()
-        argv = ['-mg', '-c', '*']
+        argv = ['-mg', '*', '-tc']
         segments = parser._split_on_via(argv)
         assert len(segments) == 1
-        assert segments[0] == ['-mg', '-c', '*']
+        assert segments[0] == ['-mg', '*', '-tc']
 
     def test_two_stages_with_via(self):
-        """Two stages separated by --via."""
+        """Two stages separated by --via (for filtering)."""
         parser = PipelineParser()
-        argv = ['-mg', '-c', '*', '--via', '-oT']
+        argv = ['-mg', '*', '-tc', '--via', '-mr', '__*', '-tm']
         segments = parser._split_on_via(argv)
         assert len(segments) == 2
-        assert segments[0] == ['-mg', '-c', '*']
-        assert segments[1] == ['-oT']
+        assert segments[0] == ['-mg', '*', '-tc']
+        assert segments[1] == ['-mr', '__*', '-tm']
 
     def test_three_stages_with_via(self):
-        """Three stages separated by --via flags."""
+        """Three stages separated by --via flags (for multi-level filtering)."""
         parser = PipelineParser()
-        argv = ['-mg', '-c', '*', '--via', '-mr', '-m', '__*__', '--via', '-oDm']
+        argv = ['-mg', '*', '-tc', '--via', '-mr', '__*__', '-tm', '--via', '-mg', 'test*', '-tf']
         segments = parser._split_on_via(argv)
         assert len(segments) == 3
-        assert segments[0] == ['-mg', '-c', '*']
-        assert segments[1] == ['-mr', '-m', '__*__']
-        assert segments[2] == ['-oDm']
+        assert segments[0] == ['-mg', '*', '-tc']
+        assert segments[1] == ['-mr', '__*__', '-tm']
+        assert segments[2] == ['-mg', 'test*', '-tf']
 
     def test_empty_argv(self):
         """Empty argv returns empty list."""
@@ -44,139 +44,184 @@ class TestSplitOnVia:
     def test_via_at_start_ignored(self):
         """--via at start creates empty first segment (filtered out)."""
         parser = PipelineParser()
-        argv = ['--via', '-mg', '-c', '*']
+        argv = ['--via', '-mg', '*', '-tc']
         segments = parser._split_on_via(argv)
         # Empty segments should be filtered
         assert len(segments) == 1
-        assert segments[0] == ['-mg', '-c', '*']
+        assert segments[0] == ['-mg', '*', '-tc']
 
 
 class TestParseMatchStage:
     """Test parsing match stages."""
 
     def test_shorthand_glob_class(self):
-        """Parse shorthand: -mg -c '*'"""
+        """Parse shorthand: -mg '*' -tc"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', '-c', '*'])
+        stage = parser._parse_stage(['-mg', '*', '-tc'])
         assert stage.stage_type == StageType.MATCH
         assert stage.args.symbol_type == 'class'
         assert stage.args.pattern == '*'
 
     def test_longform_match(self):
-        """Parse long form: match --type class --glob '*'"""
+        """Parse long form: match --match-glob '*' --type-class"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['match', '--type', 'class', '--glob', '*'])
+        stage = parser._parse_stage(['match', '--match-glob', '*', '--type-class'])
         assert stage.stage_type == StageType.MATCH
         assert stage.args.symbol_type == 'class'
         assert stage.args.pattern == '*'
 
     def test_match_with_regex(self):
-        """Parse regex match: -mr -m '__*__'"""
+        """Parse regex match: -mr '__*__' -tm"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mr', '-m', '__*__'])
+        stage = parser._parse_stage(['-mr', '__*__', '-tm'])
         assert stage.stage_type == StageType.MATCH
         assert stage.args.symbol_type == 'method'
         assert stage.args.pattern == '__*__'
 
     def test_match_with_case_insensitive(self):
-        """Parse case-insensitive match: -mg -I -c 'user*'"""
+        """Parse case-insensitive match: -mg 'user*' -tc -I"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', '-I', '-c', 'user*'])
+        stage = parser._parse_stage(['-mg', 'user*', '-tc', '-I'])
         assert stage.stage_type == StageType.MATCH
         assert stage.args.case_insensitive is True
 
     def test_match_with_limit(self):
-        """Parse match with limit: -mg -c '*' -n 20"""
+        """Parse match with limit: -mg '*' -tc -n 20"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', '-c', '*', '-n', '20'])
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-n', '20'])
         assert stage.stage_type == StageType.MATCH
         assert stage.args.limit == 20
 
     def test_match_function_type(self):
-        """Parse function match: -mg -f 'calc*'"""
+        """Parse function match: -mg 'calc*' -tf"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', '-f', 'calc*'])
+        stage = parser._parse_stage(['-mg', 'calc*', '-tf'])
         assert stage.stage_type == StageType.MATCH
         assert stage.args.symbol_type == 'function'
 
-
-class TestParseRenderStage:
-    """Test parsing render stages."""
-
-    def test_render_table_markdown(self):
-        """Parse render table markdown: -oTm"""
+    def test_multiple_type_flags_or(self):
+        """Parse multiple type flags (OR'd together): -mg '*' -tc -tf"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-oTm'])
-        assert stage.stage_type == StageType.RENDER
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-tf'])
+        assert stage.stage_type == StageType.MATCH
+        assert stage.args.symbol_types == ['class', 'function']
+        # When multiple types, symbol_type should be None
+        assert stage.args.symbol_type is None
+
+    def test_single_type_flag_also_sets_symbol_types(self):
+        """Single type flag sets both symbol_type and symbol_types: -mg '*' -tc"""
+        parser = PipelineParser()
+        stage = parser._parse_stage(['-mg', '*', '-tc'])
+        assert stage.stage_type == StageType.MATCH
+        assert stage.args.symbol_types == ['class']
+        assert stage.args.symbol_type == 'class'
+
+    def test_three_type_flags_or(self):
+        """Parse three type flags (OR'd): -mg '*' -tc -tf -tm"""
+        parser = PipelineParser()
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-tf', '-tm'])
+        assert stage.stage_type == StageType.MATCH
+        assert stage.args.symbol_types == ['class', 'function', 'method']
+        assert stage.args.symbol_type is None
+
+
+class TestMatchWithOutput:
+    """Test parsing match stages with integrated output flags.
+
+    In the new design, output flags (-oL, -oT, -oR, etc.) are part of
+    the match stage, not separate render stages.
+    """
+
+    def test_match_with_table_output(self):
+        """Parse match with table output: -mg '*' -tc -oT -fm"""
+        parser = PipelineParser()
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-oT', '-fm'])
+        assert stage.stage_type == StageType.MATCH
+        assert stage.args.pattern == '*'
+        assert stage.args.symbol_type == 'class'
         assert stage.args.render_type == 'table'
         assert stage.args.format == 'md'
 
-    def test_render_list(self):
-        """Parse render list: -oL"""
+    def test_match_with_list_output(self):
+        """Parse match with list output: -mg '*' -tc -oL"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-oL'])
-        assert stage.stage_type == StageType.RENDER
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-oL'])
+        assert stage.stage_type == StageType.MATCH
         assert stage.args.render_type == 'list'
 
-    def test_render_with_context(self):
-        """Parse render with context: -oR -C 5"""
+    def test_match_with_raw_context(self):
+        """Parse match with raw output and context: -mg '*' -tf -oR -C 5"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-oR', '-C', '5'])
-        assert stage.stage_type == StageType.RENDER
+        stage = parser._parse_stage(['-mg', '*', '-tf', '-oR', '-C', '5'])
+        assert stage.stage_type == StageType.MATCH
         assert stage.args.render_type == 'raw'
         assert stage.args.context == 5
 
-    def test_render_with_before_after_context(self):
-        """Parse render with -A and -B: -oR -A 3 -B 2"""
+    def test_match_with_before_after_context(self):
+        """Parse match with -A and -B: -mg '*' -tf -oR -A 3 -B 2"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-oR', '-A', '3', '-B', '2'])
-        assert stage.stage_type == StageType.RENDER
+        stage = parser._parse_stage(['-mg', '*', '-tf', '-oR', '-A', '3', '-B', '2'])
+        assert stage.stage_type == StageType.MATCH
         assert stage.args.after_context == 3
         assert stage.args.before_context == 2
 
-    def test_render_with_theme(self):
-        """Parse render with theme: -oF --theme monokai"""
+    def test_match_with_theme(self):
+        """Parse match with theme: -mg '*' -tc -oF --theme monokai"""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-oF', '--theme', 'monokai'])
-        assert stage.stage_type == StageType.RENDER
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-oF', '--theme', 'monokai'])
+        assert stage.stage_type == StageType.MATCH
         assert stage.args.render_type == 'formatted'
         assert stage.args.theme == 'monokai'
 
 
 class TestParseMultiStage:
-    """Test parsing multi-stage pipelines."""
+    """Test parsing multi-stage pipelines.
 
-    def test_two_stage_pipeline(self):
-        """Parse two-stage pipeline: -mg -c '*' --via -oT"""
+    In the new design, --via chains additional match filters.
+    Output flags are part of the match stage, not separate.
+    """
+
+    def test_single_stage_with_output(self):
+        """Parse single stage with output: -mg '*' -tc -oT"""
         parser = PipelineParser()
-        argv = ['-mg', '-c', '*', '--via', '-oT']
+        argv = ['-mg', '*', '-tc', '-oT']
+        stages = parser.parse(argv)
+        assert len(stages) == 1
+        assert stages[0].stage_type == StageType.MATCH
+        assert stages[0].args.render_type == 'table'
+
+    def test_two_stage_filter_pipeline(self):
+        """Parse two-stage filter pipeline: -mg '*' -tc --via -mr '__*' -tm"""
+        parser = PipelineParser()
+        argv = ['-mg', '*', '-tc', '--via', '-mr', '__*', '-tm']
         stages = parser.parse(argv)
         assert len(stages) == 2
-        assert stages[0].stage_type == StageType.MATCH
-        assert stages[1].stage_type == StageType.RENDER
-
-    def test_three_stage_pipeline(self):
-        """Parse three-stage pipeline: match -> match -> render"""
-        parser = PipelineParser()
-        argv = ['-mg', '-c', '*Match*', '--via', '-mr', '-m', '__*__', '--via', '-oDm']
-        stages = parser.parse(argv)
-        assert len(stages) == 3
         assert stages[0].stage_type == StageType.MATCH
         assert stages[0].args.symbol_type == 'class'
         assert stages[1].stage_type == StageType.MATCH
         assert stages[1].args.symbol_type == 'method'
-        assert stages[2].stage_type == StageType.RENDER
-        assert stages[2].args.render_type == 'diagram'
+
+    def test_two_stage_filter_with_output(self):
+        """Parse filter pipeline with output on last stage: -mg '*' -tc --via -mr '__*' -tm -oD"""
+        parser = PipelineParser()
+        argv = ['-mg', '*', '-tc', '--via', '-mr', '__*', '-tm', '-oD']
+        stages = parser.parse(argv)
+        assert len(stages) == 2
+        assert stages[0].stage_type == StageType.MATCH
+        assert stages[0].args.symbol_type == 'class'
+        assert stages[1].stage_type == StageType.MATCH
+        assert stages[1].args.symbol_type == 'method'
+        assert stages[1].args.render_type == 'diagram'
 
 
 class TestInvalidFlags:
     """Test error handling for invalid flags."""
 
     def test_mutually_exclusive_glob_and_regex(self):
-        """Can't use -g and -r together."""
+        """Can't use -mg and -mr together."""
         parser = PipelineParser()
         with pytest.raises(PipelineParseError):
-            parser._parse_stage(['-mg', '-r', 'pattern'])
+            parser._parse_stage(['-mg', 'pattern', '-mr', 'other'])
 
     def test_empty_stage(self):
         """Empty stage raises error."""
@@ -194,7 +239,7 @@ class TestInvalidFlags:
         """Invalid match flag raises error."""
         parser = PipelineParser()
         with pytest.raises(PipelineParseError):
-            parser._parse_stage(['-mg', '--invalid-flag'])
+            parser._parse_stage(['-mg', '*', '--invalid-flag'])
 
 
 class TestStatsStage:

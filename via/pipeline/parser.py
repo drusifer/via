@@ -2,6 +2,10 @@
 import argparse
 from typing import List
 from via.pipeline.types import StageType, PipelineStage
+from via.core.flag_groups import (
+    MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS, FORMAT_FLAGS,
+    get_match_short_flags, get_type_short_flags
+)
 
 
 class PipelineParseError(Exception):
@@ -21,17 +25,34 @@ class _StoreSyntax(argparse.Action):
         setattr(namespace, 'match_syntax', self.syntax)
 
 
+class _AppendType(argparse.Action):
+    """Custom action to append type to a list (for OR-ing multiple types)."""
+
+    def __init__(self, option_strings, dest, type_value=None, **kwargs):
+        self.type_value = type_value
+        super().__init__(option_strings, dest, nargs=0, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        current = getattr(namespace, self.dest, None) or []
+        current.append(self.type_value)
+        setattr(namespace, self.dest, current)
+
+
 class PipelineParser:
     """Parse command line into pipeline stages using argparse.
 
-    Uses separate ArgumentParser instances for each stage type (match, render, stats)
-    with exit_on_error=False to prevent sys.exit() calls.
+    A single via invocation includes:
+    - Match syntax: -mg (glob), -mr (regex), -ms (sql)
+    - Symbol types: -tc, -tf, -tm, etc. (multiple allowed, OR'd together)
+    - Output: -oL, -oT, -oD, etc.
+    - Format: -fa, -fm, -fh, -fp
+
+    The --via separator chains additional match+type filters to narrow results.
     """
 
     def __init__(self):
-        """Initialize parsers for each stage type."""
+        """Initialize parser."""
         self.match_parser = self._create_match_parser()
-        self.render_parser = self._create_render_parser()
         self.stats_parser = self._create_stats_parser()
 
     def parse(self, argv: List[str]) -> List[PipelineStage]:
@@ -92,8 +113,6 @@ class PipelineParser:
         # Detect stage type from command/flags
         if args[0] == 'match' or self._is_match_stage(args):
             return self._parse_match_stage(args)
-        elif args[0] == 'render' or self._is_render_stage(args):
-            return self._parse_render_stage(args)
         elif args[0] == 'stats':
             return self._parse_stats_stage(args)
         else:
@@ -101,13 +120,12 @@ class PipelineParser:
 
     def _is_match_stage(self, args: List[str]) -> bool:
         """Check if args indicate a match stage."""
-        match_flags = {'-m', '-g', '-r', '-s', '-c', '-f', '-i', '-G', '-F', '-N', '-H'}
-        return any(arg in match_flags for arg in args)
-
-    def _is_render_stage(self, args: List[str]) -> bool:
-        """Check if args indicate a render stage."""
-        # Check for output flags like -oL, -oT, -oD, etc.
-        return any(arg.startswith('-o') and len(arg) > 2 for arg in args)
+        match_flags = get_match_short_flags()  # {'-mg', '-mr', '-ms'}
+        type_flags = get_type_short_flags()    # {'-tc', '-tf', '-tm', ...}
+        # Also check for output flags (which are now part of match)
+        output_flags = {f.short for f in OUTPUT_FLAGS}
+        all_match_flags = match_flags | type_flags | output_flags
+        return any(arg in all_match_flags for arg in args)
 
     def _parse_match_stage(self, args: List[str]) -> PipelineStage:
         """Parse match stage using argparse.
@@ -126,38 +144,23 @@ class PipelineParser:
             if args[0] == 'match':
                 args = args[1:]
 
-            # Expand combined shorthand flags (e.g., -mg -> -m -g)
-            args = self._expand_combined_flags(args)
-
             parsed_args = self.match_parser.parse_args(args)
+
+            # Convert symbol_types list to single value for backward compat
+            # (executor will handle the list for OR logic)
+            if hasattr(parsed_args, 'symbol_types') and parsed_args.symbol_types:
+                # Keep as list for OR logic, but also set symbol_type for single type
+                if len(parsed_args.symbol_types) == 1:
+                    parsed_args.symbol_type = parsed_args.symbol_types[0]
+                else:
+                    parsed_args.symbol_type = None  # Multiple types, use symbol_types list
+            else:
+                parsed_args.symbol_type = None
+                parsed_args.symbol_types = []
+
             return PipelineStage(StageType.MATCH, parsed_args)
-        except (SystemExit, argparse.ArgumentError):
+        except (SystemExit, argparse.ArgumentError) as e:
             raise PipelineParseError(f"Invalid match stage arguments: {args}")
-
-    def _parse_render_stage(self, args: List[str]) -> PipelineStage:
-        """Parse render stage using argparse.
-
-        Args:
-            args: Arguments for render stage
-
-        Returns:
-            PipelineStage with StageType.RENDER
-
-        Raises:
-            PipelineParseError: If parsing fails
-        """
-        try:
-            # Remove 'render' if present (for long form)
-            if args[0] == 'render':
-                args = args[1:]
-
-            # Expand combined shorthand flags (e.g., -rTm -> -rT -m)
-            args = self._expand_combined_flags(args)
-
-            parsed_args = self.render_parser.parse_args(args)
-            return PipelineStage(StageType.RENDER, parsed_args)
-        except (SystemExit, argparse.ArgumentError):
-            raise PipelineParseError(f"Invalid render stage arguments: {args}")
 
     def _parse_stats_stage(self, args: List[str]) -> PipelineStage:
         """Parse stats stage using argparse.
@@ -181,73 +184,15 @@ class PipelineParser:
         except (SystemExit, argparse.ArgumentError):
             raise PipelineParseError(f"Invalid stats stage arguments: {args}")
 
-    def _expand_combined_flags(self, args: List[str]) -> List[str]:
-        """Expand combined shorthand flags for argparse.
-
-        Match shortcuts:
-            -mg -c '*' -> -g '*' -c (move pattern to follow -g)
-            -mr -m '^foo' -> -r '^foo' -m (move pattern to follow -r)
-            -ms -f 'bar%' -> -s 'bar%' -f (move pattern to follow -s)
-
-        Render shortcuts:
-            -rTm -> -rT -m (render table in markdown)
-            -rDh -> -rD -h (render diagram in html)
-
-        Args:
-            args: Original arguments
-
-        Returns:
-            Arguments with combined flags expanded
-        """
-        expanded = []
-        i = 0
-        while i < len(args):
-            arg = args[i]
-            if arg in ['-mg', '-mr', '-ms']:
-                # Match shorthand - need to find pattern and reorder
-                # Pattern is the next non-flag argument after type flags
-                syntax_flag = {'-mg': '-g', '-mr': '-r', '-ms': '-s'}[arg]
-
-                # Find the pattern (first non-flag arg after current position)
-                pattern_idx = None
-                for j in range(i + 1, len(args)):
-                    if not args[j].startswith('-'):
-                        pattern_idx = j
-                        break
-
-                if pattern_idx is None:
-                    # No pattern found, just add the syntax flag
-                    expanded.append(syntax_flag)
-                else:
-                    # Add syntax flag and pattern together
-                    expanded.append(syntax_flag)
-                    expanded.append(args[pattern_idx])
-
-                    # Add type flags between current and pattern
-                    for j in range(i + 1, pattern_idx):
-                        expanded.append(args[j])
-
-                    # Skip to after pattern
-                    i = pattern_idx
-            elif arg.startswith('-o') and len(arg) >= 3 and not arg.startswith('--'):
-                # Output shorthand: -oTm, -oDh, etc.
-                if len(arg) == 3:
-                    # Just output type: -oT
-                    expanded.append(arg)
-                elif len(arg) == 4:
-                    # Output type + format: -oTm -> -oT -m
-                    expanded.append(f'-o{arg[2]}')  # -oT
-                    expanded.append(f'-{arg[3]}')    # -m
-                else:
-                    # Unknown format, keep as-is
-                    expanded.append(arg)
-            else:
-                expanded.append(arg)
-            i += 1
-        return expanded
-
     def _create_match_parser(self) -> argparse.ArgumentParser:
         """Create argparse parser for match stage.
+
+        A single match stage includes:
+        - Match syntax: -mg, -mr, -ms (mutually exclusive)
+        - Symbol types: -tc, -tf, -tm, etc. (multiple allowed, OR'd)
+        - Output: -oL, -oT, -oD, etc. (mutually exclusive)
+        - Format: -fa, -fm, -fh, -fp (mutually exclusive)
+        - Options: -n, -I, -Q, -A, -B, -C, --theme, --nodelims
 
         Returns:
             ArgumentParser configured for match stage
@@ -257,64 +202,57 @@ class PipelineParser:
             exit_on_error=False
         )
 
-        # Symbol type (mutually exclusive via action='store_const')
-        parser.add_argument('-t', '--type', dest='symbol_type',
-                          choices=['class', 'method', 'function', 'import', 'global', 'filepath', 'filename', 'header'])
-        parser.add_argument('-c', '--class', dest='symbol_type', action='store_const', const='class')
-        parser.add_argument('-m', '--method', dest='symbol_type', action='store_const', const='method')
-        parser.add_argument('-f', '--function', dest='symbol_type', action='store_const', const='function')
-        parser.add_argument('-i', '--import', dest='symbol_type', action='store_const', const='import')
-        parser.add_argument('-G', '--global', dest='symbol_type', action='store_const', const='global')
-        parser.add_argument('-F', '--file', dest='symbol_type', action='store_const', const='filepath')
-        parser.add_argument('-N', '--filename', dest='symbol_type', action='store_const', const='filename')
-        parser.add_argument('-H', '--header', dest='symbol_type', action='store_const', const='header')
-
         # Match syntax (mutually exclusive)
-        # Each flag sets both 'pattern' and 'match_syntax' to track which was used
         syntax_group = parser.add_mutually_exclusive_group()
-        syntax_group.add_argument('-g', '--glob', dest='pattern', metavar='PATTERN',
-                                  action=_StoreSyntax, syntax='glob')
-        syntax_group.add_argument('-r', '--regex', dest='pattern', metavar='PATTERN',
-                                  action=_StoreSyntax, syntax='regex')
-        syntax_group.add_argument('-s', '--sql', dest='pattern', metavar='PATTERN',
-                                  action=_StoreSyntax, syntax='sql')
+        for flag in MATCH_FLAGS:
+            syntax_group.add_argument(
+                flag.short, flag.long,
+                dest='pattern',
+                metavar='PATTERN',
+                action=_StoreSyntax,
+                syntax=flag.suffix,
+                help=flag.help
+            )
 
-        # Options
+        # Symbol types - allow multiple (OR'd together)
+        for flag in TYPE_FLAGS:
+            parser.add_argument(
+                flag.short, flag.long,
+                dest='symbol_types',
+                action=_AppendType,
+                type_value=flag.const,
+                help=flag.help
+            )
+
+        # Output type (mutually exclusive)
+        output_group = parser.add_mutually_exclusive_group()
+        for flag in OUTPUT_FLAGS:
+            output_group.add_argument(
+                flag.short, flag.long,
+                dest='render_type',
+                action='store_const',
+                const=flag.const,
+                help=flag.help
+            )
+
+        # Format (mutually exclusive)
+        format_group = parser.add_mutually_exclusive_group()
+        for flag in FORMAT_FLAGS:
+            format_group.add_argument(
+                flag.short, flag.long,
+                dest='format',
+                action='store_const',
+                const=flag.const,
+                help=flag.help
+            )
+
+        # Match options
         parser.add_argument('-I', '--case-insensitive', dest='case_insensitive', action='store_true', default=False)
         parser.add_argument('-n', '--limit', type=int, default=10)
         parser.add_argument('-Q', '--qualified', dest='match_qualified', action='store_true', default=False,
                           help='Match against qualified_name instead of symbol_name')
 
-        return parser
-
-    def _create_render_parser(self) -> argparse.ArgumentParser:
-        """Create argparse parser for render stage.
-
-        Returns:
-            ArgumentParser configured for render stage
-        """
-        parser = argparse.ArgumentParser(
-            add_help=False,
-            exit_on_error=False
-        )
-
-        # Output type (mutually exclusive) - use -o to avoid collision with -r (regex)
-        output_group = parser.add_mutually_exclusive_group()
-        output_group.add_argument('-oL', '--list', dest='render_type', action='store_const', const='list')
-        output_group.add_argument('-oT', '--table', dest='render_type', action='store_const', const='table')
-        output_group.add_argument('-oD', '--diagram', dest='render_type', action='store_const', const='diagram')
-        output_group.add_argument('-oU', '--usage', dest='render_type', action='store_const', const='usage')
-        output_group.add_argument('-oR', '--raw', dest='render_type', action='store_const', const='raw')
-        output_group.add_argument('-oF', '--formatted', dest='render_type', action='store_const', const='formatted')
-
-        # Output format
-        format_group = parser.add_mutually_exclusive_group()
-        format_group.add_argument('-a', '--ascii', dest='format', action='store_const', const='ascii')
-        format_group.add_argument('-m', '--md', dest='format', action='store_const', const='md')
-        format_group.add_argument('-h', '--html', dest='format', action='store_const', const='html')
-        format_group.add_argument('-p', '--png', dest='format', action='store_const', const='png')
-
-        # Context lines (for raw/formatted render)
+        # Context lines (for raw/formatted output)
         parser.add_argument('-A', '--after-context', dest='after_context', type=int, default=0)
         parser.add_argument('-B', '--before-context', dest='before_context', type=int, default=0)
         parser.add_argument('-C', '--context', type=int)
@@ -322,7 +260,7 @@ class PipelineParser:
         # Theme
         parser.add_argument('--theme', type=str)
 
-        # Delimiters (enabled by default for renderers that support comments)
+        # Delimiters
         parser.add_argument('--nodelims', dest='nodelims', action='store_true', default=False,
                           help='Disable delimiter headers between matches')
 
