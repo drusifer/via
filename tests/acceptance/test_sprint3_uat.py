@@ -296,13 +296,11 @@ class TestUAT1BasicPipelineSyntax:
         lines = [l for l in result.stdout.strip().split('\n') if l.strip()]
         assert len(lines) <= 2, f"Expected at most 2 results, got {len(lines)}"
 
-    @pytest.mark.skip(reason="REGEXP not supported in SQLite without extension")
     def test_uat_1_3_match_with_regex(self, uat_project):
-        """UAT-1.3: Match with regex pattern.
+        """UAT-1.3: Match with regex pattern (uses Python-side filtering).
 
         Command: via -r 'test_.*' -f
         Expected: Lists test functions
-        Note: Skipped - SQLite REGEXP requires extension
         """
         result = subprocess.run(
             [sys.executable, "-m", "via", "-r", "test_.*", "-f"],

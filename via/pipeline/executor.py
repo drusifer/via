@@ -117,9 +117,14 @@ class PipelineExecutor:
         limit = args.limit
         match_qualified = getattr(args, 'match_qualified', False)
 
-        # Determine match operator (GLOB is default)
-        # argparse sets pattern regardless of which flag was used
-        match_op = MatchOp.GLOB  # Default
+        # Determine match operator from match_syntax attribute
+        match_syntax = getattr(args, 'match_syntax', 'glob')
+        if match_syntax == 'regex':
+            match_op = MatchOp.REGEXP
+        elif match_syntax == 'sql':
+            match_op = MatchOp.LIKE
+        else:
+            match_op = MatchOp.GLOB
 
         # Query database
         results = self.db.match(symbol_type, match_op, pattern, case_sensitive, limit, match_qualified)
@@ -147,13 +152,22 @@ class PipelineExecutor:
         pattern = args.pattern
         case_sensitive = not args.case_insensitive
 
+        # Determine match operator from match_syntax attribute
+        match_syntax = getattr(args, 'match_syntax', 'glob')
+        if match_syntax == 'regex':
+            match_op = MatchOp.REGEXP
+        elif match_syntax == 'sql':
+            match_op = MatchOp.LIKE
+        else:
+            match_op = MatchOp.GLOB
+
         for record in prev_results:
             # Filter by type
             if record.symbol_type != target_type:
                 continue
 
-            # Apply pattern match (using glob by default)
-            if self._pattern_matches(record.symbol_name, pattern, MatchOp.GLOB, case_sensitive):
+            # Apply pattern match
+            if self._pattern_matches(record.symbol_name, pattern, match_op, case_sensitive):
                 yield record
 
     def _pattern_matches(

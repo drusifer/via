@@ -246,3 +246,88 @@ class TestMatchResultFields:
         results = list(test_db.match(SymbolType.METHOD, MatchOp.GLOB, 'save', True))
         assert len(results) == 1
         assert results[0].line_number == 10
+
+
+class TestMatchWithRegex:
+    """Tests for REGEXP matching (Python-side filtering)."""
+
+    def test_match_regex_basic(self, test_db):
+        """Test basic regex matching."""
+        results = list(test_db.match(SymbolType.METHOD, MatchOp.REGEXP, r'sa.*', True))
+        assert len(results) == 1
+        assert results[0].symbol_name == 'save'
+
+    def test_match_regex_word_boundary(self, test_db):
+        """Test regex with word boundary pattern."""
+        results = list(test_db.match(SymbolType.METHOD, MatchOp.REGEXP, r'^save$', True))
+        assert len(results) == 1
+        assert results[0].symbol_name == 'save'
+
+    def test_match_regex_no_match(self, test_db):
+        """Test regex that matches nothing."""
+        results = list(test_db.match(SymbolType.METHOD, MatchOp.REGEXP, r'^xyz$', True))
+        assert len(results) == 0
+
+    def test_match_regex_all(self, test_db):
+        """Test regex that matches all."""
+        results = list(test_db.match(SymbolType.METHOD, MatchOp.REGEXP, r'.*', True))
+        assert len(results) == 2  # save and load
+
+    def test_match_regex_case_sensitive(self, test_db):
+        """Test case-sensitive regex matching."""
+        results = list(test_db.match(SymbolType.CLASS, MatchOp.REGEXP, r'user', True))
+        assert len(results) == 0  # 'User' != 'user'
+
+    def test_match_regex_case_insensitive(self, test_db):
+        """Test case-insensitive regex matching."""
+        results = list(test_db.match(SymbolType.CLASS, MatchOp.REGEXP, r'user', False))
+        assert len(results) == 1
+        assert results[0].symbol_name == 'User'
+
+    def test_match_regex_with_limit(self, test_db):
+        """Test regex with limit."""
+        results = list(test_db.match(SymbolType.METHOD, MatchOp.REGEXP, r'.*', True, limit=1))
+        assert len(results) == 1
+
+    def test_match_regex_character_class(self, test_db):
+        """Test regex with character class."""
+        results = list(test_db.match(SymbolType.METHOD, MatchOp.REGEXP, r'[sl].*', True))
+        assert len(results) == 2  # save and load
+
+    def test_match_regex_qualified_name(self, test_db):
+        """Test regex on qualified_name."""
+        results = list(test_db.match(
+            SymbolType.METHOD, MatchOp.REGEXP, r'user\.User\.save', True, match_qualified=True
+        ))
+        assert len(results) == 1
+        assert results[0].qualified_name == 'user.User.save'
+
+    def test_match_regex_invalid_pattern(self, test_db):
+        """Test invalid regex pattern raises error."""
+        import re
+        with pytest.raises(re.error):
+            list(test_db.match(SymbolType.METHOD, MatchOp.REGEXP, r'[invalid', True))
+
+    def test_match_regex_special_chars(self, test_db):
+        """Test regex with special regex characters."""
+        # Insert a symbol with special chars
+        test_db.insert_symbol('test_func', 'function', 'src/test.py', 10, 'test.test_func', 100, 50, None)
+
+        # Match with escaped dot and underscore
+        results = list(test_db.match(SymbolType.FUNCTION, MatchOp.REGEXP, r'test_.*', True))
+        assert len(results) == 1
+        assert results[0].symbol_name == 'test_func'
+
+    def test_match_regex_returns_match_record(self, test_db):
+        """Test that regex returns proper MatchRecord objects."""
+        results = list(test_db.match(SymbolType.METHOD, MatchOp.REGEXP, r'save', True))
+        assert len(results) == 1
+        record = results[0]
+        # Check all expected fields are present
+        assert record.symbol_name == 'save'
+        assert record.symbol_type == 'method'
+        assert record.file_path == 'src/user.py'
+        assert record.line_number == 10
+        assert record.byte_offset == 100
+        assert record.byte_length == 50
+        assert record.qualified_name == 'user.User.save'

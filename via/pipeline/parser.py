@@ -9,6 +9,18 @@ class PipelineParseError(Exception):
     pass
 
 
+class _StoreSyntax(argparse.Action):
+    """Custom action to store both pattern and match_syntax."""
+
+    def __init__(self, option_strings, dest, syntax='glob', **kwargs):
+        self.syntax = syntax
+        super().__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, values)
+        setattr(namespace, 'match_syntax', self.syntax)
+
+
 class PipelineParser:
     """Parse command line into pipeline stages using argparse.
 
@@ -258,10 +270,14 @@ class PipelineParser:
         parser.add_argument('-H', '--header', dest='symbol_type', action='store_const', const='header')
 
         # Match syntax (mutually exclusive)
+        # Each flag sets both 'pattern' and 'match_syntax' to track which was used
         syntax_group = parser.add_mutually_exclusive_group()
-        syntax_group.add_argument('-g', '--glob', dest='pattern', metavar='PATTERN')
-        syntax_group.add_argument('-r', '--regex', dest='pattern', metavar='PATTERN')
-        syntax_group.add_argument('-s', '--sql', dest='pattern', metavar='PATTERN')
+        syntax_group.add_argument('-g', '--glob', dest='pattern', metavar='PATTERN',
+                                  action=_StoreSyntax, syntax='glob')
+        syntax_group.add_argument('-r', '--regex', dest='pattern', metavar='PATTERN',
+                                  action=_StoreSyntax, syntax='regex')
+        syntax_group.add_argument('-s', '--sql', dest='pattern', metavar='PATTERN',
+                                  action=_StoreSyntax, syntax='sql')
 
         # Options
         parser.add_argument('-I', '--case-insensitive', dest='case_insensitive', action='store_true', default=False)

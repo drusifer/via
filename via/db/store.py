@@ -826,7 +826,15 @@ class DatabaseStore:
         if not self.conn:
             raise RuntimeError("Database not connected")
 
-        # Build WHERE clause
+        # Handle REGEXP specially - use Python-side filtering
+        # SQLite doesn't have native REGEXP support
+        if match_op == MatchOp.REGEXP:
+            yield from self._match_with_regex(
+                symbol_type, pattern, case_sensitive, limit, match_qualified
+            )
+            return
+
+        # Build WHERE clause for SQL-based matching (GLOB, LIKE, EXACT)
         where_parts: List[str] = []
         params: List[Any] = []
 
@@ -888,6 +896,92 @@ class DatabaseStore:
                 'parent_name': row[7],
             }
             yield self._record_factory.create_from_row(row_dict, metadata)
+
+    def _match_with_regex(
+        self,
+        symbol_type: Optional[SymbolType],
+        pattern: str,
+        case_sensitive: bool,
+        limit: Optional[int],
+        match_qualified: bool
+    ) -> Iterator[MatchRecord]:
+        """Match using Python regex instead of SQL REGEXP.
+
+        SQLite doesn't have native REGEXP support, so we:
+        1. Query all symbols of the type (fast, uses index)
+        2. Apply regex filtering in Python during iteration
+        3. Stream results for O(1) memory
+
+        Args:
+            symbol_type: SymbolType to filter by, or None for all
+            pattern: Regex pattern to match
+            case_sensitive: Whether matching is case-sensitive
+            limit: Optional result limit
+            match_qualified: If True, match against qualified_name
+
+        Yields:
+            MatchRecord objects matching the regex
+        """
+        import re
+
+        # Compile regex pattern (will raise re.error if invalid)
+        flags = 0 if case_sensitive else re.IGNORECASE
+        regex = re.compile(pattern, flags)
+
+        # Build query for type filter only (no pattern in SQL)
+        where_parts: List[str] = []
+        params: List[Any] = []
+
+        if symbol_type is not None:
+            where_parts.append("symbol_type = ?")
+            params.append(symbol_type.value)
+
+        where_clause = ' AND '.join(where_parts) if where_parts else "1=1"
+
+        # Get metadata for column widths
+        metadata = self._get_match_metadata(where_clause, params)
+
+        # Query all symbols of type
+        query = f"""
+            SELECT
+                symbol_name,
+                symbol_type,
+                file_path,
+                line_number,
+                byte_offset,
+                byte_length,
+                qualified_name,
+                parent_name
+            FROM symbols
+            WHERE {where_clause}
+            ORDER BY file_path, line_number
+        """
+
+        cursor = self.conn.execute(query, params)
+        count = 0
+
+        for row in cursor:
+            # Get the value to match against
+            match_value = row[6] if match_qualified else row[0]  # qualified_name or symbol_name
+
+            # Apply regex filter
+            if regex.search(match_value):
+                row_dict = {
+                    'symbol_name': row[0],
+                    'symbol_type': row[1],
+                    'file_path': row[2],
+                    'line_number': row[3],
+                    'byte_offset': row[4],
+                    'byte_length': row[5],
+                    'qualified_name': row[6],
+                    'parent_name': row[7],
+                }
+                yield self._record_factory.create_from_row(row_dict, metadata)
+                count += 1
+
+                # Check limit
+                if limit is not None and limit > 0 and count >= limit:
+                    break
 
     def count_symbols(self) -> int:
         """Count total symbols in database.

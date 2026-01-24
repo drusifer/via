@@ -125,11 +125,10 @@ class TestMatchSyntaxFlags:
         assert result.returncode == 0
         assert 'test_function' in result.stdout
 
-    @pytest.mark.skip(reason="SQLite REGEXP requires extension not installed by default")
     def test_match_with_regex_flag(self, indexed_project):
-        """Test -r/--regex flag."""
+        """Test --regex flag (uses Python-side filtering)."""
         project_dir, _ = indexed_project
-        result = run_via_match(['-t', 'function', '-r', '^test_.*'], project_dir)
+        result = run_via_match(['-t', 'function', '--regex', '^test_.*'], project_dir)
         assert result.returncode == 0
         assert 'test_function' in result.stdout
 
