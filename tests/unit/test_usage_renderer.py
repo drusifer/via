@@ -1,288 +1,394 @@
 """
-Tests for UsageRenderer.
+Unit tests for UsageRenderer (docstring extraction).
 
-TDD: Tests written first, then implementation.
+TLDR:
+    Tests for the UsageRenderer that extracts and displays docstrings
+    from Python source files for classes, methods, and functions.
+
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+$Id$
+
+License: GPL-3.0
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
-from via.renderers.usage import UsageRenderer, MAX_USAGES_PER_SYMBOL
+import tempfile
+import os
+from via.renderers.usage import UsageRenderer, DOCSTRING_TYPES
 from via.renderers.formatters.usage_formatters import (
-    UsageLocation,
     AsciiUsageFormatter,
     MarkdownUsageFormatter,
     HtmlUsageFormatter,
+    DocstringInfo,
 )
-from via.core.match_record import FunctionMatchRecord, ClassMatchRecord, MethodMatchRecord
+from via.core.match_record import (
+    ClassMatchRecord,
+    MethodMatchRecord,
+    FunctionMatchRecord,
+    FileMatchRecord,
+)
 
 
 class TestUsageRendererBasics:
+    """Test basic UsageRenderer functionality."""
+
     def test_usage_renderer_exists(self):
-        """UsageRenderer class should exist."""
+        """UsageRenderer can be instantiated."""
         renderer = UsageRenderer()
         assert renderer is not None
 
     def test_usage_renderer_has_render_method(self):
-        """UsageRenderer should have a render method."""
+        """UsageRenderer has render method."""
         renderer = UsageRenderer()
         assert hasattr(renderer, 'render')
+        assert callable(renderer.render)
 
     def test_usage_renderer_default_formatter(self):
-        """UsageRenderer should use AsciiUsageFormatter by default."""
+        """UsageRenderer defaults to AsciiUsageFormatter."""
         renderer = UsageRenderer()
         assert isinstance(renderer.formatter, AsciiUsageFormatter)
 
     def test_usage_renderer_custom_formatter(self):
-        """UsageRenderer should accept custom formatter."""
+        """UsageRenderer accepts custom formatter."""
         formatter = MarkdownUsageFormatter()
         renderer = UsageRenderer(formatter=formatter)
-        assert isinstance(renderer.formatter, MarkdownUsageFormatter)
+        assert renderer.formatter is formatter
+
+
+class TestDocstringExtraction:
+    """Test docstring extraction from Python files."""
+
+    def test_extract_class_docstring(self):
+        """Extract docstring from a class."""
+        source = '''
+class MyClass:
+    """This is the class docstring."""
+    pass
+'''
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(source)
+            f.flush()
+            temp_path = f.name
+
+        try:
+            renderer = UsageRenderer()
+            record = ClassMatchRecord(
+                symbol_type='class',
+                symbol_name='MyClass',
+                qualified_name='MyClass',
+                file_path=temp_path,
+                line_number=2,
+            )
+            docstring = renderer._extract_docstring(record)
+            assert docstring == "This is the class docstring."
+        finally:
+            os.unlink(temp_path)
+
+    def test_extract_function_docstring(self):
+        """Extract docstring from a function."""
+        source = '''
+def my_function():
+    """This is the function docstring."""
+    pass
+'''
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(source)
+            f.flush()
+            temp_path = f.name
+
+        try:
+            renderer = UsageRenderer()
+            record = FunctionMatchRecord(
+                symbol_type='function',
+                symbol_name='my_function',
+                qualified_name='my_function',
+                file_path=temp_path,
+                line_number=2,
+            )
+            docstring = renderer._extract_docstring(record)
+            assert docstring == "This is the function docstring."
+        finally:
+            os.unlink(temp_path)
+
+    def test_extract_method_docstring(self):
+        """Extract docstring from a method."""
+        source = '''
+class MyClass:
+    def my_method(self):
+        """This is the method docstring."""
+        pass
+'''
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(source)
+            f.flush()
+            temp_path = f.name
+
+        try:
+            renderer = UsageRenderer()
+            record = MethodMatchRecord(
+                symbol_type='method',
+                symbol_name='my_method',
+                qualified_name='MyClass.my_method',
+                file_path=temp_path,
+                line_number=3,
+            )
+            docstring = renderer._extract_docstring(record)
+            assert docstring == "This is the method docstring."
+        finally:
+            os.unlink(temp_path)
+
+    def test_no_docstring_returns_none(self):
+        """Symbol without docstring returns None."""
+        source = '''
+def no_docs():
+    pass
+'''
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(source)
+            f.flush()
+            temp_path = f.name
+
+        try:
+            renderer = UsageRenderer()
+            record = FunctionMatchRecord(
+                symbol_type='function',
+                symbol_name='no_docs',
+                qualified_name='no_docs',
+                file_path=temp_path,
+                line_number=2,
+            )
+            docstring = renderer._extract_docstring(record)
+            assert docstring is None
+        finally:
+            os.unlink(temp_path)
+
+    def test_multiline_docstring(self):
+        """Extract multiline docstring."""
+        source = '''
+def documented():
+    """This is a multiline docstring.
+
+    It has multiple paragraphs.
+
+    Args:
+        None
+
+    Returns:
+        Nothing
+    """
+    pass
+'''
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(source)
+            f.flush()
+            temp_path = f.name
+
+        try:
+            renderer = UsageRenderer()
+            record = FunctionMatchRecord(
+                symbol_type='function',
+                symbol_name='documented',
+                qualified_name='documented',
+                file_path=temp_path,
+                line_number=2,
+            )
+            docstring = renderer._extract_docstring(record)
+            assert "multiline docstring" in docstring
+            assert "Args:" in docstring
+            assert "Returns:" in docstring
+        finally:
+            os.unlink(temp_path)
 
 
 class TestUsageRendererOutput:
+    """Test UsageRenderer output formatting."""
+
     def test_render_empty_records(self):
-        """Rendering with no records should return an empty string."""
+        """Render with empty records returns empty string."""
         renderer = UsageRenderer()
-        output = renderer.render(iter([]))
-        assert output == ''
+        result = renderer.render(iter([]))
+        assert result == ''
 
-    @patch.object(UsageRenderer, '_find_usages')
-    def test_render_single_record_with_usages(self, mock_find_usages):
-        """Rendering a single record with usages should show them."""
-        mock_find_usages.return_value = [
-            UsageLocation(file_path='other.py', line_number=10, context='my_function()'),
-            UsageLocation(file_path='test.py', line_number=20, context='result = my_function()')
-        ]
+    def test_render_single_record_with_docstring(self):
+        """Render single record with docstring."""
+        source = '''
+class TestClass:
+    """Test class docstring."""
+    pass
+'''
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(source)
+            f.flush()
+            temp_path = f.name
 
-        record = FunctionMatchRecord(
-            symbol_type='function',
-            symbol_name='my_function',
-            qualified_name='module.my_function',
-            file_path='src/foo.py',
-            line_number=42,
-            byte_offset=100,
-            byte_length=50
-        )
+        try:
+            renderer = UsageRenderer()
+            records = [
+                ClassMatchRecord(
+                    symbol_type='class',
+                    symbol_name='TestClass',
+                    qualified_name='TestClass',
+                    file_path=temp_path,
+                    line_number=2,
+                )
+            ]
+            result = renderer.render(iter(records))
+            assert 'TestClass' in result
+            assert 'Test class docstring.' in result
+        finally:
+            os.unlink(temp_path)
 
+    def test_render_skips_unsupported_types(self):
+        """Render skips file types that don't have docstrings."""
         renderer = UsageRenderer()
-        output = renderer.render(iter([record]))
-
-        assert 'my_function' in output
-        assert 'src/foo.py:42' in output
-        assert 'other.py:10' in output
-        assert 'test.py:20' in output
-
-    @patch.object(UsageRenderer, '_find_usages')
-    def test_render_record_no_usages(self, mock_find_usages):
-        """Rendering a record with no usages should show appropriate message."""
-        mock_find_usages.return_value = []
-
-        record = FunctionMatchRecord(
-            symbol_type='function',
-            symbol_name='unused_function',
-            qualified_name='module.unused_function',
-            file_path='src/foo.py',
-            line_number=42,
-            byte_offset=100,
-            byte_length=50
-        )
-
-        renderer = UsageRenderer()
-        output = renderer.render(iter([record]))
-
-        assert 'unused_function' in output
-        assert 'No usages found' in output
-
-    @patch.object(UsageRenderer, '_find_usages')
-    def test_render_multiple_records(self, mock_find_usages):
-        """Rendering multiple records should show usages for each."""
-        mock_find_usages.side_effect = [
-            [UsageLocation(file_path='a.py', line_number=1, context='foo()')],
-            [UsageLocation(file_path='b.py', line_number=2, context='bar()')]
-        ]
-
         records = [
-            FunctionMatchRecord(
-                symbol_type='function',
-                symbol_name='foo',
-                qualified_name='mod.foo',
-                file_path='foo.py',
-                line_number=10,
-                byte_offset=0,
-                byte_length=20
-            ),
-            FunctionMatchRecord(
-                symbol_type='function',
-                symbol_name='bar',
-                qualified_name='mod.bar',
-                file_path='bar.py',
-                line_number=20,
-                byte_offset=0,
-                byte_length=20
+            FileMatchRecord(
+                symbol_type='filepath',
+                symbol_name='test.py',
+                qualified_name='test.py',
+                file_path='test.py',
+                line_number=1,
             )
         ]
+        result = renderer.render(iter(records))
+        assert result == ''
 
-        renderer = UsageRenderer()
-        output = renderer.render(iter(records))
+    def test_render_multiple_records(self):
+        """Render multiple records."""
+        source = '''
+class First:
+    """First docstring."""
+    pass
 
-        assert 'foo' in output
-        assert 'bar' in output
-        assert 'a.py:1' in output
-        assert 'b.py:2' in output
+class Second:
+    """Second docstring."""
+    pass
+'''
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(source)
+            f.flush()
+            temp_path = f.name
 
-    @patch.object(UsageRenderer, '_find_usages')
-    def test_render_limits_usages(self, mock_find_usages):
-        """Rendering should limit usages to MAX_USAGES_PER_SYMBOL."""
-        # Create more usages than the limit
-        usages = [
-            UsageLocation(file_path=f'file{i}.py', line_number=i, context=f'usage {i}')
-            for i in range(MAX_USAGES_PER_SYMBOL + 10)
-        ]
-        mock_find_usages.return_value = usages
-
-        record = FunctionMatchRecord(
-            symbol_type='function',
-            symbol_name='popular_func',
-            qualified_name='mod.popular_func',
-            file_path='src.py',
-            line_number=1,
-            byte_offset=0,
-            byte_length=20
-        )
-
-        renderer = UsageRenderer()
-        output = renderer.render(iter([record]))
-
-        # Should show the "more" indicator
-        assert 'more usages' in output.lower()
-
-
-class TestUsageRendererGrep:
-    def test_find_usages_skips_definition(self):
-        """find_usages should skip the definition line."""
-        renderer = UsageRenderer()
-
-        # Mock grep output that includes definition line
-        mock_output = (
-            "src/foo.py:42:def my_function():\n"  # Definition - should skip
-            "other.py:10:my_function()\n"           # Usage - should include
-        )
-
-        record = FunctionMatchRecord(
-            symbol_type='function',
-            symbol_name='my_function',
-            qualified_name='module.my_function',
-            file_path='src/foo.py',
-            line_number=42,
-            byte_offset=100,
-            byte_length=50
-        )
-
-        usages = renderer._parse_grep_output(mock_output, 'src/foo.py', 42)
-
-        assert len(usages) == 1
-        assert usages[0].file_path == 'other.py'
-        assert usages[0].line_number == 10
-
-    def test_parse_grep_output_handles_empty(self):
-        """parse_grep_output should handle empty output."""
-        renderer = UsageRenderer()
-        usages = renderer._parse_grep_output('', 'foo.py', 1)
-        assert usages == []
-
-    def test_parse_grep_output_handles_malformed_lines(self):
-        """parse_grep_output should skip malformed lines."""
-        renderer = UsageRenderer()
-
-        mock_output = (
-            "good.py:10:valid line\n"
-            "bad_line_no_colon\n"
-            "another.py:abc:not a number\n"
-            "valid.py:20:another valid\n"
-        )
-
-        usages = renderer._parse_grep_output(mock_output, 'def.py', 1)
-
-        assert len(usages) == 2
-        assert usages[0].file_path == 'good.py'
-        assert usages[1].file_path == 'valid.py'
+        try:
+            renderer = UsageRenderer()
+            records = [
+                ClassMatchRecord(
+                    symbol_type='class',
+                    symbol_name='First',
+                    qualified_name='First',
+                    file_path=temp_path,
+                    line_number=2,
+                ),
+                ClassMatchRecord(
+                    symbol_type='class',
+                    symbol_name='Second',
+                    qualified_name='Second',
+                    file_path=temp_path,
+                    line_number=6,
+                ),
+            ]
+            result = renderer.render(iter(records))
+            assert 'First docstring.' in result
+            assert 'Second docstring.' in result
+        finally:
+            os.unlink(temp_path)
 
 
 class TestUsageFormatters:
-    def test_ascii_formatter_header(self):
-        """ASCII formatter should format header correctly."""
+    """Test different formatter outputs."""
+
+    def test_ascii_formatter_with_docstring(self):
+        """AsciiUsageFormatter formats symbol with docstring."""
         formatter = AsciiUsageFormatter()
-        header = formatter.format_header('my_func', 'src/foo.py', 42)
-        assert 'my_func' in header
-        assert 'src/foo.py:42' in header
-
-    def test_ascii_formatter_usage(self):
-        """ASCII formatter should format usage correctly."""
-        formatter = AsciiUsageFormatter()
-        usage = UsageLocation(file_path='test.py', line_number=10, context='  my_func()  ')
-        output = formatter.format_usage(usage)
-        assert 'test.py:10' in output
-        assert 'my_func()' in output
-
-    def test_ascii_formatter_no_usages(self):
-        """ASCII formatter should format no usages message."""
-        formatter = AsciiUsageFormatter()
-        output = formatter.format_no_usages('unused')
-        assert 'unused' in output
-        assert 'No usages found' in output
-
-    def test_markdown_formatter_header(self):
-        """Markdown formatter should include clickable link."""
-        formatter = MarkdownUsageFormatter()
-        header = formatter.format_header('my_func', 'src/foo.py', 42)
-        assert '[src/foo.py:42]' in header
-        assert '#L42' in header
-
-    def test_markdown_formatter_usage(self):
-        """Markdown formatter should use markdown links."""
-        formatter = MarkdownUsageFormatter()
-        usage = UsageLocation(file_path='test.py', line_number=10, context='my_func()')
-        output = formatter.format_usage(usage)
-        assert '[test.py:10]' in output
-        assert '#L10' in output
-        assert '`my_func()`' in output
-
-    def test_html_formatter_header(self):
-        """HTML formatter should include HTML elements."""
-        formatter = HtmlUsageFormatter()
-        header = formatter.format_header('my_func', 'src/foo.py', 42)
-        assert '<h3>' in header
-        assert '<code>my_func</code>' in header
-        assert '<a href=' in header
-
-    def test_html_formatter_usage(self):
-        """HTML formatter should use HTML links and code elements."""
-        formatter = HtmlUsageFormatter()
-        usage = UsageLocation(file_path='test.py', line_number=10, context='my_func()')
-        output = formatter.format_usage(usage)
-        assert '<li>' in output
-        assert '<a href=' in output
-        assert '<code>' in output
-
-
-class TestUsageRendererIntegration:
-    @patch('shutil.which')
-    def test_no_search_tool_available(self, mock_which):
-        """Renderer should show error when no search tool is available."""
-        mock_which.return_value = None
-
-        renderer = UsageRenderer()
-
-        record = FunctionMatchRecord(
+        info = DocstringInfo(
+            symbol_name='my_func',
             symbol_type='function',
-            symbol_name='my_function',
-            qualified_name='module.my_function',
-            file_path='src/foo.py',
-            line_number=42,
-            byte_offset=100,
-            byte_length=50
+            file_path='test.py',
+            line_number=10,
+            docstring='This is the docstring.'
         )
+        result = formatter.format_symbol(info)
+        assert '# function my_func' in result
+        assert 'test.py:10' in result
+        assert 'This is the docstring.' in result
 
-        output = renderer.render(iter([record]))
-        assert 'ripgrep' in output.lower() or 'grep' in output.lower()
-        assert 'error' in output.lower()
+    def test_ascii_formatter_without_docstring(self):
+        """AsciiUsageFormatter formats symbol without docstring."""
+        formatter = AsciiUsageFormatter()
+        info = DocstringInfo(
+            symbol_name='my_func',
+            symbol_type='function',
+            file_path='test.py',
+            line_number=10,
+            docstring=None
+        )
+        result = formatter.format_symbol(info)
+        assert '# function my_func' in result
+        assert '(no docstring)' in result
+
+    def test_markdown_formatter_with_docstring(self):
+        """MarkdownUsageFormatter formats symbol with docstring."""
+        formatter = MarkdownUsageFormatter()
+        info = DocstringInfo(
+            symbol_name='MyClass',
+            symbol_type='class',
+            file_path='module.py',
+            line_number=5,
+            docstring='Class documentation.'
+        )
+        result = formatter.format_symbol(info)
+        assert '## `MyClass`' in result
+        assert 'module.py:5' in result
+        assert '```' in result
+        assert 'Class documentation.' in result
+
+    def test_html_formatter_with_docstring(self):
+        """HtmlUsageFormatter formats symbol with docstring."""
+        formatter = HtmlUsageFormatter()
+        info = DocstringInfo(
+            symbol_name='handler',
+            symbol_type='method',
+            file_path='views.py',
+            line_number=20,
+            docstring='Handles the request.'
+        )
+        result = formatter.format_symbol(info)
+        assert '<code>handler</code>' in result
+        assert 'views.py:20' in result
+        assert '<pre class="docstring">' in result
+        assert 'Handles the request.' in result
+
+    def test_html_formatter_escapes_html(self):
+        """HtmlUsageFormatter escapes HTML in docstrings."""
+        formatter = HtmlUsageFormatter()
+        info = DocstringInfo(
+            symbol_name='test',
+            symbol_type='function',
+            file_path='test.py',
+            line_number=1,
+            docstring='Use <tag> and & symbols.'
+        )
+        result = formatter.format_symbol(info)
+        assert '&lt;tag&gt;' in result
+        assert '&' in result
+
+
+class TestDocstringTypes:
+    """Test DOCSTRING_TYPES constant."""
+
+    def test_docstring_types_includes_class(self):
+        """DOCSTRING_TYPES includes 'class'."""
+        assert 'class' in DOCSTRING_TYPES
+
+    def test_docstring_types_includes_method(self):
+        """DOCSTRING_TYPES includes 'method'."""
+        assert 'method' in DOCSTRING_TYPES
+
+    def test_docstring_types_includes_function(self):
+        """DOCSTRING_TYPES includes 'function'."""
+        assert 'function' in DOCSTRING_TYPES
+
+    def test_docstring_types_excludes_file(self):
+        """DOCSTRING_TYPES excludes 'filepath'."""
+        assert 'filepath' not in DOCSTRING_TYPES

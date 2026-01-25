@@ -1,40 +1,36 @@
 """
-UsageRenderer: Shows where symbols are used in the codebase.
+UsageRenderer: Shows docstrings for matched symbols.
 
-Uses grep/ripgrep to find references to symbols and formats them
-with location and context information.
+Extracts and displays documentation strings from Python classes,
+methods, and functions in various output formats.
 """
 
+import ast
 import logging
-import subprocess
-import shutil
-from typing import Iterator, List, Optional
+from typing import Iterator, Optional
 
 from .base import Renderer
 from .formatters.usage_formatters import (
     UsageFormatter,
     AsciiUsageFormatter,
-    UsageLocation,
+    DocstringInfo,
 )
 from ..core.match_record import MatchRecord
 
 logger = logging.getLogger(__name__)
 
-# Maximum usages to show per symbol
-MAX_USAGES_PER_SYMBOL = 20
-
-# Timeout for grep operations (seconds)
-GREP_TIMEOUT = 10
+# Symbol types that can have docstrings
+DOCSTRING_TYPES = {'class', 'method', 'function'}
 
 
 class UsageRenderer(Renderer):
-    """Renderer that shows where symbols are used.
+    """Renderer that shows docstrings for matched symbols.
 
-    Uses ripgrep (rg) or grep to find references to symbols,
-    excluding the definition line itself.
+    Extracts docstrings from Python source files for classes,
+    methods, and functions. Supports ASCII, Markdown, and HTML formats.
     """
 
-    HELP = "-oU, --usage: Show symbol usages (grep-based search)"
+    HELP = "-oU, --usage: Show symbol docstrings (documentation)"
     FLAG = "-oU"
 
     def __init__(self, formatter: Optional[UsageFormatter] = None):
@@ -44,213 +40,113 @@ class UsageRenderer(Renderer):
             formatter: Formatter for output. Defaults to AsciiUsageFormatter.
         """
         self.formatter = formatter or AsciiUsageFormatter()
-        self._search_tool = self._detect_search_tool()
-
-    def _detect_search_tool(self) -> str:
-        """Detect available search tool (prefer ripgrep)."""
-        if shutil.which('rg'):
-            return 'rg'
-        if shutil.which('grep'):
-            return 'grep'
-        return ''
 
     def render(self, records: Iterator[MatchRecord], **options) -> str:
-        """Render usage information for each symbol.
+        """Render docstrings for matched symbols.
 
         Args:
             records: Iterator of MatchRecord objects
             **options: Additional options (unused currently)
 
         Returns:
-            Formatted string showing usages for each symbol
+            Formatted string with docstrings for each symbol
         """
-        if not self._search_tool:
-            return "Error: Neither ripgrep (rg) nor grep is available. Install ripgrep for best results."
-
         outputs = []
+
         for record in records:
-            output = self._render_symbol_usages(record)
+            # Only process types that can have docstrings
+            if record.symbol_type not in DOCSTRING_TYPES:
+                continue
+
+            # Extract docstring from source file
+            docstring = self._extract_docstring(record)
+
+            # Create docstring info
+            info = DocstringInfo(
+                symbol_name=record.symbol_name,
+                symbol_type=record.symbol_type,
+                file_path=record.file_path,
+                line_number=record.line_number,
+                docstring=docstring
+            )
+
+            # Format output
+            output = self.formatter.format_symbol(info)
             outputs.append(output)
 
         return '\n\n'.join(outputs)
 
-    def _render_symbol_usages(self, record: MatchRecord) -> str:
-        """Render usages for a single symbol.
+    def _extract_docstring(self, record: MatchRecord) -> Optional[str]:
+        """Extract docstring for a symbol from its source file.
+
+        Uses AST parsing to find the docstring for the symbol at the
+        specified line number.
 
         Args:
-            record: MatchRecord for the symbol
+            record: MatchRecord with file_path and line_number
 
         Returns:
-            Formatted string with usages
+            The docstring if found, None otherwise
         """
-        symbol_name = record.symbol_name
-        usages = self._find_usages(record)
-
-        if not usages:
-            return self.formatter.format_no_usages(symbol_name)
-
-        lines = [
-            self.formatter.format_header(
-                symbol_name,
-                record.file_path,
-                record.line_number
-            ),
-            "Used in:"
-        ]
-
-        # Limit usages shown
-        shown_usages = usages[:MAX_USAGES_PER_SYMBOL]
-        remaining = len(usages) - MAX_USAGES_PER_SYMBOL
-
-        for usage in shown_usages:
-            lines.append(self.formatter.format_usage(usage))
-
-        if remaining > 0:
-            lines.append(self.formatter.format_more_indicator(remaining))
-
-        return '\n'.join(lines)
-
-    def _find_usages(self, record: MatchRecord) -> List[UsageLocation]:
-        """Find usages of a symbol using grep/ripgrep.
-
-        Args:
-            record: MatchRecord for the symbol to find usages of
-
-        Returns:
-            List of UsageLocation objects
-        """
-        symbol_name = record.symbol_name
-        definition_file = record.file_path
-        definition_line = record.line_number
+        try:
+            with open(record.file_path, 'r', encoding='utf-8') as f:
+                source = f.read()
+        except (IOError, OSError) as e:
+            logger.warning("Could not read file %s: %s", record.file_path, e)
+            return None
 
         try:
-            if self._search_tool == 'rg':
-                result = self._search_with_ripgrep(symbol_name)
-            else:
-                result = self._search_with_grep(symbol_name)
+            tree = ast.parse(source)
+        except SyntaxError as e:
+            logger.warning("Could not parse %s: %s", record.file_path, e)
+            return None
 
-            usages = self._parse_grep_output(result, definition_file, definition_line)
-            return usages
+        # Find the node at the specified line number
+        target_line = record.line_number
+        symbol_name = record.symbol_name
 
-        except subprocess.TimeoutExpired:
-            logger.warning(f"Search for '{symbol_name}' timed out after {GREP_TIMEOUT}s")
-            return []
-        except Exception as e:
-            logger.warning(f"Error searching for '{symbol_name}': {e}")
-            return []
+        for node in ast.walk(tree):
+            if not hasattr(node, 'lineno'):
+                continue
 
-    def _search_with_ripgrep(self, symbol_name: str) -> str:
-        """Search using ripgrep.
+            # Check if this is the right node
+            if node.lineno != target_line:
+                continue
 
-        Args:
-            symbol_name: Symbol to search for
+            # Extract docstring based on node type
+            if isinstance(node, ast.ClassDef) and node.name == symbol_name:
+                return ast.get_docstring(node)
+            elif isinstance(node, ast.FunctionDef) and node.name == symbol_name:
+                return ast.get_docstring(node)
+            elif isinstance(node, ast.AsyncFunctionDef) and node.name == symbol_name:
+                return ast.get_docstring(node)
 
-        Returns:
-            Raw output from ripgrep
-        """
-        # Use word boundary matching for more accurate results
-        # Escape special regex characters in symbol name
-        import re
-        escaped = re.escape(symbol_name)
+        # Fallback: search by name only if line didn't match exactly
+        return self._find_docstring_by_name(tree, symbol_name, record.symbol_type)
 
-        cmd = [
-            'rg',
-            '-n',                    # Line numbers
-            '--no-heading',          # No file grouping
-            '-w',                    # Word boundary
-            '--type', 'py',          # Python files only for now
-            '--type', 'md',          # Markdown files
-            escaped,
-            '.'
-        ]
-
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=GREP_TIMEOUT,
-            cwd='.'
-        )
-        return result.stdout
-
-    def _search_with_grep(self, symbol_name: str) -> str:
-        """Search using grep as fallback.
-
-        Args:
-            symbol_name: Symbol to search for
-
-        Returns:
-            Raw output from grep
-        """
-        import re
-        escaped = re.escape(symbol_name)
-
-        cmd = [
-            'grep',
-            '-r',                    # Recursive
-            '-n',                    # Line numbers
-            '-w',                    # Word boundary
-            '--include=*.py',        # Python files
-            '--include=*.md',        # Markdown files
-            escaped,
-            '.'
-        ]
-
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=GREP_TIMEOUT,
-            cwd='.'
-        )
-        return result.stdout
-
-    def _parse_grep_output(
+    def _find_docstring_by_name(
         self,
-        output: str,
-        definition_file: str,
-        definition_line: int
-    ) -> List[UsageLocation]:
-        """Parse grep/ripgrep output into UsageLocation objects.
+        tree: ast.AST,
+        symbol_name: str,
+        symbol_type: str
+    ) -> Optional[str]:
+        """Find docstring by symbol name as fallback.
 
         Args:
-            output: Raw grep output
-            definition_file: File where symbol is defined (to skip)
-            definition_line: Line where symbol is defined (to skip)
+            tree: Parsed AST
+            symbol_name: Name of the symbol to find
+            symbol_type: Type of symbol ('class', 'method', 'function')
 
         Returns:
-            List of UsageLocation objects, excluding definition
+            Docstring if found, None otherwise
         """
-        usages = []
+        for node in ast.walk(tree):
+            if symbol_type == 'class' and isinstance(node, ast.ClassDef):
+                if node.name == symbol_name:
+                    return ast.get_docstring(node)
+            elif symbol_type in ('method', 'function'):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    if node.name == symbol_name:
+                        return ast.get_docstring(node)
 
-        for line in output.strip().split('\n'):
-            if not line:
-                continue
-
-            # Parse format: file:line:context
-            parts = line.split(':', 2)
-            if len(parts) < 3:
-                continue
-
-            file_path = parts[0]
-            try:
-                line_num = int(parts[1])
-            except ValueError:
-                continue
-            context = parts[2] if len(parts) > 2 else ''
-
-            # Normalize file path for comparison
-            norm_file = file_path.lstrip('./')
-            norm_def = definition_file.lstrip('./')
-
-            # Skip definition line
-            if norm_file == norm_def and line_num == definition_line:
-                continue
-
-            usages.append(UsageLocation(
-                file_path=file_path,
-                line_number=line_num,
-                context=context
-            ))
-
-        return usages
+        return None

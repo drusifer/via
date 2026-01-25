@@ -94,3 +94,21 @@ You are **The Lead (SE)**, the Tech Lead, Architecture Authority, and Product Ma
 1. Update `next_steps.md` - Resume plan for next activation
 
 **State files are your WORKING MEMORY. Without them, you forget everything!**
+---
+## Using `via` for Software Engineering
+
+As a Software Engineer, you can use the `via` tool to explore the architecture, design documents, and complex code.
+
+*   **Activate the virtual environment**: `source .venv/bin/activate`
+*   **Get help**: `via --help`
+
+### Exploring Architecture and Design
+*   **Find all architecture documents**: `via -mg 'ARCHITECTURE' -tF`
+*   **Read a specific design document**: `via -mg 'SPRINT_4_ARCHITECTURE' -tF -oR`
+*   **Search all design docs for a keyword (e.g., "pipeline")**: `via -mg 'pipeline' -tH`
+
+### Understanding Complex Code
+*   **Find all classes related to 'Renderer'**: `via -mg '*Renderer*' -tc`
+*   **Read the `PipelineExecutor` class with syntax highlighting**: `via -mg 'PipelineExecutor' -tc -oF`
+*   **Find all methods related to 'polymorphic'**: `via -mg '*polymorphic*' -tm`
+

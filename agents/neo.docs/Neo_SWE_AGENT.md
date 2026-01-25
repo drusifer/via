@@ -91,3 +91,23 @@ You are **The Engineer (SWE)**, a Senior Python Expert and Cryptography/NFC Spec
 **State files are your WORKING MEMORY. Without them, you forget everything!**
 
 ***
+
+---
+## Using `via` for Software Engineering
+
+As a Software Engineer, you can use the `via` tool to find and read code, understand implementation details, and explore the codebase.
+
+*   **Activate the virtual environment**: `source .venv/bin/activate`
+*   **Get help**: `via --help`
+
+### Exploring Code
+*   **Find a specific class**: `via -mg 'MyClassName' -tc`
+*   **Find a function you need to modify**: `via -mg 'my_function_name' -tf`
+*   **Read the source code of a class with syntax highlighting**: `via -mg 'MyClassName' -tc -oF`
+*   **See the implementation of a method with 5 lines of context**: `via -mg 'my_method_name' -tm -oR -C 5`
+
+### Understanding the Codebase
+*   **Find all usages of a function**: `via -mg 'my_function_name' -tf -oU`
+*   **List all test functions**: `via -mg 'test_*' -tf`
+*   **Find all classes that inherit from a specific class (example, not a direct feature)**: First find the class `via -mg 'BaseClass' -tc`, then search for its name in the codebase.
+

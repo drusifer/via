@@ -822,59 +822,106 @@ class Migration_002(Migration):
 
 ## 4. Project Structure
 
+> **Updated**: 2026-01-24 - Reflects actual implementation
+
 ```
 via/
 ├── via/
 │   ├── __init__.py
-│   ├── __main__.py              # Entry point
+│   ├── __main__.py              # Entry point + CLI dispatch
 │   │
-│   ├── cli/
+│   ├── commands/                # Subcommand implementations
 │   │   ├── __init__.py
-│   │   ├── index_command.py     # via index
-│   │   ├── query_command.py     # via query (future)
-│   │   └── daemon_command.py    # via daemon start/stop/status
+│   │   ├── index.py             # via index
+│   │   ├── match.py             # via match
+│   │   └── stats.py             # via stats
 │   │
-│   ├── services/
+│   ├── pipeline/                # Pipeline architecture (Sprint 3+)
 │   │   ├── __init__.py
-│   │   ├── indexing_service.py  # Core indexing orchestration
-│   │   ├── watch_service.py     # Daemon + watchdog
-│   │   └── nested_index.py      # Nested index coordinator
+│   │   ├── parser.py            # PipelineParser - CLI to stages
+│   │   ├── executor.py          # PipelineExecutor - execute stages
+│   │   └── types.py             # PipelineStage, StageType
+│   │
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── constants.py         # Version, defaults, exit codes
+│   │   ├── types.py             # SymbolType, MatchOp enums
+│   │   ├── match_record.py      # Polymorphic MatchRecord classes
+│   │   ├── flag_groups.py       # CLI flag group definitions
+│   │   ├── interfaces.py        # ABC interfaces
+│   │   ├── discovery.py         # File discovery
+│   │   ├── gitignore.py         # Gitignore pattern matching
+│   │   └── logging.py           # Logging setup
 │   │
 │   ├── parsers/
 │   │   ├── __init__.py
 │   │   ├── base.py              # ParserABC
 │   │   ├── registry.py          # ParserRegistry
 │   │   ├── python_parser.py     # Python AST parser
-│   │   └── markdown_parser.py   # Markdown heading parser
+│   │   └── markdown_parser.py   # Markdown header parser
 │   │
-│   ├── core/
+│   ├── renderers/               # Output renderers (Sprint 3+)
 │   │   ├── __init__.py
-│   │   ├── discovery.py         # File discovery + .gitignore
-│   │   └── workers.py           # Worker pool
+│   │   ├── base.py              # Renderer ABC
+│   │   ├── factory.py           # RendererFactory
+│   │   ├── list.py              # ListRenderer (-oL)
+│   │   ├── table.py             # TableRenderer (-oT)
+│   │   ├── raw.py               # RawRenderer (-oR)
+│   │   ├── formatted.py         # FormattedRenderer (-oF)
+│   │   ├── diagram.py           # DiagramRenderer (-oD)
+│   │   ├── usage.py             # UsageRenderer (-oU)
+│   │   ├── formatters/          # Output format implementations
+│   │   │   ├── code_formatters.py
+│   │   │   ├── table_formatters.py
+│   │   │   ├── diagram_formatters.py
+│   │   │   └── usage_formatters.py
+│   │   └── utils/
+│   │       └── source_extraction.py
 │   │
-│   ├── db/
+│   ├── services/
 │   │   ├── __init__.py
-│   │   ├── schema.py            # Schema definitions
-│   │   ├── store.py             # DatabaseStore
-│   │   └── migrations.py        # Migration framework
+│   │   └── indexing.py          # IndexingService
 │   │
-│   └── utils/
+│   └── db/
 │       ├── __init__.py
-│       ├── logging.py           # Log setup + rotation
-│       ├── signals.py           # Signal handlers
-│       └── validation.py        # Index validation
+│       ├── schema.py            # Schema definitions
+│       └── store.py             # DatabaseStore
 │
 ├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── fixtures/
-│
 ├── docs/
-│   ├── CLI_REFERENCE.md         # User docs (TBD by @Oracle)
-│   └── ARCHITECTURE.md          # This file
-│
-├── pyproject.toml               # Project config + dependencies
+│   └── USER_GUIDE.md
+├── agents/                      # Bob System agent docs
+├── pyproject.toml
 └── README.md
+```
+
+### 4.1 Pipeline Architecture (Sprint 3+)
+
+The pipeline enables composable CLI syntax:
+
+```
+via -mg 'pattern' -tc --via -oT -fm
+    └── Match ──┘  └─ Type ─┘     └── Render ──┘
+```
+
+**Components**:
+- **PipelineParser**: Parses CLI args into `PipelineStage` objects
+- **PipelineExecutor**: Executes stages, passes `Iterator[MatchRecord]` between them
+- **Flag Groups**: Consistent `-mX`, `-tX`, `-oX`, `-fX` pattern
+
+### 4.2 MatchRecord Polymorphism (Sprint 3+)
+
+Each symbol type has its own `MatchRecord` subclass implementing `supports_render_type()`:
+
+```
+MatchRecord (ABC)
+├── ClassMatchRecord      # Supports DIAGRAM
+├── MethodMatchRecord     # No DIAGRAM
+├── FunctionMatchRecord   # No DIAGRAM
+├── FileMatchRecord       # LIST, TABLE, RAW only
+├── ImportMatchRecord     # Includes USAGE
+├── GlobalMatchRecord     # Includes FORMATTED
+└── HeaderMatchRecord     # Markdown headers
 ```
 
 ---

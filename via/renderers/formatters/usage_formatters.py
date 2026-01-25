@@ -1,103 +1,104 @@
 """
 Usage formatters for UsageRenderer.
 
-Provides ASCII, Markdown, and HTML formatting for symbol usage output.
+Provides ASCII, Markdown, and HTML formatting for symbol docstring output.
 """
 
 from abc import ABC, abstractmethod
-from typing import List
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
-class UsageLocation:
-    """Represents a single usage location."""
+class DocstringInfo:
+    """Represents a symbol's docstring information."""
+    symbol_name: str
+    symbol_type: str
     file_path: str
     line_number: int
-    context: str
+    docstring: Optional[str]
 
 
 class UsageFormatter(ABC):
-    """Abstract base class for usage formatters."""
+    """Abstract base class for usage/docstring formatters."""
 
     @abstractmethod
-    def format_header(self, symbol_name: str, definition_file: str, definition_line: int) -> str:
-        """Format the header for a symbol's usages."""
+    def format_symbol(self, info: DocstringInfo) -> str:
+        """Format a symbol with its docstring.
+
+        Args:
+            info: DocstringInfo containing symbol and docstring data
+
+        Returns:
+            Formatted string output
+        """
         pass
 
     @abstractmethod
-    def format_usage(self, usage: UsageLocation) -> str:
-        """Format a single usage location."""
-        pass
+    def format_no_docstring(self, info: DocstringInfo) -> str:
+        """Format message when no docstring found.
 
-    @abstractmethod
-    def format_no_usages(self, symbol_name: str) -> str:
-        """Format message when no usages found."""
-        pass
+        Args:
+            info: DocstringInfo for the symbol
 
-    @abstractmethod
-    def format_more_indicator(self, remaining: int) -> str:
-        """Format indicator for additional usages not shown."""
+        Returns:
+            Formatted string indicating no docstring
+        """
         pass
 
 
 class AsciiUsageFormatter(UsageFormatter):
     """Plain text ASCII formatting for terminal output."""
 
-    def format_header(self, symbol_name: str, definition_file: str, definition_line: int) -> str:
-        return f"# {symbol_name} (defined at {definition_file}:{definition_line})"
+    def format_symbol(self, info: DocstringInfo) -> str:
+        header = f"# {info.symbol_type} {info.symbol_name} ({info.file_path}:{info.line_number})"
+        if info.docstring:
+            # Indent docstring lines
+            doc_lines = info.docstring.strip().split('\n')
+            indented = '\n'.join(f"  {line}" for line in doc_lines)
+            return f"{header}\n{indented}"
+        return self.format_no_docstring(info)
 
-    def format_usage(self, usage: UsageLocation) -> str:
-        return f"  {usage.file_path}:{usage.line_number}: {usage.context.strip()}"
-
-    def format_no_usages(self, symbol_name: str) -> str:
-        return f"# {symbol_name}: No usages found"
-
-    def format_more_indicator(self, remaining: int) -> str:
-        return f"  ... and {remaining} more usages"
+    def format_no_docstring(self, info: DocstringInfo) -> str:
+        return f"# {info.symbol_type} {info.symbol_name} ({info.file_path}:{info.line_number})\n  (no docstring)"
 
 
 class MarkdownUsageFormatter(UsageFormatter):
-    """Markdown formatting with clickable links."""
+    """Markdown formatting with code blocks."""
 
-    def format_header(self, symbol_name: str, definition_file: str, definition_line: int) -> str:
-        return f"## `{symbol_name}` (defined at [{definition_file}:{definition_line}]({definition_file}#L{definition_line}))"
+    def format_symbol(self, info: DocstringInfo) -> str:
+        link = f"[{info.file_path}:{info.line_number}]({info.file_path}#L{info.line_number})"
+        header = f"## `{info.symbol_name}` ({info.symbol_type})\n\n*Defined at {link}*"
+        if info.docstring:
+            return f"{header}\n\n```\n{info.docstring.strip()}\n```"
+        return self.format_no_docstring(info)
 
-    def format_usage(self, usage: UsageLocation) -> str:
-        link = f"[{usage.file_path}:{usage.line_number}]({usage.file_path}#L{usage.line_number})"
-        return f"- {link}: `{usage.context.strip()}`"
-
-    def format_no_usages(self, symbol_name: str) -> str:
-        return f"## `{symbol_name}`: No usages found"
-
-    def format_more_indicator(self, remaining: int) -> str:
-        return f"- *... and {remaining} more usages*"
+    def format_no_docstring(self, info: DocstringInfo) -> str:
+        link = f"[{info.file_path}:{info.line_number}]({info.file_path}#L{info.line_number})"
+        return f"## `{info.symbol_name}` ({info.symbol_type})\n\n*Defined at {link}*\n\n*(no docstring)*"
 
 
 class HtmlUsageFormatter(UsageFormatter):
     """HTML formatting for web output."""
 
-    def format_header(self, symbol_name: str, definition_file: str, definition_line: int) -> str:
-        return (
-            f'<div class="usage-section">\n'
-            f'  <h3><code>{symbol_name}</code> '
-            f'(defined at <a href="{definition_file}#L{definition_line}">{definition_file}:{definition_line}</a>)</h3>\n'
-            f'  <ul class="usages">'
+    def format_symbol(self, info: DocstringInfo) -> str:
+        link = f'<a href="{info.file_path}#L{info.line_number}">{info.file_path}:{info.line_number}</a>'
+        header = (
+            f'<div class="docstring-section">\n'
+            f'  <h3><code>{info.symbol_name}</code> ({info.symbol_type})</h3>\n'
+            f'  <p class="location">Defined at {link}</p>\n'
         )
+        if info.docstring:
+            escaped = info.docstring.replace('<', '&lt;').replace('>', '&gt;')
+            return f"{header}  <pre class=\"docstring\">{escaped.strip()}</pre>\n</div>"
+        return self.format_no_docstring(info)
 
-    def format_usage(self, usage: UsageLocation) -> str:
+    def format_no_docstring(self, info: DocstringInfo) -> str:
+        link = f'<a href="{info.file_path}#L{info.line_number}">{info.file_path}:{info.line_number}</a>'
         return (
-            f'    <li><a href="{usage.file_path}#L{usage.line_number}">'
-            f'{usage.file_path}:{usage.line_number}</a>: '
-            f'<code>{usage.context.strip()}</code></li>'
-        )
-
-    def format_no_usages(self, symbol_name: str) -> str:
-        return (
-            f'<div class="usage-section">\n'
-            f'  <h3><code>{symbol_name}</code>: No usages found</h3>\n'
+            f'<div class="docstring-section">\n'
+            f'  <h3><code>{info.symbol_name}</code> ({info.symbol_type})</h3>\n'
+            f'  <p class="location">Defined at {link}</p>\n'
+            f'  <p class="no-docstring"><em>(no docstring)</em></p>\n'
             f'</div>'
         )
-
-    def format_more_indicator(self, remaining: int) -> str:
-        return f'    <li><em>... and {remaining} more usages</em></li>\n  </ul>\n</div>'

@@ -2,8 +2,8 @@
 Core type definitions for VIA match command.
 
 TLDR:
-    Defines SymbolType enum, MatchOp enum, and MatchResult dataclass for the
-    denormalized symbols table query system. Simple enums map to SQL operators.
+    Defines SymbolType enum and MatchOp enum for the denormalized symbols
+    table query system. Simple enums map to SQL operators.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -13,8 +13,6 @@ License: GPL-3.0
 """
 
 from enum import Enum
-from dataclasses import dataclass
-from typing import Optional
 
 
 class SymbolType(Enum):
@@ -53,38 +51,3 @@ class MatchOp(Enum):
         self.op_name = op_name
         self.sql_op = sql_op
         self.needs_escaping = needs_escaping
-
-
-@dataclass
-class MatchResult:
-    """Single match result with complete position information.
-
-    Attributes:
-        symbol_type: Entity type (method, class, function, etc.)
-        symbol_name: Simple name (e.g., "save", "User")
-        qualified_name: Fully qualified name (e.g., "models.user.User.save")
-        file_path: Relative file path
-        line_number: Starting line number (0 for files)
-        byte_offset: File byte offset (None for files without position)
-        byte_length: Entity byte length (None for files without position)
-        parent_name: Parent class name for methods (None otherwise)
-    """
-
-    symbol_type: str
-    symbol_name: str
-    qualified_name: str
-    file_path: str
-    line_number: Optional[int]
-    byte_offset: Optional[int]
-    byte_length: Optional[int]
-    parent_name: Optional[str]
-
-    def __str__(self) -> str:
-        """Format as output string with byte position if available."""
-        output = f"{self.symbol_type}:{self.file_path}:{self.line_number}:{self.qualified_name}"
-
-        # Include byte position if available
-        if self.byte_offset is not None:
-            output += f":@{self.byte_offset}+{self.byte_length}"
-
-        return output

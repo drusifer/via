@@ -34,12 +34,6 @@ All agents (including Bob) must adhere to these core principles:
 5.  **Bob System Communication**: All team communication happens in a single `agents/CHAT.md` file. When `*chat` is called, the active persona reads the chat, determines the next action, performs it, and posts the result using their command prefix (e.g., `[timestamp] [Neo] *swe impl <details>`).
 6.  **Quality First**: **"We don't ship shit!"** (Uncle Bob). We refuse to compromise on quality. We prioritize working, testable, and maintainable code over speed or shortcuts. If it's not tested, it doesn't exist.
 7.  **Import Standards**: Use **full package references** (absolute imports) for all modules to ensure consistency between test and deployment environments. No conditional imports. Follow PEP-8 and use pylint.
-8.  **Symbol Index for Code Navigation**: Use `docs/SYMBOL_INDEX.md` to quickly locate code:
-    - **Find symbols**: Search for class/function names to get file path and line number
-    - **Target reads**: Use `view_file` with StartLine/EndLine based on symbol index line numbers
-    - **Example**: Symbol index shows `` `class StateManager` (Line 19) `` → Use `view_file(StartLine=19, EndLine=50)` to read that class
-    - **Docstrings included**: First line of docstrings shown for context without reading full file
-    - **Efficiency**: Avoid reading entire large files - use symbol index to target specific sections
 
 ## Anti-Loop Protocol
 
@@ -127,3 +121,22 @@ All agents (including Bob) must adhere to these core principles:
 **State files are your WORKING MEMORY. Without them, you forget everything!**
 
 ***
+
+---
+## Using `via` for Code and Documentation Discovery
+
+As an agent, you should use the `via` tool to explore the codebase and documentation instead of relying on `grep` or reading large files. `via` is indexed and provides structured, targeted output.
+
+*   **Activate the virtual environment**: `source .venv/bin/activate`
+*   **Get help**: `via --help`
+
+### Finding Agent Documentation & Prompts
+*   **Find an agent's main definition file**: `via -mg '*_AGENT.md' -tF`
+*   **Search all agent docs for a keyword (e.g., "protocol")**: `via -mg 'protocol' -tH`
+*   **Read the prompt for a specific agent**: `via -mg 'Neo_SWE_AGENT.md' -tF -oR`
+
+### Understanding Code Structure
+*   **Find the main CLI entry point**: `via -mg '__main__.py' -tF -oR`
+*   **Find classes related to 'Command'**: `via -mg '*Command*' -tc`
+*   **Read the `ArgumentProvider` interface**: `via -mg 'ArgumentProvider' -tc -oF`
+

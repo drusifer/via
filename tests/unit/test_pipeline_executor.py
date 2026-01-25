@@ -3,8 +3,10 @@ import pytest
 from unittest.mock import Mock, MagicMock
 from via.pipeline.types import StageType, PipelineStage
 from via.pipeline.executor import PipelineExecutor
-from via.core.types import MatchResult, SymbolType, MatchOp
-from via.core.match_record import ClassMatchRecord
+from via.core.types import SymbolType, MatchOp
+from via.core.match_record import (
+    ClassMatchRecord, MethodMatchRecord, FunctionMatchRecord
+)
 from argparse import Namespace
 
 
@@ -16,7 +18,7 @@ class TestExecuteSingleMatchStage:
         # Setup
         db = Mock()
         db.match = Mock(return_value=iter([
-            MatchResult('class', 'User', 'models.User', 'models.py', 10, 100, 50, None)
+            ClassMatchRecord('class', 'User', 'models.User', 'models.py', 10, 100, 50, None)
         ]))
 
         executor = PipelineExecutor(db)
@@ -76,8 +78,8 @@ class TestExecuteChainedMatchStages:
 
         # First stage returns classes
         first_results = [
-            MatchResult('class', 'UserModel', 'models.UserModel', 'models.py', 10, 100, 50, None),
-            MatchResult('class', 'User', 'core.User', 'core.py', 20, 200, 60, None),
+            ClassMatchRecord('class', 'UserModel', 'models.UserModel', 'models.py', 10, 100, 50, None),
+            ClassMatchRecord('class', 'User', 'core.User', 'core.py', 20, 200, 60, None),
         ]
         db.match = Mock(return_value=iter(first_results))
 
@@ -174,7 +176,7 @@ class TestExecuteDefaultOutput:
         """Pipeline without render stage returns iterator for caller to handle."""
         db = Mock()
         matches = [
-            MatchResult('function', 'calc', 'utils.calc', 'utils.py', 15, 150, 30, None)
+            FunctionMatchRecord('function', 'calc', 'utils.calc', 'utils.py', 15, 150, 30, None)
         ]
         db.match = Mock(return_value=iter(matches))
 
@@ -207,9 +209,9 @@ class TestFilterByTypeAndPattern:
 
         # Mix of classes and methods
         first_results = [
-            MatchResult('class', 'User', 'models.User', 'models.py', 10, 100, 50, None),
-            MatchResult('method', 'save', 'models.User.save', 'models.py', 20, 200, 30, 'models.User'),
-            MatchResult('class', 'UserModel', 'models.UserModel', 'models.py', 40, 400, 60, None),
+            ClassMatchRecord('class', 'User', 'models.User', 'models.py', 10, 100, 50, None),
+            MethodMatchRecord('method', 'save', 'models.User.save', 'models.py', 20, 200, 30, 'models.User'),
+            ClassMatchRecord('class', 'UserModel', 'models.UserModel', 'models.py', 40, 400, 60, None),
         ]
         db.match = Mock(return_value=iter(first_results))
 
@@ -256,7 +258,7 @@ class TestIteratorPassing:
         materialized = {'count': 0}
 
         def tracking_generator():
-            yield MatchResult('class', 'User', 'User', 'models.py', 10, 100, 50, None)
+            yield ClassMatchRecord('class', 'User', 'User', 'models.py', 10, 100, 50, None)
             materialized['count'] += 1
 
         db.match = Mock(return_value=tracking_generator())

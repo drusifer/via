@@ -19,29 +19,6 @@ import sys
 from pathlib import Path
 
 
-def _safe_print(text: str, file=None) -> None:
-    """Print text safely, handling Unicode encoding errors.
-
-    Some terminals use latin-1 or ASCII encoding which can't handle
-    Unicode characters like emojis (✅). This function handles such
-    cases gracefully by replacing unencodable characters.
-
-    Args:
-        text: The text to print
-        file: Output file (default: sys.stdout)
-    """
-    if file is None:
-        file = sys.stdout
-
-    try:
-        print(text, file=file)
-    except UnicodeEncodeError:
-        # Terminal encoding can't handle some characters
-        # Replace unencodable chars with their unicode escape or '?'
-        encoding = getattr(file, 'encoding', 'utf-8') or 'utf-8'
-        safe_text = text.encode(encoding, errors='replace').decode(encoding)
-        print(safe_text, file=file)
-
 from .core.constants import (
     VERSION,
     DEFAULT_INDEX_DIR,
@@ -55,6 +32,7 @@ from .core.constants import (
     EXIT_ERROR,
     EXIT_KEYBOARD_INTERRUPT,
 )
+from .core.utils import safe_print
 from .core.logging import setup_logging
 from .core.types import SymbolType, MatchOp
 from .db.store import DatabaseStore
@@ -486,7 +464,7 @@ def _run_pipeline_command(argv: list, directory: str = ".") -> int:
             # If executor returns iterator (no render stage), print results
             if result is not None:
                 for record in result:
-                    _safe_print(str(record))
+                    safe_print(str(record))
 
         return EXIT_SUCCESS
 

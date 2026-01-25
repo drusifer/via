@@ -15,7 +15,7 @@ License: GPL-3.0
 
 from typing import Iterator
 
-from .base import Renderer
+from .base import Renderer, ContextOptions
 from .utils.source_extraction import extract_source
 from ..core.match_record import MatchRecord
 
@@ -45,16 +45,8 @@ class RawRenderer(Renderer):
         Returns:
             Raw source code string
         """
-        # Extract context options
-        after_context = options.get('after_context', 0)
-        before_context = options.get('before_context', 0)
-        context = options.get('context', 0)
+        ctx = ContextOptions.from_options(**options)
         nodelims = options.get('nodelims', False)
-
-        # -C overrides -A and -B
-        if context:
-            after_context = context
-            before_context = context
 
         outputs = []
 
@@ -63,8 +55,8 @@ class RawRenderer(Renderer):
                 record.file_path,
                 record.byte_offset,
                 record.byte_length,
-                before_context,
-                after_context,
+                ctx.before,
+                ctx.after,
                 read_full_file=True  # FileMatchRecord reads entire file
             )
             if source:
@@ -75,26 +67,8 @@ class RawRenderer(Renderer):
                     line_count = source.count('\n') + 1
                     end_line = record.line_number + line_count - 1
 
-                    # Build delimiter header
-                    header = self._format_header(record, end_line)
+                    # Build delimiter header (add newlines for raw output)
+                    header = "\n\n" + self.format_delimiter_header(record, end_line) + "\n"
                     outputs.append(header + source)
 
         return '\n'.join(outputs)
-
-    def _format_header(self, record: MatchRecord, end_line: int) -> str:
-        """Format the delimiter header for a match.
-
-        Args:
-            record: The match record
-            end_line: Calculated end line number
-
-        Returns:
-            Formatted header string
-        """
-        divider = '#' * 60
-        return (
-            f"\n\n{divider}\n"
-            f"# {record.file_path}:{record.line_number}-{end_line}\n"
-            f"#     {record.symbol_type} *{record.symbol_name}*\n"
-            f"{divider}\n"
-        )

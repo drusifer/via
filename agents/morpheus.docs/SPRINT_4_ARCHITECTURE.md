@@ -156,33 +156,41 @@ class MarkdownParser(ParserABC):
 
 ### 1.4 Parser Flag Updates
 
+> **Note**: VIA uses flag groups (`-tX` for type flags). Header flags follow this pattern.
+
 ```python
-# via/pipeline/parser.py - Match parser updates
+# via/core/flag_groups.py - Add to TYPE_FLAGS
 
-def _create_match_parser(self) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(add_help=False, exit_on_error=False)
+TYPE_FLAGS: List[Flag] = [
+    # ... existing flags ...
+    Flag(FlagGroup.TYPE, 'c', 'type-class', 'symbol_type', 'class', 'Classes'),
+    Flag(FlagGroup.TYPE, 'f', 'type-function', 'symbol_type', 'function', 'Functions'),
+    Flag(FlagGroup.TYPE, 'm', 'type-method', 'symbol_type', 'method', 'Methods'),
+    Flag(FlagGroup.TYPE, 'i', 'type-import', 'symbol_type', 'import', 'Imports'),
+    Flag(FlagGroup.TYPE, 'g', 'type-global', 'symbol_type', 'global', 'Globals'),
+    Flag(FlagGroup.TYPE, 'F', 'type-filepath', 'symbol_type', 'filepath', 'File paths'),
+    Flag(FlagGroup.TYPE, 'N', 'type-filename', 'symbol_type', 'filename', 'File names'),
 
-    # Existing type flags
-    parser.add_argument('-c', '--class', dest='symbol_type', action='store_const', const='class')
-    parser.add_argument('-m', '--method', dest='symbol_type', action='store_const', const='method')
-    parser.add_argument('-f', '--function', dest='symbol_type', action='store_const', const='function')
-    parser.add_argument('-i', '--import', dest='symbol_type', action='store_const', const='import')
-    parser.add_argument('-G', '--global', dest='symbol_type', action='store_const', const='global')
-    parser.add_argument('-F', '--file', dest='symbol_type', action='store_const', const='filepath')
-    parser.add_argument('-N', '--filename', dest='symbol_type', action='store_const', const='filename')
-
-    # NEW: Header type flags (mirrors -N/-F pattern)
-    parser.add_argument('-h', '--header', dest='symbol_type', action='store_const', const='header')
-    parser.add_argument('-H', '--header-path', dest='symbol_type', action='store_const', const='headerpath')
-
-    # ... rest of parser
+    # NEW: Header type flag (already added in Sprint 3)
+    Flag(FlagGroup.TYPE, 'H', 'type-header', 'symbol_type', 'header', 'Markdown headers'),
+]
 ```
 
-**Flag Behavior**:
-| Flag | Matches Against | Example Pattern | Finds |
-|------|-----------------|-----------------|-------|
-| `-h` | symbol_name | `Installation` | All headers named "Installation" |
-| `-H` | qualified_name | `*Guide*Installation*` | "Installation" under any "Guide" |
+**Flag Behavior** (using flag group pattern):
+
+| Flag | Long Form | Matches Against | Example |
+|------|-----------|-----------------|---------|
+| `-tH` | `--type-header` | symbol_name | `via -mg 'Install*' -tH` |
+
+**Header Path Matching**: Use `-Q` (qualified) flag with `-tH`:
+
+```bash
+# Match header text only (default)
+via -mg 'Installation' -tH
+
+# Match full header path (with -Q)
+via -mg '*Guide*Installation*' -tH -Q
+```
 
 ### 1.5 Match Stage Logic
 
@@ -337,7 +345,7 @@ class MermaidHtmlFormatter:
 
 ### 3.1 Overview
 
-The UsageRenderer shows where symbols are used (callers/references). This requires querying a references table or performing grep-like searches.
+The UsageRenderer renders the docstring of the matched symbol.
 
 ### 3.2 Database Extension (Optional)
 
@@ -574,7 +582,7 @@ def get_last_index_time(self) -> Optional[str]:
 - `via/renderers/usage.py` (new)
 - `via/renderers/factory.py` (register)
 
-**Acceptance**: `via -g 'match' -f --via -oU` shows where match() is called
+**Acceptance**: `via -g 'match' -f -oU` shows the docstring of the match() function
 
 ### Phase 4: Stats Command (P1)
 

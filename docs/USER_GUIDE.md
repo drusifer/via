@@ -184,6 +184,7 @@ Add `--via` followed by output flags to change format:
 | `-oT` | Table | ASCII table format |
 | `-oR` | Raw | Source code extraction |
 | `-oF` | Formatted | Syntax-highlighted source |
+| `-oU` | Usage | Renders the docstring of the matched symbol. |
 
 ### List Output (Default)
 
@@ -246,6 +247,23 @@ via -mg 'Renderer' -tc -oF -n 1
 Output shows syntax-highlighted Python code with ANSI colors.
 
 ---
+
+
+### Usage Output (Docstrings)
+
+```bash
+via -mg 'MyClassName' -tc -oU
+```
+
+Output:
+```
+############################################################
+# via/my_module.py:123
+#     class *MyClassName*
+############################################################
+This is the docstring for MyClassName.
+It can be multiple lines.
+```
 
 ## Context Lines
 

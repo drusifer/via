@@ -1,9 +1,9 @@
 """
-Unit tests for VIA core types (SymbolType, MatchOp, MatchResult).
+Unit tests for VIA core types (SymbolType, MatchOp).
 
 TLDR:
     Tests for the core type definitions used by the match command.
-    Verifies enum values, SQL operator mappings, and MatchResult formatting.
+    Verifies enum values and SQL operator mappings.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -13,7 +13,7 @@ License: GPL-3.0
 """
 
 import pytest
-from via.core.types import SymbolType, MatchOp, MatchResult
+from via.core.types import SymbolType, MatchOp
 
 
 class TestSymbolTypeEnum:
@@ -86,97 +86,3 @@ class TestMatchOpEnum:
     def test_match_op_count(self):
         """Test that we have exactly 4 match operators."""
         assert len(MatchOp) == 4
-
-
-class TestMatchResult:
-    """Tests for MatchResult dataclass."""
-
-    def test_match_result_creation(self):
-        """Test creating a MatchResult with all fields."""
-        result = MatchResult(
-            symbol_type='method',
-            symbol_name='save',
-            qualified_name='models.user.User.save',
-            file_path='src/models/user.py',
-            line_number=45,
-            byte_offset=1234,
-            byte_length=56,
-            parent_name='User'
-        )
-        assert result.symbol_type == 'method'
-        assert result.symbol_name == 'save'
-        assert result.qualified_name == 'models.user.User.save'
-        assert result.file_path == 'src/models/user.py'
-        assert result.line_number == 45
-        assert result.byte_offset == 1234
-        assert result.byte_length == 56
-        assert result.parent_name == 'User'
-
-    def test_match_result_str_with_byte_position(self):
-        """Test MatchResult string formatting with byte position."""
-        result = MatchResult(
-            symbol_type='method',
-            symbol_name='save',
-            qualified_name='models.user.User.save',
-            file_path='src/models/user.py',
-            line_number=45,
-            byte_offset=1234,
-            byte_length=56,
-            parent_name='User'
-        )
-        expected = 'method:src/models/user.py:45:models.user.User.save:@1234+56'
-        assert str(result) == expected
-
-    def test_match_result_str_without_byte_position(self):
-        """Test MatchResult string formatting without byte position."""
-        result = MatchResult(
-            symbol_type='filepath',
-            symbol_name='user.py',
-            qualified_name='src/models/user.py',
-            file_path='src/models/user.py',
-            line_number=0,
-            byte_offset=None,
-            byte_length=None,
-            parent_name=None
-        )
-        expected = 'filepath:src/models/user.py:0:src/models/user.py'
-        assert str(result) == expected
-
-    def test_match_result_with_none_parent(self):
-        """Test MatchResult with None parent_name (functions, classes)."""
-        result = MatchResult(
-            symbol_type='function',
-            symbol_name='calculate',
-            qualified_name='utils.calculate',
-            file_path='src/utils.py',
-            line_number=15,
-            byte_offset=300,
-            byte_length=80,
-            parent_name=None
-        )
-        assert result.parent_name is None
-        assert 'function:src/utils.py:15:utils.calculate:@300+80' == str(result)
-
-    def test_match_result_equality(self):
-        """Test MatchResult equality comparison."""
-        result1 = MatchResult(
-            symbol_type='method',
-            symbol_name='save',
-            qualified_name='User.save',
-            file_path='user.py',
-            line_number=10,
-            byte_offset=100,
-            byte_length=50,
-            parent_name='User'
-        )
-        result2 = MatchResult(
-            symbol_type='method',
-            symbol_name='save',
-            qualified_name='User.save',
-            file_path='user.py',
-            line_number=10,
-            byte_offset=100,
-            byte_length=50,
-            parent_name='User'
-        )
-        assert result1 == result2

@@ -88,3 +88,21 @@ all tools:
 4.  **Keep CHAT.md Short:** Post brief updates (5-10 lines), put detailed reports in `agents/cypher.docs/`
 5.  **Collaborate:** Work closely with Morpheus on feasibility, Mouse on scheduling.
 6.  **MCP First:** Check for MCP tools before standard file operations
+
+---
+## Using `via` for Project Management
+
+As a Project Manager, you can use the `via` tool to quickly find project artifacts and track progress.
+
+*   **Activate the virtual environment**: `source .venv/bin/activate`
+*   **Get help**: `via --help`
+
+### Finding Project Documents
+*   **Find all user stories**: `via -mg 'SPRINT_*_USER_STORIES' -tF`
+*   **Read the requirements for a specific sprint**: `via -mg 'SPRINT_2_REQUIREMENTS_FINAL' -tF -oR`
+*   **Search all documents for a keyword (e.g., "pipeline")**: `via -mg 'pipeline' -tH`
+
+### Tracking Progress
+*   **Find all tasks for a sprint**: `via -mg 'SPRINT_*_TASKS' -tF`
+*   **See the latest status report**: `via -mg 'SPRINT_*_PROGRESS' -tF -oR`
+

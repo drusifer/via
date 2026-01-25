@@ -16,7 +16,7 @@ License: GPL-3.0
 import os
 from typing import Iterator, Optional
 
-from .base import Renderer
+from .base import Renderer, ContextOptions
 from .formatters.code_formatters import CodeFormatter, AsciiCodeFormatter
 from .utils.source_extraction import extract_source
 from ..core.match_record import MatchRecord
@@ -60,18 +60,10 @@ class FormattedRenderer(Renderer):
         Returns:
             Syntax-highlighted source code string
         """
-        # Extract options
-        after_context = options.get('after_context', 0)
-        before_context = options.get('before_context', 0)
-        context = options.get('context', 0)
+        ctx = ContextOptions.from_options(**options)
         theme = options.get('theme')
         show_line_numbers = options.get('show_line_numbers', False)
         nodelims = options.get('nodelims', False)
-
-        # -C overrides -A and -B
-        if context:
-            after_context = context
-            before_context = context
 
         outputs = []
 
@@ -85,8 +77,8 @@ class FormattedRenderer(Renderer):
                 record.file_path,
                 record.byte_offset,
                 record.byte_length,
-                before_context,
-                after_context,
+                ctx.before,
+                ctx.after,
                 read_full_file=False  # FormattedRenderer requires byte_offset
             )
 
@@ -113,7 +105,7 @@ class FormattedRenderer(Renderer):
                 end_line = record.line_number + line_count - 1
 
                 # Add delimiter header
-                header = self._format_header(record, end_line)
+                header = self.format_delimiter_header(record, end_line)
                 outputs.append(f'{header}\n{formatted}')
 
         return '\n\n'.join(outputs)
@@ -157,21 +149,3 @@ class FormattedRenderer(Renderer):
         _, ext = os.path.splitext(file_path.lower())
 
         return ext_map.get(ext, 'text')
-
-    def _format_header(self, record: MatchRecord, end_line: int) -> str:
-        """Format the delimiter header for a match.
-
-        Args:
-            record: The match record
-            end_line: Calculated end line number
-
-        Returns:
-            Formatted header string
-        """
-        divider = '#' * 60
-        return (
-            f"{divider}\n"
-            f"# {record.file_path}:{record.line_number}-{end_line}\n"
-            f"#     {record.symbol_type} *{record.symbol_name}*\n"
-            f"{divider}"
-        )

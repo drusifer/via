@@ -4,41 +4,12 @@ from typing import Iterator, Optional, List, Dict, Set
 from via.pipeline.types import PipelineStage, StageType
 from via.core.types import SymbolType, MatchOp
 from via.core.match_record import MatchRecord, RenderType, FormatType
+from via.core.utils import safe_print, get_match_op
 from via.db.store import DatabaseStore
 from via.renderers.factory import RendererFactory
 import fnmatch
 import re
 
-
-def _safe_print(text: str, file=None) -> None:
-    """Print text safely, handling Unicode encoding errors.
-
-    Some terminals use latin-1 or ASCII encoding which can't handle
-    Unicode characters like emojis. This handles such cases gracefully.
-    """
-    if file is None:
-        file = sys.stdout
-    try:
-        print(text, file=file)
-    except UnicodeEncodeError:
-        encoding = getattr(file, 'encoding', 'utf-8') or 'utf-8'
-        safe_text = text.encode(encoding, errors='replace').decode(encoding)
-        print(safe_text, file=file)
-
-
-# Mapping of symbol types to their supported render types (for error messages)
-SYMBOL_RENDER_SUPPORT: Dict[str, Set[RenderType]] = {
-    'class': {RenderType.LIST, RenderType.TABLE, RenderType.DIAGRAM,
-              RenderType.USAGE, RenderType.RAW, RenderType.FORMATTED},
-    'method': {RenderType.LIST, RenderType.TABLE, RenderType.USAGE,
-               RenderType.RAW, RenderType.FORMATTED},
-    'function': {RenderType.LIST, RenderType.TABLE, RenderType.USAGE,
-                 RenderType.RAW, RenderType.FORMATTED},
-    'filepath': {RenderType.LIST, RenderType.TABLE, RenderType.RAW},
-    'filename': {RenderType.LIST, RenderType.TABLE, RenderType.RAW},
-    'import': {RenderType.LIST, RenderType.TABLE, RenderType.USAGE, RenderType.RAW},
-    'global': {RenderType.LIST, RenderType.TABLE, RenderType.RAW, RenderType.FORMATTED},
-}
 
 # User-friendly render type names for CLI flags
 RENDER_TYPE_FLAGS: Dict[RenderType, str] = {
@@ -134,12 +105,7 @@ class PipelineExecutor:
         # Determine match operator from match_syntax attribute
         # match_syntax is the suffix from flag groups: 'g' (glob), 'r' (regex), 's' (sql)
         match_syntax = getattr(args, 'match_syntax', 'g')
-        if match_syntax == 'r':
-            match_op = MatchOp.REGEXP
-        elif match_syntax == 's':
-            match_op = MatchOp.LIKE
-        else:
-            match_op = MatchOp.GLOB
+        match_op = get_match_op(match_syntax)
 
         # Handle multiple symbol types (OR'd together)
         if len(symbol_types) > 1:
@@ -217,12 +183,7 @@ class PipelineExecutor:
         # Determine match operator from match_syntax attribute
         # match_syntax is the suffix from flag groups: 'g' (glob), 'r' (regex), 's' (sql)
         match_syntax = getattr(args, 'match_syntax', 'g')
-        if match_syntax == 'r':
-            match_op = MatchOp.REGEXP
-        elif match_syntax == 's':
-            match_op = MatchOp.LIKE
-        else:
-            match_op = MatchOp.GLOB
+        match_op = get_match_op(match_syntax)
 
         for record in prev_results:
             # Filter by type if specified
@@ -307,7 +268,7 @@ class PipelineExecutor:
         output = renderer.render(filter_supported(records), **render_options)
 
         if output:
-            _safe_print(output)
+            safe_print(output)
 
         # Show helpful message for skipped types
         if skipped_types:
@@ -325,14 +286,10 @@ class PipelineExecutor:
             skipped_types: Dict mapping symbol_type -> count of skipped records
         """
         render_flag = RENDER_TYPE_FLAGS.get(render_type, render_type.value)
-        print(f"\nWarning: {sum(skipped_types.values())} record(s) skipped "
-              f"(don't support {render_flag}):", file=sys.stderr)
-
-        for symbol_type, count in skipped_types.items():
-            supported = SYMBOL_RENDER_SUPPORT.get(symbol_type, set())
-            supported_flags = [RENDER_TYPE_FLAGS[rt] for rt in supported if rt in RENDER_TYPE_FLAGS]
-            print(f"  {symbol_type}: {count} skipped. Supported: {', '.join(supported_flags)}",
-                  file=sys.stderr)
+        total = sum(skipped_types.values())
+        types_str = ', '.join(f"{t}({c})" for t, c in skipped_types.items())
+        print(f"Warning: {total} record(s) skipped (don't support {render_flag}): {types_str}",
+              file=sys.stderr)
 
     def _execute_stats_stage(self, stage: PipelineStage):
         """Execute stats stage (placeholder for Phase 8).

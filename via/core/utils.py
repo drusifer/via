@@ -1,0 +1,60 @@
+"""Common utility functions for VIA.
+
+TLDR:
+    Consolidates utilities that were previously duplicated across multiple
+    modules. Includes safe_print for Unicode handling and get_match_op for
+    match syntax conversion.
+
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+$Id$
+
+License: GPL-3.0
+"""
+
+import sys
+from functools import wraps
+from typing import Callable, TypeVar, Any, Optional, TextIO
+
+from .types import MatchOp
+
+F = TypeVar('F', bound=Callable[..., Any])
+
+
+def safe_print(text: str, file: Optional[TextIO] = None) -> None:
+    """Print text safely, handling Unicode encoding errors.
+
+    Some terminals use latin-1 or ASCII encoding which can't handle
+    Unicode characters like emojis. This handles such cases gracefully
+    by replacing unencodable characters.
+
+    Args:
+        text: The text to print
+        file: Output file (default: sys.stdout)
+    """
+    if file is None:
+        file = sys.stdout
+    try:
+        print(text, file=file)
+    except UnicodeEncodeError:
+        encoding = getattr(file, 'encoding', 'utf-8') or 'utf-8'
+        safe_text = text.encode(encoding, errors='replace').decode(encoding)
+        print(safe_text, file=file)
+
+
+def get_match_op(match_syntax: str) -> MatchOp:
+    """Convert match syntax suffix to MatchOp enum.
+
+    Args:
+        match_syntax: Single character suffix ('g', 'r', 's')
+            - 'g': GLOB pattern (default)
+            - 'r': REGEXP (regex)
+            - 's': SQL LIKE pattern
+
+    Returns:
+        Corresponding MatchOp enum value
+    """
+    return {
+        'r': MatchOp.REGEXP,
+        's': MatchOp.LIKE,
+    }.get(match_syntax, MatchOp.GLOB)

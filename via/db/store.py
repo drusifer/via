@@ -17,7 +17,8 @@ License: GPL-3.0
 import os
 import sqlite3
 import time
-from typing import Optional, List, Dict, Any, Iterator
+from functools import wraps
+from typing import Optional, List, Dict, Any, Iterator, Callable, TypeVar
 
 from .schema import (
     ALL_TABLES,
@@ -26,6 +27,24 @@ from .schema import (
 )
 from ..core.types import SymbolType, MatchOp
 from ..core.match_record import MatchRecord, MatchRecordFactory
+
+F = TypeVar('F', bound=Callable[..., Any])
+
+
+def require_connection(func: F) -> F:
+    """Decorator that ensures database connection exists.
+
+    Raises:
+        RuntimeError: If database is not connected
+    """
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not self.conn:
+            raise RuntimeError("Database not connected")
+        return func(self, *args, **kwargs)
+    return wrapper  # type: ignore
+
+
 class DatabaseStore:
     """Manages SQLite database for code index."""
 
@@ -66,11 +85,9 @@ class DatabaseStore:
         """Context manager exit."""
         self.close()
 
+    @require_connection
     def initialize_schema(self) -> None:
         """Create all tables and indexes if they don't exist."""
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
 
         # Create all tables
@@ -112,9 +129,6 @@ class DatabaseStore:
         Returns:
             Metadata value or None if not found
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("SELECT value FROM metadata WHERE key = ?", (key,))
         row = cursor.fetchone()
@@ -169,9 +183,6 @@ class DatabaseStore:
         Returns:
             File ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         rel_path = self._to_relative_path(path)
         cursor = self.conn.cursor()
 
@@ -203,9 +214,6 @@ class DatabaseStore:
             mtime: File modification time
             parsed: Whether file has been parsed
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         updates = []
         params = []
 
@@ -246,9 +254,6 @@ class DatabaseStore:
         Returns:
             File record as dict or None if not found
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         rel_path = self._to_relative_path(path)
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM files WHERE path = ?", (rel_path,))
@@ -265,9 +270,6 @@ class DatabaseStore:
         Returns:
             File record as dict or None if not found
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM files WHERE id = ?", (file_id,))
         row = cursor.fetchone()
@@ -283,9 +285,6 @@ class DatabaseStore:
         Returns:
             List of file records as dicts
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         if parsed_only:
             cursor.execute("SELECT * FROM files WHERE parsed = 1")
@@ -300,9 +299,6 @@ class DatabaseStore:
         Args:
             file_id: File ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM files WHERE id = ?", (file_id,))
         self._commit_if_needed()
@@ -314,9 +310,6 @@ class DatabaseStore:
         Args:
             path: Absolute file path
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         rel_path = self._to_relative_path(path)
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM files WHERE path = ?", (rel_path,))
@@ -355,9 +348,6 @@ class DatabaseStore:
         Returns:
             Function ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute(
             """
@@ -383,9 +373,6 @@ class DatabaseStore:
         Returns:
             List of function records as dicts
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM functions WHERE file_id = ?", (file_id,))
         return [dict(row) for row in cursor.fetchall()]
@@ -400,9 +387,6 @@ class DatabaseStore:
         Returns:
             List of function records as dicts
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM functions WHERE name = ?", (name,))
         return [dict(row) for row in cursor.fetchall()]
@@ -414,9 +398,6 @@ class DatabaseStore:
         Args:
             file_id: File ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM functions WHERE file_id = ?", (file_id,))
         self._commit_if_needed()
@@ -452,9 +433,6 @@ class DatabaseStore:
         Returns:
             Class ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute(
             """
@@ -480,9 +458,6 @@ class DatabaseStore:
         Returns:
             List of class records as dicts
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM classes WHERE file_id = ?", (file_id,))
         return [dict(row) for row in cursor.fetchall()]
@@ -497,9 +472,6 @@ class DatabaseStore:
         Returns:
             List of class records as dicts
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM classes WHERE name = ?", (name,))
         return [dict(row) for row in cursor.fetchall()]
@@ -511,9 +483,6 @@ class DatabaseStore:
         Args:
             file_id: File ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM classes WHERE file_id = ?", (file_id,))
         self._commit_if_needed()
@@ -545,9 +514,6 @@ class DatabaseStore:
         Returns:
             Import ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute(
             """
@@ -569,9 +535,6 @@ class DatabaseStore:
         Returns:
             List of import records as dicts
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM imports WHERE file_id = ?", (file_id,))
         return [dict(row) for row in cursor.fetchall()]
@@ -583,9 +546,6 @@ class DatabaseStore:
         Args:
             file_id: File ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM imports WHERE file_id = ?", (file_id,))
         self._commit_if_needed()
@@ -617,9 +577,6 @@ class DatabaseStore:
         Returns:
             Global ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute(
             """
@@ -658,9 +615,6 @@ class DatabaseStore:
         Returns:
             Symbol ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute(
             """
@@ -683,9 +637,6 @@ class DatabaseStore:
         Args:
             file_path: Relative file path
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute(
             "DELETE FROM symbols WHERE file_path = ?",
@@ -703,9 +654,6 @@ class DatabaseStore:
         Returns:
             List of global records as dicts
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM globals WHERE file_id = ?", (file_id,))
         return [dict(row) for row in cursor.fetchall()]
@@ -717,33 +665,27 @@ class DatabaseStore:
         Args:
             file_id: File ID
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM globals WHERE file_id = ?", (file_id,))
         self._commit_if_needed()
 
     # Batch operations for performance
 
+    @require_connection
     def begin_transaction(self) -> None:
         """Begin a transaction."""
-        if not self.conn:
-            raise RuntimeError("Database not connected")
         self._in_transaction = True
         self.conn.execute("BEGIN TRANSACTION")
 
+    @require_connection
     def commit_transaction(self) -> None:
         """Commit current transaction."""
-        if not self.conn:
-            raise RuntimeError("Database not connected")
         self.conn.commit()
         self._in_transaction = False
 
+    @require_connection
     def rollback_transaction(self) -> None:
         """Rollback current transaction."""
-        if not self.conn:
-            raise RuntimeError("Database not connected")
         self.conn.rollback()
         self._in_transaction = False
 
@@ -796,6 +738,7 @@ class DatabaseStore:
             }
         }
 
+    @require_connection
     def match(
         self,
         symbol_type: Optional[SymbolType],
@@ -823,9 +766,6 @@ class DatabaseStore:
             for result in db.match(SymbolType.METHOD, MatchOp.GLOB, '*save()'):
                 print(f"{result.qualified_name} at byte {result.byte_offset}")
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         # Handle REGEXP specially - use Python-side filtering
         # SQLite doesn't have native REGEXP support
         if match_op == MatchOp.REGEXP:
@@ -989,9 +929,6 @@ class DatabaseStore:
         Returns:
             Total number of symbols
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.execute("SELECT COUNT(*) FROM symbols")
         row = cursor.fetchone()
         return row[0] if row else 0
@@ -1002,18 +939,12 @@ class DatabaseStore:
         Returns:
             Number of unique files
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.execute("SELECT COUNT(DISTINCT file_path) FROM symbols")
         row = cursor.fetchone()
         return row[0] if row else 0
 
     def count_by_type(self) -> Dict[str, int]:
         """Count symbols by type, including markdown headers."""
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.execute(
             "SELECT symbol_type, COUNT(*) FROM symbols GROUP BY symbol_type ORDER BY COUNT(*) DESC"
         )
@@ -1032,9 +963,6 @@ class DatabaseStore:
         Returns:
             List of (file_path, count) tuples
         """
-        if not self.conn:
-            raise RuntimeError("Database not connected")
-
         cursor = self.conn.execute(
             "SELECT file_path, COUNT(*) as cnt FROM symbols GROUP BY file_path ORDER BY cnt DESC LIMIT ?",
             (limit,)

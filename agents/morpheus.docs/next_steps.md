@@ -1,37 +1,25 @@
 # Morpheus Next Steps
 
-## Immediate Next Steps (For Other Personas)
+## Immediate (After Neo Refactoring)
 
-### For @Neo (Implementation)
-**Priority**: P0
-**Task**: Implement Sprint 2 Match Command
+1. Review Neo's refactoring PR for architectural compliance
+2. Verify DRY violations are resolved
+3. Run tests to confirm no regressions
 
-**Files to Create/Modify**:
-1. `via/core/types.py` - SymbolType enum, MatchOp enum, MatchResult dataclass
-2. `via/database/store.py` - Add _QUERY_TEMPLATES dict and match() method
-3. `via/__main__.py` - Add match subcommand with CLI flags
+## Sprint 4 Remaining Architecture Work
 
-**Implementation Order**:
-1. Story 1: Create types.py with enums and dataclass (S1.1-S1.7)
-2. Story 2: Add match() to DatabaseStore with SQL templates (S2.1-S2.7)
-3. Story 3: Wire CLI match command (S3.1-S3.6)
+1. Review DiagramRenderer implementation when complete
+2. Review UsageRenderer implementation when complete
+3. Design any needed architectural changes for Stats Command
 
-**Reference Documents**:
-- Architecture: `/home/drusifer/Projects/via/agents/morpheus.docs/MATCH_COMMAND_ARCHITECTURE.md`
-- User Stories: `/home/drusifer/Projects/via/agents/cypher.docs/SPRINT_2_USER_STORIES.md`
-- Requirements: `/home/drusifer/Projects/via/agents/cypher.docs/SPRINT_2_REQUIREMENTS_FINAL.md`
+## Backlog Items
 
-### For @Mouse (Optional - Task Breakdown)
-If more detailed task breakdown needed before implementation, create Sprint 2 task board with individual tickets.
+- Consider extracting common renderer patterns to base class
+- Consider consolidating SymbolType usage (string vs enum)
+- Review error handling patterns across codebase
 
-### For @Morpheus (Future Sprints)
-- Sprint 3: Design render command architecture (syntax highlighting, context lines)
-- Sprint 4: Design query pipeline architecture (AND/OR/NOT operators)
+## Notes
 
-## No Current Blockers
-Architecture is complete and ready for implementation. All design questions resolved.
-
-## Long-term Architectural Considerations
-- Byte offset/length will enable efficient rendering in Sprint 3
-- SQL template pattern scales well for future query complexity
-- Enum pattern makes adding new types/operators trivial
+- Code review document created: `SPRINT_4_CODE_REVIEW.md`
+- Priority order for refactoring established
+- Estimated 3-4 hours for HIGH priority items

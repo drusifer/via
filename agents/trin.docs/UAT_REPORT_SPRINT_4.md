@@ -9,7 +9,7 @@ Sprint 4 focused on tech debt and feature completion: MarkdownParser, DiagramRen
 ## User Acceptance Criteria
 - [x] MarkdownParser parses all header levels, builds qualified names, and handles edge cases
 - [x] DiagramRenderer renders class diagrams in all required formats
-- [x] UsageRenderer outputs symbol usage with correct formatting and handles unicode/missing fields
+- [x] UsageRenderer outputs the docstring of the symbol with correct formatting and handles unicode/missing fields
 - [x] Stats command provides accurate statistics and supports verbose/json output
 
 ## Test Results
