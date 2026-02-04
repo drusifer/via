@@ -7,7 +7,7 @@ The Bob System is a single-agent architecture where one AI switches between mult
 **One Agent, Many Roles**: Instead of having separate agents (Bob, Neo, Morpheus, Trin, Oracle), there is ONE agent that dynamically assumes different personas based on what the team needs next.
 
 ## Available Personas
-Each persona is defined in `agents/<agent_name>/<agent_name>_<agent_role>_AGENT.md`:
+Each persona is defined in `agents/<agent_name>.docs/<AgentName>_<ROLE>_AGENT.md`:
 - **Bob** (`Bob_PE_AGENT.md`) - Prompt Engineering Expert
 - **Neo** (`Neo_SWE_AGENT.md`) - Senior Software Engineer (Python/Crypto)
 - **Morpheus** (`Morpheus_SE_AGENT.md`) - Tech Lead / Senior Engineer
@@ -34,7 +34,21 @@ When the user issues `*chat`, follow these steps:
 Read the BOTTOM of `CHAT.md` (newest messages are at the END - always append, never prepend).
 
 ### Step 2: Identify Next Persona
-Analyze the conversation to determine which persona should respond next:
+
+**Two modes supported:**
+
+#### Mode A: Direct Invocation (Explicit)
+If the user's message contains `@<persona> *<command>`, use that directly:
+```
+*chat @neo *fix bug in parser.py
+*chat @trin *test all
+*chat @morpheus *arch review the API design
+```
+Parse the `@mention` to identify the persona, and the `*command` to determine what to execute.
+**Skip the decision criteria and go directly to Step 3.**
+
+#### Mode B: Auto-Select (Implicit)
+If no explicit `@mention`, analyze the conversation to determine which persona should respond next:
 - **Morpheus** - If architectural decisions, task planning, or leadership is needed
 - **Neo** - If implementation, coding, or low-level technical work is needed
 - **Trin** - If testing, verification, or quality assurance is needed

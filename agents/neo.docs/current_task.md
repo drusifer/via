@@ -1,50 +1,57 @@
-# Current Task: Sprint 3 Phase 3 - Streaming & Metadata
-
+**Task**: Sprint 3 Phase 4 - Advanced Renderers
 **Status**: Complete (100%)
-**Started**: 2026-01-20
-**Completed**: 2026-01-20
+**Completed**: 2026-02-04
 
-## Completed Tasks
+**Completed Tasks**:
+- ✅ Task 4.1: DiagramRenderer (6/6 tests)
+- ✅ Task 4.2: UsageRenderer (5/5 tests)
+- ✅ Task 4.3: FormattedRenderer (7/7 tests)
+- ✅ Registry Update (3/3 tests)
 
-- Task 3.1: Implement `_get_match_metadata()` in DatabaseStore
-- Task 3.2: Limit parameter with default (0 = unlimited)
+**Implementation Summary**:
 
-## Summary
+### Task 4.1 - DiagramRenderer
+Created `via/renderers/diagram_renderer.py`:
+- Renders class hierarchy diagrams
+- ASCII: Text-based box diagrams
+- MD: Mermaid classDiagram format
+- Only processes ClassMatchRecord instances
 
-Added metadata computation to DatabaseStore that runs BEFORE streaming results:
-- Single aggregation query computes total_matches and column_widths
-- Metadata attached to every MatchRecord via factory
-- Column widths reflect max lengths across ALL matches (not just limited)
-- Enables streaming renderers (TableRenderer can use pre-computed widths)
+### Task 4.2 - UsageRenderer
+Created `via/renderers/usage_renderer.py`:
+- Shows symbol definitions with location info
+- ASCII: Plain text with file:line format
+- MD: Markdown with headers and formatting
+- Shows type, qualified name, parent, byte info
 
-## Files Modified
+### Task 4.3 - FormattedRenderer
+Created `via/renderers/formatted_renderer.py`:
+- Pretty-prints code snippets from source files
+- Reads files using byte_offset/byte_length
+- ASCII: Line-numbered code with header
+- MD: Fenced code blocks with language detection
+- Handles missing files gracefully
 
-- via/db/store.py (added `_get_match_metadata()`, updated `match()`)
-- tests/unit/test_database_streaming.py (NEW - 17 tests)
+### Registry Update
+Updated `via/renderers/__init__.py`:
+- Added DiagramRenderer, UsageRenderer, FormattedRenderer
+- All RenderType values now have a renderer
+- get_renderer() supports all 6 render types
 
-## Test Results
+**Test Results**:
+- Advanced renderer tests: 21/21 passing
+- Updated Phase 3 registry test: 1/1 passing
+- All tests: 354 passed, 1 failed (pre-existing), 1 skipped
+- Coverage: 80%
 
-- 314 passed, 1 skipped
-- 79% overall coverage
+**Files Created**:
+- via/renderers/diagram_renderer.py
+- via/renderers/usage_renderer.py
+- via/renderers/formatted_renderer.py
+- tests/unit/test_advanced_renderers.py
 
-## Key Implementation Details
+**Files Modified**:
+- via/renderers/__init__.py (registered new renderers)
+- tests/unit/test_renderers.py (updated registry test)
 
-```python
-def _get_match_metadata(self, where_clause, params) -> Dict:
-    """Single aggregation query for metadata."""
-    query = """
-        SELECT
-            COUNT(*) as total,
-            MAX(LENGTH(symbol_name)) as max_symbol_name,
-            MAX(LENGTH(qualified_name)) as max_qualified_name,
-            ...
-        FROM symbols WHERE {where_clause}
-    """
-    return {'total_matches': ..., 'column_widths': {...}}
-```
-
-## Next Steps (Phase 4)
-
-1. Create ListRenderer (streams records, uses `__str__()`)
-2. Create TableRenderer (streams records, uses metadata for column widths)
-3. Wire renderers into PipelineExecutor
+**Phase 4 Complete!** Ready to start Phase 5 (Filter Pipeline) or Phase 6 (Output Destinations).

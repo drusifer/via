@@ -702,3 +702,343 @@ via -mg 'render' -tf --via -oU       # Show docstrings for matching functions
 
 **Tests:** 22 new unit tests, 544 total passing, 80% coverage
 
+[<small>2026-02-01 11:50:12</small>] [**Bob**]->[**all**] **pe research*:
+
+ 
+
+## Agent Convention Research Complete 📋
+
+I've analyzed the latest 2026 conventions for agent architectures. Here's how Bob Protocol aligns:
+
+### The Big 3 Standards (Linux Foundation's AAIF)
+
+1. **MCP (Model Context Protocol)** - Anthropic's universal tool connectivity
+2. **AGENTS.md** - OpenAI's project-specific agent instructions  
+3. **Skills** - Claude's modular capability packaging
+
+### Bob Protocol Alignment Analysis
+
+| Convention | Bob Protocol Has | Gap/Opportunity |
+|------------|------------------|-----------------|
+| **MCP Tools** | ✅ Yes (tools/mcp_protocol.md) | Already aligned |
+| **AGENTS.md** | ⚠️ Partial | Our *_AGENT.md files serve similar purpose but aren't discoverable by other agents |
+| **Skills** | ⚠️ Partial | Personas function like Skills but lack standard YAML frontmatter |
+| **Handoffs** | ✅ Yes | CHAT.md @mentions = handoff protocol |
+| **Progressive Loading** | ✅ Yes | State files (context.md, current_task.md) |
+
+### Key Recommendations
+
+1. **Create AGENTS.md at repo root** - Standard discovery for external agents (Codex, Cursor, Copilot)
+2. **Add YAML frontmatter to *_AGENT.md files** - Match Skills format:
+   ```yaml
+   ---
+   name: neo
+   description: Senior SWE for Python/Crypto implementation. Use for coding tasks.
+   allowed-tools: [Bash, Edit, Write, Read]
+   ---
+   ```
+3. **Consider .claude/skills/ directory** - Could convert personas to official Skills
+4. **Keep CHAT.md handoff protocol** - Aligns with multi-agent orchestration patterns
+
+### Industry Context
+
+- 60,000+ repos now use AGENTS.md
+- MCP is the de facto standard (OpenAI adopted March 2025)
+- Skills run in Claude's VM with progressive disclosure (load on demand)
+
+@Human: Would you like me to draft an AGENTS.md for this repo and/or update the persona files with Skills-compatible frontmatter?
+
+
+[<small>2026-02-01 11:57:02</small>] [**Bob**]->[**all**] **pe cleanup*:
+
+ 
+
+## Bob Prompt Cleanup Complete ✅
+
+Removed outdated/incorrect references from Bob protocol files:
+
+### Bob_PE_AGENT.md
+- ❌ Removed entire 'MCP Tools (Preferred)' section (referenced non-existent files)
+- ❌ Removed 'MCP First' operational guideline
+- ❌ Removed Symbol Index section (docs/SYMBOL_INDEX.md doesn't exist)
+- ✏️ Updated LESSONS.md references to generic 'document lessons learned'
+
+### HELP.md  
+- ❌ Removed MCP Tools references for Bob and Cypher personas
+- ✏️ Updated Anti-Loop Protocol LESSONS.md references
+
+### BOB_SYSTEM_PROTOCOL.md
+- ✏️ Fixed persona file path format to match actual structure
+
+All references now point to files that actually exist. Ready to continue with convention alignment (AGENTS.md, YAML frontmatter) when you're ready.
+
+
+[<small>2026-02-01 19:36:44</small>] [**Bob**]->[**all**] **pe update*:
+
+ 
+
+## Agent Convention Alignment Complete ✅
+
+All files now follow 2026 agent standards. Structure:
+
+### Created Files
+- `agents/AGENTS.md` - Project instructions for AI agents
+
+### Added YAML Frontmatter to All Personas
+Each *_AGENT.md now has:
+```yaml
+---
+name: <persona>
+description: <when to use this agent>
+triggers: ["*cmd1", "*cmd2", ...]
+---
+```
+
+### Symlinks Created
+
+| Platform | Location | Points To |
+|----------|----------|-----------|
+| **OpenAI/Codex/Cursor** | `AGENTS.md` | → `agents/AGENTS.md` |
+| **Gemini** | `GEMINI.md` | → `agents/AGENTS.md` |
+| **Claude Skills** | `.claude/skills/*/` | → `agents/*.docs/` |
+| **SKILL.md aliases** | `agents/*.docs/SKILL.md` | → `*_AGENT.md` |
+
+### Housekeeping
+- ✏️ Moved `Mouse_SM_AGENT.md` from `neo.docs/` to `mouse.docs/`
+
+All agent files remain in `agents/` folder. External agents discover via symlinks.
+
+
+[<small>2026-02-01 19:38:05</small>] [**Bob**]->[**all**] **pe tool*:
+
+ 
+
+## Setup Tool Created ✅
+
+Created `agents/tools/setup_agent_links.py` - reusable script for new projects.
+
+**Usage:**
+```bash
+python3 agents/tools/setup_agent_links.py
+```
+
+**What it does:**
+- Auto-discovers persona folders (`*.docs/` with `*_AGENT.md`)
+- Creates `.claude/skills/` symlinks for Claude
+- Creates `SKILL.md` aliases in each persona folder
+- Creates `AGENTS.md` and `GEMINI.md` at repo root
+- Warns about missing YAML frontmatter
+- Idempotent (safe to run multiple times)
+
+Copy `agents/` folder to a new project, run the script, done.
+
+
+[<small>2026-02-01 19:46:52</small>] [**Bob**]->[**all**] **pe refactor*:
+
+ 
+
+## Bob Protocol Restructured ✅
+
+Separated **Bob (Agent)** from **Bob Protocol (Skill)**:
+
+### New Structure
+```
+agents/
+├── skills/
+│   └── bob-protocol/
+│       └── SKILL.md          ← Shared coordination methodology
+├── bob.docs/
+│   └── Bob_PE_AGENT.md       ← Bob's specific PE role only
+└── ...
+```
+
+### What Changed
+
+| Before | After |
+|--------|-------|
+| Protocol embedded in Bob_PE_AGENT.md | Protocol is separate skill |
+| Only Bob knew the protocol | All agents can load it |
+
+### New Frontmatter Field
+Agents now declare dependencies:
+```yaml
+requires: ["bob-protocol"]
+```
+
+### Updated Setup Script
+`setup_agent_links.py` now finds shared skills in `agents/skills/` and creates symlinks for them.
+
+
+[<small>2026-02-01 19:52:50</small>] [**Bob**]->[**all**] **pe update*:
+
+ 
+
+## `*chat` Workflow Updated ✅
+
+The bob-protocol skill now explicitly requires:
+
+1. **Log user's message FIRST** via `chat.py --persona User`
+2. Then identify persona, respond, and log response
+
+This ensures ALL messages (user + AI) go through CHAT.md.
+
+Example flow:
+```
+User: *chat fix the parser bug
+AI:   ./chat.py "fix the parser bug" --persona User --cmd request
+AI:   [identifies Neo, loads agent, does work]
+AI:   ./chat.py "Fixed it..." --persona Neo --cmd "swe fix"
+```
+
+
+[<small>2026-02-01 20:03:58</small>] [**User**]->[**all**] **request*:
+
+ all let's do a review of the project and see what tasks remain for the current Sprint
+
+[<small>2026-02-01 20:04:46</small>] [**Mouse**]->[**all**] **sm status*:
+
+ ## 🏃 Sprint 3 Status Report
+
+**Date:** 2026-02-01
+**Sprint:** Sprint 3 - Internal Pipeline & Render System
+**Total Scope:** 34 story points (20 P0 MVP + 15 P1 Optional)
+
+---
+
+### ✅ COMPLETED (Phase 1 - Task 1.1 & 1.2)
+
+| Task | Description | Status | Evidence |
+|------|-------------|--------|----------|
+| **1.1** | Pipeline Parser with argparse | ✅ DONE | `via/pipeline/parser.py`, 26 tests passing |
+| **1.2** | Pipeline Executor | ✅ DONE | `via/pipeline/executor.py`, tests passing |
+
+**Implemented Features:**
+- StageType enum (MATCH/RENDER/STATS)
+- PipelineStage dataclass with argparse.Namespace
+- PipelineParser splits argv on `--via` flags
+- Separate ArgumentParser for each stage
+- Shorthand flags: `-mg`, `-mr`, `-ms`, `-rT`, `-rL`, `-rD`, etc.
+- Mutually exclusive groups for syntax flags
+- Multi-stage pipeline parsing
+- Chained match filtering
+
+---
+
+### 🔲 NOT STARTED (Remaining Tasks)
+
+**Phase 1 Remaining:**
+| Task | Description | Est. Hours |
+|------|-------------|------------|
+| 1.3 | Wire Pipeline into CLI Entry Point | 4h |
+| 1.4 | Integration Tests for Pipeline | 4h |
+
+**Phase 2: MatchRecord System (5 pts, 40h):**
+- Task 2.1: MatchRecord Base Class and Enums (8h)
+- Task 2.2: Derived MatchRecord Classes (12h)
+- Task 2.3: MatchRecordFactory (8h)
+- Task 2.4: Update DatabaseStore to Use Factory (8h)
+- Task 2.5: Integration Tests (4h)
+
+**Phase 3: Streaming & Metadata (2 pts, 16h):**
+- Task 3.1: Metadata Computation in DatabaseStore (12h)
+- Task 3.2: Limit Parameter and Default (4h)
+
+**Phase 4: List & Table Renderers (3 pts, 24h):**
+- Task 4.1: Renderer Base Class and Factory (4h)
+- Task 4.2: ListRenderer (4h)
+- Task 4.3: TableRenderer (12h)
+- Task 4.4: Wire Renderers into Pipeline (4h)
+
+**Phase 5: Raw Renderer (2 pts, 16h):**
+- Task 5.1: RawRenderer (16h)
+
+**Phase 6: Formatted Renderer (3 pts, 24h):**
+- Task 6.1: Integrate Pygments (4h)
+- Task 6.2: FormattedRenderer (12h)
+- Task 6.3: Theme Detection (8h)
+
+---
+
+### 📊 Sprint Progress
+
+```
+P0 MVP Progress: ████░░░░░░░░░░░░░░░░ 20% (32h done / 160h total)
+
+Phase 1: ██████████░░░░░░░░░░ 80% (32h / 40h)
+Phase 2: ░░░░░░░░░░░░░░░░░░░░  0% ( 0h / 40h)
+Phase 3: ░░░░░░░░░░░░░░░░░░░░  0% ( 0h / 16h)
+Phase 4: ░░░░░░░░░░░░░░░░░░░░  0% ( 0h / 24h)
+Phase 5: ░░░░░░░░░░░░░░░░░░░░  0% ( 0h / 16h)
+Phase 6: ░░░░░░░░░░░░░░░░░░░░  0% ( 0h / 24h)
+```
+
+---
+
+### 🚧 BLOCKERS
+
+None currently identified.
+
+---
+
+### 📋 Immediate Next Steps
+
+1. **@Neo** - Complete Task 1.3 (Wire Pipeline into CLI)
+2. **@Neo** - Complete Task 1.4 (Integration Tests)
+3. **@Neo** - Start Phase 2 (MatchRecord System)
+
+---
+
+### 🎯 Recent Team Activity (from CHAT.md)
+
+| Date | Persona | Activity |
+|------|---------|----------|
+| 2026-02-01 | Bob | Agent convention alignment (AGENTS.md, Skills, YAML frontmatter) |
+| 2026-02-01 | Bob | Created setup_agent_links.py tool |
+| 2026-02-01 | Bob | Restructured Bob Protocol as shared skill |
+| 2026-01-16 | Neo | Phase 1 Task 1.1 Complete (Pipeline Parser) |
+| 2026-01-16 | Mouse | Sprint 3 Task Breakdown Complete |
+| 2026-01-16 | Cypher | Sprint 3 Requirements Finalized |
+| 2026-01-16 | Morpheus | Sprint 3 Architecture Complete |
+
+---
+
+**Summary:** Sprint 3 is ~20% complete. Phase 1 (Pipeline) is nearly done. Need to focus on completing Phase 1 and moving to Phase 2 (MatchRecord System) which is a BLOCKER for all rendering work.
+
+[<small>2026-02-01 20:05:57</small>] [**User**]->[**all**] **request*:
+
+ @neo *tdd implement
+
+[<small>2026-02-02 12:05:43</small>] [**Neo**]->[**all**] **swe impl*:
+
+ ## ✅ Phase 1 Complete - Pipeline CLI Integrated!
+
+**Tasks Completed:**
+- Task 1.3: Wire Pipeline into CLI Entry Point
+- Task 1.4: Integration Tests for Pipeline
+
+**Implementation (TDD):**
+1. Wrote 18 integration tests FIRST (red phase)
+2. Implemented CLI routing (green phase)
+3. All 254 tests passing (1 pre-existing failure unrelated)
+
+**Key Changes to `via/__main__.py`:**
+- `_is_pipeline_syntax()` detects shorthand flags (-mg, -rT, etc.)
+- `_run_pipeline_command()` executes via PipelineParser + PipelineExecutor
+- Backward compatibility preserved (via match still works)
+
+**New Syntax Working:**
+```bash
+via -mg -c '*'              # Match all classes
+via -mg -f 'calc*' -n 5     # Match functions, limit 5
+via -mg -c '*' --via -rT    # Match classes, render table
+via -mg -c '*' --via -rL    # Match classes, render list
+```
+
+**Test Results:** 254 passed, 77% coverage
+
+**Ready for Phase 2:** MatchRecord System (BLOCKER for all rendering)
+
+[<small>2026-02-04 15:22:31</small>] [**User**]->[**all**] **request*:
+
+ @neo *tdd phase 2
+

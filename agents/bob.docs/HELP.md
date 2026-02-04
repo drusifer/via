@@ -27,9 +27,6 @@ Type `*help` anytime to see this reference. The Bob System is a single AI that s
 | `*chat` | Activate multi-persona | `*chat` |
 | `*help` | Show this guide | `*help` |
 
-**MCP Tools:** Filesystem (PRIMARY), Editor, Git
-**See:** `agents/tools/filesystem_mcp.md`, `agents/tools/editor_mcp.md`
-
 ---
 
 ### 📋 Cypher - Product Manager
@@ -45,9 +42,6 @@ Type `*help` anytime to see this reference. The Bob System is a single AI that s
 | `*pm prioritize <ITEMS>` | Prioritize features | `*pm prioritize backlog` |
 | `*pm update <STATUS>` | Post status update | `*pm update Sprint 3 progress` |
 | `*pm story <USER_STORY>` | Add/update user story | `*pm story User can reset password` |
-
-**MCP Tools:** Filesystem (PRIMARY), Project Management, Git
-**See:** `agents/tools/filesystem_mcp.md`, `agents/tools/project_management_mcp.md`
 
 ---
 
@@ -167,12 +161,12 @@ Type `*help` anytime to see this reference. The Bob System is a single AI that s
 2. **Oracle First** (`@Oracle *ora ask`):
    - Have we seen this error before?
    - What have we tried for this problem?
-   - What's in LESSONS.md about this issue?
+   - What lessons have we learned about this issue?
 3. Read error logs carefully
 4. Verify environment (venv, paths, imports)
 5. Plan based on Oracle's knowledge + logs
 6. ONE retry with new approach
-7. If THAT fails: Log in LESSONS.md and escalate
+7. If THAT fails: Document the lesson learned and escalate
 
 **ABSOLUTE RULE:** NO THIRD ATTEMPT without:
 - Consulting Oracle
