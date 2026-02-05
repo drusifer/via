@@ -151,7 +151,7 @@ class TestMatchRecordIntegration:
         """MatchRecord supports_render_type() works correctly."""
         from via.db.store import DatabaseStore
         from via.core.types import SymbolType, MatchOp
-        from via.core.constants import RenderType
+        from via.core.match_record import RenderType
 
         with DatabaseStore(indexed_project["db_path"], indexed_project["tmpdir"]) as db:
             class_results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*'))
