@@ -29,6 +29,8 @@ class ParseResult:
     globals: List["GlobalEntity"] = field(default_factory=list)
     log_statements: List["LogStatementEntity"] = field(default_factory=list)
     markdown_headings: List["MarkdownHeadingEntity"] = field(default_factory=list)
+    calls: List["CallEntity"] = field(default_factory=list)
+    references: List["ReferenceEntity"] = field(default_factory=list)
     parse_error: Optional[str] = None
 @dataclass
 class FunctionEntity:
@@ -94,6 +96,33 @@ class MarkdownHeadingEntity:
     line_number: int
     byte_offset: int
     byte_length: int
+
+
+@dataclass
+class CallEntity:
+    """Represents a function/method call."""
+
+    caller_name: str  # Function/method that makes the call
+    callee_name: str  # Function/method being called
+    line_number: int
+    byte_offset: int
+    byte_length: int
+    caller_type: str = 'function'  # 'function' or 'method'
+    caller_parent: Optional[str] = None  # Class name if method
+
+
+@dataclass
+class ReferenceEntity:
+    """Represents a symbol reference (e.g., using a global constant)."""
+
+    referencer_name: str  # Function/method that makes the reference
+    referenced_name: str  # Symbol being referenced (constant, global, etc.)
+    line_number: int
+    byte_offset: int
+    byte_length: int
+    referencer_type: str = 'function'  # 'function' or 'method'
+    referencer_parent: Optional[str] = None  # Class name if method
+
 
 class ParserABC(ABC, ArgumentProvider, HelpProvider):
     """Abstract base class for language parsers."""

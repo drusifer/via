@@ -1,16 +1,20 @@
 """Pipeline parser using argparse for flag parsing."""
 import argparse
-from typing import List
+from typing import List, Optional, Tuple
 from via.pipeline.types import StageType, PipelineStage
+from via.pipeline.relationship_filter import RelationshipFilter
 from via.core.flag_groups import (
-    MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS, FORMAT_FLAGS,
-    get_match_short_flags, get_type_short_flags
+    MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS, FORMAT_FLAGS, RELATIONSHIP_FLAGS,
+    get_match_short_flags, get_type_short_flags, get_relationship_short_flags
 )
+from via.core.relationship_types import RelationshipType
 
 
 class PipelineParseError(Exception):
     """Raised when pipeline parsing fails."""
     pass
+
+
 
 
 class _StoreSyntax(argparse.Action):
@@ -77,7 +81,7 @@ class PipelineParser:
         return stages
 
     def _split_on_via(self, argv: List[str]) -> List[List[str]]:
-        """Split argv into segments at each --via flag.
+        """Split argv into segments at each --via flag (for non-relationship pipeline).
 
         Args:
             argv: Command line arguments
@@ -86,14 +90,79 @@ class PipelineParser:
             List of argument segments (empty segments filtered out)
         """
         segments = [[]]
-        for arg in argv:
+        i = 0
+        while i < len(argv):
+            arg = argv[i]
             if arg == '--via':
-                segments.append([])
+                # Check if next arg is a relationship type
+                value_map = RelationshipType.get_value_map()
+                if i + 1 < len(argv) and argv[i + 1] in value_map:
+                    # This is a relationship, keep it in current segment
+                    segments[-1].append(arg)
+                    segments[-1].append(argv[i + 1])
+                    i += 2
+                    continue
+                else:
+                    # Plain --via separator
+                    segments.append([])
+                    i += 1
+                    continue
             else:
                 segments[-1].append(arg)
+            i += 1
 
         # Filter out empty segments
         return [s for s in segments if s]
+
+    def _extract_invert_flag(self, args: List[str]) -> Tuple[List[str], bool]:
+        """Extract --invert/-iv flag from args.
+
+        Args:
+            args: List of arguments to process
+
+        Returns:
+            Tuple of (filtered_args, invert_flag)
+        """
+        filtered = []
+        invert = False
+        for arg in args:
+            if arg in ('--invert', '-iv'):
+                invert = True
+            else:
+                filtered.append(arg)
+        return (filtered, invert)
+
+    def _find_relationship_split(self, args: List[str]) -> Optional[Tuple[List[str], RelationshipType, List[str], bool]]:
+        """Find relationship flag in args and split into subject/object parts.
+
+        Args:
+            args: Command line arguments for a stage
+
+        Returns:
+            Tuple of (subject_args, relationship_type, object_args, invert) or None
+        """
+        flag_map = RelationshipType.get_flag_map()
+        value_map = RelationshipType.get_value_map()
+
+        # Look for relationship short flags (-Vinh, -Vca, etc.)
+        for i, arg in enumerate(args):
+            if arg in flag_map:
+                rel_type = flag_map[arg]
+                subject_args = args[:i]
+                object_args, invert = self._extract_invert_flag(args[i + 1:])
+                return (subject_args, rel_type, object_args, invert)
+
+        # Look for --via <relationship-type> long form
+        for i, arg in enumerate(args):
+            if arg == '--via' and i + 1 < len(args):
+                next_arg = args[i + 1]
+                if next_arg in value_map:
+                    rel_type = value_map[next_arg]
+                    subject_args = args[:i]
+                    object_args, invert = self._extract_invert_flag(args[i + 2:])
+                    return (subject_args, rel_type, object_args, invert)
+
+        return None
 
     def _parse_stage(self, args: List[str]) -> PipelineStage:
         """Parse single stage using appropriate argparse parser.
@@ -141,26 +210,68 @@ class PipelineParser:
         """
         try:
             # Remove 'match' if present (for long form)
-            if args[0] == 'match':
+            if args and args[0] == 'match':
                 args = args[1:]
 
-            parsed_args = self.match_parser.parse_args(args)
+            # Check for relationship query
+            rel_split = self._find_relationship_split(args)
+            if rel_split:
+                subject_args, rel_type, object_args, invert = rel_split
 
-            # Convert symbol_types list to single value for backward compat
-            # (executor will handle the list for OR logic)
-            if hasattr(parsed_args, 'symbol_types') and parsed_args.symbol_types:
-                # Keep as list for OR logic, but also set symbol_type for single type
-                if len(parsed_args.symbol_types) == 1:
-                    parsed_args.symbol_type = parsed_args.symbol_types[0]
-                else:
-                    parsed_args.symbol_type = None  # Multiple types, use symbol_types list
+                if not object_args:
+                    raise PipelineParseError("Relationship query requires object pattern")
+
+                # Parse subject args
+                parsed_args = self.match_parser.parse_args(subject_args)
+                self._finalize_symbol_types(parsed_args)
+
+                # Parse object args (for pattern and types)
+                object_parsed = self.match_parser.parse_args(object_args)
+                self._finalize_symbol_types(object_parsed)
+
+                # Create relationship filter
+                parsed_args.relationship = RelationshipFilter(
+                    relationship_type=rel_type,
+                    object_pattern=object_parsed.pattern or '*',
+                    object_match_syntax=getattr(object_parsed, 'match_syntax', 'glob'),
+                    object_types=object_parsed.symbol_types or [],
+                    invert=invert
+                )
+
+                # Merge output/format flags from object args to subject
+                if object_parsed.render_type:
+                    parsed_args.render_type = object_parsed.render_type
+                if object_parsed.format:
+                    parsed_args.format = object_parsed.format
+
+                return PipelineStage(StageType.MATCH, parsed_args)
             else:
-                parsed_args.symbol_type = None
-                parsed_args.symbol_types = []
+                # Regular match stage
+                parsed_args = self.match_parser.parse_args(args)
+                self._finalize_symbol_types(parsed_args)
+                parsed_args.relationship = None
 
-            return PipelineStage(StageType.MATCH, parsed_args)
+                return PipelineStage(StageType.MATCH, parsed_args)
         except (SystemExit, argparse.ArgumentError) as e:
             raise PipelineParseError(f"Invalid match stage arguments: {args}")
+
+    def _finalize_symbol_types(self, parsed_args) -> None:
+        """Finalize symbol_types from parsed args.
+
+        Args:
+            parsed_args: Namespace from argparse
+        """
+        # Convert symbol_types list to single value for backward compat
+        # (executor will handle the list for OR logic)
+        if hasattr(parsed_args, 'symbol_types') and parsed_args.symbol_types:
+            # Keep as list for OR logic, but also set symbol_type for single type
+            if len(parsed_args.symbol_types) == 1:
+                parsed_args.symbol_type = parsed_args.symbol_types[0]
+            else:
+                parsed_args.symbol_type = None  # Multiple types, use symbol_types list
+        else:
+            parsed_args.symbol_type = None
+            parsed_args.symbol_types = []
 
     def _parse_stats_stage(self, args: List[str]) -> PipelineStage:
         """Parse stats stage using argparse.

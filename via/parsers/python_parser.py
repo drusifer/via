@@ -24,7 +24,28 @@ from .base import (
     ClassEntity,
     ImportEntity,
     GlobalEntity,
+    CallEntity,
+    ReferenceEntity,
 )
+# Python builtins that should not be indexed as call relationships
+PYTHON_BUILTINS = {
+    'print', 'len', 'str', 'int', 'float', 'bool', 'list', 'dict', 'set', 'tuple',
+    'range', 'enumerate', 'zip', 'map', 'filter', 'sorted', 'reversed', 'sum',
+    'min', 'max', 'abs', 'round', 'pow', 'divmod', 'hash', 'id', 'type', 'isinstance',
+    'issubclass', 'callable', 'getattr', 'setattr', 'hasattr', 'delattr', 'dir', 'vars',
+    'repr', 'ascii', 'bin', 'oct', 'hex', 'ord', 'chr', 'format', 'input', 'open',
+    'iter', 'next', 'slice', 'object', 'super', 'property', 'classmethod', 'staticmethod',
+    'any', 'all', 'globals', 'locals', 'exec', 'eval', 'compile', 'breakpoint',
+    '__import__', 'memoryview', 'bytearray', 'bytes', 'frozenset', 'complex',
+}
+
+# Python constants and keywords that shouldn't be indexed as references
+PYTHON_CONSTANTS = {
+    'True', 'False', 'None', 'Ellipsis', 'NotImplemented',
+    '__name__', '__doc__', '__file__', '__package__', '__spec__',
+}
+
+
 class PythonParser(ParserABC):
     """Parser for Python files using the ast module."""
 
@@ -104,10 +125,37 @@ class PythonParser(ParserABC):
         func = self._extract_function(node, text, class_id=None)
         result.functions.append(func)
 
+        # Extract calls from function body
+        calls = self._extract_calls(node, text, caller_name=node.name, caller_type='function')
+        result.calls.extend(calls)
+
+        # Extract references from function body
+        refs = self._extract_references(node, text, referencer_name=node.name, referencer_type='function')
+        result.references.extend(refs)
+
     def _handle_class(self, node: ast.ClassDef, text: str, result: ParseResult) -> None:
         """Handle ClassDef nodes."""
         cls = self._extract_class(node, text)
         result.classes.append(cls)
+
+        # Extract calls and references from methods within the class
+        for item in node.body:
+            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                calls = self._extract_calls(
+                    item, text,
+                    caller_name=item.name,
+                    caller_type='method',
+                    caller_parent=node.name
+                )
+                result.calls.extend(calls)
+
+                refs = self._extract_references(
+                    item, text,
+                    referencer_name=item.name,
+                    referencer_type='method',
+                    referencer_parent=node.name
+                )
+                result.references.extend(refs)
 
     def _handle_import(self, node, text: str, result: ParseResult) -> None:
         """Handle Import and ImportFrom nodes."""
@@ -393,3 +441,190 @@ class PythonParser(ParserABC):
             end_offset += len(lines[node.end_lineno - 1])
 
         return max(0, end_offset - start_offset)
+
+    def _extract_calls(
+        self,
+        func_node: ast.AST,
+        text: str,
+        caller_name: str,
+        caller_type: str = 'function',
+        caller_parent: str = None
+    ) -> list:
+        """
+        Extract function/method calls from a function body.
+
+        Args:
+            func_node: Function or method AST node
+            text: Source code text
+            caller_name: Name of the calling function/method
+            caller_type: 'function' or 'method'
+            caller_parent: Parent class name if method
+
+        Returns:
+            List of CallEntity objects
+        """
+        calls = []
+
+        for node in ast.walk(func_node):
+            if not isinstance(node, ast.Call):
+                continue
+
+            callee_name = self._get_callee_name(node)
+            if not callee_name:
+                continue
+
+            # Skip builtins
+            if callee_name in PYTHON_BUILTINS:
+                continue
+
+            byte_offset = self._get_byte_offset(node, text)
+            byte_length = self._get_byte_length(node, text)
+
+            calls.append(CallEntity(
+                caller_name=caller_name,
+                callee_name=callee_name,
+                line_number=node.lineno,
+                byte_offset=byte_offset,
+                byte_length=byte_length,
+                caller_type=caller_type,
+                caller_parent=caller_parent,
+            ))
+
+        return calls
+
+    def _get_callee_name(self, call_node: ast.Call) -> str:
+        """
+        Extract the callee name from a Call node.
+
+        Examples:
+            func() -> 'func'
+            self.method() -> 'method'
+            obj.method() -> 'method'
+            module.func() -> 'func'
+
+        Args:
+            call_node: AST Call node
+
+        Returns:
+            Callee name or None if cannot be determined
+        """
+        func = call_node.func
+
+        if isinstance(func, ast.Name):
+            # Simple function call: func()
+            return func.id
+
+        elif isinstance(func, ast.Attribute):
+            # Method/attribute call: obj.method() or self.method()
+            return func.attr
+
+        return None
+
+    def _extract_references(
+        self,
+        func_node: ast.AST,
+        text: str,
+        referencer_name: str,
+        referencer_type: str = 'function',
+        referencer_parent: str = None
+    ) -> list:
+        """
+        Extract symbol references from a function body.
+
+        Extracts references to external symbols (globals, constants) used within
+        the function. Excludes parameters, local variables, builtins, and self/cls.
+
+        Args:
+            func_node: Function or method AST node
+            text: Source code text
+            referencer_name: Name of the function/method making references
+            referencer_type: 'function' or 'method'
+            referencer_parent: Parent class name if method
+
+        Returns:
+            List of ReferenceEntity objects
+        """
+        references = []
+
+        # Collect function parameters
+        params = set()
+        if isinstance(func_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for arg in func_node.args.args:
+                params.add(arg.arg)
+            for arg in func_node.args.posonlyargs:
+                params.add(arg.arg)
+            for arg in func_node.args.kwonlyargs:
+                params.add(arg.arg)
+            if func_node.args.vararg:
+                params.add(func_node.args.vararg.arg)
+            if func_node.args.kwarg:
+                params.add(func_node.args.kwarg.arg)
+
+        # Collect local variables (assigned within the function)
+        locals_vars = set()
+        for node in ast.walk(func_node):
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        locals_vars.add(target.id)
+            elif isinstance(node, ast.AnnAssign):
+                if isinstance(node.target, ast.Name):
+                    locals_vars.add(node.target.id)
+            elif isinstance(node, ast.NamedExpr):  # Walrus operator :=
+                if isinstance(node.target, ast.Name):
+                    locals_vars.add(node.target.id)
+
+        # Track which names we've already added to avoid duplicates
+        seen_names = set()
+
+        # Find all Name nodes used in Load context (reading a variable)
+        for node in ast.walk(func_node):
+            if not isinstance(node, ast.Name):
+                continue
+
+            # Only care about Load context (reading a variable)
+            if not isinstance(node.ctx, ast.Load):
+                continue
+
+            name = node.id
+
+            # Skip duplicates
+            if name in seen_names:
+                continue
+
+            # Skip parameters
+            if name in params:
+                continue
+
+            # Skip local variables
+            if name in locals_vars:
+                continue
+
+            # Skip self/cls
+            if name in ('self', 'cls'):
+                continue
+
+            # Skip Python builtins
+            if name in PYTHON_BUILTINS:
+                continue
+
+            # Skip Python constants (True, False, None, etc.)
+            if name in PYTHON_CONSTANTS:
+                continue
+
+            # This is a reference to an external symbol
+            seen_names.add(name)
+            byte_offset = self._get_byte_offset(node, text)
+            byte_length = self._get_byte_length(node, text)
+
+            references.append(ReferenceEntity(
+                referencer_name=referencer_name,
+                referenced_name=name,
+                line_number=node.lineno,
+                byte_offset=byte_offset,
+                byte_length=byte_length,
+                referencer_type=referencer_type,
+                referencer_parent=referencer_parent,
+            ))
+
+        return references

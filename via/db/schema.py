@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS symbols (
 );
 """
 
-# Schema v2: Symbol references table for relationship queries (future)
+# Schema v2: Symbol references table for relationship queries
 CREATE_REFERENCES_TABLE = """
 CREATE TABLE IF NOT EXISTS symbol_references (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -159,6 +159,17 @@ CREATE TABLE IF NOT EXISTS symbol_references (
     line_number INTEGER,
     FOREIGN KEY (from_symbol_id) REFERENCES symbols(id) ON DELETE CASCADE,
     FOREIGN KEY (to_symbol_id) REFERENCES symbols(id) ON DELETE CASCADE
+);
+"""
+
+# Schema v3: Pending relationships for two-pass indexing
+CREATE_PENDING_RELATIONSHIPS_TABLE = """
+CREATE TABLE IF NOT EXISTS pending_relationships (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id INTEGER NOT NULL,
+    target_name TEXT NOT NULL,
+    rel_type TEXT NOT NULL,
+    FOREIGN KEY (source_id) REFERENCES symbols(id) ON DELETE CASCADE
 );
 """
 
@@ -188,6 +199,9 @@ CREATE_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_symbol_references_from ON symbol_references(from_symbol_id);",
     "CREATE INDEX IF NOT EXISTS idx_symbol_references_to ON symbol_references(to_symbol_id);",
     "CREATE INDEX IF NOT EXISTS idx_symbol_references_type ON symbol_references(reference_type);",
+    # v3 indexes (pending relationships)
+    "CREATE INDEX IF NOT EXISTS idx_pending_rel_source ON pending_relationships(source_id);",
+    "CREATE INDEX IF NOT EXISTS idx_pending_rel_target ON pending_relationships(target_name);",
 ]
 
 # All table creation statements in dependency order
@@ -204,4 +218,6 @@ ALL_TABLES = [
     # v2 tables
     CREATE_SYMBOLS_TABLE,
     CREATE_REFERENCES_TABLE,
+    # v3 tables
+    CREATE_PENDING_RELATIONSHIPS_TABLE,
 ]

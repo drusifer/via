@@ -968,3 +968,294 @@ class DatabaseStore:
             (limit,)
         )
         return [(row[0], row[1]) for row in cursor.fetchall()]
+
+    # =========================================================================
+    # Relationship Methods (Sprint 5)
+    # =========================================================================
+
+    @require_connection
+    def insert_relationship(
+        self,
+        source_id: int,
+        target_id: int,
+        rel_type: str
+    ) -> int:
+        """Insert a relationship between two symbols.
+
+        Args:
+            source_id: ID of the source symbol
+            target_id: ID of the target symbol
+            rel_type: Type of relationship (e.g., 'inherits-from', 'calls')
+
+        Returns:
+            ID of the inserted relationship
+        """
+        cursor = self.conn.execute(
+            """INSERT INTO symbol_references (from_symbol_id, to_symbol_id, reference_type)
+               VALUES (?, ?, ?)""",
+            (source_id, target_id, rel_type)
+        )
+        return cursor.lastrowid
+
+    @require_connection
+    def insert_pending_relationship(
+        self,
+        source_id: int,
+        target_name: str,
+        rel_type: str
+    ) -> int:
+        """Insert a pending relationship (target not yet resolved).
+
+        Used in two-pass indexing when the target symbol may not exist yet.
+
+        Args:
+            source_id: ID of the source symbol
+            target_name: Name of the target symbol (to be resolved later)
+            rel_type: Type of relationship
+
+        Returns:
+            ID of the inserted pending relationship
+        """
+        cursor = self.conn.execute(
+            """INSERT INTO pending_relationships (source_id, target_name, rel_type)
+               VALUES (?, ?, ?)""",
+            (source_id, target_name, rel_type)
+        )
+        return cursor.lastrowid
+
+    @require_connection
+    def resolve_pending_relationships(self) -> int:
+        """Resolve pending relationships after all symbols have been indexed.
+
+        For each pending relationship, tries to find the target symbol by name
+        and creates a resolved relationship if found. For imports, creates
+        module symbols for external modules. Cleans up pending entries.
+
+        Returns:
+            Number of relationships resolved
+        """
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT id, source_id, target_name, rel_type FROM pending_relationships"
+        )
+        pending = cursor.fetchall()
+
+        resolved_count = 0
+        for row in pending:
+            pending_id, source_id, target_name, rel_type = row
+
+            # Try to find target symbol by name
+            target_cursor = self.conn.execute(
+                "SELECT id FROM symbols WHERE symbol_name = ? LIMIT 1",
+                (target_name,)
+            )
+            target_row = target_cursor.fetchone()
+
+            if target_row:
+                # Create resolved relationship
+                self.insert_relationship(source_id, target_row[0], rel_type)
+                resolved_count += 1
+            elif rel_type == 'imports':
+                # For imports, create a module symbol for external modules
+                module_id = self._get_or_create_module_symbol(target_name)
+                if module_id:
+                    self.insert_relationship(source_id, module_id, rel_type)
+                    resolved_count += 1
+
+            # Delete pending entry (resolved or not)
+            self.conn.execute(
+                "DELETE FROM pending_relationships WHERE id = ?",
+                (pending_id,)
+            )
+
+        return resolved_count
+
+    def _get_or_create_module_symbol(self, module_name: str) -> int:
+        """Get or create a module symbol for external modules.
+
+        Args:
+            module_name: Name of the module (e.g., 'os', 'typing')
+
+        Returns:
+            Symbol ID of the module
+        """
+        # Check if module symbol already exists
+        cursor = self.conn.execute(
+            "SELECT id FROM symbols WHERE symbol_name = ? AND symbol_type = 'module' LIMIT 1",
+            (module_name,)
+        )
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+
+        # Create new module symbol for external module
+        cursor = self.conn.execute(
+            """INSERT INTO symbols
+               (symbol_name, symbol_type, file_path, line_number, qualified_name)
+               VALUES (?, 'module', '<external>', 0, ?)""",
+            (module_name, module_name)
+        )
+        return cursor.lastrowid
+
+    @require_connection
+    def query_relationships(
+        self,
+        relationship_type: str,
+        subject_pattern: Optional[str] = None,
+        object_pattern: Optional[str] = None,
+        subject_type: Optional[str] = None,
+        object_type: Optional[str] = None,
+        invert: bool = False,
+        match_op: MatchOp = MatchOp.GLOB,
+        case_sensitive: bool = True,
+        limit: int = 100
+    ) -> Iterator[MatchRecord]:
+        """Query symbols by relationship.
+
+        When invert=False (default):
+            Returns subjects that have the relationship TO objects matching pattern.
+            Example: Find classes that inherit from 'BaseClass'
+
+        When invert=True:
+            Returns targets that have the relationship FROM subjects matching pattern.
+            Example: Find what 'ChildClass' inherits from
+
+        Args:
+            relationship_type: Type of relationship (e.g., 'inherits-from')
+            subject_pattern: Pattern to filter subject symbols
+            object_pattern: Pattern to filter object (target) symbols
+            subject_type: Symbol type filter for subjects
+            object_type: Symbol type filter for objects
+            invert: If True, swap subject/object in query
+            match_op: Match operator for pattern matching
+            case_sensitive: Whether pattern matching is case-sensitive
+            limit: Maximum results to return
+
+        Yields:
+            MatchRecord objects for matching symbols
+        """
+        # Build the query
+        if not invert:
+            # Normal: find subjects that relate TO objects
+            # Return the subjects (sources)
+            select_from = "s"  # source symbol
+            filter_on = "t"   # filter by target pattern
+            join_source = "from_symbol_id"
+            join_target = "to_symbol_id"
+        else:
+            # Inverted: find targets that relate FROM subjects
+            # Return the targets
+            select_from = "t"  # target symbol
+            filter_on = "s"   # filter by source pattern
+            join_source = "from_symbol_id"
+            join_target = "to_symbol_id"
+
+        # Build WHERE clauses
+        where_parts = [f"r.reference_type = ?"]
+        params: List[Any] = [relationship_type]
+
+        # Pattern filtering: subject_pattern always filters source (s),
+        # object_pattern always filters target (t). The caller (executor)
+        # handles any swapping needed for inverted queries.
+        if subject_pattern and subject_pattern != '*':
+            column = "s.symbol_name"
+            pat = subject_pattern
+            if not case_sensitive:
+                column = "LOWER(s.symbol_name)"
+                pat = pat.lower()
+            where_parts.append(f"{column} {match_op.sql_op} ?")
+            params.append(pat)
+
+        if object_pattern and object_pattern != '*':
+            column = "t.symbol_name"
+            pat = object_pattern
+            if not case_sensitive:
+                column = "LOWER(t.symbol_name)"
+                pat = pat.lower()
+            where_parts.append(f"{column} {match_op.sql_op} ?")
+            params.append(pat)
+
+        # Type filtering: subject_type filters source, object_type filters target
+        if subject_type:
+            where_parts.append("s.symbol_type = ?")
+            params.append(subject_type)
+
+        if object_type:
+            where_parts.append("t.symbol_type = ?")
+            params.append(object_type)
+
+        # Build query
+        where_clause = " AND ".join(where_parts)
+        query = f"""
+            SELECT
+                {select_from}.symbol_name,
+                {select_from}.symbol_type,
+                {select_from}.file_path,
+                {select_from}.line_number,
+                {select_from}.byte_offset,
+                {select_from}.byte_length,
+                {select_from}.qualified_name,
+                {select_from}.parent_name
+            FROM symbol_references r
+            JOIN symbols s ON r.{join_source} = s.id
+            JOIN symbols t ON r.{join_target} = t.id
+            WHERE {where_clause}
+            ORDER BY {select_from}.file_path, {select_from}.line_number
+            LIMIT ?
+        """
+        params.append(limit)
+
+        # Execute and yield results
+        cursor = self.conn.execute(query, params)
+        for row in cursor:
+            row_dict = {
+                'symbol_name': row[0],
+                'symbol_type': row[1],
+                'file_path': row[2],
+                'line_number': row[3],
+                'byte_offset': row[4],
+                'byte_length': row[5],
+                'qualified_name': row[6],
+                'parent_name': row[7],
+            }
+            yield self._record_factory.create_from_row(row_dict)
+
+    @require_connection
+    def delete_relationships_for_file(self, file_path: str) -> int:
+        """Delete all relationships involving symbols from a file.
+
+        Used when re-indexing a file to clean up stale relationships.
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            Number of relationships deleted
+        """
+        # Get symbol IDs for this file
+        cursor = self.conn.execute(
+            "SELECT id FROM symbols WHERE file_path = ?",
+            (file_path,)
+        )
+        symbol_ids = [row[0] for row in cursor.fetchall()]
+
+        if not symbol_ids:
+            return 0
+
+        # Delete relationships where these symbols are source or target
+        placeholders = ",".join("?" * len(symbol_ids))
+        deleted = 0
+
+        cursor = self.conn.execute(
+            f"DELETE FROM symbol_references WHERE from_symbol_id IN ({placeholders})",
+            symbol_ids
+        )
+        deleted += cursor.rowcount
+
+        cursor = self.conn.execute(
+            f"DELETE FROM symbol_references WHERE to_symbol_id IN ({placeholders})",
+            symbol_ids
+        )
+        deleted += cursor.rowcount
+
+        return deleted

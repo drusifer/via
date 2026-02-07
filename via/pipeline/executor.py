@@ -2,6 +2,7 @@
 import sys
 from typing import Iterator, Optional, List, Dict, Set
 from via.pipeline.types import PipelineStage, StageType
+from via.pipeline.relationship_filter import RelationshipFilter
 from via.core.types import SymbolType, MatchOp
 from via.core.match_record import MatchRecord, RenderType, FormatType
 from via.core.utils import safe_print, get_match_op
@@ -93,6 +94,11 @@ class PipelineExecutor:
         """
         args = stage.args
 
+        # Check if this is a relationship query
+        relationship = getattr(args, 'relationship', None)
+        if relationship:
+            return self._execute_relationship_query(stage)
+
         # Extract arguments - check for symbol_types list (OR'd) or symbol_type (single)
         symbol_types = getattr(args, 'symbol_types', None) or []
         symbol_type = args.symbol_type if hasattr(args, 'symbol_type') else None
@@ -117,6 +123,62 @@ class PipelineExecutor:
         st = SymbolType(symbol_type) if symbol_type else None
         results = self.db.match(st, match_op, pattern, case_sensitive, limit, match_qualified)
         return results
+
+    def _execute_relationship_query(self, stage: PipelineStage) -> Iterator[MatchRecord]:
+        """Execute relationship query against database.
+
+        Args:
+            stage: PipelineStage with relationship filter
+
+        Returns:
+            Iterator of MatchRecord from database
+        """
+        args = stage.args
+        rel: RelationshipFilter = args.relationship
+
+        # Extract query params from CLI
+        # - Pattern BEFORE --via: what user is relating TO (the "known" thing)
+        # - Pattern AFTER --via: filter on results (defaults to '*' = all)
+        cli_relate_to_pattern = args.pattern
+        cli_results_pattern = rel.object_pattern
+
+        cli_relate_to_types = getattr(args, 'symbol_types', None) or []
+        cli_relate_to_type = args.symbol_type if hasattr(args, 'symbol_type') else None
+        if cli_relate_to_types:
+            cli_relate_to_type = cli_relate_to_types[0]
+
+        cli_results_type = rel.object_types[0] if rel.object_types else None
+
+        case_sensitive = not args.case_insensitive
+        limit = args.limit
+
+        # Map CLI patterns to DB query based on invert flag
+        # Without invert: relate TO = targets (parents), results = sources (children)
+        # With invert: relate TO = sources (children), results = targets (parents)
+        if not rel.invert:
+            # "Find children that inherit FROM parents matching pattern"
+            subject_pattern = cli_results_pattern   # filter results (sources/children)
+            object_pattern = cli_relate_to_pattern  # filter what we relate TO (targets/parents)
+            subject_type = cli_results_type
+            object_type = cli_relate_to_type
+        else:
+            # "Find parents that are inherited BY children matching pattern"
+            subject_pattern = cli_relate_to_pattern  # filter what we query about (sources/children)
+            object_pattern = cli_results_pattern     # filter results (targets/parents)
+            subject_type = cli_relate_to_type
+            object_type = cli_results_type
+
+        # Query relationships from database
+        return self.db.query_relationships(
+            relationship_type=rel.relationship_type.value,
+            subject_pattern=subject_pattern,
+            object_pattern=object_pattern,
+            subject_type=subject_type,
+            object_type=object_type,
+            invert=rel.invert,
+            limit=limit,
+            case_sensitive=case_sensitive
+        )
 
     def _match_multiple_types(
         self,

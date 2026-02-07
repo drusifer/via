@@ -403,7 +403,7 @@ class IndexingService:
         # Insert class and method symbols
         for cls in parse_result.classes:
             qualified_name = _calculate_qualified_name(file_info.path, cls.name)
-            self.db_store.insert_symbol(
+            class_id = self.db_store.insert_symbol(
                 symbol_name=cls.name,
                 symbol_type='class',
                 file_path=file_info.path,
@@ -413,6 +413,19 @@ class IndexingService:
                 byte_length=cls.byte_length,
                 parent_name=None,
             )
+
+            # Create pending relationships for inheritance
+            if cls.bases:
+                # bases is a comma-separated string like "Base1, Base2"
+                base_names = [b.strip() for b in cls.bases.split(',')]
+                for base_name in base_names:
+                    if base_name:
+                        self.db_store.insert_pending_relationship(
+                            source_id=class_id,
+                            target_name=base_name,
+                            rel_type='inherits-from'
+                        )
+
             for method in cls.methods:
                 qualified_name = _calculate_qualified_name(file_info.path, method.name, parent_class=cls.name)
                 self.db_store.insert_symbol(
@@ -440,11 +453,11 @@ class IndexingService:
                 parent_name=None,
             )
 
-        # Insert import symbols
+        # Insert import symbols and create import relationships
         for imp in parse_result.imports:
             symbol_name = imp.name if imp.name else imp.module
             qualified_name = imp.module if not imp.name else f"{imp.module}.{imp.name}"
-            self.db_store.insert_symbol(
+            import_id = self.db_store.insert_symbol(
                 symbol_name=symbol_name,
                 symbol_type='import',
                 file_path=file_info.path,
@@ -453,6 +466,16 @@ class IndexingService:
                 byte_offset=imp.byte_offset,
                 byte_length=imp.byte_length,
                 parent_name=None,
+            )
+
+            # Create pending relationship for imports
+            # Source is the import symbol (carries file path info)
+            # Target is the module being imported
+            module_name = imp.module if imp.module else symbol_name
+            self.db_store.insert_pending_relationship(
+                source_id=import_id,
+                target_name=module_name,
+                rel_type='imports'
             )
 
         # Insert global symbols
@@ -492,6 +515,54 @@ class IndexingService:
             byte_length=None,
             parent_name=None,
         )
+
+        # Create pending relationships for function/method calls
+        for call in parse_result.calls:
+            # Find the caller symbol
+            caller_type = 'method' if call.caller_type == 'method' else 'function'
+            parent_name = call.caller_parent if call.caller_type == 'method' else None
+
+            # Look up the caller symbol
+            cursor = self.db_store.conn.execute(
+                """SELECT id FROM symbols
+                   WHERE symbol_name = ? AND symbol_type = ? AND file_path = ?
+                   AND (parent_name = ? OR (parent_name IS NULL AND ? IS NULL))
+                   LIMIT 1""",
+                (call.caller_name, caller_type, file_info.path, parent_name, parent_name)
+            )
+            row = cursor.fetchone()
+
+            if row:
+                caller_id = row[0]
+                self.db_store.insert_pending_relationship(
+                    source_id=caller_id,
+                    target_name=call.callee_name,
+                    rel_type='calls'
+                )
+
+        # Create pending relationships for symbol references
+        for ref in parse_result.references:
+            # Find the referencer symbol
+            referencer_type = 'method' if ref.referencer_type == 'method' else 'function'
+            parent_name = ref.referencer_parent if ref.referencer_type == 'method' else None
+
+            # Look up the referencer symbol
+            cursor = self.db_store.conn.execute(
+                """SELECT id FROM symbols
+                   WHERE symbol_name = ? AND symbol_type = ? AND file_path = ?
+                   AND (parent_name = ? OR (parent_name IS NULL AND ? IS NULL))
+                   LIMIT 1""",
+                (ref.referencer_name, referencer_type, file_info.path, parent_name, parent_name)
+            )
+            row = cursor.fetchone()
+
+            if row:
+                referencer_id = row[0]
+                self.db_store.insert_pending_relationship(
+                    source_id=referencer_id,
+                    target_name=ref.referenced_name,
+                    rel_type='references'
+                )
 
         # Insert header symbols with hierarchical qualified names
         header_stack: list = []  # [(level, text), ...]

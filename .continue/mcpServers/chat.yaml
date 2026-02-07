@@ -1,0 +1,13 @@
+name: chat-new-message
+version: 0.0.1
+schema: v1
+mcpServers:
+  - name: New MCP server
+    command: ${workspaceRoot}/agents/tools/chat.py
+    args:
+      - --persona
+      - <agent_name>
+      - --to
+      - <recipient_name or all>
+      - <message>
+    env: {}

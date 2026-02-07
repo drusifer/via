@@ -28,39 +28,55 @@ The following relationship types will be indexed in the first iteration:
 The syntax for querying relationships will extend the existing pipeline construct. A new \`--invert\` flag will be introduced to simplify the relationship types by allowing for bidirectional queries.
 
 **Syntax:**
-\`<subject_query> --via <relationship> <object_query> [--invert] [options]\`
+\`RELATE_TO_QUERY --via RELATIONSHIP [RESULTS_FILTER] [--invert] [options]\`
 
-This design allows for a powerful and flexible way to compose complex queries, as both the subject and object can be defined using the full \`via\` match syntax. The \`--invert\` flag (short form: \`-iv\`) reverses the direction of the relationship query.
+**Key Concepts:**
+
+*   **Pattern BEFORE \`--via\`**: Filters what you're **relating TO** (the "known" thing you're querying about)
+*   **Pattern AFTER \`--via\`** (optional): Filters the **results** (defaults to \`*\` = all matches)
+*   **\`--invert\` flag** (short form: \`-iv\`): Flips the relationship direction (e.g., "inherits-from" becomes "inherited-by")
+
+This design provides good defaults - you typically only need to specify one pattern (what you're looking for), and the tool returns all related symbols. You can optionally add a second pattern to filter the results.
 
 **Relationship Types & Flags:**
 
-| Relationship | Long Form | Short Form | Description (default) | Description with \`--invert\` |
+| Relationship | Long Form | Short Form | Default Direction | With \`--invert\` |
 |---|---|---|---|---|
-| Inheritance | \`--via inherits-from\` | \`-Vinh\` | Subject inherits from object. | Object inherits from subject. |
-| Calls | \`--via calls\` | \`-Vca\` | Subject calls object. | Object calls subject (i.e., "called by"). |
-| Imports | \`--via imports\` | \`-Vimp\` | Subject imports object. | Object imports subject (i.e., "imported by"). |
-| References | \`--via references\` | \`-Vr\` | Subject references object. | Object references subject (i.e., "referenced by"). |
+| Inheritance | \`--via inherits-from\` | \`-Vinh\` | Find children of X | Find parents of X |
+| Calls | \`--via calls\` | \`-Vca\` | Find callers of X | Find callees of X |
+| Imports | \`--via imports\` | \`-Vimp\` | Find importers of X | Find imports by X |
+| References | \`--via references\` | \`-Vr\` | Find referencers of X | Find references by X |
 
 **Examples:**
 
-*   **Find all classes that inherit from a base class matching \`*Base*\`:**
+*   **Find all classes that inherit from \`BaseClass\`:**
     \`\`\`bash
-    via -mg '*' -tc --via inherits-from -mg '*Base*' -tc
+    via -mg 'BaseClass' -tc --via inherits-from
     \`\`\`
 
-*   **Find the parents of a class matching \`*Parser*\` (inverted inheritance):**
+*   **Find all classes that inherit from any class matching \`*Base*\`:**
     \`\`\`bash
-    via -mg '*' -tc --via inherits-from -mg '*Parser*' -tc --invert
+    via -mg '*Base*' -tc --via inherits-from
     \`\`\`
 
-*   **Find all functions that call a function matching \`*util*\`:**
+*   **Find all classes that inherit from \`BaseClass\`, but only show ones matching \`Child*\`:**
     \`\`\`bash
-    via -mg '*' -tf --via calls -mg '*util*' -tf
+    via -mg 'BaseClass' -tc --via inherits-from -mg 'Child*'
     \`\`\`
 
-*   **Find all functions called by a function matching \`*main*\` (inverted calls):**
+*   **Find the parents of \`MyClass\` (what does MyClass inherit from?):**
     \`\`\`bash
-    via -mg '*' -tf --via calls -mg '*main*' -tf --invert
+    via -mg 'MyClass' -tc --via inherits-from --invert
+    \`\`\`
+
+*   **Find all functions that call \`helper_func\`:**
+    \`\`\`bash
+    via -mg 'helper_func' -tf --via calls
+    \`\`\`
+
+*   **Find all functions called by \`main_func\`:**
+    \`\`\`bash
+    via -mg 'main_func' -tf --via calls --invert
     \`\`\`
 
 ## 3. User Stories
@@ -68,20 +84,20 @@ This design allows for a powerful and flexible way to compose complex queries, a
 ### For Developers:
 
 *   **As a developer, I want to find all children of a base class so that I can understand its inheritance hierarchy.**
-    *   \`via -mg '*' -tc --via inherits-from -mg 'BaseClass' -tc --invert\`
+    *   \`via -mg 'BaseClass' -tc --via inherits-from\`
 *   **As a developer, I want to find all functions that call a specific utility function so that I can assess the impact of changing its signature.**
-    *   \`via -mg '*' -tf --via calls -mg 'utility_function' -tf\`
+    *   \`via -mg 'utility_function' -tf --via calls\`
 *   **As a developer, I want to find where a module is imported to understand its usage.**
-    *   \`via -mg '*' -tF --via imports -mg 'my_module' --invert\`
+    *   \`via -mg 'my_module' --via imports\`
 
 ### For Agents (to shortcut code reads):
 
 *   **As an agent, I want to quickly find the parent class of a given class to understand its core behavior.**
-    *   \`via -mg '*' -tc --via inherits-from -mg 'MyClass' -tc\`
+    *   \`via -mg 'MyClass' -tc --via inherits-from --invert\`
 *   **As an agent, before modifying a method, I want to see a list of all other methods that call it.**
-    *   \`via -mg '*' -tm --via calls -mg 'my_method' -tm --invert\`
+    *   \`via -mg 'my_method' -tm --via calls\`
 *   **As an agent, I want to identify all test classes that inherit from a specific test base class.**
-    *   \`via -mg 'Test*' -tc --via inherits-from -mg 'BaseTest' -tc --invert\`
+    *   \`via -mg 'BaseTest' -tc --via inherits-from -mg 'Test*'\`
 
 ## 4. Out of Scope for Initial Release
 

@@ -1,0 +1,10 @@
+# This is an example configuration file
+# To learn more, see the full config.yaml reference: https://docs.continue.dev/reference
+name: Local Config
+version: 1.0.0
+schema: v1
+models:
+  - name: DeepSeek Coder
+    provider: deepseek
+    model: deepseek-coder
+    apiKey: sk-1564883ae11746789b4463aaf96faec7

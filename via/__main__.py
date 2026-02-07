@@ -53,13 +53,15 @@ def _build_pipeline_help() -> str:
     - Type: -tc (class), -tf (function), -tm (method), etc.
     - Output: -oL (list), -oT (table), -oD (diagram), etc.
     - Format: -fa (ascii), -fm (markdown), -fh (html), -fp (png)
+    - Relationship: -Vinh (inherits-from), -Vca (calls), etc.
     """
-    from .core.flag_groups import MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS, FORMAT_FLAGS
+    from .core.flag_groups import MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS, FORMAT_FLAGS, RELATIONSHIP_FLAGS
 
     match_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in MATCH_FLAGS)
     type_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in TYPE_FLAGS)
     output_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in OUTPUT_FLAGS)
     format_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in FORMAT_FLAGS)
+    relationship_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in RELATIONSHIP_FLAGS)
 
     return f"""\
 Pipeline Syntax (alternative to subcommands):
@@ -75,6 +77,10 @@ Options:
   -n, --limit N         Limit results to N matches
   -I, --case-insensitive  Case-insensitive matching
   -Q, --qualified       Match against qualified_name instead of symbol_name
+
+Relationship Flags (-V<X> or --via <type>):
+{relationship_help}
+  --invert, -iv         Invert relationship direction
 
 Output Flags (after --via, -o<X>):
 {output_help}
@@ -94,6 +100,9 @@ Examples:
   via -mr '^test_.*' -tf --via -oU  # Find usages of test functions
   via -mg '*Install*' -tH           # Headers containing 'Install'
   via stats                         # Show database statistics
+  via -mg 'BaseClass' -tc -Vinh -mg '*' -tc  # Classes inheriting from BaseClass
+  via -mg 'helper' -tf -Vca -mg '*' -tf      # Functions calling helper
+  via -mg 'typing' -ti -Vimp -mg '*' -tF     # Files importing typing
 """
 
 
@@ -579,3 +588,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
