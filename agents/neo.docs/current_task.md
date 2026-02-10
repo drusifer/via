@@ -1,57 +1,33 @@
-**Task**: Sprint 3 Phase 4 - Advanced Renderers
-**Status**: Complete (100%)
-**Completed**: 2026-02-04
+# Neo Current Task - Sprint 5 UAT Test Fixes
 
-**Completed Tasks**:
-- ✅ Task 4.1: DiagramRenderer (6/6 tests)
-- ✅ Task 4.2: UsageRenderer (5/5 tests)
-- ✅ Task 4.3: FormattedRenderer (7/7 tests)
-- ✅ Registry Update (3/3 tests)
+## Task: Fix failing Sprint 5 UAT tests
+**Status**: COMPLETE (100%)
+**Date**: 2026-02-09
 
-**Implementation Summary**:
+## Root Cause
 
-### Task 4.1 - DiagramRenderer
-Created `via/renderers/diagram_renderer.py`:
-- Renders class hierarchy diagrams
-- ASCII: Text-based box diagrams
-- MD: Mermaid classDiagram format
-- Only processes ClassMatchRecord instances
+`resolve_pending_relationships()` in `DatabaseStore` used `SELECT id FROM symbols WHERE symbol_name = ? LIMIT 1` to find target symbols. With no ordering, this picked whichever symbol was inserted first. When files were indexed in non-alphabetical order (e.g., fileB before fileA), import symbols were created before definition symbols. The LIMIT 1 then resolved relationships to the import symbol (type='import') instead of the actual class/function definition.
 
-### Task 4.2 - UsageRenderer
-Created `via/renderers/usage_renderer.py`:
-- Shows symbol definitions with location info
-- ASCII: Plain text with file:line format
-- MD: Markdown with headers and formatting
-- Shows type, qualified name, parent, byte info
+This caused `object_type='class'` filters in `query_relationships` to return empty results, since the relationship target had type='import' instead of type='class'.
 
-### Task 4.3 - FormattedRenderer
-Created `via/renderers/formatted_renderer.py`:
-- Pretty-prints code snippets from source files
-- Reads files using byte_offset/byte_length
-- ASCII: Line-numbered code with header
-- MD: Fenced code blocks with language detection
-- Handles missing files gracefully
+## Fix Applied
 
-### Registry Update
-Updated `via/renderers/__init__.py`:
-- Added DiagramRenderer, UsageRenderer, FormattedRenderer
-- All RenderType values now have a renderer
-- get_renderer() supports all 6 render types
+**File**: `via/db/store.py` line ~1048
 
-**Test Results**:
-- Advanced renderer tests: 21/21 passing
-- Updated Phase 3 registry test: 1/1 passing
-- All tests: 354 passed, 1 failed (pre-existing), 1 skipped
-- Coverage: 80%
+Added `ORDER BY CASE symbol_type WHEN 'class' THEN 0 WHEN 'function' THEN 1 ... END` to prefer definitions over imports when resolving pending relationships.
 
-**Files Created**:
-- via/renderers/diagram_renderer.py
-- via/renderers/usage_renderer.py
-- via/renderers/formatted_renderer.py
-- tests/unit/test_advanced_renderers.py
+**File**: `tests/uat/test_sprint5_uat.py` line ~365
 
-**Files Modified**:
-- via/renderers/__init__.py (registered new renderers)
-- tests/unit/test_renderers.py (updated registry test)
+Fixed UAT-2.1 test: removed incorrect `-ti` type filter on the subject side of an import relationship query. The target module `typing` has type `module`, not `import`.
 
-**Phase 4 Complete!** Ready to start Phase 5 (Filter Pipeline) or Phase 6 (Output Destinations).
+## Test Results
+
+- **Full suite**: 687 passed, 0 failed
+- **Sprint 5 UAT**: 25/25 passed
+- **New regression tests**: 9 tests in `test_relationship_pipeline.py`
+
+## Files Modified
+
+- `via/db/store.py` - Fix relationship resolution ordering
+- `tests/uat/test_sprint5_uat.py` - Fix UAT-2.1 query
+- `tests/unit/test_relationship_pipeline.py` - New regression tests

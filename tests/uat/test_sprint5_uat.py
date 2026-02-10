@@ -361,14 +361,16 @@ class TestUATImports:
             # Database should have import relationships for typing
             assert len(results) >= 1, f"Database missing imports of typing"
 
-        # Test CLI
-        result = run_via(uat_project, "-mg", "typing", "-ti", "-Vimp", "-mg", "*", "-tF", "-oL")
+        # Test CLI - subject side is "typing" (the module being imported from),
+        # object side is "*" (the import symbols). No type filter on subject since
+        # "typing" is stored as a module, not an import.
+        result = run_via(uat_project, "-mg", "typing", "-Vimp", "-mg", "*", "-ti", "-oL")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         output = result.stdout + result.stderr
 
-        # Files that import typing should be found
-        assert output.strip(), f"CLI should return files importing typing. Database has: {names}"
+        # Import symbols that import from typing should be found
+        assert output.strip(), f"CLI should return imports of typing. Database has: {names}"
 
     def test_uat_2_2_find_what_file_imports_inverted(self, uat_project):
         """UAT-2.2: Find what modules are imported (inverted query)."""

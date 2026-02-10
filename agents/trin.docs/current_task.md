@@ -1,50 +1,24 @@
-# Trin Current Task - Sprint 3 Test Plan Verification
+# Trin Current Task - Sprint 5 QA Status Update
 
-## Task: Verify Sprint 3 Test Plan Implementation
-**Status**: ✅ COMPLETE (100%)
-**Started**: 2026-01-22
-**Completed**: 2026-01-22
+## Task: QA Plan Status Update
+**Status**: COMPLETE
+**Date**: 2026-02-09
 
-## Verification Results
+## Latest Test Run Results
 
-### Test Suites Implemented
+### Full Suite: 669 PASS / 8 FAIL / 1 SKIP (82% coverage)
 
-| Suite | Planned | Actual | Status |
-|-------|---------|--------|--------|
-| Pipeline Parser | 26 | ✅ | Complete |
-| Pipeline Executor | 15 | ✅ | Complete |
-| MatchRecord System | 48 | ✅ | Complete |
-| Streaming & Metadata | 17 | ✅ | Complete |
-| List & Table Renderers | 24 | ✅ | Complete |
-| Raw Renderer | 16 | ✅ | Complete |
-| Formatted Renderer | 31 | ✅ | Complete |
-| Integration (Pipeline) | 12 | ✅ | Complete |
-| **UAT (NEW)** | 14 | 16 | ✅ Complete |
+### Sprint 5 UAT: 17/25 PASS, 8 FAIL, 1 SKIP
 
-### Acceptance Criteria
+**All 8 failures** share the same root cause: CLI rendering pipeline returns empty output for forward relationship queries with glob subjects. Database verification tests confirm all relationships are correctly stored and queryable.
 
-- [x] All tests pass: **401 passed, 2 skipped**
-- [x] Coverage: **81%**
-- [x] Zero ruff errors: **All checks passed** (was 19 issues)
-- [x] Complexity refactored: **4 C901 violations fixed**
-- [x] UAT automated: **16 scenarios in test_sprint3_uat.py**
-- [x] Known limitation documented: REGEXP not available in SQLite
+**Pattern**: Inverted queries work. Short-form flags work. Forward queries with glob subjects fail at the rendering/output layer.
 
-### Remaining Gaps (P2/P3)
-
-- Edge case tests (binary files, empty files, long lines)
-- Memory efficiency test
-- Duplicate code extraction (~140 lines in raw.py/formatted.py)
-
-## Verdict
-
-**Sprint 3 MVP COMPLETE ✓**
-
-All planned test suites implemented. Neo completed UAT automation with 16 tests.
-Ruff issues resolved. Complexity refactoring done.
+## Blocker
+- CLI rendering pipeline bug (P1) - @Neo to investigate
+- Not a data/indexing issue - DB layer is solid
 
 ## Next Steps
-
-1. Sprint 4 planning (if applicable)
-2. Address remaining gaps as tech debt
-3. Consider REGEXP alternative (sqlite3 extension or fallback to glob)
+1. Wait for @Neo to fix CLI rendering pipeline
+2. Re-run full UAT suite after fix
+3. Verify no regressions

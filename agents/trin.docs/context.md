@@ -1,38 +1,35 @@
 # Trin Context - Working Memory
 
-## Current Sprint: Sprint 1 (CLI Implementation)
+## Current Sprint: Sprint 5 (Symbol Relationships)
 
-### Test Plan Created
-**Date**: 2026-01-11
-**Target**: Story 7 - CLI Command Implementation
-**File**: `agents/trin.docs/CLI_TEST_PLAN.md`
+### Active Test Plan
 
-**Summary**:
-- Created comprehensive test plan with 44 test cases
-- Identified BLOCKER: DatabaseStore connection issue
-- 3 test phases: Unit (15 tests), Integration (16 tests), E2E (13 tests)
-- Acceptance criteria: 3/13 met (23%)
+- `SPRINT_5_UAT_PLAN.md` - 25 UAT scenarios for relationship queries
+- Execution status: 17 PASS / 8 FAIL / 1 SKIP
+
+### Test Suite Health (2026-02-09)
+
+- **Full suite**: 669 pass / 8 fail / 1 skip (82% coverage)
+- **All 8 failures**: CLI rendering pipeline returns empty for forward relationship queries
+- **DB layer**: Solid - all verification tests pass
+- **No regressions** in non-relationship tests
 
 ### Key Findings
 
-#### BLOCKER: DatabaseStore Connection
-**Severity**: HIGH
-**Issue**: CLI doesn't call `.connect()` and `.initialize_schema()` on DatabaseStore
-**Impact**: Command crashes with "Database not connected" error
-**Fix**: Use context manager pattern in `_run_index_command()`
+- Inverted queries and short-form flags work correctly
+- Forward queries with glob subjects return empty at rendering layer
+- Root cause is in the CLI output pipeline, not indexing or storage
 
-#### Test Coverage Gaps
-- `via/__main__.py`: 0% coverage (NEW MODULE)
-- Need integration tests for CLI commands
-- Need E2E tests for real project indexing
+### Archived Plans (2026-02-09)
 
-### Next Actions
-1. Wait for @Neo to fix DatabaseStore connection blocker
-2. Run initial smoke tests
-3. Implement Phase 1 unit tests
-4. Implement Phase 2 integration tests
+Moved 4 stale plans/reports to `archive/`:
+- CLI_TEST_PLAN.md (Sprint 1)
+- SPRINT_2_TEST_PLAN.md
+- SPRINT_3_TEST_PLAN.md
+- UAT_REPORT_SPRINT_4.md
 
 ### Test Philosophy
+
 - Oracle First: Consult Oracle for expected behaviors
 - Fast Feedback: Prioritize unit tests over E2E
 - Incremental: Test small components in isolation

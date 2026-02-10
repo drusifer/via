@@ -1108,3 +1108,109 @@ Ready for @Neo to begin implementation
 
  Switching back to Bob. The arg parsing discrepancies have been fixed: relationship flags now appear in via --help, and backwards CLI syntax in UAT tests has been corrected. All reference tests pass. What should we work on next?
 
+[<small>2026-02-09 18:16:34</small>] [**Trin**]->[**all**] **qa plan*:
+
+ [Trin] *qa plan status - Sprint 5 UAT & Overall QA Status
+
+## Overall Test Suite: 669 PASS / 8 FAIL / 1 SKIP (82% coverage)
+
+## Sprint 5 UAT Results: 17/25 PASS, 8 FAIL, 1 SKIP
+
+| Suite | Pass | Fail | Skip |
+|-------|------|------|------|
+| 1. Inheritance | 2 | 4 | 0 |
+| 2. Imports | 3 | 1 | 0 |
+| 3. Calls | 2 | 3 | 0 |
+| 4. References | 2 | 0 | 1 |
+| 5. Edge Cases | 4 | 0 | 0 |
+| DB Verification | 3 | 0 | 0 |
+
+## Root Cause (All 8 Failures)
+**CLI rendering pipeline returns empty output** for certain relationship queries even though database verification confirms relationships are correctly stored. This is the SAME rendering issue noted during initial UAT execution.
+
+Key pattern: Inverted queries and short-form flags work. Forward queries with glob subjects often return empty. DB layer is solid.
+
+## Blockers
+- CLI rendering bug blocks 8 UAT tests (P1)
+- No new regressions in non-relationship tests (669 pass)
+
+## Recommendation
+@Neo *fix CLI rendering pipeline for forward relationship queries. The data is there - it's a presentation layer issue.
+
+[<small>2026-02-09 18:18:18</small>] [**Trin**]->[**all**] **qa review*:
+
+ [Trin] *qa review CLI_TEST_PLAN.md Audit
+
+**Verdict: STALE - needs significant update.** This plan was written for Sprint 1/Story 7 and hasn't been maintained since.
+
+## What's Outdated
+
+**1. Status & Blockers (Section 7-8) - RESOLVED**
+- DatabaseStore connection blocker: FIXED long ago
+- Acceptance criteria shows 3/13 (23%) - actual state is much better
+- __main__.py coverage listed as 0% - no longer true
+
+**2. Missing Test Coverage (Sections planned but never created)**
+- `test_cli_progress.py` - NEVER CREATED
+- `test_cli_index_errors.py` - NEVER CREATED  
+- `test_cli_database.py` - NEVER CREATED
+- `tests/e2e/` directory - DOES NOT EXIST (no E2E tests)
+
+**3. Tests That DO Exist (not in plan)**
+- `test_cli_render_pipeline.py` - exists, not in plan
+- `test_cli_match.py` - exists, not in plan
+- `test_cli_pipeline.py` - exists, not in plan
+- `test_cli_relationships.py` - exists, not in plan
+- Sprint 5 UAT suite (25 tests) - separate plan exists
+
+**4. Scope Drift**
+- Plan targets 44 tests for Story 7 CLI basics
+- Actual CLI has grown massively: pipeline, renderers, relationships, match records
+- Plan doesn't cover any Sprint 2-5 features
+
+## What's Still Accurate
+- Unit parser tests (Section 1.1): 14/14 PASS - well covered
+- Integration index tests (Section 2.1): 9/9 PASS - well covered
+- Test fixture patterns still valid
+
+## Recommendation
+This plan should either be **archived** (it served its Sprint 1 purpose) or **rewritten** to reflect the current CLI scope. The Sprint 5 UAT plan is the active testing document. @Mouse should track this as tech debt.
+
+[<small>2026-02-09 18:20:24</small>] [**Trin**]->[**all**] **qa plan*:
+
+ [Trin] *qa plan archive complete
+
+Archived 4 stale test plans/reports to `trin.docs/archive/`:
+- CLI_TEST_PLAN.md (Sprint 1/Story 7)
+- SPRINT_2_TEST_PLAN.md (Sprint 2/Match Command)
+- SPRINT_3_TEST_PLAN.md (Sprint 3/Pipeline & Renderers)
+- UAT_REPORT_SPRINT_4.md (Sprint 4/Tech Debt)
+
+**Active plan**: SPRINT_5_UAT_PLAN.md (25 scenarios, 17 pass / 8 fail / 1 skip)
+
+Updated context.md and next_steps.md to reflect current state. Trin's docs are clean.
+
+[<small>2026-02-09 18:36:19</small>] [**Neo**]->[**all**] **swe fix*:
+
+ [Neo] *swe fix Sprint 5 UAT - ALL 25 TESTS PASSING
+
+## Root Cause Found & Fixed
+
+**Bug**: `resolve_pending_relationships()` in `DatabaseStore` used `SELECT id FROM symbols WHERE symbol_name = ? LIMIT 1` with no ordering. When files were indexed in non-alphabetical order, import symbols were created before definitions. The `LIMIT 1` resolved relationships to import symbols (type='import') instead of class/function definitions.
+
+This caused `object_type='class'` filters to return empty because the relationship target had type='import'.
+
+## Fix
+
+**`via/db/store.py`**: Added `ORDER BY CASE symbol_type WHEN 'class' THEN 0 WHEN 'function' THEN 1 ... END` to prefer definitions over imports during resolution.
+
+**`tests/uat/test_sprint5_uat.py`**: Fixed UAT-2.1 query - removed incorrect `-ti` type filter on subject side (target `typing` is type 'module', not 'import').
+
+## Results
+
+- **Sprint 5 UAT**: 25/25 PASS (was 17/25)
+- **Full suite**: 687 passed, 0 failed (was 669 pass / 8 fail)
+- **New regression tests**: 9 tests in `test_relationship_pipeline.py`
+
+@Trin *qa verify Sprint 5 UAT complete
+

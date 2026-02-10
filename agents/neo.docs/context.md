@@ -1,30 +1,22 @@
-**Context: Sprint 3 Implementation**
+**Context: Sprint 5 Implementation**
 
 **Key Decisions**:
+
 1. Pipeline syntax detection uses flag prefixes (-mg, -mr, -rT, etc.)
 2. Legacy syntax (via match -t ...) preserved via subcommand detection
-3. --db flag extracted separately for pipeline mode
-4. Default database path: ./.via/index.db
-5. MatchRecord system uses polymorphism + factory pattern
-6. Each MatchRecord subclass knows its supported render types
-7. Renderer system uses abstract base class with format support
-8. ListRenderer/RawRenderer are streaming, TableRenderer buffers
-9. All 6 RenderTypes now have implemented renderers
+3. MatchRecord system uses polymorphism + factory pattern
+4. Renderer system uses abstract base class with format support
+5. Relationship queries use --via / -V flags with subject/object patterns
+6. resolve_pending_relationships prefers definitions over imports (ORDER BY symbol_type priority)
 
-**Technical Insights**:
-- Pipeline parser uses argparse with exit_on_error=False
-- Shorthand expansion: -mg → -g, -rTm → -rT -m
-- Executor passes Iterator[MatchRecord] between stages (zero-copy)
-- Render stages consume iterator and print (terminal)
-- Match stages without render return iterator for default list output
-- MatchRecordFactory.create_from_dict() creates correct subclass
-- DatabaseStore.match() now returns Iterator[MatchRecord]
-- get_renderer(RenderType) returns appropriate Renderer instance
-- Renderers yield lines lazily for streaming output
-- FormattedRenderer reads source files using byte_offset/byte_length
-- DiagramRenderer outputs Mermaid format for MD
+**Bug Fix (2026-02-09)**: resolve_pending_relationships symbol resolution
+
+- **Root Cause**: `LIMIT 1` with no ORDER BY picked import symbols over definitions when files indexed out of order
+- **Fix**: Added ORDER BY CASE to prefer class > function > method > global > module > import
+- **Regression tests**: `tests/unit/test_relationship_pipeline.py` (TestRelationshipResolutionOrder)
 
 **Architecture**:
+
 ```
 via/__main__.py
   ├── _is_pipeline_syntax() → Detect shorthand flags
@@ -33,34 +25,17 @@ via/__main__.py
   │     └── PipelineExecutor.execute(stages) → Iterator|None
   └── main() → Routes to pipeline or legacy mode
 
-via/core/match_record.py
-  ├── MatchRecord (ABC) → Base class with supports_render_type()
-  ├── ClassMatchRecord → Supports all render types
-  ├── MethodMatchRecord → No DIAGRAM
-  ├── FunctionMatchRecord → No DIAGRAM
-  ├── FileMatchRecord → LIST, TABLE, RAW only
-  ├── ImportMatchRecord → LIST, TABLE, USAGE, RAW
-  ├── GlobalMatchRecord → LIST, TABLE, RAW, FORMATTED
-  └── MatchRecordFactory → Creates correct subclass from dict
-
-via/renderers/
-  ├── base.py → Abstract Renderer class
-  ├── list_renderer.py → ASCII/MD list output
-  ├── table_renderer.py → ASCII/MD/HTML table output
-  ├── raw_renderer.py → Tab-separated machine output
-  ├── diagram_renderer.py → ASCII/Mermaid class diagrams
-  ├── usage_renderer.py → Symbol definition info
-  ├── formatted_renderer.py → Code snippets from source
-  └── __init__.py → get_renderer() factory
+via/db/store.py
+  ├── resolve_pending_relationships() → Resolves cross-file refs after indexing
+  ├── query_relationships() → Query by relationship type with filters
+  └── insert_relationship() → Store resolved relationship
 ```
 
 **Test Patterns**:
+
 - Use indexed_project fixture for temp DB
 - subprocess.run for CLI integration tests
-- Assert on returncode, stdout, stderr
+- Reverse-order indexing to test relationship resolution
 - TDD: Write tests first, see red, implement, see green
 
-**Phase 1 Complete** - Pipeline routing implemented
-**Phase 2 Complete** - MatchRecord system implemented
-**Phase 3 Complete** - Streaming renderer pipeline implemented
-**Phase 4 Complete** - Advanced renderers implemented
+**Sprint 5 Status**: UAT complete (25/25 pass), 687 total tests passing

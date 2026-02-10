@@ -1044,9 +1044,20 @@ class DatabaseStore:
         for row in pending:
             pending_id, source_id, target_name, rel_type = row
 
-            # Try to find target symbol by name
+            # Try to find target symbol by name, preferring definitions
+            # (class/function/method/global) over import symbols to ensure
+            # relationships point to the actual definition.
             target_cursor = self.conn.execute(
-                "SELECT id FROM symbols WHERE symbol_name = ? LIMIT 1",
+                """SELECT id FROM symbols WHERE symbol_name = ?
+                   ORDER BY CASE symbol_type
+                       WHEN 'class' THEN 0
+                       WHEN 'function' THEN 1
+                       WHEN 'method' THEN 2
+                       WHEN 'global' THEN 3
+                       WHEN 'module' THEN 4
+                       ELSE 5
+                   END
+                   LIMIT 1""",
                 (target_name,)
             )
             target_row = target_cursor.fetchone()
