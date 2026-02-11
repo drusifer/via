@@ -1214,3 +1214,59 @@ This caused `object_type='class'` filters to return empty because the relationsh
 
 @Trin *qa verify Sprint 5 UAT complete
 
+[<small>2026-02-11 12:17:40</small>] [**User**]->[**all**] **request*:
+
+ @cypher pm go for launch?
+
+[<small>2026-02-11 12:19:20</small>] [**Cypher**]->[**all**] **pm assess launch*:
+
+ GO FOR LAUNCH (Conditional). Full assessment in cypher.docs/LAUNCH_READINESS_ASSESSMENT.md
+
+**Summary**: 687 tests passing, 0 failures, 82% coverage, 25/25 UAT green. Neo's rendering fix closed all 8 blockers. All 4 relationship types complete and verified.
+
+**One condition**: USER_GUIDE.md needs expanded relationship examples before GA announcement. Core product is solid - ship it, expand docs in parallel.
+
+@Oracle *ora record Sprint 5 shipped. All relationship queries (inheritance, calls, imports, references) operational with bidirectional support.
+@Mouse *sm update Sprint 5 COMPLETE.
+
+[<small>2026-02-11 12:22:56</small>] [**User**]->[**all**] **request*:
+
+ @oracle Update USER_GUIDE.md and --help output to include useful examples
+
+[<small>2026-02-11 12:25:17</small>] [**Oracle**]->[**all**] **ora record*:
+
+ Documentation updated. Two files changed:
+
+**docs/USER_GUIDE.md** - Added full 'Relationship Queries' section (Section 7) with:
+- Syntax explanation (subject/object/invert)
+- Flag reference table (4 relationship types with long/short forms)
+- Examples for each type: inheritance, imports, calls, references
+- Combining with output formats
+- Quick reference addition
+
+**via/__main__.py** - Rewrote --help Examples section:
+- Added 'Relationship Queries' subsection with 6 commented examples
+- Cleaned up general examples (index, search, output, stats)
+- Every example has a plain-English comment explaining what it does
+
+All 687 tests still passing. Cypher's launch condition is now cleared.
+
+[<small>2026-02-11 12:37:35</small>] [**User**]->[**all**] **request*:
+
+ @cypher pm launch Sprint 5
+
+[<small>2026-02-11 12:38:50</small>] [**Cypher**]->[**all**] **pm launch*:
+
+ SPRINT 5 LAUNCHED. All conditions met.
+
+**Final Scorecard**:
+- Tests: 687 pass / 0 fail / 82% coverage
+- UAT: 25/25 green
+- Features: 4/4 relationship types complete
+- Docs: USER_GUIDE.md + --help updated (Oracle cleared this)
+- Blockers: NONE
+
+Sprint 5 (Symbol Relationships) is officially shipped. The via tool now understands code structure - inheritance, calls, imports, and references - with bidirectional queries and clean CLI ergonomics.
+
+Well done team. @Mouse *sm close Sprint 5.
+

@@ -13,6 +13,7 @@
     
     "geminicodeassist.agentYoloMode": true,
     "gemini.agent.autoApproveTools": true,
-    "gemini.agent.confirmBeforeWrite": false
+    "gemini.agent.confirmBeforeWrite": false,
+    "makefile.configureOnOpen": false
 
 }

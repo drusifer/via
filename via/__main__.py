@@ -94,15 +94,20 @@ Context Lines (for -oR, -oF):
   -C N                  Show N lines before and after
 
 Examples:
-  via -mg '*Test*' -tc              # Classes matching *Test*
-  via -mg 'parse' -tf -n 10         # First 10 functions with 'parse'
-  via -mg '*' -tc --via -oD -fm     # Class diagram in Markdown
-  via -mr '^test_.*' -tf --via -oU  # Find usages of test functions
-  via -mg '*Install*' -tH           # Headers containing 'Install'
-  via stats                         # Show database statistics
-  via -mg 'BaseClass' -tc -Vinh -mg '*' -tc  # Classes inheriting from BaseClass
-  via -mg 'helper' -tf -Vca -mg '*' -tf      # Functions calling helper
-  via -mg 'typing' -ti -Vimp -mg '*' -tF     # Files importing typing
+  via index .                                        # Index current directory
+  via -mg '*Test*' -tc                               # Classes matching *Test*
+  via -mg 'parse' -tf -n 10                          # First 10 functions with 'parse'
+  via -mg '*' -tc --via -oT                          # All classes as table
+  via -mg 'main' -tf -oR -C 3                        # Function source with context
+  via stats                                          # Database statistics
+
+Relationship Queries:
+  via -mg 'Base' -tc -Vinh -mg '*' -tc               # Who inherits from Base?
+  via -mg 'MyClass' -tc -Vinh -mg '*' -tc --invert   # What does MyClass inherit?
+  via -mg 'helper' -tf -Vca -mg '*' -tf              # Who calls helper()?
+  via -mg 'main' -tf -Vca -mg '*' -tf --invert       # What does main() call?
+  via -mg 'typing' -Vimp -mg '*' -tF                 # Files importing typing
+  via -mg 'MAX_SIZE' -tG -Vr -mg '*' -tf             # Who references MAX_SIZE?
 """
 
 

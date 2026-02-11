@@ -10,9 +10,10 @@ A complete guide to using VIA for indexing and searching Python codebases.
 4. [Searching with Pipeline Syntax](#searching-with-pipeline-syntax)
 5. [Output Formats](#output-formats)
 6. [Context Lines](#context-lines)
-7. [Legacy Subcommand Syntax](#legacy-subcommand-syntax)
-8. [Practical Examples](#practical-examples)
-9. [Troubleshooting](#troubleshooting)
+7. [Relationship Queries](#relationship-queries)
+8. [Legacy Subcommand Syntax](#legacy-subcommand-syntax)
+9. [Practical Examples](#practical-examples)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -298,6 +299,93 @@ via -mg '*' -tf -oR --nodelims
 
 ---
 
+## Relationship Queries
+
+VIA can trace relationships between symbols: inheritance, function calls, imports, and references. This lets you navigate code structure, not just search for names.
+
+### Syntax
+
+```
+via -m<X> SUBJECT -t<Y> -V<rel> -m<X> OBJECT -t<Y> [--invert]
+```
+
+- **SUBJECT** (before `-V`): The symbol you're querying about (the "known" thing)
+- **OBJECT** (after `-V`): Filter the results (defaults to `*` = all matches)
+- **`--invert` / `-iv`**: Flip the relationship direction
+
+### Relationship Flags
+
+| Relationship | Long Form | Short Form | Default Direction | With `--invert` |
+|---|---|---|---|---|
+| Inheritance | `--via inherits-from` | `-Vinh` | Find children of X | Find parents of X |
+| Calls | `--via calls` | `-Vca` | Find callers of X | Find callees of X |
+| Imports | `--via imports` | `-Vimp` | Find importers of X | Find imports by X |
+| References | `--via references` | `-Vr` | Find referencers of X | Find references by X |
+
+### Inheritance Examples
+
+```bash
+# Find all classes that inherit from BaseClass
+via -mg 'BaseClass' -tc -Vinh -mg '*' -tc
+
+# Find what MyClass inherits from (parents)
+via -mg 'MyClass' -tc -Vinh -mg '*' -tc --invert
+
+# Find children of any class matching *Base*
+via -mg '*Base*' -tc -Vinh -mg '*' -tc
+
+# Filter: only show children matching "Child*"
+via -mg 'BaseClass' -tc -Vinh -mg 'Child*' -tc
+```
+
+### Import Examples
+
+```bash
+# Find all files that import typing
+via -mg 'typing' -Vimp -mg '*' -tF
+
+# Find what a specific file imports
+via -mg 'my_service.py' -tF -Vimp -mg '*' --invert
+
+# Find all files importing dataclasses, show as table
+via -mg 'dataclasses' -Vimp -mg '*' -tF --via -oT
+```
+
+### Call Examples
+
+```bash
+# Find all functions that call helper_func
+via -mg 'helper_func' -tf -Vca -mg '*' -tf
+
+# Find what main() calls (callees)
+via -mg 'main' -tf -Vca -mg '*' -tf --invert
+
+# Find all callers of a method
+via -mg 'save' -tm -Vca -mg '*' -tm
+```
+
+### Reference Examples
+
+```bash
+# Find all functions that reference a constant
+via -mg 'MAX_RETRIES' -tG -Vr -mg '*' -tf
+
+# Find what external symbols a function references
+via -mg 'process_data' -tf -Vr -mg '*' --invert
+```
+
+### Combining with Output Formats
+
+```bash
+# Inheritance tree as table
+via -mg 'BaseClass' -tc -Vinh -mg '*' -tc --via -oT
+
+# Show source of all callers
+via -mg 'validate' -tf -Vca -mg '*' -tf --via -oR
+```
+
+---
+
 ## Legacy Subcommand Syntax
 
 The older subcommand syntax still works:
@@ -480,6 +568,16 @@ via ... -oT            # Table output
 via ... -oR            # Raw source
 via ... -oF            # Formatted source
 via ... -oR -C 3       # With context lines
+```
+
+### Relationship Commands
+
+```bash
+via ... -Vinh ...              # Inheritance (inherits-from)
+via ... -Vca ...               # Calls
+via ... -Vimp ...              # Imports
+via ... -Vr ...                # References
+via ... --invert               # Flip direction (or -iv)
 ```
 
 ### Pattern Types

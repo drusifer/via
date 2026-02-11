@@ -5,7 +5,7 @@
 
 ## User Stories
 
-### 1. Implement Correct `UsageRenderer` Functionality
+### 1. Implement Correct `UsageRenderer` Functionality [COMPLETE]
 *   **User Story**: As a developer, I want to quickly see the 'usage' aka docstring/javadoc/manpage etc. for the matched symbols.
 
 *   **Acceptance Criteria**:
