@@ -34,7 +34,6 @@ from .core.constants import (
 )
 from .core.utils import safe_print
 from .core.logging import setup_logging
-from .core.types import SymbolType, MatchOp
 from .db.store import DatabaseStore
 from .parsers.registry import ParserRegistry
 from .parsers.python_parser import PythonParser
@@ -154,16 +153,6 @@ def _create_parser() -> argparse.ArgumentParser:
     )
     IndexCommand.add_arguments(index_parser)
 
-    # --- Match subcommand ---
-    from .commands.match import MatchCommand
-    match_parser = subparsers.add_parser(
-        "match",
-        aliases=["m"],
-        help="Search indexed code using pattern matching",
-        description=MatchCommand.get_help(),
-    )
-    MatchCommand.add_arguments(match_parser)
-
     # --- Stats subcommand ---
     from .commands.stats import StatsCommand
     stats_parser = subparsers.add_parser(
@@ -175,22 +164,6 @@ def _create_parser() -> argparse.ArgumentParser:
     StatsCommand.add_arguments(stats_parser)
 
     return parser
-
-
-def _determine_match_op(args: argparse.Namespace) -> MatchOp:
-    """Determine match operator from command-line flags.
-
-    Args:
-        args: Parsed command-line arguments
-
-    Returns:
-        MatchOp enum value
-    """
-    if args.regex:
-        return MatchOp.REGEXP
-    if args.sql:
-        return MatchOp.LIKE
-    return MatchOp.GLOB
 
 
 def _progress_callback(message: str, current: int, total: int) -> None:
@@ -317,81 +290,6 @@ def _run_index_command(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
 
-def _run_match_command(args: argparse.Namespace) -> int:
-    """
-    Execute the match command.
-
-    Args:
-        args: Parsed command-line arguments
-
-    Returns:
-        Exit code
-    """
-    # Resolve directory
-    target_dir = Path(args.directory).resolve()
-
-    if not target_dir.exists():
-        print(f"Error: Directory does not exist: {target_dir}", file=sys.stderr)
-        return EXIT_ERROR
-
-    # Determine database path
-    if args.db:
-        db_path = Path(args.db)
-    else:
-        index_dir = target_dir / DEFAULT_INDEX_DIR
-        db_path = index_dir / DEFAULT_DB_NAME
-
-    if not db_path.exists():
-        print(f"Error: Database not found: {db_path}", file=sys.stderr)
-        print(f"Run 'via index' first to create the index.", file=sys.stderr)
-        return EXIT_ERROR
-
-    # Determine match operator from flags
-    match_op = _determine_match_op(args)
-
-    # Parse symbol type
-    try:
-        symbol_type = SymbolType[args.type.upper()]
-    except KeyError:
-        print(f"Error: Invalid symbol type: {args.type}", file=sys.stderr)
-        return EXIT_ERROR
-
-    try:
-        # Open database
-        with DatabaseStore(str(db_path), str(target_dir)) as db_store:
-            # Execute match
-            results = db_store.match(
-                symbol_type=symbol_type,
-                match_op=match_op,
-                pattern=args.pattern,
-                case_sensitive=not args.case_insensitive,
-                limit=args.limit,
-            )
-
-            # Stream results
-            count = 0
-            for result in results:
-                print(result)
-                count += 1
-
-            # Log count if verbose
-            if count == 0:
-                logging.info("No matches found")
-            else:
-                logging.info(f"Found {count} matches")
-
-        return EXIT_SUCCESS
-
-    except KeyboardInterrupt:
-        print("\n\nSearch interrupted by user", file=sys.stderr)
-        return EXIT_KEYBOARD_INTERRUPT
-
-    except Exception as e:
-        logging.exception("Match command failed with exception")
-        print(f"\nError: Match failed: {e}", file=sys.stderr)
-        return EXIT_ERROR
-
-
 def _run_stats_command(args: argparse.Namespace) -> int:
     """
     Execute the stats command.
@@ -515,13 +413,13 @@ def _is_pipeline_syntax(argv: list) -> bool:
     first_arg = argv[0]
 
     # Known subcommands use subcommand syntax
-    if first_arg in ('index', 'match', 'm', 'stats', '--help', '-h', '--version'):
+    if first_arg in ('index', 'i', 'stats', 's', '--help', '-h', '--version'):
         return False
 
     # Verbosity flags are ambiguous - check what follows
     if first_arg in ('-v', '-vv', '-vvv', '-vvvv'):
         # Check if next arg is a subcommand
-        if len(argv) > 1 and argv[1] in ('index', 'match', 'm'):
+        if len(argv) > 1 and argv[1] in ('index', 'i'):
             return False
         # Otherwise treat as pipeline (could be stats verbose)
         return True
@@ -579,8 +477,6 @@ def main() -> int:
     # Dispatch to subcommand
     if args.command in ("index", "i"):
         return _run_index_command(args)
-    elif args.command in ("match", "m"):
-        return _run_match_command(args)
     elif args.command in ("stats", "s"):
         return _run_stats_command(args)
     elif args.command is None:

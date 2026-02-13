@@ -27,5 +27,11 @@ Via - Python codebase indexing and querying CLI tool
 via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 ```
 
+### Roadmap (2026-02-11) - Split into 3 sprints
+- **Sprint 6** - Watch Mode (12pts): watchdog, debounce 500ms, all file types, relationship re-resolution
+- **Sprint 7** - MCP Mode (10pts): stdio JSON-RPC server, auto-config for Claude/Gemini/ChatGPT
+- **Sprint 8** - Line Index (6pts): `-mL` match type with slice syntax, byte offset indexing
+- All questions resolved. Sprint 6 ready to start.
+
 ## Blockers
-None - Sprint 5 complete, launch approved
+None

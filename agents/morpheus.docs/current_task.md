@@ -1,36 +1,26 @@
-# Morpheus Current Task - Sprint 4 Code Review
+# Morpheus Current Task - Architecture Review & Cleanup Plan
 
-## Task: Code Quality Review for Sprint 4
+## Task: Full Codebase Architecture Review
 **Status**: COMPLETE (100%)
-**Started**: 2026-01-24
-**Completed**: 2026-01-24
+**Started**: 2026-02-11
+**Completed**: 2026-02-11
 
 ## Completed Items
-- [x] Read and analyzed all core source files
-- [x] Identified DRY violations (6 HIGH priority)
-- [x] Identified KISS violations (2 MEDIUM priority)
-- [x] Identified code smells (4 LOW priority)
-- [x] Wrote comprehensive code review document
-- [x] Prioritized refactoring order for Neo
-- [x] Posted to CHAT.md
+- [x] Full codebase audit (46 source files)
+- [x] Database table usage analysis (6 dead tables identified)
+- [x] Dead code identification (~500 lines removable)
+- [x] Layering violation analysis (_get_match_metadata in DB layer)
+- [x] Duplication analysis (pattern matching, renderer metadata)
+- [x] Drew's questions answered and decisions recorded
+- [x] 3-phase refactoring plan created
+- [x] ARCH_REVIEW_SPRINT_8.md updated with all findings
 
-## Review Deliverable
-**Document**: `agents/morpheus.docs/SPRINT_4_CODE_REVIEW.md`
-
-**Verdict**: NEEDS REFACTORING
-
-**Issues Found**:
-- 6 HIGH (duplicated code, render support duplication)
-- 5 MEDIUM (long methods, dead code, primitive obsession)
-- 4 LOW (magic numbers, data clumps, inconsistent error handling)
-
-## Key DRY Violations Identified
-1. `_safe_print` duplicated in __main__.py and executor.py
-2. `_format_header` duplicated in raw.py and formatted.py
-3. Context option extraction duplicated in renderers
-4. Database connection check repeated ~30 times in store.py
-5. Match syntax logic duplicated in executor.py
-6. Render support defined in executor.py AND match_record.py
+## Key Decisions Made
+1. Consolidate to executor/pipeline arch (remove legacy match subcommand)
+2. Python-side filter in executor.py is REQUIRED (keep)
+3. metadata/schema_migrations tables are active (keep)
+4. Move _get_match_metadata to MatchQueryHelper utility (layering fix)
+5. SQL Views won't work for per-query column widths
 
 ## Next Task
-Handed off to @Neo for refactoring per code review.
+Ready for Phase 1 execution (dead code removal) — hand off to @Neo or @Cypher for stories.

@@ -1,25 +1,30 @@
 # Morpheus Next Steps
 
-## Immediate (After Neo Refactoring)
+## Immediate - Ready for Execution
 
-1. Review Neo's refactoring PR for architectural compliance
-2. Verify DRY violations are resolved
-3. Run tests to confirm no regressions
+### Phase 1: Dead Code Removal (~500 lines)
+1. Remove 6 legacy tables from schema.py
+2. Remove 12 legacy indexes from schema.py
+3. Remove legacy CRUD from store.py (~350 lines)
+4. Remove _store_entities() from indexing.py (~70 lines)
+5. Rewrite affected tests to use symbols table
+6. Remove _run_match_command() from __main__.py (~70 lines)
+7. Remove commands/match.py if fully dead
 
-## Sprint 4 Remaining Architecture Work
+### Phase 2: Layering Fixes
+8. Extract _get_match_metadata() to MatchQueryHelper utility
+9. Executor calls helper, passes metadata to renderers
+10. DB layer no longer knows about rendering
 
-1. Review DiagramRenderer implementation when complete
-2. Review UsageRenderer implementation when complete
-3. Design any needed architectural changes for Stats Command
+### Phase 3: DRY Consolidation
+11. Extract PatternMatcher utility (shared SQL + Python matching)
+12. Extract common renderer metadata pattern to base class
+13. Reconcile schema version numbering
 
-## Backlog Items
+## Handoff Options
+- @Cypher: Write user stories for Phase 1-3
+- @Neo: Start Phase 1 implementation directly
+- Drew: Decide which path
 
-- Consider extracting common renderer patterns to base class
-- Consider consolidating SymbolType usage (string vs enum)
-- Review error handling patterns across codebase
-
-## Notes
-
-- Code review document created: `SPRINT_4_CODE_REVIEW.md`
-- Priority order for refactoring established
-- Estimated 3-4 hours for HIGH priority items
+## Architecture Review Document
+`agents/morpheus.docs/ARCH_REVIEW_SPRINT_8.md`

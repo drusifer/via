@@ -82,54 +82,77 @@ class TestIndexingService:
         """Test that functions are extracted."""
         indexing_service.index(temp_project)
 
-        # Query database for functions
-        all_files = indexing_service.db_store.get_all_files(parsed_only=True)
+        # Query symbols table for functions
+        cursor = indexing_service.db_store.conn.execute(
+            "SELECT * FROM symbols WHERE symbol_type = ?",
+            ('function',)
+        )
+        functions = cursor.fetchall()
 
-        total_functions = 0
-        for file_record in all_files:
-            functions = indexing_service.db_store.get_functions_by_file(file_record['id'])
-            total_functions += len(functions)
+        # Should have at least: hello, utility, method
+        assert len(functions) >= 3
 
-        assert total_functions >= 3  # hello, utility, method
+        # Verify specific function names
+        function_names = [row[0] for row in functions]  # symbol_name is first column
+        assert 'hello' in function_names
+        assert 'utility' in function_names
+        assert 'method' in function_names
 
     def test_index_extracts_classes(self, indexing_service, temp_project):
         """Test that classes are extracted."""
         indexing_service.index(temp_project)
 
-        all_files = indexing_service.db_store.get_all_files(parsed_only=True)
+        # Query symbols table for classes
+        cursor = indexing_service.db_store.conn.execute(
+            "SELECT * FROM symbols WHERE symbol_type = ?",
+            ('class',)
+        )
+        classes = cursor.fetchall()
 
-        total_classes = 0
-        for file_record in all_files:
-            classes = indexing_service.db_store.get_classes_by_file(file_record['id'])
-            total_classes += len(classes)
+        # Should have at least: MyClass, Nested
+        assert len(classes) >= 2
 
-        assert total_classes >= 2  # MyClass, Nested
+        # Verify specific class names
+        class_names = [row[0] for row in classes]  # symbol_name is first column
+        assert 'MyClass' in class_names
+        assert 'Nested' in class_names
 
     def test_index_extracts_imports(self, indexing_service, temp_project):
         """Test that imports are extracted."""
         indexing_service.index(temp_project)
 
-        all_files = indexing_service.db_store.get_all_files(parsed_only=True)
+        # Query symbols table for imports
+        cursor = indexing_service.db_store.conn.execute(
+            "SELECT * FROM symbols WHERE symbol_type = ?",
+            ('import',)
+        )
+        imports = cursor.fetchall()
 
-        total_imports = 0
-        for file_record in all_files:
-            imports = indexing_service.db_store.get_imports_by_file(file_record['id'])
-            total_imports += len(imports)
+        # Should have at least: os, Path (from pathlib)
+        assert len(imports) >= 2
 
-        assert total_imports >= 2  # os, pathlib.Path
+        # Verify specific imports
+        import_names = [row[0] for row in imports]  # symbol_name is first column
+        assert 'os' in import_names
+        assert 'Path' in import_names
 
     def test_index_extracts_globals(self, indexing_service, temp_project):
         """Test that globals are extracted."""
         indexing_service.index(temp_project)
 
-        all_files = indexing_service.db_store.get_all_files(parsed_only=True)
+        # Query symbols table for globals
+        cursor = indexing_service.db_store.conn.execute(
+            "SELECT * FROM symbols WHERE symbol_type = ?",
+            ('global',)
+        )
+        globals_list = cursor.fetchall()
 
-        total_globals = 0
-        for file_record in all_files:
-            globals_list = indexing_service.db_store.get_globals_by_file(file_record['id'])
-            total_globals += len(globals_list)
+        # Should have at least: DEBUG
+        assert len(globals_list) >= 1
 
-        assert total_globals >= 1  # DEBUG
+        # Verify DEBUG global
+        global_names = [row[0] for row in globals_list]  # symbol_name is first column
+        assert 'DEBUG' in global_names
 
     def test_incremental_indexing_skips_unchanged(self, indexing_service, temp_project):
         """Test that incremental indexing skips unchanged files."""
@@ -229,7 +252,7 @@ class TestIndexingService:
         # First index
         indexing_service.index(temp_project)
 
-        # Modify file - add a function
+        # Modify file - replace content with a single new function
         import time
         time.sleep(0.1)
         module_path = os.path.join(temp_project, "module.py")
@@ -243,12 +266,16 @@ def new_function():
         indexing_service.index(temp_project, force=True)
 
         # Check that old entities are gone and new ones exist
-        file_record = indexing_service.db_store.get_file_by_path(module_path)
-        functions = indexing_service.db_store.get_functions_by_file(file_record['id'])
+        # Query symbols for this specific file
+        cursor = indexing_service.db_store.conn.execute(
+            "SELECT symbol_name, symbol_type FROM symbols WHERE file_path = ? AND symbol_type = ?",
+            (module_path, 'function')
+        )
+        functions = cursor.fetchall()
 
-        # Should only have new_function now
+        # Should only have new_function now (old hello and method should be gone)
         assert len(functions) == 1
-        assert functions[0]['name'] == 'new_function'
+        assert functions[0][0] == 'new_function'
 
     def test_nested_directory_indexing(self, indexing_service, temp_project):
         """Test indexing of nested directories."""

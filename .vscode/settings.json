@@ -5,7 +5,7 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "chat.tools.terminal.autoApprove": {
-        "/^cd /home/drusifer/Projects/via && source venv/bin/activate && pytest tests/unit/test_match_record\\.py -xvs 2>&1 \\| head -100$/": {
+        "/^cd /home/drusifer/Projects/via && source venv/bin/activate && pytest tests .*": {
             "approve": true,
             "matchCommandLine": true
         }
@@ -15,5 +15,4 @@
     "gemini.agent.autoApproveTools": true,
     "gemini.agent.confirmBeforeWrite": false,
     "makefile.configureOnOpen": false
-
 }

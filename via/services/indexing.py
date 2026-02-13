@@ -270,7 +270,6 @@ class IndexingService:
             Dict with entity counts
         """
         file_id = self._upsert_file(file_info, parse_result)
-        self._store_entities(file_id, file_info, parse_result)
         self._store_symbols(file_info, parse_result)
 
         return {
@@ -295,11 +294,7 @@ class IndexingService:
 
         if existing:
             file_id = existing['id']
-            # Delete old entities (will be replaced)
-            self.db_store.delete_functions_by_file(file_id)
-            self.db_store.delete_classes_by_file(file_id)
-            self.db_store.delete_imports_by_file(file_id)
-            self.db_store.delete_globals_by_file(file_id)
+            # Delete old symbols (will be replaced)
             self.db_store.delete_symbols_by_file(file_info.path)
             # Update file record
             self.db_store.update_file(
@@ -318,80 +313,6 @@ class IndexingService:
                 parsed=True,
             )
         return file_id
-
-    def _store_entities(self, file_id: int, file_info: DiscoveredFile, parse_result) -> None:
-        """Store classes, methods, functions, imports, and globals.
-
-        Args:
-            file_id: Database file ID
-            file_info: File information
-            parse_result: Parse result with entities
-        """
-        # Store classes first (needed for method linking)
-        for cls in parse_result.classes:
-            class_id = self.db_store.insert_class(
-                file_id=file_id,
-                name=cls.name,
-                line_start=cls.line_start,
-                line_end=cls.line_end,
-                byte_offset=cls.byte_offset,
-                byte_length=cls.byte_length,
-                bases=cls.bases,
-                decorators=cls.decorators,
-                docstring=cls.docstring,
-            )
-            # Store methods
-            for method in cls.methods:
-                self.db_store.insert_function(
-                    file_id=file_id,
-                    class_id=class_id,
-                    name=method.name,
-                    line_start=method.line_start,
-                    line_end=method.line_end,
-                    byte_offset=method.byte_offset,
-                    byte_length=method.byte_length,
-                    args=method.args,
-                    decorators=method.decorators,
-                    docstring=method.docstring,
-                )
-
-        # Store top-level functions
-        for func in parse_result.functions:
-            self.db_store.insert_function(
-                file_id=file_id,
-                name=func.name,
-                line_start=func.line_start,
-                line_end=func.line_end,
-                byte_offset=func.byte_offset,
-                byte_length=func.byte_length,
-                args=func.args,
-                decorators=func.decorators,
-                docstring=func.docstring,
-            )
-
-        # Store imports
-        for imp in parse_result.imports:
-            self.db_store.insert_import(
-                file_id=file_id,
-                module=imp.module,
-                name=imp.name,
-                alias=imp.alias,
-                line_number=imp.line_number,
-                byte_offset=imp.byte_offset,
-                byte_length=imp.byte_length,
-            )
-
-        # Store globals
-        for glob in parse_result.globals:
-            self.db_store.insert_global(
-                file_id=file_id,
-                name=glob.name,
-                value=glob.value,
-                type_hint=glob.type_hint,
-                line_number=glob.line_number,
-                byte_offset=glob.byte_offset,
-                byte_length=glob.byte_length,
-            )
 
     def _store_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
         """Populate symbols table (denormalized for fast matching).

@@ -1270,3 +1270,156 @@ Sprint 5 (Symbol Relationships) is officially shipped. The via tool now understa
 
 Well done team. @Mouse *sm close Sprint 5.
 
+[<small>2026-02-11 12:43:21</small>] [**User**]->[**all**] **request*:
+
+ @cypher pm prepare the next set of user stories for Sprint 6. This should include --watch mode where via runs in the background and automatically updates the index when files change
+
+[<small>2026-02-11 12:46:10</small>] [**Cypher**]->[**all**] **pm story*:
+
+ Sprint 6 user stories drafted. See cypher.docs/SPRINT_6_USER_STORIES.md
+
+**Theme**: Watch Mode & Live Indexing (12 points, 5 stories)
+
+| # | Story | Pts | Pri |
+|---|-------|-----|-----|
+| 1 | Basic watch mode (watchdog → re-index) | 5 | P0 |
+| 2 | Terminal feedback & debouncing | 2 | P0 |
+| 3 | Exclusion pattern support | 2 | P1 |
+| 4 | Error resilience & stability | 2 | P1 |
+| 5 | Force re-index while watching | 1 | P2 |
+
+Good news: the -w flag is already parsed, IndexingService already does incremental updates, and FileDiscovery handles .gitignore. We're wiring up watchdog events to existing infrastructure.
+
+5 open questions for Drew in the doc. @Morpheus *arch review Sprint 6 scope when ready.
+
+[<small>2026-02-11 13:16:29</small>] [**Cypher**]->[**all**] **pm update*:
+
+ Drew's answers received. Incorporating into Sprint 6 stories now.
+
+**Decisions locked in**:
+- 500ms debounce, no config needed
+- Watch ALL supported file types (py, md, pyx, pyi)
+- Re-resolve relationships on file change (2-pass OK)
+- watchdog for cross-platform
+
+**Two NEW features requested**:
+1. **MCP Mode** - AI agent protocol with auto-config for Claude/Gemini/ChatGPT
+2. **Line Number Index** - New symbol type for byte offset queries with slice syntax
+
+Writing stories for both now. This bumps Sprint 6 scope significantly.
+@Morpheus *arch note Drew wants clean architecture for multi-file-type support.
+
+[<small>2026-02-11 13:19:19</small>] [**Cypher**]->[**all**] **pm story*:
+
+ Sprint 6 stories updated with Drew's answers + 2 new epics. See cypher.docs/SPRINT_6_USER_STORIES.md
+
+**3 Epics, 10 Stories, 28 Points**:
+
+| Epic | Stories | Points | Key Deliverable |
+|------|---------|--------|-----------------|
+| Watch Mode | 1-5 | 12 | via index -w with watchdog |
+| MCP Mode | 6-8 | 10 | via --mcp server + auto-config |
+| Line Index | 9-10 | 6 | -tL symbol type + slice queries |
+
+**Heads up**: 28pts is 2x our Sprint 5 velocity. 3 new open questions for Drew on scope/splitting.
+
+@Morpheus *arch review Sprint 6 - especially MCP architecture and multi-file-type parser registration (Drew's request).
+
+[<small>2026-02-11 13:28:02</small>] [**User**]->[**all**] **request*:
+
+ @cypher pm plan split into 3 sprints one for each epic, we'll do this incrementally
+
+[<small>2026-02-11 13:29:47</small>] [**Cypher**]->[**all**] **pm plan*:
+
+ Sprint plan split into 3 incremental sprints. All questions resolved.
+
+| Sprint | Epic | Points | Deliverable |
+|--------|------|--------|-------------|
+| **Sprint 6** | Watch Mode | 12 | via index -w (watchdog, debounce, exclusions) |
+| **Sprint 7** | MCP Mode | 10 | via --mcp (stdio JSON-RPC, auto-config, schema) |
+| **Sprint 8** | Line Index | 6 | -mL slice queries (byte offset indexing) |
+
+**Key decisions locked in**:
+- Line queries use -mL match type (not --lines)
+- MCP uses stdio transport
+- 3 separate sprints, incremental delivery
+
+Docs created:
+- cypher.docs/SPRINT_6_USER_STORIES.md (Watch Mode, 5 stories)
+- cypher.docs/SPRINT_7_USER_STORIES.md (MCP, 3 stories)
+- cypher.docs/SPRINT_8_USER_STORIES.md (Line Index, 2 stories)
+
+Sprint 6 is ready to go. @Morpheus *arch review Sprint 6 Watch Mode when ready.
+
+[<small>2026-02-11 13:33:54</small>] [**User**]->[**all**] **request*:
+
+ @Morpheus tl arch all - review vs current working code. Find duplication and outdated code to remove (do we still use all those tables?). Identify structural changes that will simplify the code, promote reuse (DRY), and is testable.
+
+[<small>2026-02-11 14:59:41</small>] [**Morpheus**]->[**all**] **lead arch*:
+
+ [Morpheus] *lead arch review Complete. Full audit written to morpheus.docs/ARCH_REVIEW_SPRINT_8.md
+
+**VERDICT: SIGNIFICANT CLEANUP NEEDED**
+
+Key findings:
+- 6 DEAD TABLES (functions, classes, imports, globals, log_statements, markdown_headings) - written but never queried in production. ~500 lines removable.
+- Legacy match subcommand likely dead code
+- Layering violation: rendering metadata computed in DB layer (store.py:697)
+- Pattern matching duplicated in store.py AND executor.py
+- Schema version numbering is inconsistent (says v2, has v3 tables)
+
+Recommended 3-phase cleanup: Dead code removal → Layering fixes → Consolidation.
+
+3 questions for @Drew in the review doc before proceeding.
+
+[<small>2026-02-11 15:08:15</small>] [**User**]->[**all**] **request*:
+
+ @Morpheus answers: There should only be 1 path for matching so consolidate everything to the executor arch if this is more scalable. I believe the meta data is for streaming output for tables and such but please verify if it is still needed (maybe do the same using sql queries / views on the symbols table?).
+
+[<small>2026-02-11 15:09:30</small>] [**Morpheus**]->[**all**] **lead arch*:
+
+ [Morpheus] *lead arch update - Drew's questions answered, review updated.
+
+KEY DECISIONS:
+1. REMOVE legacy match subcommand — consolidate to executor/pipeline arch (confirmed by Drew)
+2. KEEP Python-side filter in executor.py — it's REQUIRED for chained --via stages (not duplication, different purpose: DB query vs in-memory filter)
+3. KEEP metadata/schema_migrations tables — actively used for schema versioning
+4. KEEP _get_match_metadata SQL aggregation — needed for streaming table/list renderers. But MOVE it out of DatabaseStore into a MatchQueryHelper utility (layering fix)
+
+SQL Views won't work for per-query column widths (can't parameterize WHERE clause). Recommend Option B: MatchQueryHelper utility.
+
+Updated ARCH_REVIEW_SPRINT_8.md with 3-phase refactoring plan. Ready for @Cypher to write user stories or @Neo to start Phase 1 (dead code removal).
+
+[<small>2026-02-11 15:11:29</small>] [**User**]->[**all**] **request*:
+
+ All - We will do a quick tech debt sprint before diving into SPRINTs 6-8.
+
+[<small>2026-02-11 15:11:38</small>] [**Morpheus**]->[**all**] **lead plan*:
+
+ [Morpheus] *lead plan Tech Debt Sprint — scope confirmed by Drew.
+
+Based on ARCH_REVIEW_SPRINT_8.md, this sprint covers all 3 phases:
+
+**Phase 1 — Dead Code Removal (P0)**
+- Remove 6 legacy tables + 12 indexes from schema.py
+- Remove ~350 lines legacy CRUD from store.py
+- Remove _store_entities() from indexing.py (~70 lines)
+- Remove _run_match_command() from __main__.py (~70 lines)
+- Remove commands/match.py
+- Rewrite affected tests against symbols table
+
+**Phase 2 — Layering Fix (P1)**
+- Extract _get_match_metadata() to MatchQueryHelper utility
+- Executor calls helper, passes metadata to renderers
+
+**Phase 3 — DRY Consolidation (P2)**
+- Extract PatternMatcher utility
+- Extract common renderer metadata to base class
+- Fix schema version numbering
+
+@Cypher *pm stories — write user stories for this tech debt sprint so we can track properly. Reference ARCH_REVIEW_SPRINT_8.md for details.
+
+[<small>2026-02-11 15:11:50</small>] [**User**]->[**all**] **request*:
+
+ @Neo implement the arch plan
+

@@ -1,4 +1,4 @@
-# Morpheus Context - Sprint 2 Architecture
+# Morpheus Context - Architecture Review 2026-02-11
 
 ## Key Architectural Decisions
 
@@ -19,57 +19,32 @@
 - **MatchResult Dataclass**: Includes byte_offset and byte_length for direct file seeking
 - **References table**: Separate table for future relationship queries (calls, imports, inherits)
 
-**Key Principles**:
-- Zero JOINs (all data in symbols table)
-- Zero SQL templates (same query pattern for all types)
-- Zero class hierarchies
-- Trivial query construction
-- 3 files total: via/core/types.py, via/db/store.py, via/__main__.py
+## Architecture Audit (2026-02-11)
 
-**Database Schema**:
-- `symbols` table: (symbol_name, symbol_type, file_path, line_number, byte_offset, byte_length, qualified_name, parent_name)
-- `references` table: (from_symbol_id, to_symbol_id, reference_type, line_number)
-- `files` table: Retained for metadata only (not used by match command)
+### Dead Weight Identified
+- 6 legacy tables (functions, classes, imports, globals, log_statements, markdown_headings) are created and some are written to but NEVER queried in production
+- All production queries use the denormalized `symbols` table
+- Legacy table getters in store.py only called from test code
+- ~500 lines removable across schema.py, store.py, indexing.py
 
-**Symbol Types**: method, class, function, filepath, filename, import, global
+### Layering Issues
+- `_get_match_metadata()` in store.py computes rendering column widths (DB knows about rendering)
+- `PipelineExecutor` has deep knowledge of renderer internals
 
-**Match Operators**: EXACT (=), GLOB (*,?), LIKE (%,_), REGEXP (full regex)
+### Duplication
+- Pattern matching logic exists in both store.py (SQL) and executor.py (Python)
 
-**Output Format**: `type:file_path:line_number:qualified_name:@byte_offset+byte_length`
-
-**Benefits**:
-- Zero JOINs = faster queries
-- Trivial to add new symbol types (just enum value + indexer update)
-- Trivial to add new operators (just enum value)
-- Single query pattern for all types
-- No polymorphism overhead
-- References table enables future complex queries without affecting match performance
+### What's Clean
+- Renderer hierarchy (base, context options, source extraction)
+- Pipeline architecture (parser, executor, types)
+- SymbolType/MatchOp enums
+- MatchRecord hierarchy
+- RendererFactory
 
 ## Project Context
 
-### Sprint 1 - COMPLETE ✅
-- CLI index command with AST parsing
-- Database schema with all entity tables
-- 102/104 tests passing (98%)
-- Tagged v0.1.0-mvp
-
-### Sprint 2 - IN PROGRESS
-- Focus: `via match` command (renamed from `via query`)
-- Scope: Pattern matching with multiple syntaxes (glob/regex/SQL LIKE)
-- Entity type filtering (method/class/function/filepath/filename/import/global)
-- Simple text output only (rendering deferred to Sprint 3)
-
-### Deferred to Sprint 3+
-- `via render` command (syntax highlighting, context lines)
-- `via list` command (browse entities)
-- `via stats` command (database statistics)
-- Multiple output formats (JSON, CSV, table)
-- Boolean query operators (AND, OR, NOT)
+### Sprints 1-5 - COMPLETE
+### Sprint 6-7 - Status unknown, need to check
 
 ## Current Blockers
-None - architecture complete and ready for implementation.
-
-## Notes
-- User feedback emphasized simplicity: "Use database layer with SQL templates"
-- Byte offset/length critical for future efficient code rendering
-- Streaming results via generators for pipe support
+Awaiting Drew's answers to 3 questions in ARCH_REVIEW_SPRINT_8.md before proceeding with cleanup.
