@@ -507,13 +507,13 @@ def test_func():
         assert (via_dir / "index.db").exists(), "Database not created"
 
     def test_uat_4_2_match_command(self, uat_project):
-        """UAT-4.2: Match command with explicit subcommand.
+        """UAT-4.2: Match with pipeline syntax.
 
-        Command: via match '*' -t class
+        Command: via -mg '*' -tc
         Expected: Lists classes
         """
         result = subprocess.run(
-            [sys.executable, "-m", "via", "match", "*", "-t", "class"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc"],
             cwd=str(uat_project),
             capture_output=True,
             text=True,

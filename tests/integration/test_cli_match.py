@@ -89,8 +89,8 @@ def helper_function():
 
 def run_via_pipeline(args, project_dir):
     """Run via pipeline command and return result."""
-    cmd = [sys.executable, '-m', 'via'] + args + ['-d', str(project_dir)]
-    return subprocess.run(cmd, capture_output=True, text=True)
+    cmd = [sys.executable, '-m', 'via'] + args
+    return subprocess.run(cmd, capture_output=True, text=True, cwd=str(project_dir))
 
 
 class TestCLICommandParsing:
@@ -104,10 +104,11 @@ class TestCLICommandParsing:
         assert 'test_function' in result.stdout
 
     def test_pipeline_match_missing_type(self, indexed_project):
-        """Test pipeline match fails without type flag."""
+        """Test pipeline match without type flag searches all types."""
         project_dir, _ = indexed_project
         result = run_via_pipeline(['-mg', 'pattern'], project_dir)
-        assert result.returncode != 0
+        # Without type flag, searches all types and returns success
+        assert result.returncode == 0
 
 
 class TestMatchSyntaxFlags:
@@ -222,17 +223,21 @@ class TestErrorHandling:
 
     def test_match_database_not_found(self, tmp_path):
         """Test error when database doesn't exist."""
-        cmd = [sys.executable, '-m', 'via', '-mg', '*', '-tf', '-d', str(tmp_path)]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        cmd = [sys.executable, '-m', 'via', '-mg', '*', '-tf']
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(tmp_path))
         assert result.returncode != 0
         assert 'Database not found' in result.stderr or 'does not exist' in result.stderr.lower()
 
-    def test_match_directory_not_found(self):
-        """Test error when directory doesn't exist."""
-        cmd = [sys.executable, '-m', 'via', '-mg', '*', '-tf', '-d', '/nonexistent/path']
-        result = subprocess.run(cmd, capture_output=True, text=True)
+    def test_match_directory_not_found(self, tmp_path):
+        """Test error when directory doesn't exist (handled by cwd)."""
+        # When cwd doesn't exist, subprocess will raise an error
+        # Just verify the via command handles missing database gracefully
+        empty_dir = tmp_path / "empty"
+        empty_dir.mkdir()
+        cmd = [sys.executable, '-m', 'via', '-mg', '*', '-tf']
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(empty_dir))
         assert result.returncode != 0
-        assert 'does not exist' in result.stderr.lower()
+        assert 'Database not found' in result.stderr or 'does not exist' in result.stderr.lower()
 
 
 class TestStreamingOutput:

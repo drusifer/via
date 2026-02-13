@@ -206,10 +206,18 @@ class CacheManager:
     yield project_dir
 
 
-def run_match(args, project_dir):
-    """Execute via match command."""
-    cmd = [sys.executable, '-m', 'via', 'match'] + args + ['-d', str(project_dir)]
-    return subprocess.run(cmd, capture_output=True, text=True)
+def run_via(args, project_dir):
+    """Execute via with pipeline syntax.
+
+    Args:
+        args: Pipeline arguments (e.g., ['-mg', '*', '-tc'])
+        project_dir: Project directory to run from (uses cwd)
+
+    Returns:
+        CompletedProcess result
+    """
+    cmd = [sys.executable, '-m', 'via'] + args
+    return subprocess.run(cmd, capture_output=True, text=True, cwd=str(project_dir))
 
 
 class TestAC1_GlobPatterns:
@@ -217,7 +225,7 @@ class TestAC1_GlobPatterns:
 
     def test_glob_asterisk_wildcard(self, uat_project):
         """Test glob * wildcard matches multiple characters."""
-        result = run_match(['-t', 'method', '-g', '*ToString*'], uat_project)
+        result = run_via(['-mg', '*ToString*', '-tm'], uat_project)
         assert result.returncode == 0
         assert 'ToString' in result.stdout
         # Should find User.ToString and Post.ToString
@@ -226,19 +234,19 @@ class TestAC1_GlobPatterns:
 
     def test_glob_question_wildcard(self, uat_project):
         """Test glob ? wildcard matches single character."""
-        result = run_match(['-t', 'method', '-g', 'sav?'], uat_project)
+        result = run_via(['-mg', 'sav?', '-tm'], uat_project)
         assert result.returncode == 0
         assert 'save' in result.stdout
 
     def test_glob_prefix_match(self, uat_project):
         """Test glob prefix matching."""
-        result = run_match(['-t', 'function', '-g', 'create_*'], uat_project)
+        result = run_via(['-mg', 'create_*', '-tf'], uat_project)
         assert result.returncode == 0
         assert 'create_user' in result.stdout
 
     def test_glob_suffix_match(self, uat_project):
         """Test glob suffix matching."""
-        result = run_match(['-t', 'function', '-g', '*_hash'], uat_project)
+        result = run_via(['-mg', '*_hash', '-tf'], uat_project)
         assert result.returncode == 0
         assert 'calculate_hash' in result.stdout
 
@@ -248,19 +256,19 @@ class TestAC2_SQLLikePatterns:
 
     def test_like_percent_wildcard(self, uat_project):
         """Test SQL LIKE % wildcard."""
-        result = run_match(['-t', 'method', '-s', '%save%'], uat_project)
+        result = run_via(['-ms', '%save%', '-tm'], uat_project)
         assert result.returncode == 0
         assert 'save' in result.stdout
 
     def test_like_underscore_wildcard(self, uat_project):
         """Test SQL LIKE _ wildcard for single character."""
-        result = run_match(['-t', 'method', '-s', 'sav_'], uat_project)
+        result = run_via(['-ms', 'sav_', '-tm'], uat_project)
         assert result.returncode == 0
         assert 'save' in result.stdout
 
     def test_like_prefix_search(self, uat_project):
         """Test SQL LIKE prefix matching."""
-        result = run_match(['-t', 'function', '-s', 'find_%'], uat_project)
+        result = run_via(['-ms', 'find_%', '-tf'], uat_project)
         assert result.returncode == 0
         assert 'find_user_by_email' in result.stdout
 
@@ -270,14 +278,14 @@ class TestAC3_EntityTypeFiltering:
 
     def test_filter_methods(self, uat_project):
         """Test filtering by method type."""
-        result = run_match(['-t', 'method', '-g', '*'], uat_project)
+        result = run_via(['-mg', '*', '-tm'], uat_project)
         assert result.returncode == 0
         lines = result.stdout.strip().split('\n')
         assert all('method:' in l for l in lines if l)
 
     def test_filter_classes(self, uat_project):
         """Test filtering by class type."""
-        result = run_match(['-t', 'class', '-g', '*'], uat_project)
+        result = run_via(['-mg', '*', '-tc'], uat_project)
         assert result.returncode == 0
         assert 'User' in result.stdout
         assert 'Post' in result.stdout
@@ -285,20 +293,20 @@ class TestAC3_EntityTypeFiltering:
 
     def test_filter_functions(self, uat_project):
         """Test filtering by function type."""
-        result = run_match(['-t', 'function', '-g', '*'], uat_project)
+        result = run_via(['-mg', '*', '-tf'], uat_project)
         assert result.returncode == 0
         assert 'function:' in result.stdout
 
     def test_filter_imports(self, uat_project):
         """Test filtering by import type."""
-        result = run_match(['-t', 'import', '-g', '*'], uat_project)
+        result = run_via(['-mg', '*', '-ti'], uat_project)
         assert result.returncode == 0
         assert 'json' in result.stdout
         assert 'datetime' in result.stdout
 
     def test_filter_globals(self, uat_project):
         """Test filtering by global type."""
-        result = run_match(['-t', 'global', '-g', '*'], uat_project)
+        result = run_via(['-mg', '*', '-tg'], uat_project)
         assert result.returncode == 0
         assert 'MAX_NAME_LENGTH' in result.stdout
         assert 'DEBUG_MODE' in result.stdout
@@ -309,21 +317,21 @@ class TestAC6_ResultLimiting:
 
     def test_limit_results(self, uat_project):
         """Test -n flag limits results."""
-        result = run_match(['-t', 'method', '-g', '*', '-n', '3'], uat_project)
+        result = run_via(['-mg', '*', '-tm', '-n', '3'], uat_project)
         assert result.returncode == 0
         lines = [l for l in result.stdout.strip().split('\n') if l]
         assert len(lines) == 3
 
     def test_limit_one(self, uat_project):
         """Test limit of 1 returns exactly one result."""
-        result = run_match(['-t', 'class', '-g', '*', '-n', '1'], uat_project)
+        result = run_via(['-mg', '*', '-tc', '-n', '1'], uat_project)
         assert result.returncode == 0
         lines = [l for l in result.stdout.strip().split('\n') if l]
         assert len(lines) == 1
 
     def test_limit_greater_than_total(self, uat_project):
         """Test limit greater than total results returns all."""
-        result = run_match(['-t', 'class', '-g', '*', '-n', '100'], uat_project)
+        result = run_via(['-mg', '*', '-tc', '-n', '100'], uat_project)
         assert result.returncode == 0
         lines = [l for l in result.stdout.strip().split('\n') if l]
         assert len(lines) == 3  # User, Post, CacheManager
@@ -334,20 +342,20 @@ class TestAC7_CaseSensitivity:
 
     def test_case_sensitive_no_match(self, uat_project):
         """Test case-sensitive search doesn't match wrong case."""
-        result = run_match(['-t', 'class', '-g', 'user'], uat_project)
+        result = run_via(['-mg', 'user', '-tc'], uat_project)
         assert result.returncode == 0
         # Should not find 'User' with lowercase search
         assert 'User' not in result.stdout
 
     def test_case_insensitive_match(self, uat_project):
         """Test -I flag enables case-insensitive matching."""
-        result = run_match(['-t', 'class', '-g', 'user', '-I'], uat_project)
+        result = run_via(['-mg', 'user', '-tc', '-I'], uat_project)
         assert result.returncode == 0
         assert 'User' in result.stdout
 
     def test_case_insensitive_uppercase_pattern(self, uat_project):
         """Test case-insensitive with uppercase pattern."""
-        result = run_match(['-t', 'method', '-g', 'TOSTRING', '-I'], uat_project)
+        result = run_via(['-mg', 'TOSTRING', '-tm', '-I'], uat_project)
         assert result.returncode == 0
         assert 'ToString' in result.stdout
 
@@ -357,7 +365,7 @@ class TestAC8_OutputFormat:
 
     def test_output_contains_all_fields(self, uat_project):
         """Test output format includes all required fields."""
-        result = run_match(['-t', 'method', '-g', 'save', '-n', '1'], uat_project)
+        result = run_via(['-mg', 'save', '-tm', '-n', '1'], uat_project)
         assert result.returncode == 0
         line = result.stdout.strip()
         parts = line.split(':')
@@ -369,7 +377,7 @@ class TestAC8_OutputFormat:
 
     def test_output_includes_byte_position(self, uat_project):
         """Test output includes byte position for methods."""
-        result = run_match(['-t', 'method', '-g', 'save', '-n', '1'], uat_project)
+        result = run_via(['-mg', 'save', '-tm', '-n', '1'], uat_project)
         assert result.returncode == 0
         # Should have @offset+length
         assert '@' in result.stdout
@@ -377,7 +385,7 @@ class TestAC8_OutputFormat:
 
     def test_output_no_byte_position_for_files(self, uat_project):
         """Test filename output doesn't have byte position."""
-        result = run_match(['-t', 'filename', '-g', 'user.py'], uat_project)
+        result = run_via(['-mg', 'user.py', '-tN'], uat_project)
         assert result.returncode == 0
         # Filename entries should not have @offset+length format
         # (or have None values)
@@ -393,7 +401,7 @@ class TestAC9_StreamingOutput:
 
     def test_output_pipeable(self, uat_project):
         """Test output can be piped to wc."""
-        result = run_match(['-t', 'method', '-g', '*'], uat_project)
+        result = run_via(['-mg', '*', '-tm'], uat_project)
         assert result.returncode == 0
         # Verify clean output (no headers/footers)
         assert '===' not in result.stdout
@@ -401,7 +409,7 @@ class TestAC9_StreamingOutput:
 
     def test_output_grepable(self, uat_project):
         """Test output can be piped to grep."""
-        result = run_match(['-t', 'method', '-g', '*'], uat_project)
+        result = run_via(['-mg', '*', '-tm'], uat_project)
         assert result.returncode == 0
         # Each line should be greppable
         lines = result.stdout.strip().split('\n')
@@ -413,13 +421,13 @@ class TestErrorHandling:
 
     def test_database_not_found(self, tmp_path):
         """Test helpful error when database doesn't exist."""
-        result = run_match(['-t', 'method', '-g', '*'], tmp_path)
+        result = run_via(['-mg', '*', '-tm'], tmp_path)
         assert result.returncode != 0
         assert 'Database not found' in result.stderr
         assert 'via index' in result.stderr
 
     def test_no_matches_graceful(self, uat_project):
         """Test no matches returns empty output gracefully."""
-        result = run_match(['-t', 'method', '-g', 'nonexistent_xyz_123'], uat_project)
+        result = run_via(['-mg', 'nonexistent_xyz_123', '-tm'], uat_project)
         assert result.returncode == 0
         assert result.stdout.strip() == '' or result.stdout.strip() == ''

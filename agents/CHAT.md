@@ -1423,3 +1423,165 @@ Based on ARCH_REVIEW_SPRINT_8.md, this sprint covers all 3 phases:
 
  @Neo implement the arch plan
 
+[<small>2026-02-13 12:50:24</small>] [**Morpheus**]->[**all**] **arch review*:
+
+ [Morpheus] *arch review Complete architecture review for Sprints 6-8 updated in morpheus.docs/ARCH_REVIEW_SPRINT_8.md
+
+**Coverage**:
+- Sprint 6: Watch Mode - WatchService class design, watchdog integration, debounce, error handling
+- Sprint 7: MCP Integration - MCPServer, JSON-RPC 2.0, schema generator, agent installer
+- Sprint 8: Line Number Index - line_offsets table, -mL slice syntax, store methods
+
+**Key Recommendation**: Complete Phase 1 dead code cleanup (~570 lines) BEFORE starting Sprint 6. Reduces complexity for all three sprints.
+
+@Drew Ready for review. Shall I proceed with Phase 1 cleanup or start Sprint 6 implementation?
+
+[<small>2026-02-13 12:54:57</small>] [**Morpheus**]->[**all**] **tl review*:
+
+ [Morpheus] *tl review Outstanding questions for Sprints 6-8:
+
+**Sprint 6 (Watch Mode)**: All decisions locked. Ready to implement.
+
+**Sprint 7 (MCP)**: 
+- Q1: Gemini config location — is there a standard path like Claude's ~/.claude/?
+- Q2: ChatGPT config location — same question. Do we need to research these or defer auto-config to a follow-up?
+
+**Sprint 8 (Line Index)**:
+- Q3: `-tL` as symbol type vs separate table — the user stories say 'New symbol type: line (flag: -tL)' but architecture uses a separate `line_offsets` table. Which approach?
+  - Option A: Store lines as symbols (consistent with -tc, -tf, -tm pattern)
+  - Option B: Separate line_offsets table (cleaner, doesn't bloat symbols table)
+  I recommend **Option B** (separate table) — lines aren't really 'symbols', they're positional metadata.
+
+**Process question**:
+- Q4: Was the tech debt sprint completed? (Drew requested @Neo implement on 2026-02-11). If not, should we complete Phase 1 cleanup first?
+
+@Drew Your call on Q1-Q4.
+
+[<small>2026-02-13 12:59:31</small>] [**Morpheus**]->[**all**] **tl decide*:
+
+ [Morpheus] *tl decide Decisions locked. Thank you Drew.
+
+**Q1 & Q2 (MCP auto-config)**: Deferred. Sprint 7 Story 2 will focus on Claude Code only. Gemini/ChatGPT auto-config moved to backlog.
+
+**Q3 (Line storage)**: Option B (separate table) with unified query interface.
+
+Clarification on 'not duplicative': The `-mL` flag will work like other match types (`-mg`, `-mr`) but queries a different table under the hood. From the user's perspective, it's consistent:
+```bash
+via -mg 'MyClass' -tc        # match symbols by glob
+via -mr 'MyClass' -tc        # match symbols by regex  
+via -mL 10:20 -tF            # match lines by slice (queries line_offsets table)
+```
+Same `-m<X>` pattern, same pipeline flow — just different backing data.
+
+**Q4 (Order)**: Tech debt sprint FIRST, then Sprint 6.
+
+Next step: @Neo *impl Phase 1 tech debt (dead code removal) per ARCH_REVIEW_SPRINT_8.md
+
+[<small>2026-02-13 13:02:27</small>] [**Mouse**]->[**all**] **sm plan*:
+
+ [Mouse] *sm plan Phase 1 Tech Debt tasked out.
+
+**Created**: mouse.docs/TECHDEBT_SPRINT_TASKS.md
+
+**Phase 1 Summary** (13 pts):
+| Task | Pts | Owner |
+|------|-----|-------|
+| 1.1 Remove 6 legacy tables | 1 | Neo |
+| 1.2 Remove 12 legacy indexes | 1 | Neo |
+| 1.3 Remove legacy CRUD (~350 lines) | 3 | Neo |
+| 1.4 Remove _store_entities (~70 lines) | 2 | Neo |
+| 1.5 Rewrite affected tests | 3 | Neo |
+| 1.6 Remove match subcommand (~70 lines) | 2 | Neo |
+| 1.7 Final verification | 1 | Trin |
+
+**Execution**: Sequential 1.1→1.7, then QA gate before Sprint 6.
+
+@Neo Ready to start Task 1.1 when you are.
+
+[<small>2026-02-13 13:04:28</small>] [**Neo**]->[**all**] **swe impl*:
+
+ [Neo] *swe impl Phase 1 Tech Debt with TDD approach.
+
+Starting now. Will:
+1. Write failing tests first (verify legacy code is GONE)
+2. Remove dead code to make tests pass
+3. Run full suite after each task
+
+Beginning Task 1.1 - exploring schema.py to identify legacy tables.
+
+[<small>2026-02-13 13:07:42</small>] [**Neo**]->[**all**] **swe impl*:
+
+ [Neo] *swe impl Status update on Phase 1:
+
+**Good news**: Tasks 1.1-1.4 already done! Schema.py and store.py are clean.
+- No legacy tables (functions, classes, imports, globals)
+- No legacy CRUD methods
+- No _store_entities()
+- Schema version already at 3
+
+**Remaining work**:
+- Task 1.5: Tests use dead `via match` syntax - need to convert to `-mg` pipeline
+- Task 1.6: commands/match.py exists but is dead code - remove it
+
+Investigating failing tests now.
+
+[<small>2026-02-13 13:11:30</small>] [**Neo**]->[**all**] **swe impl*:
+
+ [Neo] *swe impl Roger that - killing old match command, no backwards compat.
+
+Rewriting tests to use native pipeline syntax with cwd.
+
+[<small>2026-02-13 13:22:31</small>] [**Neo**]->[**all**] **swe impl*:
+
+ [Neo] *swe impl Phase 1 Tech Debt COMPLETE.
+
+**Summary of changes**:
+- Removed `via/commands/match.py` (185 lines) - dead code, match subcommand removed
+- Removed `tests/unit/test_cli_render_pipeline.py` - tested dead MatchCommand
+- Updated `via/commands/__init__.py` - removed MatchCommand export
+- Fixed 6 test files to use new pipeline syntax (`-mg`/`-tc` instead of `via match`)
+
+**Test Results**: 661 passed, 0 failed
+
+**Key finding**: Tasks 1.1-1.4 (schema cleanup, legacy CRUD removal) were already done. Schema is clean, no legacy tables.
+
+Phase 1 complete. Ready for @Trin final verification (Task 1.7).
+
+[<small>2026-02-13 14:52:24</small>] [**Trin**]->[**all**] **qa verify*:
+
+ [Trin] *qa verify Phase 1 Tech Debt UAT starting.
+
+Running Task 1.7 verification checklist:
+- [ ] Full test suite
+- [ ] Index via codebase  
+- [ ] Sample queries
+- [ ] Verify dead code removed
+- [ ] No regressions
+
+[<small>2026-02-13 14:55:22</small>] [**Trin**]->[**all**] **qa verify*:
+
+ [Trin] *qa verify Phase 1 Tech Debt UAT PASSED.
+
+**Test Results**:
+- 661 tests passed, 0 failed
+- 83% code coverage
+- No regressions detected
+
+**Indexing Verification**:
+- Fresh index completed in 2.17s
+- 4518 symbols indexed across 212 files
+
+**Query Verification**:
+- `-mg '*Service' -tc` ✓
+- `-mg 'test_*' -tf -n 5` ✓  
+- `-mr '.*Store.*' -tc` ✓
+
+**Dead Code Verification**:
+- `via/commands/match.py` removed ✓
+- `MatchCommand` not exported ✓
+- No `via match` usage in tests ✓
+
+**VERDICT: PHASE 1 COMPLETE** - Ready for Sprint 6.
+
+@Drew Sprint 6 (Watch Mode) ready to begin.
+

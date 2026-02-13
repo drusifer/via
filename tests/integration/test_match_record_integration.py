@@ -172,10 +172,9 @@ class TestMatchRecordIntegration:
             assert not method_record.supports_render_type(RenderType.DIAGRAM)
 
     def test_cli_match_output_unchanged(self, indexed_project):
-        """CLI match command output format unchanged by MatchRecord refactor."""
+        """CLI pipeline output format unchanged by MatchRecord refactor."""
         result = subprocess.run(
-            ["python", "-m", "via", "match", "-t", "class", "-g", "*",
-             "--db", indexed_project["db_path"]],
+            ["python", "-m", "via", "-mg", "*", "-tc"],
             capture_output=True,
             text=True,
             cwd=indexed_project["tmpdir"]
@@ -192,11 +191,9 @@ class TestMatchRecordIntegration:
         assert ':@' in line  # byte position present
 
     def test_pipeline_match_with_match_records(self, indexed_project):
-        """Pipeline match stage works with MatchRecord via legacy syntax."""
-        # Use legacy syntax which is fully implemented
+        """Pipeline match stage works with MatchRecord."""
         result = subprocess.run(
-            ["python", "-m", "via", "match", "-t", "class", "-g", "*",
-             "--db", indexed_project["db_path"]],
+            ["python", "-m", "via", "-mg", "*", "-tc"],
             capture_output=True,
             text=True,
             cwd=indexed_project["tmpdir"]

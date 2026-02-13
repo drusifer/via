@@ -84,19 +84,18 @@ class TestIndexingService:
 
         # Query symbols table for functions
         cursor = indexing_service.db_store.conn.execute(
-            "SELECT * FROM symbols WHERE symbol_type = ?",
+            "SELECT symbol_name FROM symbols WHERE symbol_type = ?",
             ('function',)
         )
         functions = cursor.fetchall()
 
-        # Should have at least: hello, utility, method
-        assert len(functions) >= 3
+        # Should have at least: hello, utility (method is a METHOD, not a function)
+        assert len(functions) >= 2
 
         # Verify specific function names
-        function_names = [row[0] for row in functions]  # symbol_name is first column
+        function_names = [row[0] for row in functions]
         assert 'hello' in function_names
         assert 'utility' in function_names
-        assert 'method' in function_names
 
     def test_index_extracts_classes(self, indexing_service, temp_project):
         """Test that classes are extracted."""
@@ -104,7 +103,7 @@ class TestIndexingService:
 
         # Query symbols table for classes
         cursor = indexing_service.db_store.conn.execute(
-            "SELECT * FROM symbols WHERE symbol_type = ?",
+            "SELECT symbol_name FROM symbols WHERE symbol_type = ?",
             ('class',)
         )
         classes = cursor.fetchall()
@@ -113,7 +112,7 @@ class TestIndexingService:
         assert len(classes) >= 2
 
         # Verify specific class names
-        class_names = [row[0] for row in classes]  # symbol_name is first column
+        class_names = [row[0] for row in classes]
         assert 'MyClass' in class_names
         assert 'Nested' in class_names
 
@@ -123,7 +122,7 @@ class TestIndexingService:
 
         # Query symbols table for imports
         cursor = indexing_service.db_store.conn.execute(
-            "SELECT * FROM symbols WHERE symbol_type = ?",
+            "SELECT symbol_name FROM symbols WHERE symbol_type = ?",
             ('import',)
         )
         imports = cursor.fetchall()
@@ -132,7 +131,7 @@ class TestIndexingService:
         assert len(imports) >= 2
 
         # Verify specific imports
-        import_names = [row[0] for row in imports]  # symbol_name is first column
+        import_names = [row[0] for row in imports]
         assert 'os' in import_names
         assert 'Path' in import_names
 
@@ -142,7 +141,7 @@ class TestIndexingService:
 
         # Query symbols table for globals
         cursor = indexing_service.db_store.conn.execute(
-            "SELECT * FROM symbols WHERE symbol_type = ?",
+            "SELECT symbol_name FROM symbols WHERE symbol_type = ?",
             ('global',)
         )
         globals_list = cursor.fetchall()
@@ -151,7 +150,7 @@ class TestIndexingService:
         assert len(globals_list) >= 1
 
         # Verify DEBUG global
-        global_names = [row[0] for row in globals_list]  # symbol_name is first column
+        global_names = [row[0] for row in globals_list]
         assert 'DEBUG' in global_names
 
     def test_incremental_indexing_skips_unchanged(self, indexing_service, temp_project):
