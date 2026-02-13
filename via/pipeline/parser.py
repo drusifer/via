@@ -4,15 +4,13 @@ from typing import List, Optional, Tuple
 from via.pipeline.types import StageType, PipelineStage
 from via.pipeline.relationship_filter import RelationshipFilter
 from via.core.flag_groups import (
-    MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS, FORMAT_FLAGS, RELATIONSHIP_FLAGS,
-    get_match_short_flags, get_type_short_flags, get_relationship_short_flags
+    MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS, FORMAT_FLAGS, get_match_short_flags, get_type_short_flags
 )
 from via.core.relationship_types import RelationshipType
 
 
 class PipelineParseError(Exception):
     """Raised when pipeline parsing fails."""
-    pass
 
 
 
@@ -102,13 +100,11 @@ class PipelineParser:
                     segments[-1].append(argv[i + 1])
                     i += 2
                     continue
-                else:
-                    # Plain --via separator
-                    segments.append([])
-                    i += 1
-                    continue
-            else:
-                segments[-1].append(arg)
+                # Plain --via separator
+                segments.append([])
+                i += 1
+                continue
+            segments[-1].append(arg)
             i += 1
 
         # Filter out empty segments
@@ -182,10 +178,9 @@ class PipelineParser:
         # Detect stage type from command/flags
         if args[0] == 'match' or self._is_match_stage(args):
             return self._parse_match_stage(args)
-        elif args[0] == 'stats':
+        if args[0] == 'stats':
             return self._parse_stats_stage(args)
-        else:
-            raise PipelineParseError(f"Unknown stage type: {args}")
+        raise PipelineParseError(f"Unknown stage type: {args}")
 
     def _is_match_stage(self, args: List[str]) -> bool:
         """Check if args indicate a match stage."""
@@ -252,8 +247,8 @@ class PipelineParser:
                 parsed_args.relationship = None
 
                 return PipelineStage(StageType.MATCH, parsed_args)
-        except (SystemExit, argparse.ArgumentError) as e:
-            raise PipelineParseError(f"Invalid match stage arguments: {args}")
+        except (SystemExit, argparse.ArgumentError) as exc:
+            raise PipelineParseError(f"Invalid match stage arguments: {args}") from exc
 
     def _finalize_symbol_types(self, parsed_args) -> None:
         """Finalize symbol_types from parsed args.
@@ -292,8 +287,8 @@ class PipelineParser:
 
             parsed_args = self.stats_parser.parse_args(args)
             return PipelineStage(StageType.STATS, parsed_args)
-        except (SystemExit, argparse.ArgumentError):
-            raise PipelineParseError(f"Invalid stats stage arguments: {args}")
+        except (SystemExit, argparse.ArgumentError) as exc:
+            raise PipelineParseError(f"Invalid stats stage arguments: {args}") from exc
 
     def _create_match_parser(self) -> argparse.ArgumentParser:
         """Create argparse parser for match stage.

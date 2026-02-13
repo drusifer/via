@@ -269,7 +269,7 @@ class IndexingService:
         Returns:
             Dict with entity counts
         """
-        file_id = self._upsert_file(file_info, parse_result)
+        self._upsert_file(file_info, parse_result)
         self._store_symbols(file_info, parse_result)
 
         return {

@@ -84,5 +84,6 @@ duplicates: install-dev
 security: install-dev
 	. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
 
-# Alias for full analysis
-analyze: lint-slow
+fix: install-dev
+	@echo "=== RUFF: fix ==="
+	. ${VENV_ACTIVATE} && ruff check --fix via/

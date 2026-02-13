@@ -13,7 +13,6 @@ License: GPL-3.0
 """
 
 import sys
-from functools import wraps
 from typing import Callable, TypeVar, Any, Optional, TextIO
 
 from .types import MatchOp

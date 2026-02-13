@@ -7,7 +7,7 @@ Author: Neo (SWE)
 Sprint: 5, Phase 1.4
 """
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
 from via.core.relationship_types import RelationshipType
 
 

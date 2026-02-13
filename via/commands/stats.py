@@ -14,7 +14,7 @@ License: GPL-3.0
 
 import json
 import argparse
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from ..core.interfaces import ArgumentProvider, HelpProvider
 
 

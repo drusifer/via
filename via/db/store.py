@@ -623,7 +623,7 @@ class DatabaseStore:
                 count += 1
 
                 # Check limit
-                if limit is not None and limit > 0 and count >= limit:
+                if limit is not None and 0 < limit <= count:
                     break
 
     def count_symbols(self) -> int:
@@ -667,7 +667,8 @@ class DatabaseStore:
             List of (file_path, count) tuples
         """
         cursor = self.conn.execute(
-            "SELECT file_path, COUNT(*) as cnt FROM symbols GROUP BY file_path ORDER BY cnt DESC LIMIT ?",
+            "SELECT file_path, COUNT(*) as cnt FROM symbols "
+            "GROUP BY file_path ORDER BY cnt DESC LIMIT ?",
             (limit,)
         )
         return [(row[0], row[1]) for row in cursor.fetchall()]
@@ -853,19 +854,17 @@ class DatabaseStore:
             # Normal: find subjects that relate TO objects
             # Return the subjects (sources)
             select_from = "s"  # source symbol
-            filter_on = "t"   # filter by target pattern
             join_source = "from_symbol_id"
             join_target = "to_symbol_id"
         else:
             # Inverted: find targets that relate FROM subjects
             # Return the targets
             select_from = "t"  # target symbol
-            filter_on = "s"   # filter by source pattern
             join_source = "from_symbol_id"
             join_target = "to_symbol_id"
 
         # Build WHERE clauses
-        where_parts = [f"r.reference_type = ?"]
+        where_parts = ["r.reference_type = ?"]
         params: List[Any] = [relationship_type]
 
         # Pattern filtering: subject_pattern always filters source (s),

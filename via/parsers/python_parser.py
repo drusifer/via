@@ -377,9 +377,8 @@ class PythonParser(ParserABC):
 
         if hasattr(ast, 'unparse'):
             return ", ".join(f"@{ast.unparse(d)}" for d in decorator_list)
-        else:
-            # Fallback for older Python versions
-            return ", ".join(f"@{d.id if isinstance(d, ast.Name) else 'decorator'}" for d in decorator_list)
+        # Fallback for older Python versions
+        return ", ".join(f"@{d.id if isinstance(d, ast.Name) else 'decorator'}" for d in decorator_list)
 
     def _extract_bases(self, bases: list) -> str:
         """Extract base classes as string."""
@@ -388,22 +387,21 @@ class PythonParser(ParserABC):
 
         if hasattr(ast, 'unparse'):
             return ", ".join(ast.unparse(b) for b in bases)
-        else:
-            # Fallback for older Python versions
-            return ", ".join(b.id if isinstance(b, ast.Name) else 'Base' for b in bases)
+        # Fallback for older Python versions
+        return ", ".join(b.id if isinstance(b, ast.Name) else 'Base' for b in bases)
 
     def _extract_literal_value(self, node: ast.AST) -> str:
         """Extract literal value as string if possible."""
         if isinstance(node, ast.Constant):
             return repr(node.value)
-        elif isinstance(node, ast.Num):  # Python < 3.8
+        if isinstance(node, ast.Num):  # Python < 3.8
             return repr(node.n)
-        elif isinstance(node, ast.Str):  # Python < 3.8
+        if isinstance(node, ast.Str):  # Python < 3.8
             return repr(node.s)
-        elif hasattr(ast, 'unparse'):
+        if hasattr(ast, 'unparse'):
             try:
                 return ast.unparse(node)
-            except:
+            except Exception:
                 return None
         return None
 

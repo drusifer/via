@@ -1,6 +1,9 @@
 """Pipeline executor for running pipeline stages."""
+import fnmatch
+import re
 import sys
-from typing import Iterator, Optional, List, Dict, Set
+from typing import Iterator, Optional, List, Dict
+
 from via.pipeline.types import PipelineStage, StageType
 from via.pipeline.relationship_filter import RelationshipFilter
 from via.core.types import SymbolType, MatchOp
@@ -8,8 +11,6 @@ from via.core.match_record import MatchRecord, RenderType, FormatType
 from via.core.utils import safe_print, get_match_op
 from via.db.store import DatabaseStore
 from via.renderers.factory import RendererFactory
-import fnmatch
-import re
 
 
 # User-friendly render type names for CLI flags
@@ -205,7 +206,9 @@ class PipelineExecutor:
         count = 0
         for type_str in symbol_types:
             st = SymbolType(type_str)
-            for record in self.db.match(st, match_op, pattern, case_sensitive, limit, match_qualified):
+            for record in self.db.match(
+                st, match_op, pattern, case_sensitive, limit, match_qualified
+            ):
                 yield record
                 count += 1
                 if count >= limit:
@@ -280,9 +283,9 @@ class PipelineExecutor:
 
         if match_op == MatchOp.GLOB:
             return fnmatch.fnmatch(value, pattern)
-        elif match_op == MatchOp.REGEXP:
+        if match_op == MatchOp.REGEXP:
             return bool(re.search(pattern, value))
-        elif match_op == MatchOp.LIKE:
+        if match_op == MatchOp.LIKE:
             # Convert SQL LIKE pattern to regex
             regex_pattern = pattern.replace('%', '.*').replace('_', '.')
             return bool(re.match(f'^{regex_pattern}$', value))
@@ -353,7 +356,7 @@ class PipelineExecutor:
         print(f"Warning: {total} record(s) skipped (don't support {render_flag}): {types_str}",
               file=sys.stderr)
 
-    def _execute_stats_stage(self, stage: PipelineStage):
+    def _execute_stats_stage(self, stage: PipelineStage):  # noqa: ARG002  pylint: disable=unused-argument
         """Execute stats stage (placeholder for Phase 8).
 
         Args:
