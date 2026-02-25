@@ -14,9 +14,12 @@ License: GPL-3.0
 """
 
 from abc import ABC, abstractmethod
-from ..core.interfaces import ArgumentProvider, HelpProvider
 from dataclasses import dataclass, field
 from typing import List, Optional, Set
+
+from ..core.interfaces import ArgumentProvider, HelpProvider
+
+
 @dataclass
 class ParseResult:
     """Result of parsing a file."""

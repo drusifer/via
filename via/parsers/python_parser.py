@@ -18,15 +18,16 @@ import os
 from typing import Set
 
 from .base import (
+    CallEntity,
+    ClassEntity,
+    FunctionEntity,
+    GlobalEntity,
+    ImportEntity,
     ParserABC,
     ParseResult,
-    FunctionEntity,
-    ClassEntity,
-    ImportEntity,
-    GlobalEntity,
-    CallEntity,
     ReferenceEntity,
 )
+
 # Python builtins that should not be indexed as call relationships
 PYTHON_BUILTINS = {
     'print', 'len', 'str', 'int', 'float', 'bool', 'list', 'dict', 'set', 'tuple',
@@ -543,8 +544,33 @@ class PythonParser(ParserABC):
             List of ReferenceEntity objects
         """
         references = []
+        params = self._collect_parameters(func_node)
+        locals_vars = self._collect_locals(func_node)
+        seen_names = set()
 
-        # Collect function parameters
+        for node in ast.walk(func_node):
+            if not isinstance(node, ast.Name) or not isinstance(node.ctx, ast.Load):
+                continue
+
+            name = node.id
+            if self._should_skip_reference(name, seen_names, params, locals_vars):
+                continue
+
+            seen_names.add(name)
+            references.append(ReferenceEntity(
+                referencer_name=referencer_name,
+                referenced_name=name,
+                line_number=node.lineno,
+                byte_offset=self._get_byte_offset(node, text),
+                byte_length=self._get_byte_length(node, text),
+                referencer_type=referencer_type,
+                referencer_parent=referencer_parent,
+            ))
+
+        return references
+
+    def _collect_parameters(self, func_node: ast.AST) -> set:
+        """Collect function parameters."""
         params = set()
         if isinstance(func_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             for arg in func_node.args.args:
@@ -557,8 +583,10 @@ class PythonParser(ParserABC):
                 params.add(func_node.args.vararg.arg)
             if func_node.args.kwarg:
                 params.add(func_node.args.kwarg.arg)
+        return params
 
-        # Collect local variables (assigned within the function)
+    def _collect_locals(self, func_node: ast.AST) -> set:
+        """Collect local variables (assigned within the function)."""
         locals_vars = set()
         for node in ast.walk(func_node):
             if isinstance(node, ast.Assign):
@@ -571,58 +599,20 @@ class PythonParser(ParserABC):
             elif isinstance(node, ast.NamedExpr):  # Walrus operator :=
                 if isinstance(node.target, ast.Name):
                     locals_vars.add(node.target.id)
+        return locals_vars
 
-        # Track which names we've already added to avoid duplicates
-        seen_names = set()
-
-        # Find all Name nodes used in Load context (reading a variable)
-        for node in ast.walk(func_node):
-            if not isinstance(node, ast.Name):
-                continue
-
-            # Only care about Load context (reading a variable)
-            if not isinstance(node.ctx, ast.Load):
-                continue
-
-            name = node.id
-
-            # Skip duplicates
-            if name in seen_names:
-                continue
-
-            # Skip parameters
-            if name in params:
-                continue
-
-            # Skip local variables
-            if name in locals_vars:
-                continue
-
-            # Skip self/cls
-            if name in ('self', 'cls'):
-                continue
-
-            # Skip Python builtins
-            if name in PYTHON_BUILTINS:
-                continue
-
-            # Skip Python constants (True, False, None, etc.)
-            if name in PYTHON_CONSTANTS:
-                continue
-
-            # This is a reference to an external symbol
-            seen_names.add(name)
-            byte_offset = self._get_byte_offset(node, text)
-            byte_length = self._get_byte_length(node, text)
-
-            references.append(ReferenceEntity(
-                referencer_name=referencer_name,
-                referenced_name=name,
-                line_number=node.lineno,
-                byte_offset=byte_offset,
-                byte_length=byte_length,
-                referencer_type=referencer_type,
-                referencer_parent=referencer_parent,
-            ))
-
-        return references
+    def _should_skip_reference(self, name: str, seen: set, params: set, locals_vars: set) -> bool:
+        """Check if a name should be skipped during reference extraction."""
+        if name in seen:
+            return True
+        if name in params:
+            return True
+        if name in locals_vars:
+            return True
+        if name in ('self', 'cls'):
+            return True
+        if name in PYTHON_BUILTINS:
+            return True
+        if name in PYTHON_CONSTANTS:
+            return True
+        return False

@@ -5,8 +5,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
-from via.core.discovery import FileDiscovery, DiscoveredFile
+from via.core.discovery import DiscoveredFile, FileDiscovery
 
 
 @pytest.fixture

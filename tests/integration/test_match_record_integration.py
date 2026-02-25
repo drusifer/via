@@ -11,10 +11,11 @@ Author: Drew Gutstein / Neo
 License: GPL-3.0
 """
 
-import pytest
+import os
 import subprocess
 import tempfile
-import os
+
+import pytest
 
 
 @pytest.fixture
@@ -70,9 +71,9 @@ class TestMatchRecordIntegration:
 
     def test_match_returns_correct_class_record(self, indexed_project):
         """match() returns ClassMatchRecord for indexed class."""
-        from via.db.store import DatabaseStore
-        from via.core.types import SymbolType, MatchOp
         from via.core.match_record import ClassMatchRecord
+        from via.core.types import MatchOp, SymbolType
+        from via.db.store import DatabaseStore
 
         with DatabaseStore(indexed_project["db_path"], indexed_project["tmpdir"]) as db:
             results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*'))
@@ -82,9 +83,9 @@ class TestMatchRecordIntegration:
 
     def test_match_returns_correct_method_record(self, indexed_project):
         """match() returns MethodMatchRecord for indexed method."""
-        from via.db.store import DatabaseStore
-        from via.core.types import SymbolType, MatchOp
         from via.core.match_record import MethodMatchRecord
+        from via.core.types import MatchOp, SymbolType
+        from via.db.store import DatabaseStore
 
         with DatabaseStore(indexed_project["db_path"], indexed_project["tmpdir"]) as db:
             results = list(db.match(SymbolType.METHOD, MatchOp.GLOB, '*'))
@@ -95,9 +96,9 @@ class TestMatchRecordIntegration:
 
     def test_match_returns_correct_function_records(self, indexed_project):
         """match() returns FunctionMatchRecord for indexed functions."""
-        from via.db.store import DatabaseStore
-        from via.core.types import SymbolType, MatchOp
         from via.core.match_record import FunctionMatchRecord
+        from via.core.types import MatchOp, SymbolType
+        from via.db.store import DatabaseStore
 
         with DatabaseStore(indexed_project["db_path"], indexed_project["tmpdir"]) as db:
             results = list(db.match(SymbolType.FUNCTION, MatchOp.GLOB, '*'))
@@ -109,9 +110,9 @@ class TestMatchRecordIntegration:
 
     def test_match_returns_correct_import_records(self, indexed_project):
         """match() returns ImportMatchRecord for indexed imports."""
-        from via.db.store import DatabaseStore
-        from via.core.types import SymbolType, MatchOp
         from via.core.match_record import ImportMatchRecord
+        from via.core.types import MatchOp, SymbolType
+        from via.db.store import DatabaseStore
 
         with DatabaseStore(indexed_project["db_path"], indexed_project["tmpdir"]) as db:
             results = list(db.match(SymbolType.IMPORT, MatchOp.GLOB, '*'))
@@ -121,9 +122,9 @@ class TestMatchRecordIntegration:
 
     def test_match_returns_correct_global_record(self, indexed_project):
         """match() returns GlobalMatchRecord for indexed globals."""
-        from via.db.store import DatabaseStore
-        from via.core.types import SymbolType, MatchOp
         from via.core.match_record import GlobalMatchRecord
+        from via.core.types import MatchOp, SymbolType
+        from via.db.store import DatabaseStore
 
         with DatabaseStore(indexed_project["db_path"], indexed_project["tmpdir"]) as db:
             results = list(db.match(SymbolType.GLOBAL, MatchOp.GLOB, '*'))
@@ -133,8 +134,8 @@ class TestMatchRecordIntegration:
 
     def test_match_record_str_compatible_with_cli_output(self, indexed_project):
         """MatchRecord __str__ format is compatible with CLI output."""
+        from via.core.types import MatchOp, SymbolType
         from via.db.store import DatabaseStore
-        from via.core.types import SymbolType, MatchOp
 
         with DatabaseStore(indexed_project["db_path"], indexed_project["tmpdir"]) as db:
             results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*'))
@@ -149,9 +150,9 @@ class TestMatchRecordIntegration:
 
     def test_match_supports_render_type_method(self, indexed_project):
         """MatchRecord supports_render_type() works correctly."""
-        from via.db.store import DatabaseStore
-        from via.core.types import SymbolType, MatchOp
         from via.core.match_record import RenderType
+        from via.core.types import MatchOp, SymbolType
+        from via.db.store import DatabaseStore
 
         with DatabaseStore(indexed_project["db_path"], indexed_project["tmpdir"]) as db:
             class_results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*'))

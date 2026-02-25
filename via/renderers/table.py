@@ -13,11 +13,11 @@ $Id$
 License: GPL-3.0
 """
 
-from typing import Iterator, Optional, Dict
+from typing import Dict, Iterator, Optional
 
-from .base import Renderer
-from .formatters.table_formatters import TableFormatter, COLUMNS
 from ..core.match_record import MatchRecord
+from .base import Renderer
+from .formatters.table_formatters import COLUMNS, TableFormatter
 
 
 class TableRenderer(Renderer):

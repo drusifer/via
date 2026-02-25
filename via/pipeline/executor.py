@@ -2,16 +2,15 @@
 import fnmatch
 import re
 import sys
-from typing import Iterator, Optional, List, Dict
+from typing import Dict, Iterator, List, Optional
 
-from via.pipeline.types import PipelineStage, StageType
-from via.pipeline.relationship_filter import RelationshipFilter
-from via.core.types import SymbolType, MatchOp
-from via.core.match_record import MatchRecord, RenderType, FormatType
-from via.core.utils import safe_print, get_match_op
+from via.core.match_record import FormatType, MatchRecord, RenderType
+from via.core.types import MatchOp, SymbolType
+from via.core.utils import get_match_op, safe_print
 from via.db.store import DatabaseStore
+from via.pipeline.relationship_filter import RelationshipFilter
+from via.pipeline.types import PipelineStage, StageType
 from via.renderers.factory import RendererFactory
-
 
 # User-friendly render type names for CLI flags
 RENDER_TYPE_FLAGS: Dict[RenderType, str] = {

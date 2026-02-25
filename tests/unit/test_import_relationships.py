@@ -10,14 +10,14 @@ Author: Neo (SWE)
 Sprint: 5, Phase 3
 """
 
-import pytest
 from pathlib import Path
 
-from via.db.store import DatabaseStore
-from via.services.indexing import IndexingService
-from via.parsers.registry import ParserRegistry
-from via.parsers.python_parser import PythonParser
+import pytest
 from via.core.discovery import DiscoveredFile
+from via.db.store import DatabaseStore
+from via.parsers.python_parser import PythonParser
+from via.parsers.registry import ParserRegistry
+from via.services.indexing import IndexingService
 
 
 @pytest.fixture

@@ -5,11 +5,11 @@ Tests the find_index_db() function that locates .via/index.db by walking
 up the directory tree, similar to how git finds .git directories.
 """
 
-import pytest
-from pathlib import Path
-import tempfile
 import os
+import tempfile
+from pathlib import Path
 
+import pytest
 from via.core.discovery import find_index_db
 
 

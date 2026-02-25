@@ -14,9 +14,9 @@ License: GPL-3.0
 """
 
 import re
-from typing import Set, List, Tuple
+from typing import List, Set, Tuple
 
-from .base import ParserABC, ParseResult, MarkdownHeadingEntity
+from .base import MarkdownHeadingEntity, ParserABC, ParseResult
 
 
 class MarkdownParser(ParserABC):

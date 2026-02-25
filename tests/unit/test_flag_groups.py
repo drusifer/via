@@ -6,7 +6,7 @@ TDD tests for new prefix-based flag groups:
 - Format: -fa (ascii), -fm (markdown), -fh (html), -fp (png)
 """
 import pytest
-from via.pipeline.parser import PipelineParser, PipelineParseError
+from via.pipeline.parser import PipelineParseError, PipelineParser
 
 
 class TestMatchFlags:

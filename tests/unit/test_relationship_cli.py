@@ -9,9 +9,9 @@ Author: Neo (SWE)
 Sprint: 5, Phase 1.4
 """
 import pytest
-from via.pipeline.parser import PipelineParser, PipelineParseError
-from via.pipeline.types import StageType
 from via.core.relationship_types import RelationshipType
+from via.pipeline.parser import PipelineParseError, PipelineParser
+from via.pipeline.types import StageType
 
 
 class TestRelationshipFlagParsing:

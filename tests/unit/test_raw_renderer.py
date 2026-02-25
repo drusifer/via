@@ -13,16 +13,19 @@ $Id$
 License: GPL-3.0
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
 from typing import Iterator
 
+import pytest
 from via.core.match_record import (
-    RenderType, ClassMatchRecord, MethodMatchRecord,
-    FunctionMatchRecord, FileMatchRecord, ImportMatchRecord
+    ClassMatchRecord,
+    FileMatchRecord,
+    FunctionMatchRecord,
+    ImportMatchRecord,
+    MethodMatchRecord,
+    RenderType,
 )
-
 
 # Sample Python source for testing
 SAMPLE_SOURCE = '''"""Module docstring."""
@@ -156,8 +159,8 @@ class TestRawRendererBasic:
 
     def test_raw_renderer_is_renderer(self):
         """Test RawRenderer inherits from Renderer."""
-        from via.renderers.raw import RawRenderer
         from via.renderers.base import Renderer
+        from via.renderers.raw import RawRenderer
 
         renderer = RawRenderer()
         assert isinstance(renderer, Renderer)

@@ -5,13 +5,13 @@ TDD: Tests written first, then implementation.
 """
 
 import pytest
+from via.core.match_record import ClassMatchRecord, MethodMatchRecord, RenderType
 from via.renderers.diagram import DiagramRenderer
 from via.renderers.formatters.diagram_formatters import (
     MermaidAsciiFormatter,
-    MermaidMarkdownFormatter,
     MermaidHtmlFormatter,
+    MermaidMarkdownFormatter,
 )
-from via.core.match_record import ClassMatchRecord, MethodMatchRecord, RenderType
 
 
 class TestDiagramRendererBasics:

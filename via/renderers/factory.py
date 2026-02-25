@@ -15,18 +15,10 @@ License: GPL-3.0
 
 from typing import Optional
 
+from ..core.match_record import FormatType, RenderType
 from .base import Renderer
-from .list import ListRenderer
-from .table import TableRenderer
-from .raw import RawRenderer
-from .formatted import FormattedRenderer
 from .diagram import DiagramRenderer
-from .usage import UsageRenderer
-from .formatters.table_formatters import (
-    AsciiTableFormatter,
-    MarkdownTableFormatter,
-    HtmlTableFormatter,
-)
+from .formatted import FormattedRenderer
 from .formatters.code_formatters import (
     AsciiCodeFormatter,
     HtmlCodeFormatter,
@@ -34,16 +26,23 @@ from .formatters.code_formatters import (
 )
 from .formatters.diagram_formatters import (
     MermaidAsciiFormatter,
-    MermaidMarkdownFormatter,
     MermaidHtmlFormatter,
+    MermaidMarkdownFormatter,
+)
+from .formatters.table_formatters import (
+    AsciiTableFormatter,
+    HtmlTableFormatter,
+    MarkdownTableFormatter,
 )
 from .formatters.usage_formatters import (
     AsciiUsageFormatter,
-    MarkdownUsageFormatter,
     HtmlUsageFormatter,
+    MarkdownUsageFormatter,
 )
-from ..core.match_record import RenderType, FormatType
-
+from .list import ListRenderer
+from .raw import RawRenderer
+from .table import TableRenderer
+from .usage import UsageRenderer
 
 # Lookup tables for formatter classes (reduces cyclomatic complexity)
 TABLE_FORMATTERS = {

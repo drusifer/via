@@ -2,10 +2,10 @@
 
 from .base import Renderer
 from .factory import RendererFactory
-from .list import ListRenderer
-from .table import TableRenderer
-from .raw import RawRenderer
 from .formatted import FormattedRenderer
+from .list import ListRenderer
+from .raw import RawRenderer
+from .table import TableRenderer
 
 __all__ = [
     'Renderer', 'RendererFactory', 'ListRenderer', 'TableRenderer',

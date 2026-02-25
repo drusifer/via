@@ -5,8 +5,8 @@ TDD: Tests written first, then implementation.
 """
 
 import pytest
+from via.parsers.base import MarkdownHeadingEntity, ParseResult
 from via.parsers.markdown_parser import MarkdownParser
-from via.parsers.base import ParseResult, MarkdownHeadingEntity
 
 
 class TestMarkdownParserBasics:

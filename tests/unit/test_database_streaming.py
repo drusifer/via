@@ -12,13 +12,13 @@ $Id$
 License: GPL-3.0
 """
 
-import pytest
 import tempfile
 from pathlib import Path
 
+import pytest
+from via.core.match_record import ClassMatchRecord, MatchRecord
+from via.core.types import MatchOp, SymbolType
 from via.db.store import DatabaseStore
-from via.core.types import SymbolType, MatchOp
-from via.core.match_record import MatchRecord, ClassMatchRecord
 
 
 @pytest.fixture

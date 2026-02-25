@@ -17,15 +17,15 @@ import os
 import sqlite3
 import time
 from functools import wraps
-from typing import Optional, List, Dict, Any, Iterator, Callable, TypeVar
+from typing import Any, Callable, Dict, Iterator, List, Optional, TypeVar
 
+from ..core.match_record import MatchRecord, MatchRecordFactory
+from ..core.types import MatchOp, SymbolType
 from .schema import (
     ALL_TABLES,
     CREATE_INDEXES,
     SCHEMA_VERSION,
 )
-from ..core.types import SymbolType, MatchOp
-from ..core.match_record import MatchRecord, MatchRecordFactory
 
 F = TypeVar('F', bound=Callable[..., Any])
 

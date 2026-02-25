@@ -13,13 +13,14 @@ $Id$
 License: GPL-3.0
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
+from via.core.types import MatchOp, SymbolType
 from via.db.store import DatabaseStore
-from via.parsers.registry import ParserRegistry
 from via.parsers.python_parser import PythonParser
+from via.parsers.registry import ParserRegistry
 from via.services.indexing import IndexingService, _calculate_qualified_name
-from via.core.types import SymbolType, MatchOp
 
 
 @pytest.fixture

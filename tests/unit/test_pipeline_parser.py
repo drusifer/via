@@ -1,7 +1,7 @@
 """Unit tests for pipeline parser (Task 1.1)."""
 import pytest
-from via.pipeline.types import StageType, PipelineStage
-from via.pipeline.parser import PipelineParser, PipelineParseError
+from via.pipeline.parser import PipelineParseError, PipelineParser
+from via.pipeline.types import PipelineStage, StageType
 
 
 class TestSplitOnVia:

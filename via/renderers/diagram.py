@@ -15,8 +15,8 @@ License: GPL-3.0
 
 from typing import Iterator, List
 
+from ..core.match_record import ClassMatchRecord, MatchRecord
 from .base import Renderer
-from ..core.match_record import MatchRecord, ClassMatchRecord
 
 
 class DiagramRenderer(Renderer):

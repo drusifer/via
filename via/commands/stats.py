@@ -12,9 +12,10 @@ $Id$
 License: GPL-3.0
 """
 
-import json
 import argparse
-from typing import Dict, Any
+import json
+from typing import Any, Dict
+
 from ..core.interfaces import ArgumentProvider, HelpProvider
 
 

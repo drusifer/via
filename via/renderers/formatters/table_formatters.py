@@ -18,7 +18,6 @@ from typing import Dict
 
 from ...core.match_record import MatchRecord
 
-
 # Default column order and display names
 COLUMNS = [
     ('symbol_type', 'Type'),

@@ -13,7 +13,7 @@ License: GPL-3.0
 """
 
 import pytest
-from via.core.types import SymbolType, MatchOp
+from via.core.types import MatchOp, SymbolType
 
 
 class TestSymbolTypeEnum:

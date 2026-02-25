@@ -13,7 +13,7 @@ License: GPL-3.0
 """
 
 import sys
-from typing import Callable, TypeVar, Any, Optional, TextIO
+from typing import Any, Callable, Optional, TextIO, TypeVar
 
 from .types import MatchOp
 

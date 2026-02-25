@@ -12,22 +12,23 @@ $Id$
 License: GPL-3.0
 """
 
-import pytest
-import tempfile
 import os
-from via.renderers.usage import UsageRenderer, DOCSTRING_TYPES
-from via.renderers.formatters.usage_formatters import (
-    AsciiUsageFormatter,
-    MarkdownUsageFormatter,
-    HtmlUsageFormatter,
-    DocstringInfo,
-)
+import tempfile
+
+import pytest
 from via.core.match_record import (
     ClassMatchRecord,
-    MethodMatchRecord,
-    FunctionMatchRecord,
     FileMatchRecord,
+    FunctionMatchRecord,
+    MethodMatchRecord,
 )
+from via.renderers.formatters.usage_formatters import (
+    AsciiUsageFormatter,
+    DocstringInfo,
+    HtmlUsageFormatter,
+    MarkdownUsageFormatter,
+)
+from via.renderers.usage import DOCSTRING_TYPES, UsageRenderer
 
 
 class TestUsageRendererBasics:

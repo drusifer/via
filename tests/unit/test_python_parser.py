@@ -1,7 +1,6 @@
 """Unit tests for Python parser."""
 
 import pytest
-
 from via.parsers.python_parser import PythonParser
 
 

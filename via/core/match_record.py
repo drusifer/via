@@ -14,10 +14,11 @@ License: GPL-3.0
 """
 
 from abc import ABC, abstractmethod
-from .interfaces import ArgumentProvider, HelpProvider
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
+from .interfaces import ArgumentProvider, HelpProvider
 
 
 class RenderType(Enum):

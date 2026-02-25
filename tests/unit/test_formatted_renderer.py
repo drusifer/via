@@ -12,15 +12,20 @@ $Id$
 License: GPL-3.0
 """
 
-import pytest
-import tempfile
 import os
 import re
+import tempfile
 from typing import Iterator
 
+import pytest
 from via.core.match_record import (
-    RenderType, ClassMatchRecord, MethodMatchRecord,
-    FunctionMatchRecord, FileMatchRecord, ImportMatchRecord, GlobalMatchRecord
+    ClassMatchRecord,
+    FileMatchRecord,
+    FunctionMatchRecord,
+    GlobalMatchRecord,
+    ImportMatchRecord,
+    MethodMatchRecord,
+    RenderType,
 )
 
 
@@ -291,8 +296,8 @@ class TestFormattedRendererBasic:
 
     def test_formatted_renderer_is_renderer(self):
         """Test FormattedRenderer inherits from Renderer."""
-        from via.renderers.formatted import FormattedRenderer
         from via.renderers.base import Renderer
+        from via.renderers.formatted import FormattedRenderer
 
         renderer = FormattedRenderer()
         assert isinstance(renderer, Renderer)

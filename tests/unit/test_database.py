@@ -6,9 +6,8 @@ import time
 from pathlib import Path
 
 import pytest
-
-from via.db.store import DatabaseStore
 from via.db.schema import SCHEMA_VERSION
+from via.db.store import DatabaseStore
 
 
 @pytest.fixture

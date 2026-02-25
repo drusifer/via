@@ -13,12 +13,13 @@ $Id$
 License: GPL-3.0
 """
 
-import pytest
-import sys
 import io
+import sys
+
+import pytest
 from via.__main__ import _create_parser
-from via.core.utils import safe_print
 from via.core.constants import EXIT_SUCCESS
+from via.core.utils import safe_print
 
 
 class TestCLIParser:

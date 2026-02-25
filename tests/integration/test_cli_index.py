@@ -15,14 +15,14 @@ License: GPL-3.0
 """
 
 import os
-import pytest
 import subprocess
 import tempfile
 from pathlib import Path
 
-from via.db.store import DatabaseStore
+import pytest
 from via.core.constants import EXIT_SUCCESS
-from via.core.types import SymbolType, MatchOp
+from via.core.types import MatchOp, SymbolType
+from via.db.store import DatabaseStore
 
 
 class TestCLIIndexCommand:

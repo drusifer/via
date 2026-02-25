@@ -16,6 +16,8 @@ License: GPL-3.0
 import logging
 import sys
 from typing import Optional
+
+
 def setup_logging(verbosity: int = 0, log_file: Optional[str] = None) -> None:
     """
     Setup logging based on verbosity level.

@@ -5,15 +5,16 @@ Tests the execution of relationship queries in the pipeline.
 Author: Neo (SWE)
 Sprint: 5, Phase 1.5
 """
-import pytest
+import os
+import tempfile
 from argparse import Namespace
-from via.pipeline.executor import PipelineExecutor
-from via.pipeline.types import PipelineStage, StageType
-from via.pipeline.relationship_filter import RelationshipFilter
+
+import pytest
 from via.core.relationship_types import RelationshipType
 from via.db.store import DatabaseStore
-import tempfile
-import os
+from via.pipeline.executor import PipelineExecutor
+from via.pipeline.relationship_filter import RelationshipFilter
+from via.pipeline.types import PipelineStage, StageType
 
 
 @pytest.fixture

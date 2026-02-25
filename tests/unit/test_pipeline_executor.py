@@ -1,13 +1,12 @@
 """Unit tests for pipeline executor (Task 1.2)."""
-import pytest
-from unittest.mock import Mock, MagicMock
-from via.pipeline.types import StageType, PipelineStage
-from via.pipeline.executor import PipelineExecutor
-from via.core.types import SymbolType, MatchOp
-from via.core.match_record import (
-    ClassMatchRecord, MethodMatchRecord, FunctionMatchRecord
-)
 from argparse import Namespace
+from unittest.mock import MagicMock, Mock
+
+import pytest
+from via.core.match_record import ClassMatchRecord, FunctionMatchRecord, MethodMatchRecord
+from via.core.types import MatchOp, SymbolType
+from via.pipeline.executor import PipelineExecutor
+from via.pipeline.types import PipelineStage, StageType
 
 
 class TestExecuteSingleMatchStage:

@@ -2,7 +2,9 @@
 IndexCommand: CLI argument and help provider for 'index' subcommand.
 """
 import argparse
+
 from ..core.interfaces import ArgumentProvider, HelpProvider
+
 
 class IndexCommand(ArgumentProvider, HelpProvider):
     @classmethod

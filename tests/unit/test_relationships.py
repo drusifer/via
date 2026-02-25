@@ -12,11 +12,12 @@ $Id$
 License: GPL-3.0
 """
 
-import pytest
-import tempfile
 import os
-from via.db.store import DatabaseStore
+import tempfile
+
+import pytest
 from via.core.relationship_types import RelationshipType
+from via.db.store import DatabaseStore
 
 
 class TestRelationshipTypeEnum:

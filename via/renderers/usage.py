@@ -9,13 +9,13 @@ import ast
 import logging
 from typing import Iterator, Optional
 
+from ..core.match_record import MatchRecord
 from .base import Renderer
 from .formatters.usage_formatters import (
-    UsageFormatter,
     AsciiUsageFormatter,
     DocstringInfo,
+    UsageFormatter,
 )
-from ..core.match_record import MatchRecord
 
 logger = logging.getLogger(__name__)
 

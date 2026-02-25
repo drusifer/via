@@ -4,10 +4,10 @@ Tests for Stats command.
 TDD: Tests written first, then implementation.
 """
 
-import pytest
 import json
 from unittest.mock import MagicMock
 
+import pytest
 from via.commands.stats import StatsCommand
 
 

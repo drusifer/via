@@ -11,14 +11,14 @@ Author: Neo (SWE)
 Sprint: 5, Phase 6 (Type Filter Fix)
 """
 
-import pytest
 from argparse import Namespace
 
-from via.pipeline.executor import PipelineExecutor
-from via.pipeline.types import PipelineStage, StageType
-from via.pipeline.relationship_filter import RelationshipFilter
+import pytest
 from via.core.relationship_types import RelationshipType
 from via.db.store import DatabaseStore
+from via.pipeline.executor import PipelineExecutor
+from via.pipeline.relationship_filter import RelationshipFilter
+from via.pipeline.types import PipelineStage, StageType
 
 
 @pytest.fixture

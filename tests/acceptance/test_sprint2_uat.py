@@ -29,10 +29,11 @@ Acceptance Criteria from SPRINT_2_USER_STORIES.md:
 
 import subprocess
 import sys
-import pytest
 from pathlib import Path
+
+import pytest
+from via.core.types import MatchOp, SymbolType
 from via.db.store import DatabaseStore
-from via.core.types import SymbolType, MatchOp
 
 
 @pytest.fixture(scope="module")

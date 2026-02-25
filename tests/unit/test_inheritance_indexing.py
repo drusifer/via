@@ -5,14 +5,15 @@ Tests that inheritance relationships are properly indexed during file parsing.
 Author: Neo (SWE)
 Sprint: 5, Phase 2
 """
-import pytest
-import tempfile
 import os
-from via.db.store import DatabaseStore
-from via.services.indexing import IndexingService
+import tempfile
+
+import pytest
 from via.core.discovery import DiscoveredFile
-from via.parsers.registry import ParserRegistry
+from via.db.store import DatabaseStore
 from via.parsers.python_parser import PythonParser
+from via.parsers.registry import ParserRegistry
+from via.services.indexing import IndexingService
 
 
 @pytest.fixture

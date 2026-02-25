@@ -1,6 +1,6 @@
 """Commands package for VIA CLI."""
 
-from .stats import StatsCommand
 from .index import IndexCommand
+from .stats import StatsCommand
 
 __all__ = ['StatsCommand', 'IndexCommand']

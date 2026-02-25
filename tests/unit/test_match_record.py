@@ -12,8 +12,9 @@ $Id$
 License: GPL-3.0
 """
 
-import pytest
 from abc import ABC
+
+import pytest
 
 
 class TestRenderTypeEnum:
@@ -446,7 +447,7 @@ class TestMatchRecordFactory:
 
     def test_factory_creates_class_record(self):
         """Test factory creates ClassMatchRecord for class type."""
-        from via.core.match_record import MatchRecordFactory, ClassMatchRecord
+        from via.core.match_record import ClassMatchRecord, MatchRecordFactory
         factory = MatchRecordFactory()
         row = {
             'symbol_type': 'class',
@@ -482,7 +483,7 @@ class TestMatchRecordFactory:
 
     def test_factory_creates_function_record(self):
         """Test factory creates FunctionMatchRecord for function type."""
-        from via.core.match_record import MatchRecordFactory, FunctionMatchRecord
+        from via.core.match_record import FunctionMatchRecord, MatchRecordFactory
         factory = MatchRecordFactory()
         row = {
             'symbol_type': 'function',
@@ -499,7 +500,7 @@ class TestMatchRecordFactory:
 
     def test_factory_creates_file_record(self):
         """Test factory creates FileMatchRecord for filepath type."""
-        from via.core.match_record import MatchRecordFactory, FileMatchRecord
+        from via.core.match_record import FileMatchRecord, MatchRecordFactory
         factory = MatchRecordFactory()
         row = {
             'symbol_type': 'filepath',
@@ -516,7 +517,7 @@ class TestMatchRecordFactory:
 
     def test_factory_creates_import_record(self):
         """Test factory creates ImportMatchRecord for import type."""
-        from via.core.match_record import MatchRecordFactory, ImportMatchRecord
+        from via.core.match_record import ImportMatchRecord, MatchRecordFactory
         factory = MatchRecordFactory()
         row = {
             'symbol_type': 'import',
@@ -533,7 +534,7 @@ class TestMatchRecordFactory:
 
     def test_factory_creates_global_record(self):
         """Test factory creates GlobalMatchRecord for global type."""
-        from via.core.match_record import MatchRecordFactory, GlobalMatchRecord
+        from via.core.match_record import GlobalMatchRecord, MatchRecordFactory
         factory = MatchRecordFactory()
         row = {
             'symbol_type': 'global',

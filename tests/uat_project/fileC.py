@@ -3,11 +3,11 @@ FileC - Grandchild classes and deeper hierarchy.
 
 Contains classes that inherit from fileB (grandchildren of fileA).
 """
-from typing import List
 from dataclasses import dataclass
+from typing import List
 
+from fileA import BaseClass, helper_util
 from fileB import ChildClass, MultiChild, func_b
-from fileA import helper_util, BaseClass
 
 
 class GrandChildClass(ChildClass):

@@ -15,9 +15,9 @@ License: GPL-3.0
 
 from typing import Iterator
 
-from .base import Renderer, ContextOptions
-from .utils.source_extraction import extract_source
 from ..core.match_record import MatchRecord
+from .base import ContextOptions, Renderer
+from .utils.source_extraction import extract_source
 
 
 class RawRenderer(Renderer):

@@ -20,8 +20,9 @@ UAT-4: Subcommand Syntax (index, match, help)
 
 import subprocess
 import sys
-import pytest
 from pathlib import Path
+
+import pytest
 from via.db.store import DatabaseStore
 
 

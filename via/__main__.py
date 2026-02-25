@@ -18,30 +18,29 @@ import logging
 import sys
 from pathlib import Path
 
-
-from .core.constants import (
-    VERSION,
-    DEFAULT_INDEX_DIR,
+from via.commands.stats import StatsCommand
+from via.core.constants import (
     DEFAULT_DB_NAME,
-    VERBOSITY_QUIET,
-    VERBOSITY_NORMAL,
-    VERBOSITY_VERBOSE,
-    VERBOSITY_DEBUG,
-    VERBOSITY_TRACE,
-    EXIT_SUCCESS,
+    DEFAULT_INDEX_DIR,
     EXIT_ERROR,
     EXIT_KEYBOARD_INTERRUPT,
+    EXIT_SUCCESS,
+    VERBOSITY_DEBUG,
+    VERBOSITY_NORMAL,
+    VERBOSITY_QUIET,
+    VERBOSITY_TRACE,
+    VERBOSITY_VERBOSE,
+    VERSION,
 )
-from .core.utils import safe_print
-from .core.logging import setup_logging
-from .db.store import DatabaseStore
-from .parsers.registry import ParserRegistry
-from .parsers.python_parser import PythonParser
-from .parsers.markdown_parser import MarkdownParser
-from .commands.stats import StatsCommand
-from .services.indexing import IndexingService
-from .pipeline.parser import PipelineParser, PipelineParseError
-from .pipeline.executor import PipelineExecutor
+from via.core.logging import setup_logging
+from via.core.utils import safe_print
+from via.db.store import DatabaseStore
+from via.parsers.markdown_parser import MarkdownParser
+from via.parsers.python_parser import PythonParser
+from via.parsers.registry import ParserRegistry
+from via.pipeline.executor import PipelineExecutor
+from via.pipeline.parser import PipelineParseError, PipelineParser
+from via.services.indexing import IndexingService
 
 
 def _build_pipeline_help() -> str:
@@ -54,7 +53,13 @@ def _build_pipeline_help() -> str:
     - Format: -fa (ascii), -fm (markdown), -fh (html), -fp (png)
     - Relationship: -Vinh (inherits-from), -Vca (calls), etc.
     """
-    from .core.flag_groups import MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS, FORMAT_FLAGS, RELATIONSHIP_FLAGS
+    from via.core.flag_groups import (
+        FORMAT_FLAGS,
+        MATCH_FLAGS,
+        OUTPUT_FLAGS,
+        RELATIONSHIP_FLAGS,
+        TYPE_FLAGS,
+    )
 
     match_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in MATCH_FLAGS)
     type_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in TYPE_FLAGS)
@@ -144,7 +149,7 @@ def _create_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # --- Index subcommand ---
-    from .commands.index import IndexCommand
+    from via.commands.index import IndexCommand
     index_parser = subparsers.add_parser(
         "index",
         aliases=["i"],
@@ -154,7 +159,7 @@ def _create_parser() -> argparse.ArgumentParser:
     IndexCommand.add_arguments(index_parser)
 
     # --- Stats subcommand ---
-    from .commands.stats import StatsCommand
+    from via.commands.stats import StatsCommand
     stats_parser = subparsers.add_parser(
         "stats",
         aliases=["s"],
@@ -426,7 +431,7 @@ def _is_pipeline_syntax(argv: list) -> bool:
 
     # New flag groups: -m<X> match, -t<X> type, -o<X> output, -f<X> format
     # Check for any flag in argv that matches our flag groups
-    from .core.flag_groups import get_match_short_flags, get_type_short_flags
+    from via.core.flag_groups import get_match_short_flags, get_type_short_flags
     match_flags = get_match_short_flags()  # {'-mg', '-mr', '-ms'}
     type_flags = get_type_short_flags()    # {'-tc', '-tf', '-tm', ...}
 

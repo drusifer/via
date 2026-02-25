@@ -1,7 +1,6 @@
 """Unit tests for parser registry."""
 
 import pytest
-
 from via.parsers.base import ParserABC, ParseResult
 from via.parsers.registry import ParserRegistry
 

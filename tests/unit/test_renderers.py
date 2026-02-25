@@ -13,12 +13,16 @@ $Id$
 License: GPL-3.0
 """
 
-import pytest
 from typing import Iterator
 
+import pytest
 from via.core.match_record import (
-    RenderType, FormatType, MatchRecord,
-    ClassMatchRecord, MethodMatchRecord, FunctionMatchRecord
+    ClassMatchRecord,
+    FormatType,
+    FunctionMatchRecord,
+    MatchRecord,
+    MethodMatchRecord,
+    RenderType,
 )
 
 
@@ -171,8 +175,8 @@ class TestTableRenderer:
 
     def test_table_renderer_ascii_format(self):
         """Test TableRenderer outputs ASCII table."""
-        from via.renderers.table import TableRenderer
         from via.renderers.formatters.table_formatters import AsciiTableFormatter
+        from via.renderers.table import TableRenderer
 
         renderer = TableRenderer(AsciiTableFormatter())
         records = list(make_test_records(2))
@@ -186,8 +190,8 @@ class TestTableRenderer:
 
     def test_table_renderer_markdown_format(self):
         """Test TableRenderer outputs Markdown table."""
-        from via.renderers.table import TableRenderer
         from via.renderers.formatters.table_formatters import MarkdownTableFormatter
+        from via.renderers.table import TableRenderer
 
         renderer = TableRenderer(MarkdownTableFormatter())
         records = list(make_test_records(2))
@@ -198,8 +202,8 @@ class TestTableRenderer:
 
     def test_table_renderer_html_format(self):
         """Test TableRenderer outputs HTML table."""
-        from via.renderers.table import TableRenderer
         from via.renderers.formatters.table_formatters import HtmlTableFormatter
+        from via.renderers.table import TableRenderer
 
         renderer = TableRenderer(HtmlTableFormatter())
         records = list(make_test_records(2))
@@ -212,8 +216,8 @@ class TestTableRenderer:
 
     def test_table_renderer_uses_metadata_widths(self):
         """Test TableRenderer uses column widths from metadata."""
-        from via.renderers.table import TableRenderer
         from via.renderers.formatters.table_formatters import AsciiTableFormatter
+        from via.renderers.table import TableRenderer
 
         renderer = TableRenderer(AsciiTableFormatter())
         records = list(make_test_records(2))
@@ -228,8 +232,8 @@ class TestTableRenderer:
 
     def test_table_renderer_more_indicator(self):
         """Test TableRenderer shows '... N more' in footer."""
-        from via.renderers.table import TableRenderer
         from via.renderers.formatters.table_formatters import AsciiTableFormatter
+        from via.renderers.table import TableRenderer
 
         renderer = TableRenderer(AsciiTableFormatter())
         records = list(make_test_records(2, total=10))
@@ -239,8 +243,8 @@ class TestTableRenderer:
 
     def test_table_renderer_empty_input(self):
         """Test TableRenderer handles empty input."""
-        from via.renderers.table import TableRenderer
         from via.renderers.formatters.table_formatters import AsciiTableFormatter
+        from via.renderers.table import TableRenderer
 
         renderer = TableRenderer(AsciiTableFormatter())
         output = renderer.render(iter([]))
@@ -330,8 +334,8 @@ class TestRendererIntegration:
 
     def test_table_renderer_with_mixed_types(self):
         """Test TableRenderer works with mixed record types."""
-        from via.renderers.table import TableRenderer
         from via.renderers.formatters.table_formatters import AsciiTableFormatter
+        from via.renderers.table import TableRenderer
 
         renderer = TableRenderer(AsciiTableFormatter())
         records = [

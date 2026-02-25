@@ -3,16 +3,16 @@ MyService - A service module with various imports.
 
 Used for testing import relationship queries.
 """
-import os
-import sys
 import json
 import logging
-from typing import List, Dict, Optional, Any
+import os
+import sys
+from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from collections import defaultdict
+from typing import Any, Dict, List, Optional
 
-from fileA import BaseClass, func_a, MY_CONSTANT
+from fileA import MY_CONSTANT, BaseClass, func_a
 from fileB import ChildClass, func_b
 
 logger = logging.getLogger(__name__)

@@ -5,17 +5,17 @@ Contains classes that inherit from fileA and functions that call fileA functions
 """
 import os
 import sys
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
 from fileA import (
-    BaseClass,
+    CONFIG_KEY,
+    MY_CONSTANT,
     AnotherBase,
+    BaseClass,
+    deprecated_func,
     func_a,
     helper_util,
-    deprecated_func,
-    MY_CONSTANT,
-    CONFIG_KEY,
 )
 
 

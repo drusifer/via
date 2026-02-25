@@ -42,7 +42,7 @@ License: GPL-3.0
 import logging
 import os
 from dataclasses import dataclass
-from typing import List, Set, Optional
+from typing import List, Optional, Set
 
 import pathspec
 

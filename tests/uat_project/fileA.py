@@ -3,10 +3,10 @@ FileA - Base classes and utility functions.
 
 Contains base classes and functions that will be inherited/called by other files.
 """
-import os
 import json
-from typing import List, Dict, Optional
+import os
 from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 # Global constants
 MY_CONSTANT = 42

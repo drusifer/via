@@ -1,12 +1,18 @@
 """Pipeline parser using argparse for flag parsing."""
 import argparse
 from typing import List, Optional, Tuple
-from via.pipeline.types import StageType, PipelineStage
-from via.pipeline.relationship_filter import RelationshipFilter
+
 from via.core.flag_groups import (
-    MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS, FORMAT_FLAGS, get_match_short_flags, get_type_short_flags
+    FORMAT_FLAGS,
+    MATCH_FLAGS,
+    OUTPUT_FLAGS,
+    TYPE_FLAGS,
+    get_match_short_flags,
+    get_type_short_flags,
 )
 from via.core.relationship_types import RelationshipType
+from via.pipeline.relationship_filter import RelationshipFilter
+from via.pipeline.types import PipelineStage, StageType
 
 
 class PipelineParseError(Exception):

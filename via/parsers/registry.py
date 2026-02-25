@@ -13,10 +13,12 @@ $Id$
 License: GPL-3.0
 """
 
-from typing import Dict, List, Optional, Type
 import os
+from typing import Dict, List, Optional, Type
 
 from .base import ParserABC
+
+
 class ParserRegistry:
     """Registry for managing language parsers."""
 

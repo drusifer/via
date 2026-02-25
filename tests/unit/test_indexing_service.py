@@ -5,11 +5,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
-from via.services.indexing import IndexingService, IndexingStats
 from via.db.store import DatabaseStore
-from via.parsers.registry import ParserRegistry
 from via.parsers.python_parser import PythonParser
+from via.parsers.registry import ParserRegistry
+from via.services.indexing import IndexingService, IndexingStats
 
 
 @pytest.fixture

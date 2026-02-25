@@ -1,7 +1,7 @@
 """Pipeline types and data structures."""
+from argparse import Namespace
 from dataclasses import dataclass
 from enum import Enum
-from argparse import Namespace
 
 
 class StageType(Enum):

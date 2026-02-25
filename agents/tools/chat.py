@@ -4,6 +4,7 @@ import datetime
 import os
 import sys
 
+
 def main():
     parser = argparse.ArgumentParser(description="Append a message to agents/CHAT.md")
     parser.add_argument("message", help="The message content")

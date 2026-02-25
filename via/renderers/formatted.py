@@ -16,11 +16,10 @@ License: GPL-3.0
 import os
 from typing import Iterator, Optional
 
-from .base import Renderer, ContextOptions
-from .formatters.code_formatters import CodeFormatter, AsciiCodeFormatter
-from .utils.source_extraction import extract_source
 from ..core.match_record import MatchRecord
-
+from .base import ContextOptions, Renderer
+from .formatters.code_formatters import AsciiCodeFormatter, CodeFormatter
+from .utils.source_extraction import extract_source
 
 # Symbol types that support formatted rendering
 SUPPORTED_TYPES = {'class', 'method', 'function', 'global'}

@@ -17,12 +17,12 @@ License: GPL-3.0
 import logging
 import time
 from dataclasses import dataclass
-from typing import Optional, Callable
+from typing import Callable, Optional
 
-from ..core.constants import DEFAULT_MAX_FILE_SIZE, PROGRESS_UPDATE_INTERVAL
-from ..core.discovery import FileDiscovery, DiscoveredFile
-from ..db.store import DatabaseStore
-from ..parsers.registry import ParserRegistry
+from via.core.constants import DEFAULT_MAX_FILE_SIZE, PROGRESS_UPDATE_INTERVAL
+from via.core.discovery import DiscoveredFile, FileDiscovery
+from via.db.store import DatabaseStore
+from via.parsers.registry import ParserRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ class IndexingService:
         start_time = time.time()
         stats = IndexingStats()
 
-        logger.info(f"Starting index of {root_dir}")
+        logger.info("Starting index of %s", root_dir)
 
         # Get parseable extensions from registry
         parseable_exts = self.parser_registry.get_supported_extensions()
@@ -131,7 +131,7 @@ class IndexingService:
         discovered = discovery.discover()
         stats.total_files = len(discovered)
 
-        logger.info(f"Discovered {stats.total_files} files")
+        logger.info("Discovered %d files", stats.total_files)
 
         if progress_callback:
             progress_callback("Discovering files", 0, stats.total_files)
@@ -146,14 +146,14 @@ class IndexingService:
                     # Check if file needs indexing
                     if not force and not self._should_index_file(file_info):
                         stats.skipped_files += 1
-                        logger.debug(f"Skipping unchanged file: {file_info.path}")
+                        logger.debug("Skipping unchanged file: %s", file_info.path)
                         continue
 
                     # Check if oversized
                     if file_info.is_oversized:
                         self._store_oversized_file(file_info)
                         stats.oversized_files += 1
-                        logger.debug(f"Oversized file: {file_info.path}")
+                        logger.debug("Oversized file: %s", file_info.path)
                         continue
 
                     # Check if parseable
@@ -171,10 +171,10 @@ class IndexingService:
                     stats.imports += file_stats['imports']
                     stats.globals += file_stats['globals']
 
-                    logger.debug(f"Indexed: {file_info.path}")
+                    logger.debug("Indexed: %s", file_info.path)
 
                 except Exception as e:
-                    logger.error(f"Failed to index {file_info.path}: {e}")
+                    logger.error("Failed to index %s: %s", file_info.path, e)
                     stats.failed_files += 1
 
                 # Progress callback
@@ -190,15 +190,17 @@ class IndexingService:
         except Exception as e:
             # Rollback on error
             self.db_store.rollback_transaction()
-            logger.error(f"Index failed, rolling back: {e}")
+            logger.error("Index failed, rolling back: %s", e)
             raise
 
         stats.duration_seconds = time.time() - start_time
 
         logger.info(
-            f"Indexing complete: {stats.indexed_files} files indexed, "
-            f"{stats.skipped_files} skipped, {stats.failed_files} failed "
-            f"in {stats.duration_seconds:.2f}s"
+            "Indexing complete: %d files indexed, %d skipped, %d failed in %.2fs",
+            stats.indexed_files,
+            stats.skipped_files,
+            stats.failed_files,
+            stats.duration_seconds
         )
 
         return stats
@@ -237,7 +239,7 @@ class IndexingService:
         parser = self.parser_registry.get_parser(file_info.path)
 
         if not parser:
-            logger.warning(f"No parser found for {file_info.path}")
+            logger.warning("No parser found for %s", file_info.path)
             self._store_unparsed_file(file_info)
             return {'functions': 0, 'classes': 0, 'imports': 0, 'globals': 0}
 
@@ -250,7 +252,7 @@ class IndexingService:
 
         # Check for parse errors
         if parse_result.parse_error:
-            logger.warning(f"Parse error in {file_info.path}: {parse_result.parse_error}")
+            logger.warning("Parse error in %s: %s", file_info.path, parse_result.parse_error)
             # Store as parsed with error
             self._store_file_with_error(file_info, parse_result.parse_error)
             return {'functions': 0, 'classes': 0, 'imports': 0, 'globals': 0}
@@ -314,14 +316,20 @@ class IndexingService:
             )
         return file_id
 
-    def _store_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
-        """Populate symbols table (denormalized for fast matching).
 
-        Args:
-            file_info: File information
-            parse_result: Parse result with entities
-        """
-        # Insert class and method symbols
+    def _store_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Populate symbols table (denormalized for fast matching)."""
+        self._store_class_symbols(file_info, parse_result)
+        self._store_function_symbols(file_info, parse_result)
+        self._store_import_symbols(file_info, parse_result)
+        self._store_global_symbols(file_info, parse_result)
+        self._store_file_path_symbols(file_info)
+        self._store_call_relationships(file_info, parse_result)
+        self._store_reference_relationships(file_info, parse_result)
+        self._store_markdown_headers(file_info, parse_result)
+
+    def _store_class_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Insert class and method symbols."""
         for cls in parse_result.classes:
             qualified_name = _calculate_qualified_name(file_info.path, cls.name)
             class_id = self.db_store.insert_symbol(
@@ -337,7 +345,6 @@ class IndexingService:
 
             # Create pending relationships for inheritance
             if cls.bases:
-                # bases is a comma-separated string like "Base1, Base2"
                 base_names = [b.strip() for b in cls.bases.split(',')]
                 for base_name in base_names:
                     if base_name:
@@ -360,7 +367,8 @@ class IndexingService:
                     parent_name=cls.name,
                 )
 
-        # Insert function symbols
+    def _store_function_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Insert function symbols."""
         for func in parse_result.functions:
             qualified_name = _calculate_qualified_name(file_info.path, func.name)
             self.db_store.insert_symbol(
@@ -374,7 +382,8 @@ class IndexingService:
                 parent_name=None,
             )
 
-        # Insert import symbols and create import relationships
+    def _store_import_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Insert import symbols and create import relationships."""
         for imp in parse_result.imports:
             symbol_name = imp.name if imp.name else imp.module
             qualified_name = imp.module if not imp.name else f"{imp.module}.{imp.name}"
@@ -389,9 +398,6 @@ class IndexingService:
                 parent_name=None,
             )
 
-            # Create pending relationship for imports
-            # Source is the import symbol (carries file path info)
-            # Target is the module being imported
             module_name = imp.module if imp.module else symbol_name
             self.db_store.insert_pending_relationship(
                 source_id=import_id,
@@ -399,7 +405,8 @@ class IndexingService:
                 rel_type='imports'
             )
 
-        # Insert global symbols
+    def _store_global_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Insert global symbols."""
         for glob in parse_result.globals:
             qualified_name = _calculate_qualified_name(file_info.path, glob.name)
             self.db_store.insert_symbol(
@@ -413,37 +420,36 @@ class IndexingService:
                 parent_name=None,
             )
 
-        # Insert file path symbols (for filename and filepath matching)
-        # Both match on basename for usability; filepath shows full path in output
+    def _store_file_path_symbols(self, file_info: DiscoveredFile) -> None:
+        """Insert file path symbols (for filename and filepath matching)."""
         filename = file_info.path.split('/')[-1]
         self.db_store.insert_symbol(
             symbol_name=filename,
             symbol_type='filename',
             file_path=file_info.path,
             line_number=0,
-            qualified_name=filename,  # Just filename for -N output
+            qualified_name=filename,
             byte_offset=None,
             byte_length=None,
             parent_name=None,
         )
         self.db_store.insert_symbol(
-            symbol_name=filename,  # Match on basename, not full path
+            symbol_name=filename,
             symbol_type='filepath',
             file_path=file_info.path,
             line_number=0,
-            qualified_name=file_info.path,  # Full path for -F output
+            qualified_name=file_info.path,
             byte_offset=None,
             byte_length=None,
             parent_name=None,
         )
 
-        # Create pending relationships for function/method calls
+    def _store_call_relationships(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Create pending relationships for function/method calls."""
         for call in parse_result.calls:
-            # Find the caller symbol
             caller_type = 'method' if call.caller_type == 'method' else 'function'
             parent_name = call.caller_parent if call.caller_type == 'method' else None
 
-            # Look up the caller symbol
             cursor = self.db_store.conn.execute(
                 """SELECT id FROM symbols
                    WHERE symbol_name = ? AND symbol_type = ? AND file_path = ?
@@ -461,13 +467,12 @@ class IndexingService:
                     rel_type='calls'
                 )
 
-        # Create pending relationships for symbol references
+    def _store_reference_relationships(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Create pending relationships for symbol references."""
         for ref in parse_result.references:
-            # Find the referencer symbol
             referencer_type = 'method' if ref.referencer_type == 'method' else 'function'
             parent_name = ref.referencer_parent if ref.referencer_type == 'method' else None
 
-            # Look up the referencer symbol
             cursor = self.db_store.conn.execute(
                 """SELECT id FROM symbols
                    WHERE symbol_name = ? AND symbol_type = ? AND file_path = ?
@@ -485,22 +490,18 @@ class IndexingService:
                     rel_type='references'
                 )
 
-        # Insert header symbols with hierarchical qualified names
-        header_stack: list = []  # [(level, text), ...]
+    def _store_markdown_headers(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Insert header symbols with hierarchical qualified names."""
+        header_stack = []
         for heading in parse_result.markdown_headings:
-            # Pop headers at same or higher level from stack
             while header_stack and header_stack[-1][0] >= heading.level:
                 header_stack.pop()
 
-            # Build qualified name from ancestor stack
             ancestors = [text for _, text in header_stack]
             ancestors.append(heading.text)
             qualified_name = ' > '.join(ancestors)
 
-            # Get parent (immediate ancestor)
             parent_name = header_stack[-1][1] if header_stack else None
-
-            # Push current header to stack
             header_stack.append((heading.level, heading.text))
 
             self.db_store.insert_symbol(

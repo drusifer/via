@@ -1,10 +1,10 @@
 """Formatters for different output formats."""
 
 from .table_formatters import (
-    TableFormatter,
     AsciiTableFormatter,
-    MarkdownTableFormatter,
     HtmlTableFormatter,
+    MarkdownTableFormatter,
+    TableFormatter,
 )
 
 __all__ = [

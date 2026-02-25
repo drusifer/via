@@ -15,8 +15,8 @@ License: GPL-3.0
 
 from typing import Iterator
 
-from .base import Renderer
 from ..core.match_record import MatchRecord
+from .base import Renderer
 
 
 class ListRenderer(Renderer):
