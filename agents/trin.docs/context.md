@@ -1,36 +1,33 @@
 # Trin Context - Working Memory
 
-## Current Sprint: Sprint 5 (Symbol Relationships)
+## Current Sprint: Sprint 6 (Watch Mode) — SIGNED OFF
 
-### Active Test Plan
+### Test Suite Health (2026-03-19)
+- **Full suite**: 709 pass, 0 fail (83% coverage)
+- **Sprint 6 UAT**: 17/17 pass
+- **Sprint 5 UAT**: 25/25 pass (unchanged)
+- **No regressions**
 
-- `SPRINT_5_UAT_PLAN.md` - 25 UAT scenarios for relationship queries
-- Execution status: 17 PASS / 8 FAIL / 1 SKIP
+### Key Finding: SQLite + Threading
+- `DatabaseStore.connect()` must use `check_same_thread=False`
+- WatchService uses `threading.Timer` for debounce — DB ops run in timer thread
+- Without this, all timer-thread DB writes silently fail (exception caught, 0 symbols logged)
+- **Diagnostic pattern**: if output says "(0 symbols)" but no error in stderr, suspect thread safety
+- **Test pattern**: `test_watch_thread_safety.py` — call target method from `threading.Timer`, assert DB state
 
-### Test Suite Health (2026-02-09)
-
-- **Full suite**: 669 pass / 8 fail / 1 skip (82% coverage)
-- **All 8 failures**: CLI rendering pipeline returns empty for forward relationship queries
-- **DB layer**: Solid - all verification tests pass
-- **No regressions** in non-relationship tests
-
-### Key Findings
-
-- Inverted queries and short-form flags work correctly
-- Forward queries with glob subjects return empty at rendering layer
-- Root cause is in the CLI output pipeline, not indexing or storage
-
-### Archived Plans (2026-02-09)
-
-Moved 4 stale plans/reports to `archive/`:
-- CLI_TEST_PLAN.md (Sprint 1)
-- SPRINT_2_TEST_PLAN.md
-- SPRINT_3_TEST_PLAN.md
-- UAT_REPORT_SPRINT_4.md
+### Key Finding: Symbols table not CASCADE-linked to files
+- `symbols.file_path` is a plain TEXT column, no FK to `files`
+- Deleting a file record does NOT delete its symbols
+- Must call `delete_symbols_by_file(path)` before/alongside `delete_file_by_path(path)`
 
 ### Test Philosophy
-
 - Oracle First: Consult Oracle for expected behaviors
-- Fast Feedback: Prioritize unit tests over E2E
+- Fast Feedback: Use `make` skill for all test runs (not raw Bash)
 - Incremental: Test small components in isolation
 - Quality Gates: No regressions allowed
+
+### Test Files Added (Sprint 6)
+- `tests/unit/test_watch_service.py` — 27 unit tests (Neo wrote)
+- `tests/unit/test_watch_thread_safety.py` — 1 diagnostic unit test (Trin wrote)
+- `tests/integration/test_cli_watch.py` — 3 CLI integration tests (Neo wrote)
+- `tests/uat/test_sprint6_uat.py` — 17 UAT scenario tests (Trin wrote)

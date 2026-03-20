@@ -1,89 +1,161 @@
-# Makefile for the VIA project
+.DEFAULT_GOAL := help
 
-.PHONY: all venv test clean lint-fast lint lint-slow duplicates security analyze
+ifdef MKF_ACTIVE
 
-# Variables
-PYTHON := python3
-VENV_DIR := .venv
-VENV_PYTHON := $(VENV_DIR)/bin/python
-VENV_ACTIVATE := $(VENV_DIR)/bin/activate
-VENV_STAMP := $(VENV_DIR)/venv.stamp
+# ── Project targets (invoked by mkf via re-invocation) ───────────────────────
+# Included here so mkf can find them when it re-runs: make MKF_ACTIVE=1 <target>
+-include Makefile.prj
 
-REQUIREMENTS := pyproject.toml
-INSTALL_STAMP := $(VENV_DIR)/installed.stamp
-INSTALL_DEV_STAMP := $(VENV_DIR)/installed-dev.stamp
+# ── Real recipes (invoked by mkf, not directly by the user) ─────────────────
 
-# Default target runs install and test
-all: install test
+.PHONY: tldr install_bob update_bob pull_bob clean_bob
 
-# Create the virtual environment if it doesn't exist
-$(VENV_STAMP):
-	$(PYTHON) -m venv $(VENV_DIR)
-	touch $(VENV_STAMP)
+tldr: ## Show TL;DR summaries from all project files (quick orientation for agents)
+	@rg --no-heading "TL;DR:" --glob "*.md" -N | sed 's|^\./||' | sort
 
-venv: $(VENV_STAMP)
-
-# Install dependencies into the virtual environment
-$(INSTALL_STAMP): venv $(REQUIREMENTS)
-	$(VENV_PYTHON) -m pip install --upgrade pip && $(VENV_PYTHON) -m pip install -e .
-	touch $(INSTALL_STAMP)
-
-install: $(INSTALL_STAMP)
-
-# Install dev dependencies. This target is self-contained and includes base dependencies.
-# It no longer depends on the 'install' target's stamp file to avoid redundant installations.
-$(INSTALL_DEV_STAMP): venv $(REQUIREMENTS)
-	. ${VENV_ACTIVATE} && pip install -e ".[dev]"
-	touch $(INSTALL_DEV_STAMP)
-
-install-dev: $(INSTALL_DEV_STAMP)
-
-# Run tests using the virtual environment's python
-test: install-dev
-	. ${VENV_ACTIVATE} && pytest tests/
-
-# Clean up the project directory
-clean:
-	rm -rf .via/
-	rm -rf $(VENV_DIR)
-	find . -type d -name "__pycache__" -exec rm -r {} +
-	rm -rf .pytest_cache .coverage htmlcov
-
-# =============================================================================
-# Static Analysis Tools
-# =============================================================================
-
-# FAST: Ruff only - complexity, unused imports/vars, dead code (~1 sec)
-lint-fast: install-dev
-	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
-	. ${VENV_ACTIVATE} && ruff check via/
-
-# MEDIUM: Ruff + Bandit security (~5 sec)
-lint: install-dev
-	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
-	-. ${VENV_ACTIVATE} && ruff check via/
+install_bob: ## Copy agents into a project and set up skill links (usage: make install_bob TARGET=/path/to/project)
+	@[ -n "$(TARGET)" ] || { echo "Usage: make install_bob TARGET=/path/to/project"; exit 1; }
+	@[ -d "$(TARGET)" ] || { echo "Error: $(TARGET) does not exist"; exit 1; }
+	@echo "Installing BobProtocol into $(TARGET)..."
+	@rsync -a \
+		--exclude='*.docs/context.md' \
+		--exclude='*.docs/current_task.md' \
+		--exclude='*.docs/next_steps.md' \
+		--exclude='CHAT.md' \
+		agents/ $(TARGET)/agents/
+	@echo "Initialising agent state files..."
+	@for dir in $(TARGET)/agents/*.docs; do \
+		cp agents/templates/_template_context.md    $$dir/context.md; \
+		cp agents/templates/_template_current_task.md $$dir/current_task.md; \
+		cp agents/templates/_template_next_steps.md $$dir/next_steps.md; \
+	done
+	@cp agents/templates/_template_CHAT.md $(TARGET)/agents/CHAT.md
+	@echo "Installing Makefile into $(TARGET)..."
+	@if [ -f "$(TARGET)/Makefile" ] && ! grep -q "MKF_ACTIVE" "$(TARGET)/Makefile"; then \
+		mv "$(TARGET)/Makefile" "$(TARGET)/Makefile.prj" && echo "  Renamed: Makefile -> Makefile.prj (project targets preserved)"; \
+	fi
+	@cp Makefile "$(TARGET)/Makefile" && echo "  Installed: Makefile (bob-managed, includes Makefile.prj)"
+	@echo "Setting up Claude skill links..."
+	@python $(TARGET)/agents/tools/setup_agent_links.py
 	@echo ""
-	@echo "=== BANDIT: Security Analysis ==="
-	. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
+	@echo "Done. BobProtocol installed in $(TARGET)"
+	@echo "Run 'make tldr' inside $(TARGET) to verify."
 
-# SLOW: Full analysis - Ruff + Pylint (duplicates) + Bandit (~30 sec)
-lint-slow: install-dev
-	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
-	-. ${VENV_ACTIVATE} && ruff check via/
+update_bob: ## Update agents and skills in a project, preserving state (usage: make update_bob TARGET=/path/to/project)
+	@[ -n "$(TARGET)" ] || { echo "Usage: make update_bob TARGET=/path/to/project"; exit 1; }
+	@[ -d "$(TARGET)" ] || { echo "Error: $(TARGET) does not exist"; exit 1; }
+	@echo "Updating BobProtocol in $(TARGET)..."
+	@rsync -a \
+		--exclude='*.docs/context.md' \
+		--exclude='*.docs/current_task.md' \
+		--exclude='*.docs/next_steps.md' \
+		--exclude='CHAT.md' \
+		--exclude='chat_archive/' \
+		agents/ $(TARGET)/agents/
+	@echo "Ensuring new agent state files are initialised..."
+	@for dir in $(TARGET)/agents/*.docs; do \
+		[ -f $$dir/context.md ] || cp agents/templates/_template_context.md $$dir/context.md; \
+		[ -f $$dir/current_task.md ] || cp agents/templates/_template_current_task.md $$dir/current_task.md; \
+		[ -f $$dir/next_steps.md ] || cp agents/templates/_template_next_steps.md $$dir/next_steps.md; \
+	done
+	@[ -f $(TARGET)/agents/CHAT.md ] || cp agents/templates/_template_CHAT.md $(TARGET)/agents/CHAT.md
+	@echo "Updating Makefile in $(TARGET)..."
+	@if [ -f "$(TARGET)/Makefile" ] && ! grep -q "MKF_ACTIVE" "$(TARGET)/Makefile"; then \
+		mv "$(TARGET)/Makefile" "$(TARGET)/Makefile.prj" && echo "  Renamed: Makefile -> Makefile.prj (project targets preserved)"; \
+	fi
+	@cp Makefile "$(TARGET)/Makefile" && echo "  Updated: Makefile"
+	@echo "Updating Claude skill links..."
+	@python $(TARGET)/agents/tools/setup_agent_links.py
 	@echo ""
-	@echo "=== PYLINT: Duplicate Code & Design Rules ==="
-	-. ${VENV_ACTIVATE} && pylint via/ --enable=duplicate-code
+	@echo "Done. BobProtocol updated in $(TARGET)"
+
+pull_bob: ## Pull updates from another project using BobProtocol, preserving local state (usage: make pull_bob SRC=/path/to/project)
+	@[ -n "$(SRC)" ] || { echo "Usage: make pull_bob SRC=/path/to/project"; exit 1; }
+	@[ -d "$(SRC)" ] || { echo "Error: $(SRC) does not exist"; exit 1; }
+	@echo "Pulling BobProtocol updates from $(SRC)..."
+	@rsync -a --existing \
+		--exclude='*.docs/context.md' \
+		--exclude='*.docs/current_task.md' \
+		--exclude='*.docs/next_steps.md' \
+		--exclude='CHAT.md' \
+		--exclude='chat_archive/' \
+		$(SRC)/agents/ agents/
 	@echo ""
-	@echo "=== BANDIT: Security Analysis ==="
-	-. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
+	@echo "Done. BobProtocol pulled from $(SRC)"
 
-# Individual tools (for targeted runs)
-duplicates: install-dev
-	. ${VENV_ACTIVATE} && pylint via/ --enable=duplicate-code
+clean_bob: ## Remove generated symlinks and reset agent memory/state files
+	@echo "Removing generated symlinks..."
+	@rm -rf .claude/skills/
+	@rm -f AGENTS.md GEMINI.md .cursorrules CHATGPT.md .github/copilot-instructions.md
+	@echo "Resetting agent state files to templates..."
+	@for dir in agents/*.docs; do \
+		cp agents/templates/_template_context.md    $$dir/context.md; \
+		cp agents/templates/_template_current_task.md $$dir/current_task.md; \
+		cp agents/templates/_template_next_steps.md $$dir/next_steps.md; \
+	done
+	@cp agents/templates/_template_CHAT.md agents/CHAT.md
+	@echo "Done. Environment cleaned and state reset."
 
-security: install-dev
-	. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
+else
 
-fix: install-dev
-	@echo "=== RUFF: fix ==="
-	. ${VENV_ACTIVATE} && ruff check --fix via/
+# ── Interception layer ───────────────────────────────────────────────────────
+# All targets except help, chat, install_bob, update_bob, pull_bob, and clean_bob route through mkf (agents/tools/mkf.py).
+# mkf captures output to build/build.out, posts status to CHAT.md,
+# and prints the last 10 lines on exit.
+#
+# Verbosity (set V=):
+#   make tldr              silent  — exit code only, full log in build/build.out
+#   make tldr V=-v         stderr to terminal
+#   make tldr V=-vv        stderr + filtered failures to terminal
+#   make tldr V=-vvv       stderr + full stdout to terminal
+
+.PHONY: help chat install_bob update_bob pull_bob clean_bob
+
+install_bob: ## Copy agents into a project and set up skill links (usage: make install_bob TARGET=/path/to/project)
+	@$(MAKE) MKF_ACTIVE=1 install_bob TARGET="$(TARGET)"
+
+update_bob: ## Update agents and skills in a project, preserving state (usage: make update_bob TARGET=/path/to/project)
+	@$(MAKE) MKF_ACTIVE=1 update_bob TARGET="$(TARGET)"
+
+pull_bob: ## Pull updates from another project using BobProtocol, preserving local state (usage: make pull_bob SRC=/path/to/project)
+	@$(MAKE) MKF_ACTIVE=1 pull_bob SRC="$(SRC)"
+
+clean_bob: ## Remove generated symlinks and reset agent memory/state files
+	@$(MAKE) MKF_ACTIVE=1 clean_bob
+
+help: ## Show available make targets
+	@echo ""
+	@echo "  Build output filter (mkf) is active. All targets route through agents/tools/mkf.py."
+	@echo "  Full log: build/build.out   Status posted to: agents/CHAT.md"
+	@echo ""
+	@echo "  Verbosity: append V=-v | V=-vv | V=-vvv to any target"
+	@echo "    (none)   silent — exit code only"
+	@echo "    -v       stderr to terminal"
+	@echo "    -vv      stderr + failures/errors to terminal"
+	@echo "    -vvv     stderr + full stdout to terminal"
+	@echo ""
+	@echo "  Examples:"
+	@echo "    make pull_bob          # silent, log → build/build.out"
+	@echo "    make update_bob V=-vvv # full output"
+	@echo ""
+	@echo "  Targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "    \033[36m%-22s\033[0m %s\n", $$1, $$2}'
+	@if [ -f Makefile.prj ]; then \
+		echo ""; \
+		echo "  Project targets (Makefile.prj):"; \
+		grep -E '^[a-zA-Z][a-zA-Z0-9_-]*:' Makefile.prj | \
+		awk 'BEGIN {FS = ":.*?## "}; /##/ {printf "    \033[36m%-22s\033[0m %s\n", $$1, $$2} !/##/ {split($$0,a,":"); printf "    \033[36m%-22s\033[0m\n", a[1]}'; \
+	fi
+	@echo ""
+
+chat: ## Post a message to CHAT.md (usage: make chat MSG="<msg>" [PERSONA="<name>"] [CMD="<cmd>"] [TO="<recipient>"])
+	@[ -n "$(MSG)" ] || { echo "Usage: make chat MSG=\"<message>\" [PERSONA=\"<name>\"] [CMD=\"<cmd>\"] [TO=\"<recipient>\"]"; exit 1; }
+	@python agents/tools/chat.py "$(MSG)" \
+		$(if $(PERSONA),--persona "$(PERSONA)") \
+		$(if $(CMD),--cmd "$(CMD)") \
+		$(if $(TO),--to "$(TO)")
+
+%:
+	@./agents/tools/mkf.py $(V) $@
+
+endif

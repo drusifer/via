@@ -1,37 +1,40 @@
 # Cypher Context - VIA Project
 
-**Last Updated**: 2026-02-11 12:19:00
+**Last Updated**: 2026-03-19
 
 ## Current Project
 Via - Python codebase indexing and querying CLI tool
 
 ## Key Decisions Made
 
-### Sprint 5 - LAUNCHED (2026-02-11)
-- **STATUS**: SHIPPED
-- 687 tests, 0 failures, 82% coverage, 25/25 UAT green
-- All 4 relationship types: inheritance, calls, imports, references
-- Docs condition cleared by Oracle (USER_GUIDE.md + --help updated)
+### Sprint 5 - SHIPPED
+- STATUS: SHIPPED
+- 661 tests (at time of ship), all relationship types implemented
+- Docs condition cleared by Oracle
+
+### Sprint 6 - SHIPPED (2026-03-19)
+- STATUS: SHIPPED — 709 tests, 0 failures
+- Watch Mode (`via index -w`) fully implemented
+- Bugs found + fixed in UAT: SQLite thread safety + missing symbol deletion
+- Morpheus review: APPROVED, 5 tech debt items in `morpheus.docs/SPRINT_6_REVIEW.md`
+- Tech debt to address in Sprint 7: DatabaseStore.delete_file_completely(), IndexingService.reindex_file()
 
 ### Index Command Specification
 - **Storage**: SQLite database at `.via/index.db`
-- **No AST caching**: Parse on-demand using byte offsets
-- **Universal file indexing**: Index ALL files (metadata), parse only `.py`, `.pyx`, `.pyi`, `.md`
-- **Nested architecture**: Directory-scoped indexes with `.via/watch` signaling
+- **Universal file indexing**: All files (metadata), parse only `.py`, `.pyx`, `.pyi`, `.md`
 - **Incremental by default**: Skip unchanged files unless `--force`
-- **10MB parse limit**: Track oversized files separately
-- **Multi-language ready**: Pluggable parsers (JS in Phase 2)
+- **Watch mode**: `via index -w`, watchdog, debounce 500ms, foreground only
+- **10MB parse limit**
 
 ### Command Syntax Finalized
 ```bash
 via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 ```
 
-### Roadmap (2026-02-11) - Split into 3 sprints
-- **Sprint 6** - Watch Mode (12pts): watchdog, debounce 500ms, all file types, relationship re-resolution
-- **Sprint 7** - MCP Mode (10pts): stdio JSON-RPC server, auto-config for Claude/Gemini/ChatGPT
+### Roadmap (2026-03-19)
+- **Sprint 7** - MCP Mode (10pts): stdio JSON-RPC server, auto-config Claude Code only, tool schema
 - **Sprint 8** - Line Index (6pts): `-mL` match type with slice syntax, byte offset indexing
-- All questions resolved. Sprint 6 ready to start.
+- User stories reviewed 2026-03-19, no changes requested yet — awaiting Drew's input
 
 ## Blockers
 None

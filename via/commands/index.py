@@ -19,7 +19,7 @@ class IndexCommand(ArgumentProvider, HelpProvider):
             "-w",
             "--watch",
             action="store_true",
-            help="Watch for file changes and re-index automatically (NOT IMPLEMENTED YET)",
+            help="Watch for file changes and re-index automatically",
         )
         parser.add_argument(
             "--force",

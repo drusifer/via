@@ -1,24 +1,23 @@
 # Trin Next Steps
 
 ## Immediate
+- Nothing blocking — Sprint 6 UAT complete and signed off.
 
-1. **Sprint 5 UAT**: 8 failing tests blocked on CLI rendering pipeline fix (@Neo)
-2. Re-run full UAT suite after rendering fix lands
-3. Verify no regressions (669 non-UAT tests must stay green)
+## Sprint 7 (MCP Mode)
+- When Neo implements MCP Mode: write UAT for `via --mcp` and `via mcp install`
+- Spec: `agents/cypher.docs/SPRINT_7_USER_STORIES.md`
 
-## After Sprint 5 UAT Passes
+## Sprint 8 (Line Index)
+- When Neo implements `-mL`: write UAT for slice queries
+- Spec: `agents/cypher.docs/SPRINT_8_USER_STORIES.md`
 
-1. Update SPRINT_5_UAT_PLAN.md execution log with final results
-2. Write Sprint 5 UAT Report (summary doc)
-3. Assess overall test coverage gaps across Sprints 1-5
-
-## Active Test Plan
-
-- `SPRINT_5_UAT_PLAN.md` - current active plan (25 scenarios)
+## Process Rule
+- Always use `make` skill (not raw Bash) for all test runs
 
 ## Archived Plans
-
-- `archive/CLI_TEST_PLAN.md` - Sprint 1 / Story 7
-- `archive/SPRINT_2_TEST_PLAN.md` - Sprint 2 / Match Command
-- `archive/SPRINT_3_TEST_PLAN.md` - Sprint 3 / Pipeline & Renderers
-- `archive/UAT_REPORT_SPRINT_4.md` - Sprint 4 / Tech Debt
+- `archive/CLI_TEST_PLAN.md` - Sprint 1
+- `archive/SPRINT_2_TEST_PLAN.md` - Sprint 2
+- `archive/SPRINT_3_TEST_PLAN.md` - Sprint 3
+- `archive/UAT_REPORT_SPRINT_4.md` - Sprint 4
+- `SPRINT_5_UAT_PLAN.md` - Sprint 5 (25/25 pass)
+- `tests/uat/test_sprint6_uat.py` - Sprint 6 (17/17 pass)

@@ -2,6 +2,7 @@
 name: bob-protocol
 description: Multi-persona coordination protocol. Enables AI to switch between specialized personas (Neo, Morpheus, Trin, Oracle, Mouse, Cypher, Bob) based on task needs. Use for *chat workflow, state management, and cross-agent communication.
 triggers: ["*chat"]
+requires: ["chat", "make", "personas"]
 ---
 
 # Bob Protocol - Multi-Persona Coordination
@@ -33,7 +34,7 @@ When user types `*chat <message>`, execute this workflow:
 ### Step 1: Log User Message (ALWAYS)
 **First**, log the user's message to CHAT.md:
 ```bash
-./agents/tools/chat.py "<user's message>" --persona User --cmd "request"
+make chat MSG="<user's message>" PERSONA="User" CMD="request"
 ```
 
 ### Step 2: Read Chat Log
@@ -81,7 +82,7 @@ Execute the required task. **SHORT iterations** are key.
 ### Step 6: Post Response to Chat
 Log your response as the persona:
 ```bash
-./agents/tools/chat.py "<response>" --persona <Name> --cmd <command>
+make chat MSG="<response>" PERSONA="<Name>" CMD="<command>"
 ```
 
 ### Step 7: Save State & Loop
@@ -166,7 +167,7 @@ If a fix fails ONCE:
 
 ```bash
 # Step 1: Log user's message
-./agents/tools/chat.py "help me fix the bug in parser.py" --persona User --cmd "request"
+make chat MSG="help me fix the bug in parser.py" PERSONA="User" CMD="request"
 
 # Step 2-3: Read chat, identify Neo (coding task - auto-selected)
 # (AI determines this is a coding task → Neo)
@@ -178,7 +179,7 @@ If a fix fails ONCE:
 # (AI investigates and fixes the bug)
 
 # Step 6: Post response
-./agents/tools/chat.py "Fixed the bug in parser.py. The issue was..." --persona Neo --cmd "swe fix"
+make chat MSG="Fixed the bug in parser.py. The issue was..." PERSONA="Neo" CMD="swe fix"
 
 # Step 7: Save state
 # (AI updates neo.docs/context.md, current_task.md, next_steps.md)
@@ -192,7 +193,7 @@ If a fix fails ONCE:
 
 ```bash
 # Step 1: Log user's message
-./agents/tools/chat.py "@neo *fix bug in parser.py line 42" --persona User --cmd "request"
+make chat MSG="@neo *fix bug in parser.py line 42" PERSONA="User" CMD="request"
 
 # Step 2-3: Parse direct invocation
 # @neo → Target: Neo
@@ -207,7 +208,7 @@ If a fix fails ONCE:
 # (AI goes directly to parser.py line 42 and fixes the bug)
 
 # Step 6: Post response
-./agents/tools/chat.py "Fixed line 42 in parser.py..." --persona Neo --cmd "swe fix"
+make chat MSG="Fixed line 42 in parser.py..." PERSONA="Neo" CMD="swe fix"
 
 # Step 7: Save state
 # (AI updates neo.docs/context.md, current_task.md, next_steps.md)

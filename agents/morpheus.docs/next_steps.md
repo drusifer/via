@@ -21,8 +21,13 @@
 12. Extract common renderer metadata pattern to base class
 13. Reconcile schema version numbering
 
+## Sprint 7 Tech Debt (from Sprint 6 Review)
+- Add `DatabaseStore.delete_file_completely(path)` — encapsulates deletion triad
+- Add `IndexingService.reindex_file(path)` — public method with transaction, replaces `_index_file` call in WatchService
+- Fix `WatchService`: remove redundant `db_store` param, move lazy imports, fix private `_should_include_file` call
+
 ## Handoff Options
-- @Cypher: Write user stories for Phase 1-3
+- @Cypher: Write user stories for Phase 1-3 + Sprint 7 TD items
 - @Neo: Start Phase 1 implementation directly
 - Drew: Decide which path
 

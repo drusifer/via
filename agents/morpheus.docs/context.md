@@ -46,5 +46,11 @@
 ### Sprints 1-5 - COMPLETE
 ### Sprint 6-7 - Status unknown, need to check
 
+### Sprint 6 Review (2026-03-19)
+- STATUS: APPROVED — see `SPRINT_6_REVIEW.md`
+- 2 bugs found+fixed in UAT: `check_same_thread=False` on DatabaseStore, missing `delete_symbols_by_file` in `_remove_file`
+- 5 tech debt items: TD-1 (no transaction in _reindex_file) is most important
+- Recommend `DatabaseStore.delete_file_completely()` + `IndexingService.reindex_file()` for Sprint 7
+
 ## Current Blockers
-Awaiting Drew's answers to 3 questions in ARCH_REVIEW_SPRINT_8.md before proceeding with cleanup.
+None — Sprint 6 shipped and reviewed.

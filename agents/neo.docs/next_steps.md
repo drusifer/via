@@ -1,20 +1,18 @@
 **Next Steps for Neo**:
 
-## Sprint 5 Status
+## Sprint 6 TD Items (for Sprint 7 cleanup)
+1. `DatabaseStore.delete_file_completely(path)` — encapsulate deletion triad
+2. `IndexingService.reindex_file(path)` — public method with begin/commit_transaction
+3. Clean up watch.py: move lazy imports, fix private _should_include_file call, remove IOBase
 
-- All UAT tests passing (25/25)
-- All unit/integration tests passing (687 total)
-- Relationship resolution bug fixed
+## Sprint 7 - MCP Mode (next up)
+- Spec: `agents/cypher.docs/SPRINT_7_USER_STORIES.md`
+- User story review in progress — await Cypher/Drew sign-off before starting
+- `via/mcp/server.py` — JSON-RPC 2.0 over stdio
+- `via/mcp/schema.py` — tool schema generator
+- `via mcp install` — Claude Code auto-config
 
-## Potential Follow-ups
-
-1. **Sort glob order in IndexingService** - Currently depends on filesystem order; sorting would make indexing deterministic (optional since fix handles any order)
-2. **UAT-2.1 query design** - Import relationship queries could benefit from a `-tM` (module) type flag for cleaner queries
-3. **SymbolType.MODULE** - Add module to the SymbolType enum for consistency
-
-## Sprint 3 Remaining Phases (if applicable)
-
-- Phase 5: Filter Pipeline (3 pts)
-- Phase 6: Output Destinations (2 pts)
-- Phase 7: Interactive Mode (3 pts)
-- Phase 8: Stats Command (2 pts)
+## Sprint 8 - Line Index
+- Spec: `agents/cypher.docs/SPRINT_8_USER_STORIES.md`
+- `-mL` match type + slice syntax
+- line_offsets table in DB schema

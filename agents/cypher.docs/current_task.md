@@ -1,8 +1,10 @@
-**Task**: Sprint 6/7/8 Planning
-**Status**: Complete (100%)
-**Completed**: 2026-02-11
+**Task**: Sprint 7/8 User Story Review
+**Status**: IN PROGRESS (50%)
+**Started**: 2026-03-19
 
-Split 28pts across 3 sprints. All questions resolved.
-- Sprint 6: Watch Mode (12pts, 5 stories) - READY TO START
-- Sprint 7: MCP Mode (10pts, 3 stories)
-- Sprint 8: Line Index (6pts, 2 stories)
+User stories for Sprint 7 (MCP, 10pts) and Sprint 8 (Line Index, 6pts) presented to Drew.
+Awaiting feedback/changes before handing off to Morpheus + Neo.
+
+Stories are fully written in:
+- `agents/cypher.docs/SPRINT_7_USER_STORIES.md`
+- `agents/cypher.docs/SPRINT_8_USER_STORIES.md`

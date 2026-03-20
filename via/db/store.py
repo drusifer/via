@@ -63,7 +63,7 @@ class DatabaseStore:
 
     def connect(self) -> None:
         """Connect to database and enable foreign keys."""
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON;")
         # SQLite has autocommit off by default when using execute()

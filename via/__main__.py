@@ -219,15 +219,29 @@ def _run_index_command(args: argparse.Namespace) -> int:
     logging.info(f"Indexing directory: {target_dir}")
     logging.info(f"Database path: {db_path}")
 
-    # Check for watch mode (not implemented yet)
-    if args.watch:
-        print("Error: Watch mode (-w) is not implemented yet", file=sys.stderr)
-        return EXIT_ERROR
+    # Handle --exclude patterns
+    exclude_patterns = args.exclude or []
 
-    # TODO: Handle --exclude patterns (add to FileDiscovery)
-    if args.exclude:
-        logging.info(f"Additional exclusion patterns: {args.exclude}")
-        print("Warning: --exclude patterns not fully implemented yet", file=sys.stderr)
+    # Watch mode
+    if args.watch:
+        from via.services.watch import WatchService
+        with DatabaseStore(str(db_path), str(target_dir)) as db_store:
+            db_store.initialize_schema()
+            parser_registry = ParserRegistry()
+            parser_registry.register(PythonParser())
+            parser_registry.register(MarkdownParser())
+            indexing_service = IndexingService(db_store, parser_registry)
+            watch_service = WatchService(
+                indexing_service=indexing_service,
+                db_store=db_store,
+                root_dir=str(target_dir),
+                exclude_patterns=exclude_patterns,
+            )
+            watch_service.start()
+        return EXIT_SUCCESS
+
+    if exclude_patterns:
+        logging.info(f"Additional exclusion patterns: {exclude_patterns}")
 
     try:
         # Initialize database with context manager

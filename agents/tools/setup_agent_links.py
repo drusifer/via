@@ -33,17 +33,17 @@ def find_project_root() -> Path:
     return project_root
 
 
-def find_persona_folders(agents_dir: Path) -> list[tuple[str, Path, Path]]:
-    """Find all persona folders (*.docs directories with *_AGENT.md files)."""
+def find_persona_folders(agents_dir: Path) -> list[tuple[str, Path]]:
+    """Find all persona folders (*.docs directories with SKILL.md files)."""
     personas = []
 
     for item in agents_dir.iterdir():
         if item.is_dir() and item.name.endswith(".docs"):
-            # Look for *_AGENT.md file
-            agent_files = list(item.glob("*_AGENT.md"))
-            if agent_files:
+            # Look for SKILL.md file
+            skill_md = item / "SKILL.md"
+            if skill_md.exists():
                 persona_name = item.name.replace(".docs", "")
-                personas.append((persona_name, item, agent_files[0]))
+                personas.append((persona_name, item))
 
     return personas
 
@@ -94,18 +94,15 @@ def setup_claude_skills(project_root: Path, personas: list, shared_skills: list)
     count = 0
 
     # Persona skills (agents/*.docs/)
-    for persona_name, persona_dir, agent_file in personas:
+    for persona_name, persona_dir in personas:
         # Create symlink: .claude/skills/<name>/ -> agents/<name>.docs/
         skill_link = skills_dir / persona_name
         if create_symlink(skill_link, persona_dir):
             print(f"  ✅ {skill_link.relative_to(project_root)} -> {persona_dir.relative_to(project_root)}")
             count += 1
-
-        # Create SKILL.md symlink inside persona folder
-        skill_md = persona_dir / "SKILL.md"
-        if create_symlink(skill_md, agent_file):
-            print(f"  ✅ {skill_md.relative_to(project_root)} -> {agent_file.name}")
-            count += 1
+        else:
+            # Already linked
+            pass
 
     # Shared skills (agents/skills/*/)
     for skill_name, skill_dir in shared_skills:
@@ -118,7 +115,7 @@ def setup_claude_skills(project_root: Path, personas: list, shared_skills: list)
 
 
 def setup_root_symlinks(project_root: Path, agents_dir: Path) -> int:
-    """Create AGENTS.md and GEMINI.md symlinks at project root."""
+    """Create discovery symlinks at project root for various AI tools."""
     print("\n📁 Setting up root symlinks...")
 
     agents_md = agents_dir / "AGENTS.md"
@@ -128,17 +125,25 @@ def setup_root_symlinks(project_root: Path, agents_dir: Path) -> int:
         return 0
 
     count = 0
+    links = [
+        ("AGENTS.md", "OpenAI/Codex/Standard"),
+        ("GEMINI.md", "Gemini CLI"),
+        (".cursorrules", "Cursor AI"),
+        ("CHATGPT.md", "ChatGPT Projects (Copy-Paste)"),
+    ]
 
-    # AGENTS.md for OpenAI/Codex/Cursor/Copilot
-    link = project_root / "AGENTS.md"
-    if create_symlink(link, agents_md):
-        print(f"  ✅ AGENTS.md -> agents/AGENTS.md (OpenAI/Codex/Cursor)")
-        count += 1
+    for link_name, tool_name in links:
+        link = project_root / link_name
+        if create_symlink(link, agents_md):
+            print(f"  ✅ {link_name} -> agents/AGENTS.md ({tool_name})")
+            count += 1
 
-    # GEMINI.md for Gemini CLI
-    link = project_root / "GEMINI.md"
-    if create_symlink(link, agents_md):
-        print(f"  ✅ GEMINI.md -> agents/AGENTS.md (Gemini)")
+    # GitHub Copilot (specific directory)
+    github_dir = project_root / ".github"
+    github_dir.mkdir(exist_ok=True)
+    copilot_link = github_dir / "copilot-instructions.md"
+    if create_symlink(copilot_link, agents_md):
+        print(f"  ✅ .github/copilot-instructions.md -> agents/AGENTS.md (GitHub Copilot)")
         count += 1
 
     return count
@@ -148,10 +153,11 @@ def check_yaml_frontmatter(personas: list) -> list[str]:
     """Check which persona files are missing YAML frontmatter."""
     missing = []
 
-    for persona_name, persona_dir, agent_file in personas:
-        content = agent_file.read_text()
+    for persona_name, persona_dir in personas:
+        skill_md = persona_dir / "SKILL.md"
+        content = skill_md.read_text()
         if not content.startswith("---"):
-            missing.append(str(agent_file))
+            missing.append(str(skill_md))
 
     return missing
 
@@ -170,12 +176,12 @@ def main():
     personas = find_persona_folders(agents_dir)
     if not personas:
         print("\n❌ No persona folders found!")
-        print("   Expected: agents/<name>.docs/<Name>_*_AGENT.md")
+        print("   Expected: agents/<name>.docs/SKILL.md")
         sys.exit(1)
 
     print(f"\nFound {len(personas)} personas:")
-    for name, _, agent_file in personas:
-        print(f"  • {name}: {agent_file.name}")
+    for name, _ in personas:
+        print(f"  • {name}")
 
     # Find shared skills
     shared_skills = find_shared_skills(agents_dir)
