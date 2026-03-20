@@ -1,0 +1,89 @@
+# Makefile for the VIA project
+
+.PHONY: all venv test clean lint-fast lint lint-slow duplicates security analyze
+
+# Variables
+PYTHON := python3
+VENV_DIR := .venv
+VENV_PYTHON := $(VENV_DIR)/bin/python
+VENV_ACTIVATE := $(VENV_DIR)/bin/activate
+VENV_STAMP := $(VENV_DIR)/venv.stamp
+
+REQUIREMENTS := pyproject.toml
+INSTALL_STAMP := $(VENV_DIR)/installed.stamp
+INSTALL_DEV_STAMP := $(VENV_DIR)/installed-dev.stamp
+
+# Default target runs install and test
+all: install test
+
+# Create the virtual environment if it doesn't exist
+$(VENV_STAMP):
+	$(PYTHON) -m venv $(VENV_DIR)
+	touch $(VENV_STAMP)
+
+venv: $(VENV_STAMP)
+
+# Install dependencies into the virtual environment
+$(INSTALL_STAMP): venv $(REQUIREMENTS)
+	$(VENV_PYTHON) -m pip install --upgrade pip && $(VENV_PYTHON) -m pip install -e .
+	touch $(INSTALL_STAMP)
+
+install: $(INSTALL_STAMP)
+
+# Install dev dependencies. This target is self-contained and includes base dependencies.
+# It no longer depends on the 'install' target's stamp file to avoid redundant installations.
+$(INSTALL_DEV_STAMP): venv $(REQUIREMENTS)
+	. ${VENV_ACTIVATE} && pip install -e ".[dev]"
+	touch $(INSTALL_DEV_STAMP)
+
+install-dev: $(INSTALL_DEV_STAMP)
+
+# Run tests using the virtual environment's python
+test: install-dev
+	. ${VENV_ACTIVATE} && pytest tests/
+
+# Clean up the project directory
+clean:
+	rm -rf .via/
+	rm -rf $(VENV_DIR)
+	find . -type d -name "__pycache__" -exec rm -r {} +
+	rm -rf .pytest_cache .coverage htmlcov
+
+# =============================================================================
+# Static Analysis Tools
+# =============================================================================
+
+# FAST: Ruff only - complexity, unused imports/vars, dead code (~1 sec)
+lint-fast: install-dev
+	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
+	. ${VENV_ACTIVATE} && ruff check via/
+
+# MEDIUM: Ruff + Bandit security (~5 sec)
+lint: install-dev
+	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
+	-. ${VENV_ACTIVATE} && ruff check via/
+	@echo ""
+	@echo "=== BANDIT: Security Analysis ==="
+	. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
+
+# SLOW: Full analysis - Ruff + Pylint (duplicates) + Bandit (~30 sec)
+lint-slow: install-dev
+	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
+	-. ${VENV_ACTIVATE} && ruff check via/
+	@echo ""
+	@echo "=== PYLINT: Duplicate Code & Design Rules ==="
+	-. ${VENV_ACTIVATE} && pylint via/ --enable=duplicate-code
+	@echo ""
+	@echo "=== BANDIT: Security Analysis ==="
+	-. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
+
+# Individual tools (for targeted runs)
+duplicates: install-dev
+	. ${VENV_ACTIVATE} && pylint via/ --enable=duplicate-code
+
+security: install-dev
+	. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
+
+fix: install-dev
+	@echo "=== RUFF: fix ==="
+	. ${VENV_ACTIVATE} && ruff check --fix via/

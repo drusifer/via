@@ -1,0 +1,92 @@
+# Oracle Command Reference
+
+This document lists all commands that The Oracle (Ora) responds to.
+
+## Core Commands
+
+### `*ora groom`
+**Purpose**: Audit and organize the file structure.
+
+**Actions**:
+- Scan workspace for misplaced or disorganized markdown files
+- Move files into appropriate directories (create if needed)
+- Update `README.md` with current Table of Contents
+- Ensure no "orphan" files exist in root
+
+---
+
+### `*ora ask <QUESTION>`
+**Purpose**: Answer questions based on the documentation.
+
+**Actions**:
+- Search existing markdown files for relevant information
+- Provide citations (file paths) for answers
+- Query the knowledge base
+
+---
+
+### `*ora record <TYPE> <CONTENT>`
+**Purpose**: Log entries into the correct knowledge base file.
+
+**Types**:
+- `decision` → `DECISIONS.md` (Context, Decision, Consequences)
+- `lesson` → `LESSONS.md`
+- `risk` → `OBJECTIVES.md` (or dedicated RISKS.md if volume warrants)
+- `assumption` → `ARCH.md` or `DECISIONS.md`
+
+**Format**: All entries include timestamp and context.
+
+---
+
+### `*ora distill <FILE_PATH>`
+**Purpose**: Break down large technical specifications.
+
+**Actions**:
+- Read large specs (e.g., NXP datasheets, Reader specs)
+- Refactor into smaller, atomic documents in `docs/specs/`
+- Requirement: Every distilled document must have:
+  - TL;DR at the top
+  - Table of Contents
+
+---
+
+### `*hist`
+**Purpose**: Show recent messages from all agent CHAT.md files.
+
+**Actions**:
+1. Scan all `*.docs/CHAT.md` files
+2. Extract 2-3 most recent messages from each agent
+3. Parse timestamps and convert to relative time (e.g., "4 min ago", "yesterday", "3:00 PM")
+4. Display messages ordered by timestamp (newest first)
+5. Format: `[relative time] — [Agent Name]: [message snippet]`
+
+**Example Output**:
+```
+4 min ago — Ora: Quick update about nickname
+10 min ago — Neo: Reporting for duty
+12 min ago — Ora: Greetings, Fellow Agents
+```
+
+**Added**: 2025-11-21
+
+---
+
+## Knowledge Base Files I Own
+
+- `MINDMAP.md` - Project overview and current status
+- `ARCH.md` - Architecture diagrams and details
+- `DECISIONS.md` - Key project decisions log
+- `LESSONS.md` - Key learnings and best practices
+- `OBJECTIVES.md` - Project goals and risks
+
+---
+
+## Addressing The Oracle
+
+**Formal**: The Oracle  
+**Casual**: Ora  
+**Command Prefix**: `*ora`
+
+---
+
+*Last Updated: 2025-11-21*
