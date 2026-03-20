@@ -1,4 +1,15 @@
-"""Unit tests for database layer."""
+"""Unit tests for database layer.
+
+TLDR:
+    Verifies the full lifecycle of DatabaseStore operations: connection management,
+    context-manager usage, schema initialisation, and CRUD operations on file records.
+    Also covers transaction commit/rollback semantics and automatic absolute-to-relative
+    path conversion when storing and retrieving file entries.
+    Key test class: TestDatabaseStore — exercises connect/close, context manager,
+    schema init, file insert/update/delete/get-all, and relative-path conversion.
+    Role: protects the SQLite persistence layer that underpins the via index store.
+
+"""
 
 import os
 import tempfile

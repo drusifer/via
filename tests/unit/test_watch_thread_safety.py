@@ -1,9 +1,17 @@
-"""Diagnose: does WatchService._execute fail due to check_same_thread?"""
+"""
+Diagnose: does WatchService._execute fail due to check_same_thread?
+
+TLDR:
+    Regression test confirming that WatchService._reindex_file works correctly when
+    invoked from a threading.Timer thread (which is how debounce fires). Verifies the
+    SQLite connection does not raise a check_same_thread error and that symbol updates
+    (Before -> After) are committed and queryable after the timer thread completes.
+
+"""
 import os
 import tempfile
 import threading
 import time
-from io import StringIO
 from pathlib import Path
 
 import pytest
@@ -32,8 +40,6 @@ def env(tmp_path):
 def test_reindex_from_timer_thread_succeeds(env):
     """_reindex_file must work when called from a threading.Timer thread."""
     tmp_path, store, indexing_service = env
-    output = StringIO()
-
     py_file = tmp_path / "mod.py"
     py_file.write_text("class Before: pass\n")
 
@@ -42,7 +48,6 @@ def test_reindex_from_timer_thread_succeeds(env):
         db_store=store,
         root_dir=str(tmp_path),
         debounce_seconds=0.05,
-        output=output,
     )
 
     # Initial index via normal path (main thread, has transaction)

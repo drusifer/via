@@ -1,7 +1,14 @@
 """
-FileC - Grandchild classes and deeper hierarchy.
+UAT test fixture providing grandchild classes for deep inheritance and ambiguous-name tests.
 
-Contains classes that inherit from fileB (grandchildren of fileA).
+TLDR:
+    Test fixture file (fileC) used by tests/uat/test_sprint5_uat.py and related UAT suites.
+    Exercises multi-level (grandchild) inheritance and provides one of two do_work() definitions
+    for the ambiguous-symbol resolution edge case (UAT-5.3).
+    Key classes: GrandChildClass(ChildClass), AnotherGrandChild(ChildClass),
+    DataChild(ChildClass) — a dataclass child.
+    Key functions: do_work() — same name as fileD.do_work(), used to test ambiguous resolution.
+    Depends on: fileA (BaseClass, helper_util), fileB (ChildClass, MultiChild, func_b).
 """
 from dataclasses import dataclass
 from typing import List

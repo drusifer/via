@@ -1,10 +1,14 @@
 """
-Base parser interface for language parsers.
+Base parser interface and shared entity dataclasses for language parsers.
 
 TLDR:
-    Defines ParserABC abstract base class and entity dataclasses (ParseResult,
-    FunctionEntity, ClassEntity, ImportEntity, etc.) for representing parsed
-    code elements. All parsers must implement can_parse() and parse() methods.
+    Defines the ParserABC abstract base class that all language parsers must
+    implement (can_parse, parse, get_supported_extensions, language_name), and
+    the full set of entity dataclasses used to represent parsed code elements:
+    ParseResult, FunctionEntity, ClassEntity, ImportEntity, GlobalEntity,
+    LogStatementEntity, MarkdownHeadingEntity, CallEntity, and ReferenceEntity.
+    This module is the shared contract between the parser registry and every
+    concrete parser implementation.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-**Context: Sprint 6 Complete (2026-03-19)**
+**Context: Sprint 7 Complete (2026-03-20)**
 
 **Key Decisions**:
 
@@ -8,6 +8,11 @@
 4. Renderer system uses abstract base class with format support
 5. Relationship queries use --via / -V flags with subject/object patterns
 6. resolve_pending_relationships prefers definitions over imports (ORDER BY symbol_type priority)
+7. RenderType.JSON is universally supported by all MatchRecord subclasses (base class handles it)
+8. JsonRenderer._to_dict() is in the renderer, not on MatchRecord (SoC)
+9. WAL mode enabled in DatabaseStore.connect() for concurrent watch+query safety
+10. WatchService: no `output` param, uses logger.info/debug, has handle_signals param
+11. MCP server uses FastMCP (mcp>=1.26), two separate DB connections (read/write), WatchService in daemon thread
 
 **Bug Fix (2026-02-09)**: resolve_pending_relationships symbol resolution
 - Root Cause: LIMIT 1 with no ORDER BY picked import symbols over definitions
@@ -19,7 +24,7 @@
 
 **Bug Fix (2026-03-19)**: Missing symbol deletion in WatchService._remove_file
 - Root Cause: delete_file_by_path deletes files row but not symbols (no FK cascade)
-- Fix: Added delete_symbols_by_file(path) call before delete_file_by_path(path)
+- Fix: Now uses delete_file_completely() — atomic triad in one transaction
 
 **Architecture**:
 ```
@@ -28,14 +33,24 @@ via/__main__.py
   ├── _run_pipeline_command() → Pipeline execution
   │     ├── PipelineParser.parse(argv) → List[PipelineStage]
   │     └── PipelineExecutor.execute(stages) → Iterator|None
-  └── main() → Routes to pipeline, watch mode, or legacy mode
+  ├── _run_mcp_command() → via mcp {schema,serve}
+  ├── _run_install_command() → via {install,uninstall,status} mcp
+  └── main() → Routes to pipeline, watch mode, legacy mode, mcp, install
 
-via/services/watch.py (NEW - Sprint 6)
-  ├── WatchService.start() → initial index + watchdog observer + SIGINT loop
-  ├── _schedule(path, action) → debounce via threading.Timer (500ms)
-  ├── _execute(path, action) → dispatch to _reindex_file or _remove_file
-  ├── _reindex_file(path) → calls indexing_service._index_file(DiscoveredFile)
-  └── _remove_file(path) → delete_relationships + delete_symbols + delete_file
+via/mcp/
+  ├── __init__.py
+  ├── schema.py — build_tool_schema() → dict (10 examples)
+  └── server.py — run_mcp_server(root_dir, db_path) using FastMCP
+
+via/commands/install.py
+  ├── InstallTarget (ABC)
+  ├── McpInstallTarget — reads/writes .mcp.json
+  └── INSTALL_TARGETS = {'mcp': McpInstallTarget}
+
+via/renderers/json_renderer.py — JsonRenderer, _to_dict()
+via/services/watch.py — WatchService (no output param, handle_signals param)
+via/services/indexing.py — IndexingService.reindex_file() public
+via/db/store.py — WAL in connect(), delete_file_completely()
 ```
 
 **Test Patterns**:
@@ -43,17 +58,18 @@ via/services/watch.py (NEW - Sprint 6)
 - subprocess.run for CLI integration tests
 - TDD: Write tests first, see red, implement, see green
 - Use `make` skill (not raw Bash) for all test runs
+- caplog fixture for logging assertions (not output= StringIO)
 
-**Sprint 5 Status**: UAT complete (25/25 pass)
-**Sprint 6 Status**: COMPLETE (2026-03-19), 709 tests passing
-- WatchService: via/services/watch.py
-- watchdog Observer + debounce threading.Timer (500ms)
-- SIGINT: threading.Event, loop exits, prints "Watch mode stopped."
-- Story 5 (SIGUSR1 force re-index): P2, not implemented
+**Sprint 6 Status**: COMPLETE (2026-03-19), 713 tests passing
+**Sprint 7 Status**: COMPLETE (2026-03-20), 794 tests passing (+81 new tests)
 
-**Tech Debt (from Morpheus Sprint 6 review)**:
-- TD-1: Add IndexingService.reindex_file(path) — public method with transaction
-- TD-2: Add DatabaseStore.delete_file_completely(path) — deletion triad
-- TD-3: Move lazy imports to module level in watch.py
-- TD-4: Make FileDiscovery._should_include_file public
-- TD-5: Remove unused IOBase import from watch.py
+**Tech Debt (Sprint 7 created)**:
+- TD-S7-1: Async queue for DB access (replace WAL+separate-connections) if concurrent writers added
+- TD-S7-2: Evaluate lighter MCP stdio transport if dep weight becomes an issue
+
+**Tech Debt (from Morpheus Sprint 6 review — resolved in Sprint 7)**:
+- TD-1: IndexingService.reindex_file() ✅ DONE
+- TD-2: DatabaseStore.delete_file_completely() ✅ DONE
+- TD-3: Move lazy imports to module level in watch.py (still pending)
+- TD-4: Make FileDiscovery._should_include_file public (still pending)
+- TD-5: Remove unused IOBase import from watch.py ✅ DONE

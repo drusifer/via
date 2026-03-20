@@ -1,18 +1,31 @@
-**Next Steps for Neo**:
+# Neo Next Steps
 
-## Sprint 6 TD Items (for Sprint 7 cleanup)
-1. `DatabaseStore.delete_file_completely(path)` — encapsulate deletion triad
-2. `IndexingService.reindex_file(path)` — public method with begin/commit_transaction
-3. Clean up watch.py: move lazy imports, fix private _should_include_file call, remove IOBase
+## Resume Point: Sprint 8 — Line Index (`-mL`)
 
-## Sprint 7 - MCP Mode (next up)
-- Spec: `agents/cypher.docs/SPRINT_7_USER_STORIES.md`
-- User story review in progress — await Cypher/Drew sign-off before starting
-- `via/mcp/server.py` — JSON-RPC 2.0 over stdio
-- `via/mcp/schema.py` — tool schema generator
-- `via mcp install` — Claude Code auto-config
+Sprint 7 is SHIPPED (2026-03-20). 794 tests passing.
 
-## Sprint 8 - Line Index
-- Spec: `agents/cypher.docs/SPRINT_8_USER_STORIES.md`
-- `-mL` match type + slice syntax
-- line_offsets table in DB schema
+### Before Starting Sprint 8
+1. Read `agents/mouse.docs/context.md` for sprint status
+2. Read `agents/cypher.docs/SPRINT_8_USER_STORIES.md` for stories
+3. Ask Morpheus for architecture review (`@Morpheus *lead arch Sprint 8`)
+4. TDD: write tests first, see red, implement, see green
+
+### Remaining Tech Debt (low priority)
+- TD-3: Move lazy `from via.core.discovery import DiscoveredFile` in `watch.py._reindex_file` to module level
+- TD-4: Make `FileDiscovery._should_include_file` public
+- TD-S7-1: Async queue for DB if concurrent writers added (Sprint 8+)
+- TD-S7-2: Evaluate lighter MCP transport (Sprint 8+)
+
+### Key Sprint 7 Files Added
+- `via/renderers/json_renderer.py` — JsonRenderer + _to_dict()
+- `via/mcp/__init__.py`, `via/mcp/schema.py`, `via/mcp/server.py`
+- `via/commands/install.py` — McpInstallTarget + INSTALL_TARGETS
+- `tests/unit/test_json_renderer.py`, `test_sprint7_p2-p6.py`
+- `tests/uat/test_sprint7_uat.py`
+
+### Sprint 7 CLI Commands Added
+- `via mcp schema` → prints via_query tool schema as JSON
+- `via mcp serve [dir]` → starts FastMCP stdio server
+- `via install mcp [--global]` → writes .mcp.json
+- `via uninstall mcp [--global]` → removes .mcp.json entry
+- `via status mcp` → shows install state

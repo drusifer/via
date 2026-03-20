@@ -1,10 +1,15 @@
 """
-Database store for managing VIA index.
+SQLite-backed data access layer for the VIA index.
 
 TLDR:
-    Provides DatabaseStore class for SQLite operations. Files table for metadata,
-    symbols table for denormalized fast matching, symbol_references for relationships.
-    Handles relative paths, transaction support, and automatic timestamp tracking.
+    Provides the DatabaseStore class, which wraps a SQLite connection and
+    exposes CRUD operations for files, symbols, and relationships. Symbols are
+    stored in a denormalized table (file_path inline) to allow zero-JOIN
+    lookups via match(). Relationship resolution uses a two-pass strategy:
+    insert_pending_relationship() during indexing, then
+    resolve_pending_relationships() after all symbols exist. The @require_connection
+    decorator enforces connection state; explicit begin/commit/rollback methods
+    allow batching writes for performance.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -62,9 +67,10 @@ class DatabaseStore:
         self._record_factory = MatchRecordFactory()
 
     def connect(self) -> None:
-        """Connect to database and enable foreign keys."""
+        """Connect to database and enable foreign keys and WAL mode."""
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA journal_mode=WAL;")
         self.conn.execute("PRAGMA foreign_keys = ON;")
         # SQLite has autocommit off by default when using execute()
         self.conn.isolation_level = None  # Enable autocommit mode
@@ -313,6 +319,35 @@ class DatabaseStore:
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM files WHERE path = ?", (rel_path,))
         self._commit_if_needed()
+
+    def delete_file_completely(self, path: str) -> None:
+        """Delete a file and all its symbols and relationships atomically.
+
+        Replaces the three-step delete pattern in WatchService._remove_file().
+
+        Args:
+            path: Absolute file path
+        """
+        rel_path = self._to_relative_path(path)
+        # Symbols table stores absolute paths; files table stores relative paths.
+        cursor = self.conn.cursor()
+        cursor.execute("BEGIN")
+        try:
+            # Delete relationships (symbol_references) for all symbols in this file
+            cursor.execute(
+                """DELETE FROM symbol_references
+                   WHERE from_symbol_id IN (SELECT id FROM symbols WHERE file_path = ?)
+                      OR to_symbol_id   IN (SELECT id FROM symbols WHERE file_path = ?)""",
+                (path, path),
+            )
+            # Delete symbols (stored with absolute path)
+            cursor.execute("DELETE FROM symbols WHERE file_path = ?", (path,))
+            # Delete file record (stored with relative path)
+            cursor.execute("DELETE FROM files WHERE path = ?", (rel_path,))
+            cursor.execute("COMMIT")
+        except Exception:
+            cursor.execute("ROLLBACK")
+            raise
 
     # Symbol CRUD operations
 

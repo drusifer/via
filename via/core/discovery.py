@@ -1,11 +1,30 @@
+"""
+File discovery and project root location utilities.
+
+TLDR:
+    Provides two capabilities: find_index_db() walks up the directory tree to
+    locate a .via/index.db project database, and FileDiscovery crawls a
+    directory tree while honoring .gitignore rules (via pathspec). DiscoveredFile
+    is a dataclass holding path, size, mtime, and parseability metadata for each
+    file found. DEFAULT_EXCLUDES always suppresses __pycache__, .pyc, .git, and
+    .via entries.
+
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+$Id$
+
+License: GPL-3.0
+"""
+
+
 def find_index_db(start_path, return_root=False):
     """
     Walk up the directory tree from start_path to find .via/index.db.
-    
+
     Args:
         start_path: Starting directory path
         return_root: If True, also return the project root directory
-    
+
     Returns:
         If return_root is False: Path to index.db if found, else None
         If return_root is True: tuple of (Path to index.db, project root) if found, else (None, None)
@@ -24,20 +43,6 @@ def find_index_db(start_path, return_root=False):
                 return None, None
             return None
         current = current.parent
-"""
-File discovery with .gitignore support.
-
-TLDR:
-    Discovers files in a directory tree while honoring .gitignore rules using
-    pathspec library. Detects oversized files, supports nested .gitignore files,
-    and provides DEFAULT_EXCLUDES for common patterns (__pycache__, .pyc, .git).
-
-Author: Drew Gutstein
-------------------------------------------------------------------------------
-$Id$
-
-License: GPL-3.0
-"""
 
 import logging
 import os

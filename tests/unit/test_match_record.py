@@ -1,9 +1,16 @@
 """
-Unit tests for MatchRecord polymorphic system.
+Unit tests for the MatchRecord polymorphic system.
 
 TLDR:
-    Tests the MatchRecord base class, derived classes, enums, and factory.
-    Verifies render type support, str formatting, and metadata handling.
+    Tests every concrete MatchRecord subclass and supporting types used by the
+    via rendering pipeline. Key test classes: TestRenderTypeEnum and
+    TestFormatTypeEnum (validate enum values), TestMatchRecordBase (ABC
+    contract), TestClassMatchRecord / TestMethodMatchRecord /
+    TestFunctionMatchRecord / TestFileMatchRecord / TestImportMatchRecord /
+    TestGlobalMatchRecord (per-type construction, str formatting, metadata),
+    TestMatchRecordFactory (factory dispatch for all symbol types).
+    Role: protects via.core.match_record, consumed by renderers and the
+    pipeline executor.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -53,7 +60,7 @@ class TestRenderTypeEnum:
     def test_render_type_count(self):
         """Test correct number of render types."""
         from via.core.match_record import RenderType
-        assert len(RenderType) == 6
+        assert len(RenderType) == 7
 
 
 class TestFormatTypeEnum:

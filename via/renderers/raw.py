@@ -1,10 +1,12 @@
 """
-Raw renderer for extracting source code without formatting.
+Raw renderer that extracts plain-text source code using byte offsets.
 
 TLDR:
-    Extracts raw source code from files using byte offsets. Supports
-    context lines (-A/-B/-C). Output is plain text suitable for piping.
-    Streams records for O(1) memory usage.
+    RawRenderer reads byte_offset/byte_length from each MatchRecord and
+    returns the verbatim source text. Supports all symbol types, including
+    FileMatchRecord (reads the full file when byte_offset is absent).
+    Supports -A/-B/-C context lines. Each match is preceded by a # divider
+    header unless --nodelims is passed. Output is suitable for piping.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

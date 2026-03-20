@@ -1,10 +1,17 @@
-"""Flag group definitions for CLI.
+"""
+Flag group definitions for the VIA CLI.
 
-Defines consistent prefix-based flag groups:
-- Match: -mg (glob), -mr (regex), -ms (sql)
-- Type: -tc (class), -tf (function), -tm (method), etc.
-- Output: -oL (list), -oT (table), -oD (diagram), etc.
-- Format: -fa (ascii), -fm (markdown), -fh (html), -fp (png)
+TLDR:
+    Defines the canonical set of prefix-based CLI flags used throughout VIA.
+    Flag, FlagGroup, and five flag lists (MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS,
+    FORMAT_FLAGS, RELATIONSHIP_FLAGS) encode short/long names, dest attributes,
+    and help text. Helper functions (get_match_short_flags, get_type_short_flags,
+    etc.) return sets used by the pipeline parser for stage detection.
+
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+
+License: GPL-3.0
 """
 from dataclasses import dataclass
 from enum import Enum
@@ -68,6 +75,7 @@ OUTPUT_FLAGS: List[Flag] = [
     Flag(FlagGroup.OUTPUT, 'U', 'output-usage', 'render_type', 'usage', 'Usage references'),
     Flag(FlagGroup.OUTPUT, 'R', 'output-raw', 'render_type', 'raw', 'Raw source code'),
     Flag(FlagGroup.OUTPUT, 'F', 'output-formatted', 'render_type', 'formatted', 'Syntax highlighted'),
+    Flag(FlagGroup.OUTPUT, 'J', 'output-json', 'render_type', 'json', 'JSON array of symbol objects'),
 ]
 
 # Format flags

@@ -1,9 +1,13 @@
 """
-Stats command for database statistics.
+CLI argument provider and executor for the 'stats' subcommand.
 
 TLDR:
-    Provides statistics about the VIA index database including symbol counts,
-    file counts, and breakdowns by type. Supports verbose mode and JSON output.
+    Defines StatsCommand, which implements ArgumentProvider and HelpProvider
+    for 'via stats' and also owns the execute() logic. At verbosity 0 it
+    prints a summary (total symbols/files plus per-type counts); -v adds a
+    full by-type breakdown; -vv appends the top-10 files by symbol count.
+    Output can be switched to machine-readable JSON via --json. Stats are
+    gathered directly from DatabaseStore aggregation queries.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

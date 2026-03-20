@@ -1,11 +1,15 @@
 """
 TDD tests for Sprint 5 - Call Relationship Indexing.
 
-Tests the indexing and querying of call relationships:
-- Function calls function
-- Method calls method
-- Query callers of a function
-- Query what a function calls (inverted)
+TLDR:
+    Verifies that the Python parser and IndexingService correctly extract and store
+    function/method call relationships from AST analysis, including filtering out
+    built-in calls. Covers resolution of pending relationships and query scenarios
+    for callers, callees, and glob-pattern matching against call targets.
+    Key fixtures: db_store (tmp DatabaseStore), parser_registry (PythonParser-backed).
+    Role: protects the call-graph indexing pipeline that powers `via index --calls` queries.
+    Design notes: tests function-calls-function, method-calls-method, callers/callees
+    inversion, and glob matching against call targets (Sprint 5, Phase 4).
 
 Author: Neo (SWE)
 Sprint: 5, Phase 4

@@ -4,6 +4,13 @@ description: Invoke project Makefile targets. All targets route through mkf (bui
 triggers: ["*make"]
 ---
 
+One-line summary: Invoke project Makefile targets — all output is captured by mkf to `build/build.out`, not the context window.
+
+TLDR:
+    Run `make <target>` (optionally with `V=-v/-vv/-vvv` for verbosity); never pipe with `2>&1` as that defeats mkf and floods context.
+    mkf captures output, posts build status to `agents/CHAT.md`, and returns the exit code for pass/fail detection.
+    If a needed target doesn't exist, add it to the Makefile — do not invoke tools directly.
+
 # Make Skill
 
 ## Discover Available Targets

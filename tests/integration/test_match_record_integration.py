@@ -1,10 +1,16 @@
 """
-Integration tests for MatchRecord system (Phase 2 Task 2.5).
+Integration tests for the MatchRecord system covering the full index-to-match pipeline.
 
 TLDR:
-    Tests the full pipeline from indexing through match() returning
-    MatchRecord instances. Verifies backward compatibility and that
-    the system works end-to-end with real files.
+    End-to-end integration suite for MatchRecord (Phase 2 Task 2.5). Spins up a
+    temporary project, runs `via index`, then exercises DatabaseStore.match() to
+    verify each symbol type returns the correct MatchRecord subclass.
+    Key fixture: indexed_project — creates temp files, indexes them, yields paths.
+    Key class: TestMatchRecordIntegration — nine test methods covering
+    ClassMatchRecord, MethodMatchRecord, FunctionMatchRecord, ImportMatchRecord,
+    GlobalMatchRecord, supports_render_type(), __str__ format compatibility, and
+    CLI pipeline output stability.
+    Depends on: via.core.match_record, via.db.store, via.core.types.
 
 Author: Drew Gutstein / Neo
 ------------------------------------------------------------------------------

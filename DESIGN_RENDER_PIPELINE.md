@@ -1,3 +1,12 @@
+Architecture design for Sprint 3's internal render pipeline with --via flag and shorthand stage flags.
+
+TLDR:
+    Problem: Unix pipes are verbose for common match+render workflows. Solution:
+    a unified entry point with shorthand flags (-ml, -mt, -mr, -md) for single-stage
+    use and a --via separator for multi-stage match | filter | render pipelines.
+    Covers three pipeline stage types, CLI examples, phased implementation strategy,
+    breaking-change risks, and a files-to-modify checklist.
+
 # Design: Internal Pipeline Architecture (Sprint 3)
 
 ## Actual Requirements from Cypher's PRD

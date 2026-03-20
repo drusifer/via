@@ -1,4 +1,17 @@
-"""Debug UAT test issue."""
+"""
+Standalone debug script for diagnosing UAT inheritance-query failures.
+
+TLDR:
+    Creates a temporary project directory with a small class hierarchy
+    (BaseClass, ChildClass, GrandChildClass), indexes it with `via index`,
+    then fires four progressively more complex `via` queries to isolate
+    which combination of flags (-tc, -Vinh, -mg, -oL) causes unexpected
+    output or exit codes.
+    Role in the system: one-off debug/investigation script; not part of
+    the test suite and not imported by any other module. Depends on
+    `via` being installed in the active Python environment.
+
+"""
 import subprocess
 import sys
 import tempfile

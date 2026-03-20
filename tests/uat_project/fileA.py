@@ -1,7 +1,15 @@
 """
-FileA - Base classes and utility functions.
+UAT test fixture providing base classes and utility functions for relationship query tests.
 
-Contains base classes and functions that will be inherited/called by other files.
+TLDR:
+    Test fixture file (fileA) used by tests/uat/test_sprint5_uat.py and related UAT suites.
+    Defines the root of the inheritance hierarchy and common callees for cross-file tests.
+    Key classes: BaseModel (dataclass), BaseClass (base for single/multiple inheritance),
+    AnotherBase (second base for multiple inheritance), FinalClass (leaf, no children).
+    Key functions: func_a (called from fileB/my_service), helper_util (called from many files),
+    deprecated_func (target for callers-of tests), new_func (replacement).
+    Key globals: MY_CONSTANT, CONFIG_KEY (targets for reference queries).
+    Consumed by: fileB, fileC, fileD, my_service — all in tests/uat_project/.
 """
 import json
 import os

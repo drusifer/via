@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """
-mkf — make filter
-Runs a make target, routes output to build/build.out, and posts build status to chat.
+mkf — make filter and build output router.
 
-Usage: mkf [-v|-vv|-vvv] <target> [make-args...]
+TLDR:
+    Wraps `make <target>` invocations, capturing all stdout/stderr to
+    build/build.out while selectively echoing output to the terminal based on a
+    verbosity level (-v/-vv/-vvv). On completion it prints the last 10 lines of
+    the build log and posts a pass/fail status message to agents/CHAT.md via chat.py.
+    Key functions: main() orchestrates the run; should_echo() controls terminal
+    output filtering; build_chat_message() composes the status summary; post_chat()
+    delegates to chat.py; parse_args() handles -v/-vv/-vvv verbosity flags;
+    drain() flushes remaining stream output after process exit; tail() reads the
+    last N lines of a file efficiently.
+    Role in the system: invoked by developers and agents instead of bare `make`;
+    depends on chat.py for status reporting and writes to build/build.out for
+    later inspection.
+    Usage: mkf [-v|-vv|-vvv] <target> [make-args...]
 
-  (none)  silent — exit code only
-  -v      stderr to terminal
-  -vv     stderr + filtered stdout (failures/errors) to terminal
-  -vvv    stderr + full stdout to terminal
-
-On exit: prints tail -10 of build.out and posts status to agents/CHAT.md.
 """
 
 import os

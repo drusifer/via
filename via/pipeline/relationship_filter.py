@@ -1,10 +1,18 @@
-"""Relationship filter data structure for pipeline queries.
+"""
+Data structure carrying the parsed parameters of a relationship query.
 
-Holds the parsed relationship query information: relationship type,
-object query parameters, and invert flag.
+TLDR:
+    RelationshipFilter is a dataclass attached to a PipelineStage when the
+    user specifies a relationship clause (e.g. -Vinh or --via inherits-from).
+    It records the RelationshipType, the object-side pattern and match syntax,
+    an optional list of object symbol types to filter on, and an invert flag
+    that swaps the subject/object roles so queries can be read in either
+    direction ("find what X inherits from" vs. "find what inherits from X").
 
-Author: Neo (SWE)
-Sprint: 5, Phase 1.4
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+
+License: GPL-3.0
 """
 from dataclasses import dataclass, field
 from typing import List

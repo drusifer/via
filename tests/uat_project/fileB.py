@@ -1,7 +1,15 @@
 """
-FileB - Child classes and calling functions.
+UAT test fixture providing child classes and cross-file call relationships for relationship tests.
 
-Contains classes that inherit from fileA and functions that call fileA functions.
+TLDR:
+    Test fixture file (fileB) used by tests/uat/test_sprint5_uat.py and related UAT suites.
+    Exercises single and multiple inheritance from fileA, and cross-file function calls.
+    Key classes: ChildClass(BaseClass), MultiChild(BaseClass, AnotherBase), ClassB(BaseClass).
+    Key functions: func_b (calls func_a from fileA — primary cross-file call target),
+    uses_deprecated / another_deprecated_user (callers of deprecated_func),
+    process_data (calls func_a and helper_util).
+    Consumed by: fileC, my_service — both import ChildClass and func_b from here.
+    Depends on: fileA (BaseClass, AnotherBase, func_a, helper_util, deprecated_func, MY_CONSTANT).
 """
 import os
 import sys

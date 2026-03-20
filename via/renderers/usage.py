@@ -1,8 +1,17 @@
 """
-UsageRenderer: Shows docstrings for matched symbols.
+Usage renderer that extracts and displays docstrings for matched symbols.
 
-Extracts and displays documentation strings from Python classes,
-methods, and functions in various output formats.
+TLDR:
+    UsageRenderer processes class, method, and function MatchRecords (other
+    types are skipped) and extracts their Python docstrings via AST parsing.
+    It first tries to match by line number, then falls back to name-only search.
+    Accepts a pluggable UsageFormatter (ASCII, Markdown, or HTML) and emits
+    one formatted docstring block per symbol, separated by blank lines.
+
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+
+License: GPL-3.0
 """
 
 import ast
@@ -42,39 +51,38 @@ class UsageRenderer(Renderer):
         self.formatter = formatter or AsciiUsageFormatter()
 
     def render(self, records: Iterator[MatchRecord], **options) -> str:
-        """Render docstrings for matched symbols.
+        """Render docstrings grouped by file: filename once, then terse symbol entries.
 
         Args:
             records: Iterator of MatchRecord objects
             **options: Additional options (unused currently)
 
         Returns:
-            Formatted string with docstrings for each symbol
+            Formatted string with docstrings grouped by file
         """
-        outputs = []
-
+        # Group records by file_path, preserving order
+        groups: dict[str, list[MatchRecord]] = {}
         for record in records:
-            # Only process types that can have docstrings
             if record.symbol_type not in DOCSTRING_TYPES:
                 continue
+            groups.setdefault(record.file_path, []).append(record)
 
-            # Extract docstring from source file
-            docstring = self._extract_docstring(record)
+        file_blocks = []
+        for file_path, file_records in groups.items():
+            symbol_outputs = []
+            for record in file_records:
+                docstring = self._extract_docstring(record)
+                info = DocstringInfo(
+                    symbol_name=record.symbol_name,
+                    symbol_type=record.symbol_type,
+                    file_path='',  # omitted — file is shown as group header
+                    line_number=record.line_number,
+                    docstring=docstring,
+                )
+                symbol_outputs.append(self.formatter.format_symbol(info))
+            file_blocks.append(f"{file_path}\n" + "\n\n".join(symbol_outputs))
 
-            # Create docstring info
-            info = DocstringInfo(
-                symbol_name=record.symbol_name,
-                symbol_type=record.symbol_type,
-                file_path=record.file_path,
-                line_number=record.line_number,
-                docstring=docstring
-            )
-
-            # Format output
-            output = self.formatter.format_symbol(info)
-            outputs.append(output)
-
-        return '\n\n'.join(outputs)
+        return '\n\n'.join(file_blocks) + '\n'
 
     def _extract_docstring(self, record: MatchRecord) -> Optional[str]:
         """Extract docstring for a symbol from its source file.

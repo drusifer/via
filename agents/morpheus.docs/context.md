@@ -52,5 +52,11 @@
 - 5 tech debt items: TD-1 (no transaction in _reindex_file) is most important
 - Recommend `DatabaseStore.delete_file_completely()` + `IndexingService.reindex_file()` for Sprint 7
 
+## Sprint 7 Architecture (2026-03-20)
+- Design in `SPRINT_7_ARCHITECTURE.md` (rev 2)
+- Key decisions: FastMCP SDK (no hand-rolled server), WAL+separate-connections for DB concurrency, logging replaces print() in WatchService, to_dict() in JsonRenderer not MatchRecord, supports_render_type JSON check in base class
+- 2 open questions for Drew: OQ-1 (WAL vs async queue), OQ-2 (mcp dep weight)
+- TD-S7-1: async queue deferred to Sprint 8
+
 ## Current Blockers
-None — Sprint 6 shipped and reviewed.
+None — OQ-1 (WAL) and OQ-2 (FastMCP SDK) both approved by Drew 2026-03-20. Neo cleared to implement.

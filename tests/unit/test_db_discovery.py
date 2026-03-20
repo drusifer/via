@@ -1,8 +1,14 @@
 """
 Unit tests for database discovery (walking up directory tree).
 
-Tests the find_index_db() function that locates .via/index.db by walking
-up the directory tree, similar to how git finds .git directories.
+TLDR:
+    Verifies find_index_db() walks up the directory tree to locate .via/index.db,
+    similar to how git finds .git directories. Tests that the closest match is
+    returned when multiple exist and None when none is found. Covers edge cases
+    including non-existent paths, missing index.db inside .via, filesystem-root
+    termination, and the optional return_root=True variant.
+    Role: protects the project-root resolution logic that every via command depends on.
+
 """
 
 import os

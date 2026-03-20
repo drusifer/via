@@ -2,8 +2,14 @@
 User Acceptance Tests for Sprint 3 - Internal Pipeline & Render System.
 
 TLDR:
-    Validates Sprint 3 pipeline features from an end-user perspective.
-    Tests pipeline syntax, render stages, context lines, and subcommands.
+    Validates Sprint 3 pipeline features from an end-user perspective using
+    subprocess invocation of the via CLI against a real module-scoped indexed project.
+    Key fixture: uat_project (builds a multi-file Python project tree and indexes it).
+    Key classes: TestUAT1BasicPipelineSyntax (glob/regex/limit/method matching),
+    TestUAT2RenderPipeline (list/table/raw/formatted output modes),
+    TestUAT3ContextLines (-B/-A/-C flags), TestUAT4SubcommandSyntax (index/help),
+    TestAdditionalRegressions (list output, unlimited results, case-insensitive).
+    Consumed by: pytest acceptance suite; depends on via CLI, DatabaseStore.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

@@ -1,9 +1,16 @@
-"""TDD tests for Sprint 5 - Pipeline executor relationship queries.
+"""Unit tests for PipelineExecutor relationship query execution (Sprint 5).
 
-Tests the execution of relationship queries in the pipeline.
+TLDR:
+    Tests that PipelineExecutor correctly dispatches relationship-filtered queries
+    against a real DatabaseStore. Key fixtures: db_with_relationships (in-memory DB
+    seeded with inherits-from and calls relationships). Key test classes:
+    TestExecutorRelationshipQueries (forward/inverted inherits-from and calls,
+    glob object patterns, subject-side filtering), TestExecutorRelationshipLimit
+    (limit enforcement on relationship results), TestExecutorNoRelationship (plain
+    match queries still work without a relationship stage).
+    Role: protects the executor's relationship dispatch path; depends on
+    PipelineExecutor, RelationshipFilter, DatabaseStore, PipelineStage, StageType.
 
-Author: Neo (SWE)
-Sprint: 5, Phase 1.5
 """
 import os
 import tempfile

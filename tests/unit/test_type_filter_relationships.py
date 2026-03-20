@@ -1,14 +1,18 @@
-"""
-TDD tests for type filter behavior in relationship queries.
+"""Unit tests for type-filter correctness in relationship queries (Sprint 5).
 
-These tests verify that type filters are correctly applied when querying
-relationships, especially in cross-type scenarios (e.g., method references global).
+TLDR:
+    TDD regression tests for a bug where subject-side type filters incorrectly
+    filtered returned results instead of only constraining the lookup target.
+    Key fixture: db_with_cross_type_relationships (in-memory DB seeded with calls
+    and references across methods, globals, functions, and classes).
+    Key test classes: TestTypeFilterInRelationshipQueries (verifies -tg applied to
+    subject only; object_types narrows results independently; covers forward,
+    inverted, and wrong-type queries for calls and references),
+    TestTypeFilterOrdering (result ordering stability under type filter combinations).
+    Role: regression guard for type-filter logic in RelationshipFilter and
+    PipelineExecutor; depends on DatabaseStore, RelationshipFilter, PipelineExecutor,
+    PipelineStage, StageType, RelationshipType.
 
-Issue: Type filters may incorrectly filter out valid relationship results when
-the result type differs from the filter type.
-
-Author: Neo (SWE)
-Sprint: 5, Phase 6 (Type Filter Fix)
 """
 
 from argparse import Namespace

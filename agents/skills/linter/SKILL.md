@@ -4,6 +4,13 @@ description: Run code quality checks including linting, type checking, dead code
 triggers: ["*qa lint", "*qa quality", "*qa check"]
 ---
 
+One-line summary: Runs Python code quality checks — style, types, dead code, complexity, and duplication.
+
+TLDR:
+    Use `make lint` (if available) or activate `.venv` and run pylint, mypy, vulture, and radon directly.
+    Triggered by Trin via `*qa lint`, `*qa quality`, or `*qa check`; run the full suite before any PR.
+    Fix priority: errors first, then warnings, then style; refactor functions graded C or worse by radon.
+
 # Linter Skill
 
 ## Overview

@@ -1,7 +1,13 @@
 """
-FileD - Additional utilities.
+UAT test fixture providing a duplicate function name for ambiguous-symbol resolution tests.
 
-Contains another do_work function to test ambiguous resolution.
+TLDR:
+    Test fixture file (fileD) used by tests/uat/test_sprint5_uat.py and related UAT suites.
+    Intentionally defines do_work() with the same name as fileC.do_work() to exercise
+    the ambiguous-resolution edge case (UAT-5.3).
+    Key functions: do_work() (duplicate of fileC's — triggers ambiguity),
+    calls_both_do_works() (additional caller referencing helper_util).
+    Depends on: fileA (helper_util).
 """
 from fileA import helper_util
 

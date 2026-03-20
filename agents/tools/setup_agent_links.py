@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """
-Setup Agent Discovery Links
+Setup Agent Discovery Links — creates symlinks so AI tools can find agent personas.
 
-Creates symlinks for agent discovery across different AI platforms:
-- Claude: .claude/skills/<name>/ -> agents/<name>.docs/
-- OpenAI/Codex/Cursor: AGENTS.md -> agents/AGENTS.md
-- Gemini: GEMINI.md -> agents/AGENTS.md
+TLDR:
+    Scans agents/*.docs/ directories for persona folders (identified by the
+    presence of SKILL.md) and creates the platform-specific symlinks each AI
+    tool expects: .claude/skills/<name>/ for Claude Code, AGENTS.md / GEMINI.md /
+    .cursorrules / CHATGPT.md / .github/copilot-instructions.md at the project
+    root for other tools.
+    Key functions: find_project_root() locates the repo root; find_persona_folders()
+    discovers persona dirs; find_shared_skills() finds agents/skills/*/;
+    setup_claude_skills() builds the .claude/skills/ tree; setup_root_symlinks()
+    creates root-level links; check_yaml_frontmatter() warns about missing
+    SKILL.md frontmatter; create_symlink() safely creates/replaces a symlink.
+    Role in the system: a one-time setup script run from the project root; depends
+    on agents/*.docs/SKILL.md files existing and produces the discovery artifacts
+    consumed by Claude Code, OpenAI Codex, Cursor, Gemini CLI, and GitHub Copilot.
 
-Run from project root:
-    python agents/tools/setup_agent_links.py
-
-Or make executable:
-    chmod +x agents/tools/setup_agent_links.py
-    ./agents/tools/setup_agent_links.py
 """
 
 import os

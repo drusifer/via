@@ -1,10 +1,12 @@
 """
-Constants for VIA application.
+Constants for the VIA application.
 
 TLDR:
-    Centralizes all application constants including file size limits, default
-    paths, verbosity levels, and exit codes. Provides single source of truth
-    for configuration values used across the VIA indexing system.
+    Single source of truth for all application-wide constants. Covers file
+    size limits, default index/log paths, database schema version, supported
+    file extensions (Python, Markdown), default exclusion patterns for file
+    discovery, worker pool defaults, progress reporting interval, verbosity
+    level integers, and process exit codes.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

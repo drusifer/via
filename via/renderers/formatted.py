@@ -1,10 +1,12 @@
 """
-Formatted renderer for syntax-highlighted source code.
+Formatted renderer applying Pygments syntax highlighting to source code.
 
 TLDR:
-    Extracts source code from files and applies Pygments syntax highlighting.
-    Supports code symbols (class, method, function, global). Shows header
-    with symbol info. Streams records for O(1) memory usage.
+    FormattedRenderer extracts source from files via byte offsets and applies
+    Pygments syntax highlighting. Supports class, method, function, and global
+    symbol types (others are silently skipped). Accepts a pluggable CodeFormatter
+    (ASCII/terminal, HTML, or Markdown). Supports -A/-B/-C context, --theme,
+    --show-line-numbers, and --nodelims options.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

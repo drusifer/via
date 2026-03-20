@@ -1,7 +1,14 @@
-"""
-Tests for Stats command.
+"""Unit tests for StatsCommand (symbol count reporting).
 
-TDD: Tests written first, then implementation.
+TLDR:
+    TDD tests for StatsCommand written before implementation. Key test classes:
+    TestStatsCommandBasics (instantiation, basic symbol/file counts),
+    TestStatsCommandOutput (formatted output at normal and verbose levels; verifies
+    per-type breakdowns for functions, classes, methods, headers),
+    TestStatsCommandJsonOutput (JSON serialization of stats data structure).
+    Role: protects the stats subcommand output contract; depends on StatsCommand
+    from via.commands.stats, exercised via MagicMock of DatabaseStore.
+
 """
 
 import json

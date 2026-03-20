@@ -1,22 +1,26 @@
 """
-WatchService: filesystem watcher that auto-reindexes changed files.
+Filesystem watch service that triggers incremental re-indexing on file changes.
 
 TLDR:
-    Wraps watchdog to monitor a directory tree. On file change/create/delete,
-    debounces (500ms default) and delegates to IndexingService. Prints terse
-    terminal feedback. Graceful SIGINT shutdown.
+    WatchService wraps the watchdog library to observe a directory tree for
+    create/modify/delete/move events on .py, .pyx, .pyi, and .md files. Events
+    are debounced (default 500 ms) to coalesce rapid saves, then dispatched to
+    IndexingService for incremental re-index or symbol removal. The internal
+    _ViaEventHandler class bridges watchdog callbacks to WatchService._schedule.
+    Runs until Ctrl-C (SIGINT), prints terse per-file feedback to stdout.
 
-Sprint 6 - Watch Mode
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+
+License: GPL-3.0
 """
 
 import logging
 import os
 import signal
-import sys
 import threading
-from io import IOBase
 from pathlib import Path
-from typing import IO, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -70,13 +74,13 @@ class WatchService:
         root_dir: str,
         exclude_patterns: Optional[List[str]] = None,
         debounce_seconds: float = 0.5,
-        output: IO = sys.stdout,
+        handle_signals: bool = True,
     ) -> None:
         self.indexing_service = indexing_service
         self.db_store = db_store
         self.root_dir = str(Path(root_dir).resolve())
         self.debounce_seconds = debounce_seconds
-        self.output = output
+        self.handle_signals = handle_signals
 
         self._observer: Optional[Observer] = None
         self._stop_event = threading.Event()
@@ -103,25 +107,27 @@ class WatchService:
 
     def start(self) -> None:
         """Run initial index, start observer, block until stop() or SIGINT."""
-        print(f"Indexing {self.root_dir}...", file=self.output)
+        logger.info("Indexing %s...", self.root_dir)
         self.indexing_service.index(self.root_dir)
 
         self._observer = Observer()
         self._observer.schedule(_ViaEventHandler(self), self.root_dir, recursive=True)
         self._observer.start()
 
-        print(f"Watching {self.root_dir} for changes... (Ctrl-C to stop)", file=self.output)
+        logger.info("Watching %s for changes... (Ctrl-C to stop)", self.root_dir)
 
-        original_sigint = signal.getsignal(signal.SIGINT)
-        signal.signal(signal.SIGINT, self._handle_sigint)
+        if self.handle_signals:
+            original_sigint = signal.getsignal(signal.SIGINT)
+            signal.signal(signal.SIGINT, self._handle_sigint)
 
         try:
             while not self._stop_event.is_set():
                 self._stop_event.wait(timeout=0.1)
         finally:
             self._shutdown()
-            signal.signal(signal.SIGINT, original_sigint)
-            print("Watch mode stopped.", file=self.output)
+            if self.handle_signals:
+                signal.signal(signal.SIGINT, original_sigint)
+            logger.info("Watch mode stopped.")
 
     def stop(self) -> None:
         """Signal the service to stop (safe to call before start)."""
@@ -197,7 +203,7 @@ class WatchService:
         return True
 
     def _reindex_file(self, path: str) -> None:
-        """Re-index a single file and print feedback."""
+        """Re-index a single file and log feedback."""
         from via.core.discovery import DiscoveredFile
 
         # If file is gone, remove it instead
@@ -217,29 +223,21 @@ class WatchService:
         )
 
         try:
-            file_stats = self.indexing_service._index_file(file_info)
+            file_stats = self.indexing_service.reindex_file(file_info)
             n_symbols = sum(file_stats.values())
         except Exception as e:
             logger.error("Failed to index %s: %s", path, e)
             n_symbols = 0
 
         rel = os.path.relpath(path, self.root_dir)
-        print(f"Re-indexed: {rel} ({n_symbols} symbols)", file=self.output)
+        logger.info("Re-indexed: %s (%d symbols)", rel, n_symbols)
 
     def _remove_file(self, path: str) -> None:
-        """Remove a file and its symbols from the index."""
+        """Remove a file and its symbols from the index atomically."""
         try:
-            self.db_store.delete_relationships_for_file(path)
-        except Exception:
-            pass
-        try:
-            self.db_store.delete_symbols_by_file(path)
-        except Exception:
-            pass
-        try:
-            self.db_store.delete_file_by_path(path)
-        except Exception:
-            pass
+            self.db_store.delete_file_completely(path)
+        except Exception as e:
+            logger.error("Failed to remove %s: %s", path, e)
 
         rel = os.path.relpath(path, self.root_dir)
-        print(f"Removed: {rel}", file=self.output)
+        logger.info("Removed: %s", rel)

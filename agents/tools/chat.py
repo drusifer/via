@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+"""
+CLI tool for appending formatted messages to agents/CHAT.md.
+
+TLDR:
+    Provides a simple command-line interface for posting messages to the shared
+    CHAT.md communication log used by AI agents in the project. Each message is
+    stamped with a timestamp, persona, command prefix, and optional recipient list.
+    Key function: main() — parses arguments and appends a formatted message entry
+    to agents/CHAT.md, enforcing a 256-character message limit.
+    Role in the system: consumed by mkf.py (which calls it to post build status)
+    and invoked directly by agents or developers to coordinate via the chat log.
+
+"""
+
 import argparse
 import datetime
 import os

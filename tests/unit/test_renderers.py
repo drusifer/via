@@ -1,10 +1,16 @@
-"""
-Unit tests for renderer system.
+"""Unit tests for the renderer system (base, list, table, factory, formatters).
 
 TLDR:
-    Tests the Renderer base class, ListRenderer, TableRenderer, formatters,
-    and RendererFactory. Verifies streaming behavior, output formats, and
-    "... N more" indicator handling.
+    Tests the full renderer hierarchy and factory. Key helper: make_test_records
+    (generates MatchRecord iterators with optional total for "N more" logic). Key
+    test classes: TestRendererBase (abstract interface, streaming contract),
+    TestRendererFactory (format string to renderer mapping), TestListRenderer
+    (plain/raw/code/markdown/html output, "... N more" truncation indicator),
+    TestTableRenderer (column layout, per-type rows), TestTableFormatters
+    (individual formatter units), TestRendererIntegration (end-to-end output
+    correctness across format combinations).
+    Role: protects the renderer layer consumed by PipelineExecutor; depends on
+    MatchRecord, ClassMatchRecord, FunctionMatchRecord, MethodMatchRecord.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

@@ -1,4 +1,14 @@
-"""Unit tests for Python parser."""
+"""Unit tests for Python parser.
+
+TLDR:
+    Tests the PythonParser class that extracts symbols from Python source files using
+    AST parsing. Covers file extension recognition, extraction of functions (including
+    async, decorated, with args), classes (with methods, inheritance, decorators),
+    imports, globals, byte offset correctness, syntax error handling, and edge cases
+    such as empty files, comment-only files, nested classes, and Unicode content.
+    Role: protects the primary symbol extraction engine for Python codebases.
+
+"""
 
 import pytest
 from via.parsers.python_parser import PythonParser

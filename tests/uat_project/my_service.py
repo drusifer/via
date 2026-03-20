@@ -1,7 +1,15 @@
 """
-MyService - A service module with various imports.
+UAT test fixture providing a service module with rich imports and inheritance for query tests.
 
-Used for testing import relationship queries.
+TLDR:
+    Test fixture file (my_service) used by tests/uat/test_sprint5_uat.py and related UAT suites.
+    Exercises import relationship queries (stdlib + fileA/fileB cross-file imports) and
+    provides a realistic inheritance + call chain for inverted call queries (UAT-3.2).
+    Key classes: ServiceConfig (dataclass), MyService(BaseClass) — inherits from fileA.
+    Key functions: main_entrypoint() — calls func_a, func_b, process(), save();
+    primary target for "what does X call" inverted call tests.
+    Depends on: fileA (MY_CONSTANT, BaseClass, func_a), fileB (ChildClass, func_b),
+    plus stdlib: json, logging, os, sys, collections, dataclasses, pathlib, typing.
 """
 import json
 import logging

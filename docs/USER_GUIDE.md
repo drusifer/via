@@ -1,3 +1,17 @@
+Complete reference for indexing, searching, and navigating Python codebases with VIA.
+
+TLDR:
+    Covers every aspect of VIA usage: installation, incremental indexing, the
+    pipeline query syntax (`via -m<X> PATTERN -t<Y> -o<Z>`), all output formats
+    (list, table, raw, formatted, usage/docstring, JSON via -oJ), context-line
+    flags (-A/-B/-C), relationship queries (inheritance, calls, imports, references
+    with --invert), watch mode (`via index . -w`), and MCP server mode
+    (`via mcp serve` / `via install mcp`) for AI agent integration.
+    Includes a practical examples section and a troubleshooting guide for common
+    errors (missing database, no REGEXP support, slow indexing).
+    Intended for end-users and AI agents; complements the README and the
+    architecture document at agents/morpheus.docs/VIA_ARCHITECTURE.md.
+
 # VIA User Guide
 
 A complete guide to using VIA for indexing and searching Python codebases.
@@ -11,9 +25,11 @@ A complete guide to using VIA for indexing and searching Python codebases.
 5. [Output Formats](#output-formats)
 6. [Context Lines](#context-lines)
 7. [Relationship Queries](#relationship-queries)
-8. [Legacy Subcommand Syntax](#legacy-subcommand-syntax)
-9. [Practical Examples](#practical-examples)
-10. [Troubleshooting](#troubleshooting)
+8. [Watch Mode](#watch-mode)
+9. [MCP Mode (AI Agent Integration)](#mcp-mode-ai-agent-integration)
+10. [Legacy Subcommand Syntax](#legacy-subcommand-syntax)
+11. [Practical Examples](#practical-examples)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -185,7 +201,8 @@ Add `--via` followed by output flags to change format:
 | `-oT` | Table | ASCII table format |
 | `-oR` | Raw | Source code extraction |
 | `-oF` | Formatted | Syntax-highlighted source |
-| `-oU` | Usage | Renders the docstring of the matched symbol. |
+| `-oU` | Usage | Renders the docstring of the matched symbol |
+| `-oJ` | JSON | JSON array of symbol objects (AI agents / MCP) |
 
 ### List Output (Default)
 
@@ -383,6 +400,68 @@ via -mg 'BaseClass' -tc -Vinh -mg '*' -tc --via -oT
 # Show source of all callers
 via -mg 'validate' -tf -Vca -mg '*' -tf --via -oR
 ```
+
+---
+
+## Watch Mode
+
+Keep the index automatically up-to-date as you edit files.
+
+```bash
+via index . -w     # Index then watch — re-indexes on every save
+```
+
+VIA detects file changes using watchdog with a 1-second debounce. Changed files are re-indexed automatically; deleted files are fully removed (symbols and relationships). Press Ctrl-C to stop.
+
+---
+
+## MCP Mode (AI Agent Integration)
+
+VIA can run as an MCP (Model Context Protocol) server, exposing a `via_query` tool to Claude Code and other MCP clients over JSON-RPC 2.0 via stdio. The index is always current — watch mode starts automatically when the server starts.
+
+### Setup
+
+```bash
+# Register via as an MCP server in the current project
+via install mcp
+
+# Check registration status
+via status mcp
+
+# Remove registration
+via uninstall mcp
+```
+
+`via install mcp` writes `.mcp.json` in the project root (next to `.via/`). Claude Code reads this at session startup and calls `tools/list` to discover the `via_query` tool.
+
+### Starting the Server
+
+```bash
+via mcp serve              # Serve from current directory
+via mcp serve /path/to/project   # Serve a specific project
+```
+
+The server starts WatchService in a background thread (index stays current) and listens for JSON-RPC 2.0 on stdin/stdout. Exit by closing stdin (Claude Code does this automatically on session end).
+
+### Calling via_query
+
+Claude Code can call the tool with the same CLI args you would use on the command line:
+
+```json
+{"args": ["-mg", "*Parser*", "-tc"]}         // All Parser classes
+{"args": ["-mg", "*", "-tf", "-n", "20"]}   // First 20 functions
+{"args": ["stats"]}                           // Database statistics
+```
+
+Results are returned as a JSON array of symbol objects with fields: `symbol_name`, `symbol_type`, `file_path`, `line_number`, `byte_offset`, `byte_length`, `qualified_name`, `parent_name`.
+
+### Inspecting the Schema
+
+```bash
+via mcp schema             # Print the via_query tool schema as JSON
+```
+
+This shows exactly what Claude Code sees when it calls `tools/list`.
 
 ---
 

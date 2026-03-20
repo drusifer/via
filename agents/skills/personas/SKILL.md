@@ -4,6 +4,13 @@ description: Switch to a specialized agent persona or invoke a persona directly.
 triggers: ["*switch", "*invoke", "@Neo", "@Trin", "@Morpheus", "@Oracle", "@Mouse", "@Cypher", "@Bob"]
 ---
 
+One-line summary: Switch to or invoke a specialist persona to delegate work to the right agent.
+
+TLDR:
+    Use `@<Persona> *<command> <args>` for direct invocation, or describe the task via `*chat` for auto-routing to the best specialist.
+    Before switching: complete current action, post handoff to CHAT.md, save all three state files (context, current_task, next_steps).
+    Seven personas available: Neo (SWE), Morpheus (lead), Trin (QA), Oracle (knowledge), Mouse (scrum), Cypher (PM), Bob (prompt eng).
+
 # Personas Skill — Switching & Invocation
 
 ## Available Personas

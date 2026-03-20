@@ -1,10 +1,12 @@
 """
-Factory for creating renderer instances.
+Factory that wires together renderers and their format-specific sub-formatters.
 
 TLDR:
-    RendererFactory creates the appropriate renderer based on RenderType
-    and FormatType. Encapsulates the mapping between types and renderer
-    implementations.
+    RendererFactory.create(render_type, format_type) is the single point of
+    construction for all renderers. It maps RenderType (LIST, RAW, TABLE,
+    FORMATTED, DIAGRAM, USAGE) x FormatType (ASCII, MD, HTML) to the correct
+    renderer/formatter pair, defaulting to ASCII when format_type is omitted.
+    Raises ValueError with a helpful message for unimplemented render types.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -39,6 +41,7 @@ from .formatters.usage_formatters import (
     HtmlUsageFormatter,
     MarkdownUsageFormatter,
 )
+from .json_renderer import JsonRenderer
 from .list import ListRenderer
 from .raw import RawRenderer
 from .table import TableRenderer
@@ -90,6 +93,9 @@ class RendererFactory:
         Raises:
             ValueError: If render_type is not supported
         """
+        if render_type == RenderType.JSON:
+            return JsonRenderer()
+
         if render_type == RenderType.LIST:
             return ListRenderer()
 

@@ -1,12 +1,18 @@
 """
-Sprint 6 UAT Tests - Watch Mode.
+Sprint 6 UAT suite validating watch-mode behaviour via subprocess-level acceptance tests.
 
-Validates the user acceptance criteria for Sprint 6 (Watch Mode) as defined in
-agents/cypher.docs/SPRINT_6_USER_STORIES.md.
-
-Each test maps directly to one or more acceptance criteria.
-
-Run with: pytest tests/uat/test_sprint6_uat.py -v
+TLDR:
+    Subprocess-level UAT suite for `via index -w` covering eight acceptance criteria
+    (UAT-6.1 through UAT-6.8). Key test classes: TestUAT61_Startup (3 tests: blocking,
+    watching message, initial index), TestUAT62_FileModification (4 tests: .py/.md
+    re-index, symbol count feedback, DB symbol update), TestUAT63_FileCreation (2 tests),
+    TestUAT64_FileDeletion (2 tests: removed message, DB cleanup),
+    TestUAT65_GracefulShutdown (2 tests: exit-0 on SIGINT, stopped message),
+    TestUAT66_NonParseableFilesIgnored (2 tests: .json/.txt ignored),
+    TestUAT67_ExclusionPatterns (1 test: --exclude respected),
+    TestUAT68_ErrorResilience (1 test: syntax errors don't crash watcher).
+    Helpers: _start_watch, _stop_and_collect, _open_db.
+    Depends on: via.db.store, via.core.types, subprocess, signal.
 
 Author: Trin (QA)
 Sprint: 6

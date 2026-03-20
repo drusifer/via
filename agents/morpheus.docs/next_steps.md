@@ -21,15 +21,20 @@
 12. Extract common renderer metadata pattern to base class
 13. Reconcile schema version numbering
 
-## Sprint 7 Tech Debt (from Sprint 6 Review)
-- Add `DatabaseStore.delete_file_completely(path)` — encapsulates deletion triad
-- Add `IndexingService.reindex_file(path)` — public method with transaction, replaces `_index_file` call in WatchService
-- Fix `WatchService`: remove redundant `db_store` param, move lazy imports, fix private `_should_include_file` call
+## Sprint 7 — Handoff to Neo
 
-## Handoff Options
-- @Cypher: Write user stories for Phase 1-3 + Sprint 7 TD items
-- @Neo: Start Phase 1 implementation directly
-- Drew: Decide which path
+Architecture design is in `SPRINT_7_ARCHITECTURE.md`. Neo implements in this order:
 
-## Architecture Review Document
+1. `MatchRecord.to_dict()` + `RenderType.JSON` + `JsonRenderer` + `-oJ` flag
+2. TD-1: `IndexingService.reindex_file()` + `DatabaseStore.delete_file_completely()`
+3. `WatchService` `handle_signals: bool = True` param
+4. `via/mcp/schema.py` — `build_tool_schema()`
+5. `via/mcp/server.py` — `McpServer`
+6. Wire `via mcp serve` + `via mcp schema` in `__main__.py`
+7. `via/commands/install.py` — `McpInstallTarget` + `InstallTarget` ABC
+8. Wire `via install/uninstall/status` in `__main__.py`
+
+Trin: test list in SPRINT_7_ARCHITECTURE.md.
+
+## Architecture Review Document (Sprint 8 prep)
 `agents/morpheus.docs/ARCH_REVIEW_SPRINT_8.md`

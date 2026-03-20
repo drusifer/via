@@ -1,9 +1,16 @@
-"""TDD tests for Sprint 5 - Inheritance relationship indexing.
+"""Unit tests for Python class inheritance relationship indexing and querying.
 
-Tests that inheritance relationships are properly indexed during file parsing.
+TLDR:
+    Verifies that Python class inheritance is captured as pending relationships
+    during indexing and correctly resolved into symbol_references records.
+    Scenarios include single and multiple inheritance, external base classes that
+    cannot be resolved, dotted module-path base names, and both forward queries
+    ("find subclasses of X") and inverted queries ("find what X inherits from").
+    Key class: TestInheritanceRelationshipIndexing — exercises IndexingService._index_file()
+    and resolve_pending_relationships() via pytest fixtures.
+    Role: protects inheritance-relationship indexing and querying in IndexingService
+    and DatabaseStore.
 
-Author: Neo (SWE)
-Sprint: 5, Phase 2
 """
 import os
 import tempfile

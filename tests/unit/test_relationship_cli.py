@@ -1,12 +1,15 @@
-"""TDD tests for Sprint 5 - CLI relationship flags.
+"""Unit tests for CLI relationship flag parsing (Sprint 5).
 
-Tests the parsing of relationship queries:
-- --via inherits-from, --via calls, --via imports, --via references
-- Short forms: -Vinh, -Vca, -Vimp, -Vr
-- --invert / -iv flag
+TLDR:
+    Tests that PipelineParser correctly parses relationship query syntax introduced
+    in Sprint 5. Key test classes: TestRelationshipFlagParsing (long-form --via
+    flags), TestRelationshipShortFlags (-Vinh/-Vca/-Vimp/-Vr short forms),
+    TestInvertFlag (--invert/-iv direction reversal), TestRelationshipWithOptions
+    (combined limit/case/output options), TestRelationshipEdgeCases (unknown types,
+    missing objects), TestRelationshipFlagDefinitions (flag registration check).
+    Role: protects the CLI parsing layer in PipelineParser; consumed by the test suite.
+    Dependencies: PipelineParser, PipelineParseError, RelationshipType, StageType.
 
-Author: Neo (SWE)
-Sprint: 5, Phase 1.4
 """
 import pytest
 from via.core.relationship_types import RelationshipType

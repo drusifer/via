@@ -2,8 +2,12 @@
 Relationship type definitions for VIA symbol relationships.
 
 TLDR:
-    Defines RelationshipType enum for querying symbol relationships such as
-    inheritance, calls, imports, and references.
+    Defines RelationshipType enum covering the four relationship kinds stored
+    in the database: INHERITS_FROM, CALLS, IMPORTS, and REFERENCES. Each
+    member exposes a short CLI flag suffix (e.g. 'inh', 'ca') via properties
+    and class-methods, and helper constructors (from_value, from_short_flag)
+    convert between string values, CLI flags, and enum members. A module-level
+    _SHORT_FLAGS dict is the single source of truth for flag suffix mappings.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

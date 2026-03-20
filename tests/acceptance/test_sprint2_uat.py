@@ -4,7 +4,13 @@ User Acceptance Tests for Sprint 2 - Match Command.
 TLDR:
     Captures the 12 acceptance criteria from SPRINT_2_USER_STORIES.md as automated
     regression tests. These tests verify end-to-end functionality of the match
-    command against real indexed data.
+    command against real indexed data using subprocess invocation of the via CLI.
+    Key fixtures: uat_project (module-scoped, builds a real indexed project tree);
+    run_via (helper to invoke the CLI and capture stdout/stderr).
+    Key classes: TestAC1_GlobPatterns, TestAC2_SQLLikePatterns,
+    TestAC3_EntityTypeFiltering, TestAC6_ResultLimiting, TestAC7_CaseSensitivity,
+    TestAC8_OutputFormat, TestAC9_StreamingOutput, TestErrorHandling.
+    Consumed by: pytest acceptance suite; depends on via CLI, DatabaseStore.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

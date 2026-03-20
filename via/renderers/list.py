@@ -1,10 +1,11 @@
 """
-List renderer for simple line-by-line output.
+List renderer producing one line of output per MatchRecord.
 
 TLDR:
-    Outputs one line per record using MatchRecord.__str__(). Shows
-    "... (N more)" indicator when results are limited. Streams records
-    for O(1) memory usage.
+    ListRenderer formats any MatchRecord type using MatchRecord.__str__(),
+    which emits type:file:line:qualified:@byte+len. Supports all symbol
+    types. Appends "... (N more)" when the result set was truncated by a
+    limit. Streams records for O(1) memory usage.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

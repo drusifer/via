@@ -1,7 +1,18 @@
 """
-Usage formatters for UsageRenderer.
+Docstring output formatters for ASCII, Markdown, and HTML targets.
 
-Provides ASCII, Markdown, and HTML formatting for symbol docstring output.
+TLDR:
+    Defines the UsageFormatter ABC and the DocstringInfo dataclass that carries
+    symbol metadata (name, type, file, line, docstring text). Three concrete
+    formatters implement format_symbol and format_no_docstring: AsciiUsageFormatter
+    (plain # header with indented docstring), MarkdownUsageFormatter (## heading
+    with file link and fenced block), and HtmlUsageFormatter (div/h3/pre with
+    anchor links). Used exclusively by UsageRenderer.
+
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+
+License: GPL-3.0
 """
 
 from abc import ABC, abstractmethod
@@ -51,16 +62,17 @@ class AsciiUsageFormatter(UsageFormatter):
     """Plain text ASCII formatting for terminal output."""
 
     def format_symbol(self, info: DocstringInfo) -> str:
-        header = f"# {info.symbol_type} {info.symbol_name} ({info.file_path}:{info.line_number})"
+        loc = f"({info.file_path}:{info.line_number})" if info.file_path else f"(line {info.line_number})"
+        header = f"  {info.symbol_type.upper()} {info.symbol_name} {loc}"
         if info.docstring:
-            # Indent docstring lines
             doc_lines = info.docstring.strip().split('\n')
-            indented = '\n'.join(f"  {line}" for line in doc_lines)
+            indented = '\n'.join(f"    {line}" for line in doc_lines)
             return f"{header}\n{indented}"
         return self.format_no_docstring(info)
 
     def format_no_docstring(self, info: DocstringInfo) -> str:
-        return f"# {info.symbol_type} {info.symbol_name} ({info.file_path}:{info.line_number})\n  (no docstring)"
+        loc = f"({info.file_path}:{info.line_number})" if info.file_path else f"(line {info.line_number})"
+        return f"  {info.symbol_type.upper()} {info.symbol_name} {loc}"
 
 
 class MarkdownUsageFormatter(UsageFormatter):

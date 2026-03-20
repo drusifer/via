@@ -1,13 +1,17 @@
 """
-TDD tests for Sprint 5 - Import Relationship Indexing.
+Unit tests for Python import relationship indexing and querying.
 
-Tests the indexing and querying of import relationships:
-- File imports module
-- Query files importing a module
-- Query what a file imports (inverted)
+TLDR:
+    Verifies that the indexing pipeline correctly records Python import statements
+    as pending relationships and resolves them into queryable symbol references.
+    Covers simple imports, from-imports, nested module paths, multiple imports, and
+    files with no imports. Also tests forward and inverted relationship queries and
+    glob-pattern matching against import targets.
+    Key class: TestImportRelationshipIndexing — exercises IndexingService._index_file()
+    and DatabaseStore relationship queries via pytest fixtures.
+    Role: protects import-relationship indexing and querying in IndexingService and
+    DatabaseStore.
 
-Author: Neo (SWE)
-Sprint: 5, Phase 3
 """
 
 from pathlib import Path

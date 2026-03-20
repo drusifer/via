@@ -4,6 +4,13 @@ description: Self-discovery guide for Makefile targets. Run `make help` to see a
 triggers: ["*make help", "*make discover", "*build help"]
 ---
 
+One-line summary: Self-discovery guide for Makefile targets — always run `make help` before assuming what targets exist.
+
+TLDR:
+    Run `make help` to get the current, authoritative target list; never rely on hardcoded lists in docs or memory.
+    New targets require a real recipe in `ifdef MKF_ACTIVE` and a public stub in `else`, both with a `## comment` for discoverability.
+    Bob-managed targets live in `agents/Makefile.bob` (included via `-include`); inspect last build output at `build/build.out`.
+
 # Make Target Discovery
 
 ## Discover Available Targets

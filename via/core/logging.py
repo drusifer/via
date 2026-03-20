@@ -2,9 +2,11 @@
 Logging configuration for VIA.
 
 TLDR:
-    Provides centralized logging setup with 5 verbosity levels (0-4) mapped to
-    -v flags. Supports console and file logging with customizable formats based
-    on verbosity. Level 0 is warnings only, levels 1-4 add progressively more detail.
+    Provides setup_logging() and get_logger() for centralized logging control.
+    setup_logging() maps verbosity 0-4 (-v through -vvvv) to WARNING/INFO/DEBUG
+    levels with progressively richer formats (minimal message up to full
+    timestamp+module+line). An optional log_file path writes everything at DEBUG
+    regardless of the console verbosity level.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

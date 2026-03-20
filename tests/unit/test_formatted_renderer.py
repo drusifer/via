@@ -2,8 +2,19 @@
 Unit tests for FormattedRenderer and code formatters.
 
 TLDR:
-    Tests the FormattedRenderer which extracts and syntax-highlights source
-    code using Pygments. Also tests the code formatters (ASCII, HTML, Markdown).
+    Verifies FormattedRenderer extracts and syntax-highlights source code using
+    Pygments for class, method, function, and global symbols. Tests all three
+    code formatters (AsciiCodeFormatter, HtmlCodeFormatter, MarkdownCodeFormatter)
+    for correct output, line numbers, context lines, and theme selection.
+    Key classes: TestCodeFormatterBasic, TestAsciiCodeFormatter, TestHtmlCodeFormatter,
+    TestMarkdownCodeFormatter, TestFormattedRendererBasic, TestFormattedRendererClassSource,
+    TestFormattedRendererMethodSource, TestFormattedRendererFunctionSource,
+    TestFormattedRendererGlobalSource, TestFormattedRendererUnsupportedTypes,
+    TestFormattedRendererSyntaxHighlighting, TestFormattedRendererLineNumbers,
+    TestFormattedRendererContextLines, TestFormattedRendererThemeSelection,
+    TestFormattedRendererStreaming, TestFormattedRendererEmptyInput,
+    TestFormattedRendererFactory, TestThemeDetection.
+    Role: protects the -oF (formatted output) rendering pipeline.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

@@ -1,9 +1,12 @@
 """
-Mermaid diagram formatters.
+Mermaid diagram output formatters for ASCII, Markdown, and HTML targets.
 
 TLDR:
-    Formatters for Mermaid classDiagram output. ASCII returns plain text,
-    Markdown wraps in code fence, HTML includes mermaid.js for rendering.
+    Provides three formatters consumed by DiagramRenderer: MermaidAsciiFormatter
+    returns the raw Mermaid classDiagram syntax unchanged; MermaidMarkdownFormatter
+    wraps it in a ```mermaid fenced code block; MermaidHtmlFormatter produces a
+    self-contained HTML page that loads mermaid.js from CDN and renders the diagram
+    in-browser. All three expose a single format_diagram(mermaid: str) method.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

@@ -1,32 +1,50 @@
-# Neo Current Task - Sprint 6 Watch Mode
+# Neo Current Task
 
-## Task: Implement WatchService (Sprint 6)
-**Status**: COMPLETE (100%)
-**Date**: 2026-03-19
+## Task: Sprint 7 — MCP Mode
+**Status**: COMPLETE
+**Date**: 2026-03-20
 
 ## What was built
 
-- `via/services/watch.py` — `WatchService` class using `watchdog` library
-- `tests/unit/test_watch_service.py` — 27 unit tests (TDD, all passing)
-- `tests/integration/test_cli_watch.py` — 3 CLI integration tests
-- `pyproject.toml` — added `watchdog>=3.0.0` dependency
-- `via/commands/index.py` — updated help text (removed "NOT IMPLEMENTED YET")
-- `via/__main__.py` — wired up watch mode dispatch
+### P1 — JsonRenderer
+- `via/renderers/json_renderer.py` — `JsonRenderer` with `_to_dict()` static method
+- `RenderType.JSON` added to enum
+- `supports_render_type` refactored: base class handles JSON universally, subclasses implement `_supports_render_type`
+- `-oJ` / `--output-json` flag added to `OUTPUT_FLAGS`
+- `RendererFactory` registers `JsonRenderer`
 
-## Acceptance Criteria Coverage
+### P2 — DB Correctness
+- `DatabaseStore.connect()` now enables WAL mode (`PRAGMA journal_mode=WAL`)
+- `DatabaseStore.delete_file_completely(path)` — atomic triad in single transaction
+- `IndexingService.reindex_file(file_info)` — public method wrapping delete+index
 
-| Story | AC | Status |
-|-------|----|--------|
-| Story 1: Basic Watch | starts watchdog observer, initial index, SIGINT shutdown | ✅ |
-| Story 2: Feedback | "Watching..." + "Re-indexed: X (N symbols)" + "Removed: X" + "stopped" | ✅ |
-| Story 3: Exclusions | .gitignore + DEFAULT_EXCLUDES + --exclude patterns | ✅ |
-| Story 4: Error resilience | parse errors logged, DB errors caught, stop() idempotent | ✅ |
-| Story 5: Force re-index | NOT YET — SIGUSR1/Ctrl-L not implemented | ⬜ |
+### P3 — WatchService Logging Cleanup
+- `output: IO` parameter removed from `WatchService.__init__()`
+- `handle_signals: bool = True` parameter added
+- All `print()` calls replaced with `logger.info()`/`logger.debug()`
+- `_reindex_file` calls `indexing_service.reindex_file()` (not `_index_file`)
+- `_remove_file` calls `db_store.delete_file_completely()` (not 3 separate calls)
 
-## Story 5 remaining
-Story 5 (1pt) — force re-index via SIGUSR1 while watching. Low priority (P2).
-Can be done in follow-up. Core watch mode is fully functional.
+### P4 — MCP Schema
+- `via/mcp/__init__.py` created
+- `via/mcp/schema.py` — `build_tool_schema()` with 10 examples
+- `via mcp schema` CLI command added
+
+### P5 — MCP Serve
+- `mcp>=1.26` added to `pyproject.toml` dependencies
+- `via/mcp/server.py` — `run_mcp_server(root_dir, db_path)` using FastMCP
+- `via mcp serve [directory]` CLI command added
+- Output flags stripped from `via_query` args (MCP always returns dicts)
+
+### P6 — Install / Status
+- `via/commands/install.py` — `InstallTarget` ABC + `McpInstallTarget` + `INSTALL_TARGETS` registry
+- `via install mcp`, `via uninstall mcp`, `via status mcp` CLI commands added
+
+### P7 — UAT
+- `tests/uat/test_sprint7_uat.py` — 10 UAT tests, all passing
 
 ## Test Results
-- 691 passed, 0 failed (up from 661)
-- 30 new tests added
+- 794 passed, 0 failed (was 713 at Sprint 6 start, +81 new tests)
+
+## Next Sprint
+- Sprint 8: Async queue for DB (TD-S7-1), lighter MCP transport option (TD-S7-2)

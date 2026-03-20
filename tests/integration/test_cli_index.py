@@ -2,10 +2,15 @@
 Integration tests for CLI index command.
 
 TLDR:
-    Tests the `via index` command end-to-end. Creates temporary test projects,
-    runs the CLI, and verifies database contents, output, and exit codes.
-    Tests happy path scenarios including indexing, force re-indexing, and
-    custom database paths.
+    Tests the `via index` command end-to-end by invoking the CLI as a subprocess,
+    creating temporary project trees, and asserting on exit codes, stdout, and
+    database contents via DatabaseStore.
+    Key class: TestCLIIndexCommand — covers temp_project fixture, indexing the
+    current directory, indexing a specific directory, force re-indexing (-f),
+    custom database paths (--db), verbosity flags, directory creation, database
+    contents verification, empty directories, and directories with no Python files.
+    Consumed by: pytest integration suite; depends on DatabaseStore, EXIT_SUCCESS,
+    MatchOp, SymbolType constants.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

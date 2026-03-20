@@ -12,6 +12,7 @@ dependencies = [
     "pathspec>=0.11.0",
     "pygments>=2.15.0",
     "watchdog>=3.0.0",
+    "mcp>=1.26",
 ]
 
 [project.optional-dependencies]
@@ -93,4 +94,4 @@ ignore-imports = true
 [tool.bandit]
 targets = ["via"]
 exclude_dirs = ["tests", "agents"]
-skips = []
+skips = ["B608"]

@@ -1,4 +1,18 @@
-"""Integration tests for via index -w (Watch Mode, Sprint 6)."""
+"""
+Integration tests for via index -w (Watch Mode, Sprint 6).
+
+TLDR:
+    Launches the via CLI as a subprocess with the -w flag and sends SIGINT to
+    verify watch mode starts correctly. Checks that the process does not print
+    "not implemented", prints a "Watching" startup message, and exits with
+    return code 0 on SIGINT.
+    Key helper: _run_via (subprocess wrapper with cwd set to project root).
+    Key class: TestWatchCLI — tests that -w no longer prints "not implemented",
+    that a "Watching" message appears on startup, and that SIGINT triggers a clean
+    exit (return code 0).
+    Consumed by: pytest integration suite; depends on via CLI (-w flag), signal/os.
+
+"""
 
 import os
 import signal

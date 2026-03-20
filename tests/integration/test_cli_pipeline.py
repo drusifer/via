@@ -2,8 +2,15 @@
 Integration tests for CLI pipeline execution.
 
 TLDR:
-    Tests the new pipeline syntax end-to-end. Verifies pipeline parsing,
-    stage execution, match stages, render stages, and error handling.
+    Tests the via pipeline syntax end-to-end by invoking the CLI as a subprocess
+    against a real indexed temporary project. Verifies pipeline parsing, stage
+    execution, match stages, render stages, chained pipelines, and error handling.
+    Key fixture: indexed_project (builds and indexes a temp Python project).
+    Key classes: TestPipelineExecution (match, limit, functions, methods, patterns,
+    case-insensitive, imports, globals), TestPipelineWithRender (list render),
+    TestPipelineErrorHandling (empty args, invalid stage, database not found),
+    TestChainedPipeline (chained match with regex).
+    Consumed by: pytest integration suite; depends on DatabaseStore.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

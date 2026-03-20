@@ -1,14 +1,18 @@
 """
-TDD tests for Sprint 5 - Reference Relationship Indexing.
+Tests for reference relationship indexing and querying (Sprint 5).
 
-Tests the indexing and querying of reference relationships:
-- Function references a global constant
-- Method references a constant
-- Query what references a specific constant
-- Query what a function references (inverted)
+TLDR:
+    Tests that the indexing pipeline correctly extracts and resolves "references"
+    relationships between functions/methods and the global constants they use.
+    Key test classes: TestReferenceExtractionFromAST (AST-based extraction,
+    exclusion of local variables, parameters, and Python builtins),
+    TestReferenceRelationshipResolution (relationship storage and resolution
+    across files), TestReferenceRelationshipQueries (forward and inverted
+    queries, glob-pattern matching against referenced names).
+    Role: protects via.parsers.python_parser reference extraction and
+    via.db.store relationship query paths; depends on IndexingService,
+    DatabaseStore, PythonParser, and ParserRegistry.
 
-Author: Neo (SWE)
-Sprint: 5, Phase 5 (References)
 """
 
 from pathlib import Path

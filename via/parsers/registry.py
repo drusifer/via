@@ -1,10 +1,15 @@
 """
-Parser registry for managing language parsers.
+Parser registry for managing and resolving language parsers by file type.
 
 TLDR:
-    Provides ParserRegistry for registering and retrieving language parsers.
-    Uses extension-based lookup for fast parser selection. Supports global
-    singleton pattern via get_global_registry() for application-wide access.
+    Provides the ParserRegistry class, which maintains a list of ParserABC
+    instances and an extension-to-parser map for fast O(1) lookup. Parsers
+    can be registered by instance (register) or by class (register_class).
+    File-to-parser resolution first tries extension-based lookup, then falls
+    back to calling each parser's can_parse() method. A module-level singleton
+    (_global_registry) is exposed via get_global_registry(), register_parser(),
+    and register_parser_class() for application-wide use without manual
+    registry threading.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

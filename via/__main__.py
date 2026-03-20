@@ -1,10 +1,15 @@
 """
-Entry point for VIA CLI.
+Entry point for the VIA CLI.
 
 TLDR:
-    Provides main() entry point for the via command-line tool. Handles argument
-    parsing and dispatches to subcommands (index, query, render). Supports
-    verbosity levels (-v through -vvvv), watch mode, and force re-indexing.
+    Implements main(), the top-level dispatch function invoked by `python -m via`
+    or the installed `via` console script. On startup it inspects argv to choose
+    between two execution paths: pipeline syntax (flags like -mg, -tc trigger
+    PipelineParser + PipelineExecutor) and subcommand syntax (index/i and
+    stats/s dispatch to _run_index_command and _run_stats_command respectively).
+    The index subcommand supports --watch (continuous re-indexing via WatchService)
+    and --force (full re-index). Verbosity (-v through -vvvv) is forwarded to
+    setup_logging() before any command runs.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -69,7 +74,7 @@ def _build_pipeline_help() -> str:
 
     return f"""\
 Pipeline Syntax (alternative to subcommands):
-  via -m<X> PATTERN -t<Y> [OPTIONS] [--via -o<Z> -f<W>]
+  via -m<X> PATTERN -t<Y> [OPTIONS] [-o<Z>] [-f<W>]
 
 Match Syntax Flags (-m<X>):
 {match_help}
@@ -86,7 +91,7 @@ Relationship Flags (-V<X> or --via <type>):
 {relationship_help}
   --invert, -iv         Invert relationship direction
 
-Output Flags (after --via, -o<X>):
+Output Flags (-o<X>):
 {output_help}
 
 Format Flags (-f<X>):
@@ -101,7 +106,7 @@ Examples:
   via index .                                        # Index current directory
   via -mg '*Test*' -tc                               # Classes matching *Test*
   via -mg 'parse' -tf -n 10                          # First 10 functions with 'parse'
-  via -mg '*' -tc --via -oT                          # All classes as table
+  via -mg '*' -tc -oT                                # All classes as table
   via -mg 'main' -tf -oR -C 3                        # Function source with context
   via stats                                          # Database statistics
 
@@ -168,6 +173,49 @@ def _create_parser() -> argparse.ArgumentParser:
     )
     StatsCommand.add_arguments(stats_parser)
 
+    # --- Install / Uninstall / Status subcommands ---
+    from via.commands.install import INSTALL_TARGETS
+    target_choices = list(INSTALL_TARGETS.keys())
+
+    install_parser = subparsers.add_parser("install", help="Install a VIA integration")
+    install_parser.add_argument("target", choices=target_choices)
+    install_parser.add_argument("--global", dest="global_install", action="store_true",
+                                help="Install globally (~/.claude.json)")
+
+    uninstall_parser = subparsers.add_parser("uninstall", help="Uninstall a VIA integration")
+    uninstall_parser.add_argument("target", choices=target_choices)
+    uninstall_parser.add_argument("--global", dest="global_install", action="store_true",
+                                  help="Uninstall from global config")
+
+    status_parser = subparsers.add_parser("status", help="Show VIA integration status")
+    status_parser.add_argument("target", choices=target_choices)
+
+    # --- MCP subcommand ---
+    mcp_parser = subparsers.add_parser(
+        "mcp",
+        help="MCP server commands",
+        description="Commands for the VIA MCP server.",
+    )
+    mcp_sub = mcp_parser.add_subparsers(dest="mcp_command", help="MCP sub-commands")
+
+    # via mcp schema
+    mcp_sub.add_parser(
+        "schema",
+        help="Print the via_query MCP tool schema as JSON",
+    )
+
+    # via mcp serve
+    mcp_serve = mcp_sub.add_parser(
+        "serve",
+        help="Start the MCP stdio server",
+    )
+    mcp_serve.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="Root directory to watch and serve (default: current directory)",
+    )
+
     return parser
 
 
@@ -185,6 +233,30 @@ def _progress_callback(message: str, current: int, total: int) -> None:
         print(f"\r{message}: {current}/{total} ({percent:.1f}%)", end="", flush=True)
     else:
         print(f"\r{message}: {current}", end="", flush=True)
+
+
+def _run_index_watch(db_path: Path, target_dir: Path, exclude_patterns: list) -> int:
+    """Start index watch mode."""
+    from via.services.watch import WatchService
+    watch_logger = logging.getLogger('via.services.watch')
+    watch_logger.setLevel(logging.INFO)
+    for handler in logging.root.handlers:
+        if handler.level > logging.INFO:
+            handler.setLevel(logging.INFO)
+    with DatabaseStore(str(db_path), str(target_dir)) as db_store:
+        db_store.initialize_schema()
+        parser_registry = ParserRegistry()
+        parser_registry.register(PythonParser())
+        parser_registry.register(MarkdownParser())
+        indexing_service = IndexingService(db_store, parser_registry)
+        watch_service = WatchService(
+            indexing_service=indexing_service,
+            db_store=db_store,
+            root_dir=str(target_dir),
+            exclude_patterns=exclude_patterns,
+        )
+        watch_service.start()
+    return EXIT_SUCCESS
 
 
 def _run_index_command(args: argparse.Namespace) -> int:
@@ -224,21 +296,7 @@ def _run_index_command(args: argparse.Namespace) -> int:
 
     # Watch mode
     if args.watch:
-        from via.services.watch import WatchService
-        with DatabaseStore(str(db_path), str(target_dir)) as db_store:
-            db_store.initialize_schema()
-            parser_registry = ParserRegistry()
-            parser_registry.register(PythonParser())
-            parser_registry.register(MarkdownParser())
-            indexing_service = IndexingService(db_store, parser_registry)
-            watch_service = WatchService(
-                indexing_service=indexing_service,
-                db_store=db_store,
-                root_dir=str(target_dir),
-                exclude_patterns=exclude_patterns,
-            )
-            watch_service.start()
-        return EXIT_SUCCESS
+        return _run_index_watch(db_path, target_dir, exclude_patterns)
 
     if exclude_patterns:
         logging.info(f"Additional exclusion patterns: {exclude_patterns}")
@@ -394,8 +452,22 @@ def _run_pipeline_command(argv: list, directory: str = ".") -> int:
 
             # If executor returns iterator (no render stage), print results
             if result is not None:
+                count = 0
+                total_matches = None
                 for record in result:
                     safe_print(str(record))
+                    count += 1
+                    if total_matches is None:
+                        total_matches = record.total_matches
+
+                # Warn when results were capped by the limit
+                limit = getattr(stages[-1].args, 'limit', 0) or 0
+                if limit > 0 and total_matches is not None and total_matches > limit:
+                    print(
+                        f"results 1-{count} of {total_matches} matches returned "
+                        f"(--limit={limit}) use -n 0 for all results",
+                        file=sys.stderr,
+                    )
 
         return EXIT_SUCCESS
 
@@ -432,7 +504,7 @@ def _is_pipeline_syntax(argv: list) -> bool:
     first_arg = argv[0]
 
     # Known subcommands use subcommand syntax
-    if first_arg in ('index', 'i', 'stats', 's', '--help', '-h', '--version'):
+    if first_arg in ('index', 'i', 'stats', 's', 'mcp', 'install', 'uninstall', 'status', '--help', '-h', '--version'):
         return False
 
     # Verbosity flags are ambiguous - check what follows
@@ -461,6 +533,57 @@ def _is_pipeline_syntax(argv: list) -> bool:
         return True
 
     return False
+
+
+def _run_install_command(args: argparse.Namespace) -> int:
+    """Dispatch via install/uninstall/status <target>."""
+    from via.commands.install import INSTALL_TARGETS
+    target_cls = INSTALL_TARGETS.get(args.target)
+    if not target_cls:
+        print(f"Error: Unknown install target: {args.target}", file=sys.stderr)
+        return EXIT_ERROR
+
+    target = target_cls(project_root=str(Path('.').resolve()))
+    global_install = getattr(args, 'global_install', False)
+
+    if args.command == "install":
+        return target.install(global_install=global_install)
+    elif args.command == "uninstall":
+        return target.uninstall(global_install=global_install)
+    else:  # status
+        return target.status()
+
+
+def _run_mcp_command(args: argparse.Namespace) -> int:
+    """Dispatch via mcp <subcommand>."""
+    mcp_cmd = getattr(args, 'mcp_command', None)
+
+    if mcp_cmd == 'schema':
+        import json
+        from via.mcp.schema import build_tool_schema
+        print(json.dumps(build_tool_schema(), indent=2))
+        return EXIT_SUCCESS
+
+    if mcp_cmd == 'serve':
+        return _run_mcp_serve(getattr(args, 'directory', '.'))
+
+    # No sub-command — print help
+    print("Usage: via mcp {schema,serve}", file=sys.stderr)
+    return EXIT_ERROR
+
+
+def _run_mcp_serve(directory: str) -> int:
+    """Start the FastMCP stdio server."""
+    target_dir = Path(directory).resolve()
+    index_dir = target_dir / DEFAULT_INDEX_DIR
+    db_path = index_dir / DEFAULT_DB_NAME
+
+    if not db_path.exists():
+        print(f"Error: Index not found — run 'via index {directory}' first", file=sys.stderr)
+        return EXIT_ERROR
+
+    from via.mcp.server import run_mcp_server
+    return run_mcp_server(str(target_dir), str(db_path))
 
 
 def main() -> int:
@@ -498,6 +621,10 @@ def main() -> int:
         return _run_index_command(args)
     elif args.command in ("stats", "s"):
         return _run_stats_command(args)
+    elif args.command == "mcp":
+        return _run_mcp_command(args)
+    elif args.command in ("install", "uninstall", "status"):
+        return _run_install_command(args)
     elif args.command is None:
         parser.print_help()
         return EXIT_SUCCESS

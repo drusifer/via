@@ -1,4 +1,14 @@
-"""Unit tests for indexing service."""
+"""Unit tests for indexing service.
+
+TLDR:
+    Exercises IndexingService end-to-end: full directory scans, symbol extraction
+    (functions, classes, imports, globals), incremental re-indexing, force-reindex,
+    progress callbacks, oversized-file handling, parse-error resilience, and stats
+    accuracy. Also confirms that re-indexing a modified file replaces stale symbols
+    and that nested directories and empty directories are handled correctly.
+    Role: protects the core indexing pipeline that populates the via symbol database.
+
+"""
 
 import os
 import tempfile

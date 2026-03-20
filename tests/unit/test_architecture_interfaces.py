@@ -1,11 +1,16 @@
 """
 Test suite for CLI argument and help interface architecture (Morpheus's ARCH.md).
 
-Covers:
-- ArgumentProvider and HelpProvider ABCs
-- add_arguments and get_help contract
-- CLI entrypoint delegation
-- Help output synchronization
+TLDR:
+    Verifies the ArgumentProvider and HelpProvider abstract base class contracts
+    defined in ARCH.md. Tests that concrete implementations correctly register
+    CLI arguments (add_arguments) and return help strings (get_help), and that
+    both are surfaced in --help output.
+    Key tests: test_argument_provider_adds_arguments, test_help_provider_returns_help,
+    test_cli_help_integration.
+    Role: guards the CLI plugin interface so all command types remain interchangeable.
+    Design notes: defines local stub ABCs (ArgumentProvider, HelpProvider, DummyType)
+    rather than importing from via.core.interfaces — tests the contract pattern itself.
 """
 import argparse
 from abc import ABC, abstractmethod

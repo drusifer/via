@@ -2,9 +2,14 @@
 Unit tests for indexer symbol population.
 
 TLDR:
-    Tests that the IndexingService correctly populates the symbols table
-    during indexing. Verifies symbol creation for all entity types,
-    qualified name calculation, and symbol deletion on re-index.
+    Verifies that IndexingService correctly populates the symbols table during
+    indexing and cleans up stale symbols on re-index. Tests symbol creation for
+    all entity types (function, class, method, import, global), qualified name
+    calculation via _calculate_qualified_name(), and cascade deletion on re-index.
+    Key classes: TestSymbolInsertion (symbol type coverage and parent_name),
+    TestQualifiedNameCalculation (_calculate_qualified_name helper), and
+    TestSymbolDeletion (stale-symbol removal on re-index).
+    Role: protects the symbol-table population in IndexingService and DatabaseStore.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

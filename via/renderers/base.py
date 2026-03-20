@@ -1,10 +1,11 @@
 """
-Base class for renderers.
+Abstract base class and shared utilities for all renderers.
 
 TLDR:
-    Defines abstract Renderer base class that all renderers inherit from.
-    Renderers take an iterator of MatchRecords and produce formatted output.
-    Includes shared utilities like ContextOptions and format_delimiter_header.
+    Defines the Renderer ABC that every concrete renderer inherits from.
+    All renderers consume an Iterator[MatchRecord] and return a formatted
+    string. Also provides ContextOptions (consolidates -A/-B/-C flag handling)
+    and format_delimiter_header (the # divider block shown above each match).
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

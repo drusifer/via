@@ -2,8 +2,16 @@
 Integration tests for CLI relationship queries (Sprint 5).
 
 TLDR:
-    Tests end-to-end relationship queries via CLI: inheritance, calls, imports.
-    Verifies pipeline parsing and execution for relationship-based queries.
+    Tests end-to-end relationship queries via CLI by invoking the via binary as a
+    subprocess against a temporary indexed project containing classes with
+    inheritance, method calls, and imports.
+    Key fixture: indexed_project_with_relationships (builds a multi-class project
+    tree and indexes it via IndexingService/PythonParser/ParserRegistry).
+    Key classes: TestInheritanceRelationshipCLI (-Vinh forward/inverted/glob),
+    TestCallRelationshipCLI (-Vca callers and callees), TestImportRelationshipCLI
+    (-Vimp forward/inverted), TestRelationshipEdgeCases (empty results, --limit).
+    Consumed by: pytest integration suite; depends on DatabaseStore, DiscoveredFile,
+    IndexingService, PythonParser, ParserRegistry.
 
 Author: Neo (SWE)
 Sprint: 5

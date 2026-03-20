@@ -1,10 +1,14 @@
 """
-Python language parser using AST module.
+Python language parser using the stdlib AST module.
 
 TLDR:
-    Parses Python files (.py, .pyx, .pyi) using Python's AST module to extract
-    functions, classes, imports, and globals with byte offsets. Handles
-    decorators, docstrings, type hints, async functions, and syntax errors gracefully.
+    Implements PythonParser (a ParserABC subclass) that parses .py/.pyx/.pyi
+    files using Python's built-in ast module. Extracts functions, classes,
+    imports, module-level globals, call relationships, and symbol references,
+    all with precise byte offsets. Handles decorators, docstrings, type hints,
+    async functions, and syntax errors gracefully. Filters Python builtins and
+    language constants from call and reference results to keep only meaningful
+    cross-symbol relationships.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

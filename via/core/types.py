@@ -1,9 +1,12 @@
 """
-Core type definitions for VIA match command.
+Core type definitions for the VIA match command.
 
 TLDR:
-    Defines SymbolType enum and MatchOp enum for the denormalized symbols
-    table query system. Simple enums map to SQL operators.
+    Defines two enums used throughout the query layer. SymbolType enumerates
+    the entity kinds stored in the symbols table (class, method, function,
+    filepath, filename, import, global, header). MatchOp maps user-facing
+    match modes to SQL operators (=, GLOB, LIKE, REGEXP); each member carries
+    its display name, SQL operator string, and an escaping flag as a tuple.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

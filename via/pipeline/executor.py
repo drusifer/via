@@ -1,4 +1,23 @@
-"""Pipeline executor for running pipeline stages."""
+"""
+Executes a parsed pipeline by driving database queries and rendering output.
+
+TLDR:
+    PipelineExecutor walks the list of PipelineStage objects produced by
+    PipelineParser and runs each stage in order. The first MATCH stage issues a
+    database query via DatabaseStore; subsequent MATCH stages filter the
+    streaming Iterator[MatchRecord] in memory using glob, regex, or SQL-LIKE
+    pattern matching. Relationship queries (stages with a RelationshipFilter)
+    are dispatched to DatabaseStore.query_relationships. When the last MATCH
+    stage carries a render_type flag, execution falls through to
+    _execute_render_stage, which picks a renderer via RendererFactory and
+    writes formatted output to stdout. STATS stages are a placeholder for a
+    future phase.
+
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+
+License: GPL-3.0
+"""
 import fnmatch
 import re
 import sys
@@ -299,6 +318,7 @@ class PipelineExecutor:
             records: Iterator of MatchRecord to render
         """
         args = stage.args
+        limit = getattr(args, 'limit', 0) or 0
 
         # Convert string render_type to RenderType enum (default: LIST)
         render_type_str = getattr(args, 'render_type', None) or 'list'
@@ -317,12 +337,17 @@ class PipelineExecutor:
             'nodelims': getattr(args, 'nodelims', False),
         }
 
-        # Filter records and track unsupported types
+        # Filter records, track unsupported types, and capture total_matches
         skipped_types: Dict[str, int] = {}
+        rendered_count = [0]
+        total_matches_ref = [None]
 
         def filter_supported(records_iter: Iterator[MatchRecord]) -> Iterator[MatchRecord]:
             for record in records_iter:
+                if total_matches_ref[0] is None:
+                    total_matches_ref[0] = record.total_matches
                 if record.supports_render_type(render_type):
+                    rendered_count[0] += 1
                     yield record
                 else:
                     skipped_types[record.symbol_type] = skipped_types.get(record.symbol_type, 0) + 1
@@ -337,6 +362,15 @@ class PipelineExecutor:
         # Show helpful message for skipped types
         if skipped_types:
             self._print_unsupported_warning(render_type, skipped_types)
+
+        # Warn when results are capped by the limit
+        total = total_matches_ref[0]
+        if limit > 0 and total is not None and total > limit:
+            print(
+                f"results 1-{rendered_count[0]} of {total} matches returned "
+                f"(--limit={limit}) use -n 0 for all results",
+                file=sys.stderr,
+            )
 
     def _print_unsupported_warning(
         self,

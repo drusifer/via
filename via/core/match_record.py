@@ -2,9 +2,13 @@
 Polymorphic MatchRecord system for VIA.
 
 TLDR:
-    Defines MatchRecord base class and derived classes for different symbol types.
-    Each record type knows which render types it supports. Factory creates the
-    appropriate record type from database rows.
+    Defines the MatchRecord abstract dataclass and seven concrete subclasses
+    (ClassMatchRecord, MethodMatchRecord, FunctionMatchRecord, FileMatchRecord,
+    ImportMatchRecord, GlobalMatchRecord, HeaderMatchRecord), each declaring
+    which RenderType values (LIST, TABLE, DIAGRAM, USAGE, RAW, FORMATTED) it
+    supports. Also defines the FormatType enum (ASCII, MD, HTML, PNG) and
+    MatchRecordFactory, which maps symbol_type strings from database rows to
+    the correct subclass and instantiates it with optional rendering metadata.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -29,6 +33,7 @@ class RenderType(Enum):
     USAGE = 'usage'
     RAW = 'raw'
     FORMATTED = 'formatted'
+    JSON = 'json'
 
 
 class FormatType(Enum):
@@ -71,16 +76,15 @@ class MatchRecord(ABC, ArgumentProvider, HelpProvider):
     def get_help(cls) -> str:
         return getattr(cls, "HELP", f"{cls.__name__}: match record type.")
 
-    @abstractmethod
     def supports_render_type(self, render_type: RenderType) -> bool:
-        """Check if this record supports the given render type.
+        """JSON is universally supported. Delegate others to subclass."""
+        if render_type == RenderType.JSON:
+            return True
+        return self._supports_render_type(render_type)
 
-        Args:
-            render_type: The render type to check
-
-        Returns:
-            True if supported, False otherwise
-        """
+    @abstractmethod
+    def _supports_render_type(self, render_type: RenderType) -> bool:
+        """Subclasses implement type-specific render support."""
         pass
 
     def __str__(self) -> str:
@@ -105,7 +109,7 @@ class ClassMatchRecord(MatchRecord):
     base_classes: Optional[List[str]] = None
     methods: Optional[List[str]] = None
 
-    def supports_render_type(self, render_type: RenderType) -> bool:
+    def _supports_render_type(self, render_type: RenderType) -> bool:
         """Classes support all render types."""
         return render_type in {
             RenderType.LIST,
@@ -126,7 +130,7 @@ class MethodMatchRecord(MatchRecord):
     """
     HELP = "Method symbol: supports all except DIAGRAM."
 
-    def supports_render_type(self, render_type: RenderType) -> bool:
+    def _supports_render_type(self, render_type: RenderType) -> bool:
         """Methods support all except DIAGRAM."""
         return render_type in {
             RenderType.LIST,
@@ -145,7 +149,7 @@ class FunctionMatchRecord(MatchRecord):
     """
     HELP = "Function symbol: supports all except DIAGRAM."
 
-    def supports_render_type(self, render_type: RenderType) -> bool:
+    def _supports_render_type(self, render_type: RenderType) -> bool:
         """Functions support all except DIAGRAM."""
         return render_type in {
             RenderType.LIST,
@@ -165,7 +169,7 @@ class FileMatchRecord(MatchRecord):
     """
     HELP = "File path symbol: supports LIST, TABLE, RAW only."
 
-    def supports_render_type(self, render_type: RenderType) -> bool:
+    def _supports_render_type(self, render_type: RenderType) -> bool:
         """Files support LIST, TABLE, RAW only."""
         return render_type in {
             RenderType.LIST,
@@ -183,7 +187,7 @@ class ImportMatchRecord(MatchRecord):
     """
     HELP = "Import symbol: supports LIST, TABLE, USAGE, RAW."
 
-    def supports_render_type(self, render_type: RenderType) -> bool:
+    def _supports_render_type(self, render_type: RenderType) -> bool:
         """Imports support LIST, TABLE, USAGE, RAW."""
         return render_type in {
             RenderType.LIST,
@@ -202,7 +206,7 @@ class GlobalMatchRecord(MatchRecord):
     """
     HELP = "Global variable symbol: supports LIST, TABLE, RAW, FORMATTED."
 
-    def supports_render_type(self, render_type: RenderType) -> bool:
+    def _supports_render_type(self, render_type: RenderType) -> bool:
         """Globals support LIST, TABLE, RAW, FORMATTED."""
         return render_type in {
             RenderType.LIST,
@@ -223,7 +227,7 @@ class HeaderMatchRecord(MatchRecord):
     HELP = "Markdown header symbol: supports LIST, TABLE, RAW, FORMATTED."
     header_level: int = 1  # 1-6 for h1-h6
 
-    def supports_render_type(self, render_type: RenderType) -> bool:
+    def _supports_render_type(self, render_type: RenderType) -> bool:
         """Headers support LIST, TABLE, RAW, FORMATTED."""
         return render_type in {
             RenderType.LIST,

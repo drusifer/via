@@ -11,7 +11,7 @@ ifdef MKF_ACTIVE
 .PHONY: tldr install_bob update_bob pull_bob clean_bob
 
 tldr: ## Show TL;DR summaries from all project files (quick orientation for agents)
-	@rg --no-heading "TL;DR:" --glob "*.md" -N | sed 's|^\./||' | sort
+	@$(VENV_PYTHON) agents/tools/tldr.py
 
 install_bob: ## Copy agents into a project and set up skill links (usage: make install_bob TARGET=/path/to/project)
 	@[ -n "$(TARGET)" ] || { echo "Usage: make install_bob TARGET=/path/to/project"; exit 1; }

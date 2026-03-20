@@ -1,13 +1,27 @@
-"""Unit tests for WatchService (Sprint 6 - Watch Mode)."""
+"""Unit tests for WatchService (Sprint 6 - Watch Mode, updated Sprint 7).
 
+TLDR:
+    Tests WatchService in isolation using a real temp filesystem and a real
+    DatabaseStore. Key test classes: TestWatchServiceInit (init stores absolute
+    root and default debounce), TestWatchedFileFilter (extension allow/deny
+    list), TestReindexFile (log messages and error resilience on parse
+    failure or missing file), TestRemoveFile (log messages and DB deletion),
+    TestDebounce (rapid events collapsed into one action), TestExclusionPatterns
+    (venv and custom patterns skip files), TestErrorResilience (DB errors do not
+    crash; stop() before start() is safe), TestStartupShutdown (start/stop
+    lifecycle messages and initial index run).
+    Role: protects the filesystem-watch layer; depends on WatchService,
+    IndexingService, and DatabaseStore.
+
+"""
+
+import logging
 import os
-import sys
 import tempfile
 import threading
 import time
-from io import StringIO
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -49,18 +63,12 @@ def indexing_service(db_store):
 
 
 @pytest.fixture
-def output():
-    return StringIO()
-
-
-@pytest.fixture
-def watch_service(indexing_service, db_store, temp_dir, output):
+def watch_service(indexing_service, db_store, temp_dir):
     return WatchService(
         indexing_service=indexing_service,
         db_store=db_store,
         root_dir=temp_dir,
         debounce_seconds=0.05,  # Short debounce for tests
-        output=output,
     )
 
 
@@ -114,60 +122,56 @@ class TestWatchedFileFilter:
 
 
 # ---------------------------------------------------------------------------
-# Story 2: Terminal feedback
+# Story 2: Terminal feedback (now via logging)
 # ---------------------------------------------------------------------------
 
 class TestReindexFile:
-    """Test _reindex_file produces correct output."""
+    """Test _reindex_file produces correct log messages."""
 
-    def test_reindex_modified_file_prints_message(self, watch_service, temp_dir, output):
+    def test_reindex_modified_file_logs_message(self, watch_service, temp_dir, caplog):
         path = os.path.join(temp_dir, "hello.py")
-        watch_service._reindex_file(path)
-        msg = output.getvalue()
-        assert "Re-indexed:" in msg
-        assert "hello.py" in msg
+        with caplog.at_level(logging.INFO, logger='via.services.watch'):
+            watch_service._reindex_file(path)
+        assert any("Re-indexed" in r.message for r in caplog.records)
+        assert any("hello.py" in r.message for r in caplog.records)
 
-    def test_reindex_new_file_prints_indexed(self, watch_service, temp_dir, output):
+    def test_reindex_new_file_logs_indexed(self, watch_service, temp_dir, caplog):
         new_file = os.path.join(temp_dir, "new_mod.py")
         Path(new_file).write_text("class NewClass: pass\n")
-        watch_service._reindex_file(new_file)
-        msg = output.getvalue()
-        assert "Re-indexed:" in msg
-        assert "new_mod.py" in msg
+        with caplog.at_level(logging.INFO, logger='via.services.watch'):
+            watch_service._reindex_file(new_file)
+        assert any("Re-indexed" in r.message for r in caplog.records)
+        assert any("new_mod.py" in r.message for r in caplog.records)
 
-    def test_reindex_shows_symbol_count(self, watch_service, temp_dir, output):
+    def test_reindex_shows_symbol_count(self, watch_service, temp_dir, caplog):
         path = os.path.join(temp_dir, "hello.py")
-        watch_service._reindex_file(path)
-        msg = output.getvalue()
-        # Should contain "(N symbols)"
-        assert "symbol" in msg
+        with caplog.at_level(logging.INFO, logger='via.services.watch'):
+            watch_service._reindex_file(path)
+        assert any("symbol" in r.message for r in caplog.records)
 
-    def test_reindex_parse_error_does_not_raise(self, watch_service, temp_dir, output):
+    def test_reindex_parse_error_does_not_raise(self, watch_service, temp_dir):
         bad_file = os.path.join(temp_dir, "broken.py")
         Path(bad_file).write_text("def (:\n    pass\n")  # Syntax error
         # Should not raise
         watch_service._reindex_file(bad_file)
 
-    def test_reindex_missing_file_does_not_raise(self, watch_service, temp_dir, output):
+    def test_reindex_missing_file_does_not_raise(self, watch_service, temp_dir):
         ghost = os.path.join(temp_dir, "ghost.py")
         # File doesn't exist — should remove instead, not crash
         watch_service._reindex_file(ghost)
 
 
 class TestRemoveFile:
-    """Test _remove_file produces correct output."""
+    """Test _remove_file produces correct log messages."""
 
-    def test_remove_file_prints_message(self, watch_service, temp_dir, output, db_store):
-        # First index a file so there's something to delete
+    def test_remove_file_logs_message(self, watch_service, temp_dir, caplog, db_store):
         path = os.path.join(temp_dir, "hello.py")
         watch_service._reindex_file(path)
-        output.truncate(0)
-        output.seek(0)
 
-        watch_service._remove_file(path)
-        msg = output.getvalue()
-        assert "Removed:" in msg
-        assert "hello.py" in msg
+        with caplog.at_level(logging.INFO, logger='via.services.watch'):
+            watch_service._remove_file(path)
+        assert any("Removed" in r.message for r in caplog.records)
+        assert any("hello.py" in r.message for r in caplog.records)
 
     def test_remove_file_deletes_from_db(self, watch_service, temp_dir, db_store):
         path = os.path.join(temp_dir, "hello.py")
@@ -187,7 +191,7 @@ class TestRemoveFile:
 class TestDebounce:
     """Test that rapid events are collapsed into one action."""
 
-    def test_debounce_collapses_rapid_events(self, watch_service, temp_dir, output):
+    def test_debounce_collapses_rapid_events(self, watch_service, temp_dir):
         path = os.path.join(temp_dir, "hello.py")
         reindex_calls = []
 
@@ -224,23 +228,19 @@ class TestExclusionPatterns:
     """Test that exclude patterns are respected."""
 
     def test_venv_files_not_watched(self, indexing_service, db_store, temp_dir):
-        output = StringIO()
         svc = WatchService(
             indexing_service, db_store, temp_dir,
             exclude_patterns=['.venv/'],
             debounce_seconds=0.05,
-            output=output,
         )
         path = os.path.join(temp_dir, ".venv", "lib", "site.py")
         assert svc._is_watched_file(path) is False
 
     def test_custom_exclude_pattern(self, indexing_service, db_store, temp_dir):
-        output = StringIO()
         svc = WatchService(
             indexing_service, db_store, temp_dir,
             exclude_patterns=['generated/'],
             debounce_seconds=0.05,
-            output=output,
         )
         path = os.path.join(temp_dir, "generated", "schema.py")
         assert svc._is_watched_file(path) is False
@@ -253,16 +253,14 @@ class TestExclusionPatterns:
 class TestErrorResilience:
     """WatchService must survive errors without crashing."""
 
-    def test_db_error_during_reindex_does_not_crash(self, watch_service, temp_dir, output):
+    def test_db_error_during_reindex_does_not_crash(self, watch_service, temp_dir):
         path = os.path.join(temp_dir, "hello.py")
-        # Break indexing_service temporarily
-        original = watch_service.indexing_service._index_file
-        watch_service.indexing_service._index_file = MagicMock(
+        # Break reindex_file (public method, used by _reindex_file)
+        watch_service.indexing_service.reindex_file = MagicMock(
             side_effect=RuntimeError("DB locked")
         )
         # Must not raise
         watch_service._reindex_file(path)
-        watch_service.indexing_service._index_file = original
 
     def test_stop_is_idempotent(self, watch_service):
         """Calling stop() before start() must not raise."""
@@ -271,28 +269,13 @@ class TestErrorResilience:
 
 
 # ---------------------------------------------------------------------------
-# Story 5: start() prints startup and stop messages
+# Story 5: start() logs startup and stop messages
 # ---------------------------------------------------------------------------
 
 class TestStartupShutdown:
-    """Test that start() prints expected messages (via mock Observer)."""
+    """Test that start() logs expected messages (via mock Observer)."""
 
-    def test_start_prints_watching_message(self, watch_service, output):
-        with patch('via.services.watch.Observer') as MockObserver:
-            mock_obs = MagicMock()
-            MockObserver.return_value = mock_obs
-
-            # Simulate immediate stop
-            stop_event = watch_service._stop_event
-            threading.Timer(0.05, stop_event.set).start()
-
-            watch_service.start()
-
-        out = output.getvalue()
-        assert "Watching" in out
-        assert "Ctrl-C" in out
-
-    def test_start_prints_stop_message(self, watch_service, output):
+    def test_start_logs_watching_message(self, watch_service, caplog):
         with patch('via.services.watch.Observer') as MockObserver:
             mock_obs = MagicMock()
             MockObserver.return_value = mock_obs
@@ -300,12 +283,25 @@ class TestStartupShutdown:
             stop_event = watch_service._stop_event
             threading.Timer(0.05, stop_event.set).start()
 
-            watch_service.start()
+            with caplog.at_level(logging.INFO, logger='via.services.watch'):
+                watch_service.start()
 
-        out = output.getvalue()
-        assert "stopped" in out.lower()
+        assert any("Watching" in r.message for r in caplog.records)
 
-    def test_start_runs_initial_index(self, watch_service, output):
+    def test_start_logs_stop_message(self, watch_service, caplog):
+        with patch('via.services.watch.Observer') as MockObserver:
+            mock_obs = MagicMock()
+            MockObserver.return_value = mock_obs
+
+            stop_event = watch_service._stop_event
+            threading.Timer(0.05, stop_event.set).start()
+
+            with caplog.at_level(logging.INFO, logger='via.services.watch'):
+                watch_service.start()
+
+        assert any("stopped" in r.message.lower() for r in caplog.records)
+
+    def test_start_runs_initial_index(self, watch_service):
         with patch('via.services.watch.Observer') as MockObserver:
             mock_obs = MagicMock()
             MockObserver.return_value = mock_obs

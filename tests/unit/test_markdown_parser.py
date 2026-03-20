@@ -1,7 +1,14 @@
-"""
-Tests for MarkdownParser.
+"""Tests for MarkdownParser.
 
-TDD: Tests written first, then implementation.
+TLDR:
+    Validates MarkdownParser's ability to extract ATX-style headings (H1–H6) from
+    Markdown content, including correct level, text, line number, and byte-offset
+    values. Covers multiple headers, qualified/nested name building, edge cases
+    (empty content, code blocks, inline code, links, unicode), and ParseResult
+    metadata (file_path, language, parse_error).
+    Role: protects the MarkdownParser symbol-extraction logic used to index .md
+    files in the via pipeline.
+
 """
 
 import pytest

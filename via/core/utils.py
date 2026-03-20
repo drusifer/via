@@ -1,9 +1,13 @@
-"""Common utility functions for VIA.
+"""
+Common utility functions for VIA.
 
 TLDR:
-    Consolidates utilities that were previously duplicated across multiple
-    modules. Includes safe_print for Unicode handling and get_match_op for
-    match syntax conversion.
+    Consolidates small helpers previously duplicated across modules.
+    safe_print wraps print() to gracefully replace unencodable Unicode
+    characters when the terminal uses a narrow encoding (ASCII, latin-1).
+    get_match_op converts a single-character match-syntax suffix ('g' for
+    GLOB, 'r' for REGEXP, 's' for SQL LIKE) into the corresponding MatchOp
+    enum value used by the query layer.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

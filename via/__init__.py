@@ -2,16 +2,19 @@
 VIA - Python codebase indexing and querying CLI tool.
 
 TLDR:
-    Main package exposing public API for VIA indexing system. Provides access
-    to database layer (DatabaseStore), parsers (PythonParser, ParserRegistry),
-    file discovery (FileDiscovery), and entity dataclasses for code elements.
+    Top-level package that re-exports the complete public API for the VIA
+    indexing system. Exported symbols include: DatabaseStore (SQLite persistence),
+    FileDiscovery and DiscoveredFile (filesystem crawling), ParserABC and
+    ParseResult (parser contracts), entity dataclasses (FunctionEntity,
+    ClassEntity, ImportEntity, GlobalEntity, LogStatementEntity,
+    MarkdownHeadingEntity), and ParserRegistry / get_global_registry / PythonParser
+    for language-specific parsing. Import from here rather than internal modules.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
 $Id$
 
 License: GPL-3.0
-
 """
 
 __version__ = "0.1.0"

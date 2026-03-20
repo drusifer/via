@@ -1,14 +1,17 @@
-"""
-Unit tests for relationship query pipeline execution.
+"""Unit tests for end-to-end relationship query pipeline execution (Sprint 5).
 
 TLDR:
-    Tests that relationship queries (inheritance, calls, imports) return correct
-    results through the PipelineParser + PipelineExecutor, regardless of file
-    indexing order. Regression tests for the resolve_pending_relationships bug
-    where import symbols were preferred over definition symbols.
+    Integration-style unit tests verifying that PipelineParser + PipelineExecutor
+    produce correct results for inheritance, calls, and imports queries regardless
+    of file indexing order. Key fixture: relationship_project (tmp_path project
+    indexed via IndexingService with multi-file inheritance and call chains).
+    Key test classes: TestRelationshipPipelineExecution (forward/inverted queries
+    for each relationship type), TestRelationshipResolutionOrder (regression for
+    resolve_pending_relationships bug where import symbols were preferred over
+    definition symbols when indexing order varied).
+    Role: end-to-end regression guard for the pipeline query path; depends on
+    IndexingService, PipelineParser, PipelineExecutor, PythonParser, DatabaseStore.
 
-Author: Neo (SWE)
-Sprint: 5
 """
 
 import subprocess

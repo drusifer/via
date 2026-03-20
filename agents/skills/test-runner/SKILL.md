@@ -4,6 +4,13 @@ description: Run tests using the project Makefile. Use for executing test suites
 triggers: ["*test", "*qa test"]
 ---
 
+One-line summary: Run the project test suite through the Makefile for consistent environment setup.
+
+TLDR:
+    Use `make test` to run all tests; use `pytest` directly (with `.venv` activated) for targeted runs by file, pattern, or coverage.
+    On failure: read the error, fix the issue, re-run the specific failing test first, then the full suite.
+    Used by Neo (`*swe test`) after implementation changes and by Trin (`*qa test`) for full verification.
+
 # Test Runner Skill
 
 ## Overview

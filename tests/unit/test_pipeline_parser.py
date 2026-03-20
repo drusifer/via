@@ -1,4 +1,13 @@
-"""Unit tests for pipeline parser (Task 1.1)."""
+"""Unit tests for pipeline parser (Task 1.1).
+
+TLDR:
+    Tests the PipelineParser class that converts raw argv into typed PipelineStage
+    objects. Covers --via splitting, shorthand and longform match flags, multiple type
+    flags (OR logic), integrated output flags (-oT/-oL/-oR/-oF), multi-stage pipelines,
+    stats stages, and error handling for invalid or conflicting flags.
+    Role: protects the CLI argument parsing layer that feeds all pipeline execution.
+
+"""
 import pytest
 from via.pipeline.parser import PipelineParseError, PipelineParser
 from via.pipeline.types import PipelineStage, StageType

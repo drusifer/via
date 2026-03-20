@@ -1,3 +1,12 @@
+Sprint 3 design spec for composable CLI pipeline with integrated rendering stages.
+
+TLDR:
+    Problem: Sprint 2 had separate match and render commands with no composable
+    pipeline. Solution: Sprint 3 introduces a unified entry point with shorthand
+    flags (-ml, -mt, -mr, -md) and a --via separator for multi-stage pipelines,
+    enabling match | filter | render in a single CLI invocation. Covers architecture,
+    CLI examples, implementation phases, and a files-to-modify checklist.
+
 # Design: Sprint 3 Internal Pipeline with Integrated Rendering
 
 **Based on**: Cypher's PRD + Morpheus's SPRINT_3_ARCHITECTURE.md + Drew's feedback

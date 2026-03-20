@@ -2,12 +2,16 @@
 Integration tests for CLI pipeline matching syntax.
 
 TLDR:
-    Tests the `via` CLI pipeline matching end-to-end. Verifies argument parsing,
-    match syntax flags (-mg/-mr/-ms), symbol type filters (-tc/-tf/-tm/-ti/-tg),
-    qualifier flags, output formatting, and error handling.
-
-    NOTE: The `via match` subcommand has been removed. All matching now uses
-    pipeline syntax (e.g., `via -mg 'pattern' -tc`).
+    Tests the `via` CLI pipeline matching end-to-end by invoking the CLI as a
+    subprocess. Verifies argument parsing, match syntax flags (-mg/-mr/-ms), symbol
+    type filters (-tc/-tf/-tm/-ti/-tg), qualifier flags, output formatting, and error
+    handling. The `via match` subcommand has been removed; all matching uses pipeline
+    syntax (e.g., `via -mg 'pattern' -tc`).
+    Key fixtures: indexed_project (builds and indexes a temp Python project);
+    run_via_pipeline (thin subprocess helper).
+    Key classes: TestCLICommandParsing, TestMatchSyntaxFlags, TestSymbolTypeFilters,
+    TestQualifierFlags, TestOutputFormat, TestErrorHandling, TestStreamingOutput.
+    Consumed by: pytest integration suite; depends on DatabaseStore.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

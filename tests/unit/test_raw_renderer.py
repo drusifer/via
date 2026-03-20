@@ -1,10 +1,18 @@
 """
-Unit tests for RawRenderer.
+Unit tests for the RawRenderer source-extraction renderer.
 
 TLDR:
-    Tests the RawRenderer which extracts raw source code from files
-    using byte offsets. Supports all symbol types, context lines,
-    and streams with O(1) memory.
+    Tests RawRenderer, which reads raw source from files using byte offsets
+    stored in MatchRecord objects. Key test classes: TestRawRendererBasic
+    (render type and factory), TestRawRendererClassSource /
+    TestRawRendererMethodSource / TestRawRendererFunctionSource /
+    TestRawRendererFileSource / TestRawRendererImportSource (per-type
+    source extraction), TestRawRendererContextLines (before/after context
+    via -A/-B/-C), TestRawRendererStreaming (O(1) iterator output),
+    TestRawRendererEmptyInput (empty iterator handling),
+    TestRawRendererFactory (factory registration).
+    Role: protects via.renderers.raw and via.renderers.utils.source_extraction,
+    consumed by the pipeline render stage.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

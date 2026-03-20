@@ -4,6 +4,13 @@ description: Post messages to the team chat log (agents/CHAT.md). Use to communi
 triggers: ["*msg", "*chat log"]
 ---
 
+One-line summary: Posts structured messages to the shared team chat log at `agents/CHAT.md`.
+
+TLDR:
+    Use `make chat MSG="..." PERSONA="..." CMD="..." TO="..."` to log persona activity and coordinate handoffs between agents.
+    All personas should post on entry, after significant work steps, on handoff, and before saving state on exit.
+    Newest messages are at the END of `agents/CHAT.md` — always read the bottom for current context.
+
 # Chat Skill
 
 ## Overview

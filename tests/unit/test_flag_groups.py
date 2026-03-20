@@ -1,9 +1,15 @@
-"""Tests for flag groups CLI syntax.
+"""Unit tests for flag group CLI syntax in the via pipeline parser.
 
-TDD tests for new prefix-based flag groups:
-- Match: -mg (glob), -mr (regex), -ms (sql)
-- Type: -tc (class), -tf (function), -tm (method), etc.
-- Format: -fa (ascii), -fm (markdown), -fh (html), -fp (png)
+TLDR:
+    Validates the prefix-based flag group system for the via CLI pipeline parser.
+    Covers all three flag namespaces: match syntax (-mg/-mr/-ms), symbol type
+    (-tc/-tf/-tm/-ti/-tg/-tF/-tN/-tH), and output format (-fa/-fm/-fh/-fp).
+    Key classes: TestMatchFlags, TestTypeFlags, TestFormatFlags, TestOutputFlags,
+    TestCombinedFlags (multi-flag pipelines), TestStageDetection (stage boundary logic),
+    and TestOptions (-n limit, -I case-insensitive, -Q qualified name).
+    Role: protects PipelineParser flag-group feature and stage-parsing logic against
+    regressions; depends on PipelineParser and PipelineParseError.
+
 """
 import pytest
 from via.pipeline.parser import PipelineParseError, PipelineParser

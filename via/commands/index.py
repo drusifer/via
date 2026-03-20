@@ -1,5 +1,17 @@
 """
-IndexCommand: CLI argument and help provider for 'index' subcommand.
+CLI argument and help provider for the 'index' subcommand.
+
+TLDR:
+    Defines IndexCommand, which implements ArgumentProvider and HelpProvider
+    for the 'via index' subcommand. Registers the directory positional
+    argument plus --watch, --force, --exclude, and --db flags. No indexing
+    logic lives here; this class is purely the argparse glue consumed by the
+    CLI dispatcher.
+
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+
+License: GPL-3.0
 """
 import argparse
 

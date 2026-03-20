@@ -1,10 +1,13 @@
 """
-Diagram renderer for class diagrams.
+Diagram renderer generating Mermaid classDiagram output from class records.
 
 TLDR:
-    Generates Mermaid classDiagram syntax from ClassMatchRecord objects.
-    This is the ONLY renderer that MUST materialize all records because
-    building inheritance relationships requires seeing all classes first.
+    DiagramRenderer filters for ClassMatchRecord objects and emits Mermaid
+    classDiagram syntax showing class members and inheritance arrows. Unlike
+    every other renderer, it must materialize the full record list before
+    emitting output so that inter-class inheritance edges can be resolved.
+    Accepts a pluggable formatter (plain text, Markdown code-fence, or HTML
+    with mermaid.js). Non-class records are ignored.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

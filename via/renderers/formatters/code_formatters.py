@@ -1,10 +1,13 @@
 """
-Code formatters for syntax highlighting.
+Pygments-based code formatters for terminal, HTML, and Markdown output.
 
 TLDR:
-    Provides code formatters using Pygments for syntax highlighting.
-    Supports ASCII (terminal), HTML, and Markdown output formats.
-    Includes terminal theme auto-detection.
+    Defines the CodeFormatter ABC and three concrete implementations:
+    AsciiCodeFormatter (ANSI terminal colors via Terminal256Formatter),
+    HtmlCodeFormatter (HTML with CSS classes via HtmlFormatter), and
+    MarkdownCodeFormatter (fenced code block). AsciiCodeFormatter includes
+    detect_terminal_theme() to auto-select a light or dark Pygments style
+    based on COLORFGBG / TERM_BACKGROUND environment variables.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

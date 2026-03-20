@@ -1,6 +1,6 @@
 # Oracle Context
 
-**Last Updated**: 2026-03-19
+**Last Updated**: 2026-03-20
 
 ## Recent Work
 - Sprint 6 Watch Mode shipped 2026-03-19
@@ -39,6 +39,20 @@ Risk: partial reindex if killed mid-operation.
 TD item: expose `IndexingService.reindex_file(path)` with begin/commit_transaction.
 
 ## Sprint Status Summary
-- Sprints 1-6: COMPLETE
-- Sprint 7 (MCP Mode): User stories written, under Drew review
-- Sprint 8 (Line Index): User stories written, not yet started
+- Sprints 1-7: COMPLETE (Sprint 7 shipped 2026-03-20, 794 tests)
+- Sprint 8: Next up — TD-S7-1 (async queue), TD-S7-2 (lighter MCP), TD-3/4 carry-forward
+- Sprint 9 (-Vhas): User stories written 2026-03-20
+
+## Session 2026-03-20 Work (Sprint 6)
+- 48 via/ source files updated with standardized module docstrings (Code Module form #5)
+- TLDR template standardized: one marker `TLDR:` across all file types, 4-space indent, blank-line terminated
+- `make tldr` updated: runs `agents/tools/tldr.py` (uses `via` for file discovery)
+- README.md rewritten with correct syntax, make test rules, watch mode, relationships
+- `--help` fixed: output flags standalone (not after --via), bad example removed
+- `agents/templates/_template_tldr.md` — 5 forms, all consistent with rg pattern
+
+## Session 2026-03-20 Work (Sprint 7 doc groom)
+- README.md: Added -oJ flag, MCP Mode section, updated project structure and arch diagram
+- TEST_STATUS.md: Full rewrite — was Jan 2026 / 465 tests, now current (794 tests, Sprint 7)
+- docs/USER_GUIDE.md: Added -oJ, Watch Mode section, MCP Mode section (install/serve/schema)
+- via/mcp/__init__.py: Updated docstring to Code Module TLDR form #5

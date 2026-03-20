@@ -1,0 +1,125 @@
+"""
+VIA MCP server — FastMCP-based stdio server for codebase queries.
+
+TLDR:
+    run_mcp_server(root_dir, db_path) starts a FastMCP server over stdio.
+    Registers a single tool: via_query(args: list[str]) -> list[dict].
+    WatchService runs in a background daemon thread (handle_signals=False)
+    so the FastMCP event loop owns stdin/stdout exclusively.
+    MCP-mode logging goes to ~/.via/mcp.log to keep stdio clean.
+
+Author: Drew Gutstein
+------------------------------------------------------------------------------
+License: GPL-3.0
+"""
+
+import logging
+import threading
+from pathlib import Path
+
+from mcp.server.fastmcp import FastMCP
+
+from via.core.constants import EXIT_SUCCESS
+from via.db.store import DatabaseStore
+from via.parsers.markdown_parser import MarkdownParser
+from via.parsers.python_parser import PythonParser
+from via.parsers.registry import ParserRegistry
+from via.pipeline.executor import PipelineExecutor
+from via.pipeline.parser import PipelineParser
+from via.renderers.json_renderer import JsonRenderer
+from via.services.indexing import IndexingService
+from via.services.watch import WatchService
+
+
+def _build_registry() -> ParserRegistry:
+    registry = ParserRegistry()
+    registry.register(PythonParser())
+    registry.register(MarkdownParser())
+    return registry
+
+
+def _configure_mcp_logging() -> None:
+    """Route all logging to ~/.via/mcp.log so stdio stays clean."""
+    log_dir = Path.home() / ".via"
+    log_dir.mkdir(exist_ok=True)
+    log_path = log_dir / "mcp.log"
+
+    file_handler = logging.FileHandler(str(log_path))
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s [%(levelname)s] %(name)s - %(message)s")
+    )
+
+    root = logging.getLogger()
+    # Remove existing handlers that could write to stdout/stderr
+    root.handlers.clear()
+    root.addHandler(file_handler)
+    root.setLevel(logging.DEBUG)
+
+
+def run_mcp_server(root_dir: str, db_path: str) -> int:
+    """Start the FastMCP stdio server with WatchService in background thread.
+
+    Args:
+        root_dir: Root directory being served
+        db_path: Path to the SQLite index database
+
+    Returns:
+        Exit code (EXIT_SUCCESS or EXIT_ERROR)
+    """
+    _configure_mcp_logging()
+    logger = logging.getLogger(__name__)
+    logger.info("Starting MCP server for %s", root_dir)
+
+    registry = _build_registry()
+
+    # MCP read-only connection
+    mcp_store = DatabaseStore(db_path, root_dir)
+    mcp_store.connect()
+
+    # WatchService write connection
+    watch_store = DatabaseStore(db_path, root_dir)
+    watch_store.connect()
+
+    indexing_svc = IndexingService(watch_store, registry)
+    watch_svc = WatchService(
+        indexing_service=indexing_svc,
+        db_store=watch_store,
+        root_dir=root_dir,
+        handle_signals=False,
+    )
+
+    watch_thread = threading.Thread(target=watch_svc.start, daemon=True)
+    watch_thread.start()
+
+    mcp = FastMCP("via")
+
+    # Output flags that cause the executor to render (returns None) — strip them
+    _OUTPUT_FLAGS = {'-oL', '-oT', '-oD', '-oU', '-oR', '-oF', '-oJ',
+                     '--output-list', '--output-table', '--output-diagram',
+                     '--output-usage', '--output-raw', '--output-formatted', '--output-json'}
+
+    @mcp.tool()
+    def via_query(args: list[str]) -> list[dict]:
+        """Query the VIA codebase index. Pass CLI args (e.g. ['-mg','*Test*','-tc'])."""
+        try:
+            # Strip output-format flags — MCP always returns JSON dicts
+            clean_args = [a for a in args if a not in _OUTPUT_FLAGS]
+            stages = PipelineParser().parse(clean_args)
+            executor = PipelineExecutor(mcp_store)
+            results = list(executor.execute(stages) or [])
+            return [JsonRenderer._to_dict(r) for r in results]
+        except Exception as exc:
+            logger.error("via_query error: %s", exc)
+            return []
+
+    try:
+        mcp.run(transport="stdio")
+    finally:
+        watch_svc.stop()
+        watch_thread.join(timeout=5)
+        mcp_store.close()
+        watch_store.close()
+        logger.info("MCP server stopped.")
+
+    return EXIT_SUCCESS

@@ -1,7 +1,17 @@
 """
-Tests for DiagramRenderer.
+Unit tests for DiagramRenderer and Mermaid diagram formatters.
 
-TDD: Tests written first, then implementation.
+TLDR:
+    Verifies that DiagramRenderer produces correct Mermaid classDiagram output for
+    single classes, multiple classes, and inheritance relationships, while filtering
+    out non-class records. Tests all three output formatters (ASCII, Markdown code-fence,
+    and HTML with mermaid.js) for correct wrapping of generated diagrams.
+    Key classes: TestDiagramRendererBasics (instantiation and formatter acceptance),
+    TestDiagramRendererOutput (single/multiple class and inheritance rendering),
+    TestMermaidFormatters (ASCII/Markdown/HTML formatter output), and
+    TestDiagramRendererWithFormatters (end-to-end formatter integration).
+    Role: protects the diagram rendering pipeline that powers `via --oD` output.
+
 """
 
 import pytest

@@ -1,11 +1,14 @@
 """
-Database schema definitions for VIA index.
+SQL DDL constants and schema version for the VIA index database.
 
 TLDR:
-    Denormalized symbols table for fast matching (zero JOINs).
-    Files table for file metadata and incremental indexing.
-    Symbol references for relationship queries.
-    Pending relationships for two-pass cross-file resolution.
+    Defines CREATE TABLE and CREATE INDEX statements for all five VIA tables:
+    metadata, schema_migrations, files, symbols, symbol_references, and
+    pending_relationships. The symbols table is intentionally denormalized
+    (file_path stored inline) to enable zero-JOIN lookups. Pending
+    relationships support the two-pass cross-file resolution strategy used
+    during indexing. ALL_TABLES and CREATE_INDEXES are consumed by the
+    store's initializer to bootstrap or migrate the database.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

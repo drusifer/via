@@ -1,11 +1,14 @@
 """
-Indexing service orchestrating file discovery, parsing, and storage.
+Indexing service orchestrating file discovery, parsing, and database storage.
 
 TLDR:
-    Provides IndexingService that orchestrates the complete indexing pipeline:
-    FileDiscovery → ParserRegistry → Parser → DatabaseStore. Supports incremental
-    indexing via mtime checks, progress callbacks, resilient per-file error
-    handling, and force re-index flag. Returns comprehensive IndexingStats.
+    IndexingService drives the full pipeline: FileDiscovery → ParserRegistry
+    → Parser → DatabaseStore, wrapped in a single transaction per run. It
+    stores classes, methods, functions, imports, globals, filenames, filepaths,
+    Markdown headers, call relationships, and inheritance relationships. Supports
+    incremental re-indexing via mtime comparison, a force flag to re-index all
+    files, progress callbacks, and per-file error resilience. Returns an
+    IndexingStats dataclass with counts and timing.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -224,6 +227,21 @@ class IndexingService:
 
         # Check if file was modified since last index
         return file_info.mtime > existing.get('mtime', 0)
+
+    def reindex_file(self, file_info: DiscoveredFile) -> dict:
+        """Re-index a single file — deletes existing data then indexes fresh.
+
+        Public method used by WatchService. Wraps delete_file_completely() +
+        _index_file() in a single call so callers don't need to orchestrate.
+
+        Args:
+            file_info: File to re-index
+
+        Returns:
+            Dict with entity counts from _index_file
+        """
+        self.db_store.delete_file_completely(file_info.path)
+        return self._index_file(file_info)
 
     def _index_file(self, file_info: DiscoveredFile) -> dict:
         """

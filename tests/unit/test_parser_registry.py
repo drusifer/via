@@ -1,4 +1,15 @@
-"""Unit tests for parser registry."""
+"""Unit tests for parser registry.
+
+TLDR:
+    Validates ParserRegistry's ability to register parsers by instance or class,
+    look them up by file extension (case-insensitively), return all supported
+    extensions in aggregate, handle missing-extension lookups gracefully, and apply
+    last-registered-wins semantics when two parsers claim the same extension.
+    Also confirms that get_all_parsers returns a defensive copy of the internal list.
+    Role: protects the parser dispatch layer that routes files to the correct parser
+    during indexing.
+
+"""
 
 import pytest
 from via.parsers.base import ParserABC, ParseResult

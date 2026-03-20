@@ -1,4 +1,15 @@
-"""Unit tests for file discovery."""
+"""Unit tests for file discovery.
+
+TLDR:
+    Verifies FileDiscovery walks a project tree and returns DiscoveredFile records
+    with correct is_parseable, is_oversized, and absolute-path fields. Covers
+    .gitignore respect, mandatory __pycache__ exclusion, multi-extension support,
+    oversized-file detection, file counting, and the documented limitation that
+    only the root .gitignore is processed (nested ones are ignored).
+    Key class: TestFileDiscovery — exercises discover() via temporary directory fixtures.
+    Role: protects the file-discovery component that feeds every indexing pipeline.
+
+"""
 
 import os
 import tempfile

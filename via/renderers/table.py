@@ -1,10 +1,12 @@
 """
-Table renderer for formatted table output.
+Table renderer producing columnar output for any MatchRecord type.
 
 TLDR:
-    Outputs records in table format using configurable formatters (ASCII,
-    Markdown, HTML). Streams records with O(1) memory using pre-computed
-    column widths from metadata. Shows "... (N more)" indicator when limited.
+    TableRenderer accepts a pluggable TableFormatter (ASCII, Markdown, or
+    HTML) and emits columns: Type, Name, File, Line, Qualified Name.
+    Column widths are sourced from MatchRecord.column_widths metadata so
+    the header can be emitted on the first record, keeping memory O(1).
+    Appends a footer with "... (N more)" when results are truncated.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

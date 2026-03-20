@@ -1,10 +1,13 @@
 """
-Table formatters for different output formats.
+Table output formatters for ASCII, Markdown, and HTML targets.
 
 TLDR:
-    Defines TableFormatter base class and implementations for ASCII,
-    Markdown, and HTML table formats. Used by TableRenderer to generate
-    formatted table output.
+    Defines the TableFormatter ABC with format_header, format_row, and
+    format_footer methods, plus three concrete implementations: AsciiTableFormatter
+    (pipe-separated with dash separator line), MarkdownTableFormatter (GFM-style
+    pipe table), and HtmlTableFormatter (<table> with thead/tbody/tfoot). The
+    COLUMNS constant defines the five rendered fields and their display order.
+    Used exclusively by TableRenderer.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 # Mouse Context - Sprint Status
 
-**Last Updated**: 2026-03-19
+**Last Updated**: 2026-03-20
 
 ## Sprint Status
 
@@ -11,19 +11,19 @@
 | 3 | Pipeline & Renderers | ✅ SHIPPED | — |
 | 4 | Tech Debt | ✅ SHIPPED | — |
 | 5 | Relationships | ✅ SHIPPED | 661 |
-| 6 | Watch Mode | ✅ SHIPPED | 709 |
-| 7 | MCP Mode | ⬜ NOT STARTED | — |
+| 6 | Watch Mode | ✅ SHIPPED | 713 |
+| 7 | MCP Mode | ✅ SHIPPED | 794 |
 | 8 | Line Index | ⬜ NOT STARTED | — |
 
 ## Current Velocity
-- 709 tests passing, 0 failures, 83% coverage (as of 2026-03-19)
+- 794 tests passing, 0 failures (as of 2026-03-20)
+- Sprint 7 delivered same day, +81 new tests
 - Sprint 6 delivered on time with 2 bugs caught + fixed in UAT
 
-## Sprint 7 (Next)
-- 10 story points, 3 stories
-- Spec: `agents/cypher.docs/SPRINT_7_USER_STORIES.md`
-- User story review in progress (Drew reviewing 2026-03-19)
-- Not yet handed off to Morpheus or Neo
+## Sprint 7 (SHIPPED — 2026-03-20)
+- 10 story points, 3 stories, 7 phases, 46 tasks — ALL COMPLETE
+- via mcp serve, via install mcp, via mcp schema — all working
+- Tech debt created: TD-S7-1 (async queue), TD-S7-2 (lighter MCP transport)
 
 ## Key Notes
 - Use `make` skill (not raw Bash) for all test runs — team rule added 2026-03-19

@@ -1,9 +1,17 @@
-"""
-Unit tests for DatabaseStore streaming and metadata features.
+"""Unit tests for DatabaseStore streaming and metadata features.
 
 TLDR:
-    Tests metadata computation (column_widths, total_matches) before streaming,
-    limit parameter behavior, and that records have metadata attached.
+    Verifies that DatabaseStore.match() attaches correct metadata (column_widths,
+    total_matches) to every record before yielding, that metadata reflects all
+    matches even when a limit is applied, and that results are produced as a lazy
+    iterator rather than a materialised list. Key test classes:
+    TestMetadataComputation (column widths and total_matches accuracy with and
+    without pattern filters), TestLimitParameter (default limit of 10, limit=0
+    means unlimited, total_matches unaffected by limit),
+    TestStreamingBehavior (match() returns an exhaustable iterator),
+    TestCaseSensitivity (metadata correctness under case-insensitive matching).
+    Role: protects the streaming/metadata contract of DatabaseStore relied upon
+    by all renderers; depends on DatabaseStore and schema fixtures.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

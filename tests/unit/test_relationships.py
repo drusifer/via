@@ -1,9 +1,15 @@
-"""
-Unit tests for symbol relationships (Sprint 5).
+"""Unit tests for symbol relationship indexing and querying (Sprint 5).
 
 TLDR:
-    Tests for relationship indexing and querying. Verifies that inheritance,
-    calls, imports, and references relationships can be stored and queried.
+    Tests that DatabaseStore correctly stores and queries symbol relationships.
+    Key test classes: TestRelationshipTypeEnum (validates RelationshipType enum
+    values: inherits-from, calls, imports, references), TestDatabaseStoreRelationships
+    (store/query inherits-from, calls, imports, references via add_relationship and
+    get_relationships; covers forward, inverted, type-filtered, and multi-symbol
+    queries), TestPendingRelationships (deferred relationship resolution when
+    referenced symbols are not yet indexed).
+    Role: foundational test coverage for DatabaseStore relationship storage; depends
+    on DatabaseStore and RelationshipType.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

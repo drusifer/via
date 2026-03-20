@@ -1,9 +1,12 @@
 """
-Shared utilities for source code extraction.
+Shared utility for extracting source code from files by byte offset.
 
 TLDR:
-    Provides functions for extracting source code from files using byte offsets,
-    with support for context lines. Used by RawRenderer and FormattedRenderer.
+    Provides extract_source(), the single function used by both RawRenderer
+    and FormattedRenderer to read source code from disk. Given a file path,
+    byte_offset, and byte_length it slices the raw bytes and decodes them.
+    Helper functions find_context_start and find_context_end extend the slice
+    backwards/forwards by N newline-delimited lines for -A/-B/-C context support.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

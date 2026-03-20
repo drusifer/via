@@ -5,6 +5,13 @@ triggers: ["*chat"]
 requires: ["chat", "make", "personas"]
 ---
 
+One-line summary: Orchestrates multi-persona AI coordination through a shared chat log using the `*chat` trigger.
+
+TLDR:
+    Routes `*chat` messages to the right specialist persona (Neo, Trin, Morpheus, etc.) — either by explicit `@mention` or auto-selection based on task type.
+    Each persona loads its state files on entry, executes one task, saves state on exit, and posts results to `agents/CHAT.md`.
+    Key commands: `make chat MSG="..." PERSONA="..." CMD="..."` — anti-loop rule: no third attempt without Oracle + user sign-off.
+
 # Bob Protocol - Multi-Persona Coordination
 
 ## Overview
@@ -13,7 +20,7 @@ The Bob Protocol enables ONE AI to dynamically switch between multiple specializ
 
 ## Available Personas
 
-Each persona is defined in `agents/<name>.docs/<Name>_<ROLE>_AGENT.md`:
+Each persona is defined in `agents/<name>.docs/SKILL.md`:
 
 | Persona | Role | Prefix | Use When |
 |---------|------|--------|----------|
@@ -70,7 +77,7 @@ If no explicit `@mention`, analyze the request to determine who should respond:
 - **Bob** (`*prompt`) - Agent creation, process improvement
 
 ### Step 4: Load Persona and Execute
-1. Load the target `*_AGENT.md` file
+1. Load the target `agents/<name>.docs/SKILL.md` file
 2. Load persona's state files (context.md, current_task.md, next_steps.md)
 3. Adopt that persona completely
 4. **Execute the command** referenced in the message (if direct invocation)
@@ -173,7 +180,7 @@ make chat MSG="help me fix the bug in parser.py" PERSONA="User" CMD="request"
 # (AI determines this is a coding task → Neo)
 
 # Step 4: Load Neo's agent and state
-# (AI reads Neo_SWE_AGENT.md and neo.docs/context.md, etc.)
+# (AI reads neo.docs/SKILL.md and neo.docs/context.md, etc.)
 
 # Step 5: Perform the fix as Neo
 # (AI investigates and fixes the bug)
@@ -201,7 +208,7 @@ make chat MSG="@neo *fix bug in parser.py line 42" PERSONA="User" CMD="request"
 # "bug in parser.py line 42" → Arguments
 
 # Step 4: Load Neo's agent and execute command
-# (AI reads Neo_SWE_AGENT.md, loads state, becomes Neo)
+# (AI reads neo.docs/SKILL.md, loads state, becomes Neo)
 # (AI executes the *swe fix command with the given arguments)
 
 # Step 5: Perform the fix as Neo

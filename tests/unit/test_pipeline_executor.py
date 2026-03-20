@@ -1,4 +1,13 @@
-"""Unit tests for pipeline executor (Task 1.2)."""
+"""Unit tests for pipeline executor (Task 1.2).
+
+TLDR:
+    Tests the PipelineExecutor class that runs ordered pipeline stages against the
+    symbol database. Covers single-stage match queries, chained match stages used as
+    filters, render stage output, type-based filtering, and zero-copy iterator passing
+    between stages.
+    Role: protects the core pipeline execution engine that drives all via query commands.
+
+"""
 from argparse import Namespace
 from unittest.mock import MagicMock, Mock
 

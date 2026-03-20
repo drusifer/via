@@ -1,10 +1,17 @@
 """
-Sprint 5 UAT Tests - Symbol Relationship Queries.
+Sprint 5 UAT suite validating symbol relationship queries (inheritance, calls, imports, references).
 
-These tests validate the user acceptance criteria for Sprint 5 relationship
-queries as defined in trin.docs/SPRINT_5_UAT_PLAN.md.
-
-Run with: pytest tests/uat/test_sprint5_uat.py -v
+TLDR:
+    Full-stack UAT suite exercising the via CLI against a synthetic multi-file Python project
+    with inheritance, calls, imports, and global references. Covers five test classes:
+    TestUATInheritance (6 tests: single/multiple/cross-file/glob inheritance),
+    TestUATImports (4 tests: forward and inverted import queries),
+    TestUATCalls (5 tests: callers, callees, cross-file calls),
+    TestUATReferences (3 tests: constant reference lookups),
+    TestUATEdgeCases (4 tests: invalid type, missing subject, ambiguous symbols, empty results),
+    plus TestUATDatabaseVerification (3 sanity checks directly against DatabaseStore).
+    Key fixture: uat_project — builds and indexes fileA/B/C/D + my_service in a temp dir.
+    Depends on: via.db.store, via.services.indexing, via.parsers.python_parser, subprocess CLI.
 
 Author: Neo (executing Trin's UAT plan)
 Sprint: 5

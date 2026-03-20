@@ -1,10 +1,13 @@
 """
-Markdown parser for extracting headers.
+Markdown language parser for extracting ATX-style headings.
 
 TLDR:
-    Parses markdown files to extract headers (H1-H6) as searchable symbols.
-    Headers are indexed with their text, level, and qualified name (ancestor path).
-    Supports ATX-style headers (# Header) with optional trailing hashes.
+    Implements MarkdownParser (a ParserABC subclass) that parses .md/.markdown
+    files using regex to extract H1-H6 ATX-style headings (# through ######)
+    as MarkdownHeadingEntity objects with level, text, line number, and byte
+    offsets. Headings inside fenced code blocks (``` ... ```) are detected and
+    excluded to avoid false positives. The parser supports optional trailing
+    hashes in headings and handles unclosed code fences gracefully.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
