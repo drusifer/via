@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "via": {
+      "command": "/home/drusifer/Projects/via/.venv/bin/python3",
+      "args": [
+        "-m",
+        "via",
+        "mcp",
+        "serve",
+        "/home/drusifer/Projects/via"
+      ]
+    }
+  }
+}
