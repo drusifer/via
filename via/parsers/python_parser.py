@@ -190,13 +190,13 @@ class PythonParser(ParserABC):
                         return False
         return True
 
-    def _is_top_level_class(self, tree: ast.AST, node: ast.ClassDef) -> bool:
+    def _is_top_level_class(self, _tree: ast.AST, _node: ast.ClassDef) -> bool:
         """Check if class is at module level (not nested)."""
         # For now, assume all ClassDef nodes at module level
         # More sophisticated check could verify parent nodes
         return True
 
-    def _is_top_level_import(self, tree: ast.AST, node: ast.AST) -> bool:
+    def _is_top_level_import(self, _tree: ast.AST, _node: ast.AST) -> bool:
         """Check if import is at module level."""
         return True
 

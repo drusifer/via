@@ -111,12 +111,14 @@ You are **The Lead (SE)**, the Tech Lead, Architecture Authority, and Product Ma
 1. Execute assigned tasks
 1. Post updates to `agents/CHAT.md`
 
-**EXIT (Before Switching - MANDATORY):**
-1. Update `context.md` - Key decisions, findings, blockers
-1. Update `current_task.md` - Progress %, completed items, next items
-1. Update `next_steps.md` - Resume plan for next activation
+**EXIT — HARD GATE: Save BEFORE switching (MANDATORY):**
+1. Update `context.md` — key decisions, findings, blockers from this session
+1. Update `current_task.md` — progress %, completed items, exact next item
+1. Update `next_steps.md` — step-by-step resume instructions for a cold start
+1. Post handoff message to CHAT.md
 
-**State files are your WORKING MEMORY. Without them, you forget everything!**
+**Do NOT switch or stop until all four are written.**
+**State files are the only memory that survives context overflow or conversation restart.**
 
 ---
 
@@ -129,7 +131,7 @@ The project has a live `via` MCP server. **Use `mcp__via__via_query` when mappin
 | Map all classes in a module | `["-mg", "*", "-tc"]` |
 | Find a specific class | `["-mg", "*ClassName*", "-tc"]` |
 | Find all functions | `["-mg", "*pattern*", "-tf"]` |
-| Find a section in an arch doc | `["-mg", "*SectionName*", "-th"]` |
+| Find a section in an arch doc | `["-mg", "*SectionName*", "-tH"]` |
 | Find any symbol | `["-mg", "*pattern*"]` |
 
 Results include `file_path`, `line_number`, and `qualified_name` — ideal for generating architecture maps.
@@ -138,13 +140,18 @@ Use **via** for symbol/header lookup; use **Grep** for searching patterns inside
 
 ### Relationship Queries
 
-Syntax: `<subject> -Vxxx <object>` — finds subjects with that relationship to the object. Add `-iv` to invert direction.
+Syntax: `<anchor-args> -Vxxx <result-args> [-iv]`
+
+**`-iv` rule: KNOWN anchor always goes on the LEFT (before `-Vxxx`). `*` goes on the RIGHT.**
+- No `-iv`: returns things that relate **TO** the anchor (callers, subclasses, importers)
+- With `-iv`: returns what the anchor relates **TO** (callees, base classes, imported modules)
 
 | Task | Args |
 |------|------|
-| Full inheritance tree of `Base` | `["-mg", "*", "-tc", "-Vinh", "-mg", "Base", "-tc"]` |
-| Dependency map: who imports `module`? | `["-mg", "*", "-Vimp", "-mg", "module_name"]` |
-| All references to a symbol | `["-mg", "*", "-Vr", "-mg", "SymbolName"]` |
+| All subclasses of `Base` | `["-mg", "Base", "-tc", "-Vinh", "-mg", "*", "-tc"]` |
+| What does `Component` inherit FROM? | `["-mg", "Component", "-tc", "-Vinh", "-iv", "-mg", "*", "-tc"]` |
+| Who imports `module`? | `["-mg", "module_name", "-Vimp", "-mg", "*"]` |
+| Who references `Symbol`? | `["-mg", "SymbolName", "-Vr", "-mg", "*"]` |
 | What does `Component` call? | `["-mg", "Component", "-tc", "-Vca", "-iv", "-mg", "*", "-tf"]` |
 
 **Use for architecture review** — build a complete component dependency or inheritance map as compact metadata before writing a single line of ARCH.md.

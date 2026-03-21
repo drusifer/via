@@ -63,8 +63,11 @@ max-complexity = 10
 # PYLINT - Duplicate code detection and design rules
 # =============================================================================
 [tool.pylint.main]
-source-roots = ["via"]
+source-roots = ["."]
 ignore-paths = ["tests", "agents"]
+
+[tool.pylint.typecheck]
+ignored-modules = ["mcp", "watchdog", "pygments"]
 
 [tool.pylint."messages control"]
 enable = ["duplicate-code"]

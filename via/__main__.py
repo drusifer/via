@@ -164,7 +164,6 @@ def _create_parser() -> argparse.ArgumentParser:
     IndexCommand.add_arguments(index_parser)
 
     # --- Stats subcommand ---
-    from via.commands.stats import StatsCommand
     stats_parser = subparsers.add_parser(
         "stats",
         aliases=["s"],
@@ -350,7 +349,6 @@ def _run_index_command(args: argparse.Namespace) -> int:
                 print(f"\nWarning: {stats.failed_files} files failed to index", file=sys.stderr)
 
             # After indexing, run stats command for normalized output
-            from via.commands.stats import StatsCommand
             print("\nVIA STATS (normalized):")
             stats_cmd = StatsCommand(db_store)
             print(stats_cmd.execute(verbose=0, as_json=False))

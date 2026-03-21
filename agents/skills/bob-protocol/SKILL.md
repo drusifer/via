@@ -92,15 +92,29 @@ Log your response as the persona:
 make chat MSG="<response>" PERSONA="<Name>" CMD="<command>"
 ```
 
-### Step 7: Save State & Loop
-1. Update persona's state files (MANDATORY)
-2. If more work needed, identify next persona and repeat from Step 3
+### Step 7: Save State — BEFORE ANY SWITCH (MANDATORY GATE)
+
+**This step is a hard gate. You MUST NOT switch personas until it is complete.**
+State files are the only memory that survives context overflow and conversation restarts.
+
+1. **Write** `agents/[persona].docs/context.md` — what was learned, key decisions
+2. **Write** `agents/[persona].docs/current_task.md` — progress %, what was done, what's next
+3. **Write** `agents/[persona].docs/next_steps.md` — exact resume instructions
+4. **Post** a final chat message confirming handoff (persona → next persona or User)
+5. Only AFTER all four steps above: switch to next persona or stop
+
+If more work needed, identify next persona and repeat from Step 3.
 
 ---
 
 ## State Management (CRITICAL)
 
-**Each persona MUST maintain state files** in their `.docs/` folder:
+**Each persona MUST maintain state files** in their `.docs/` folder.
+
+> **Why this matters:** Claude's context window fills up and conversations restart.
+> State files are the ONLY persistent memory across those boundaries. If you switch
+> without saving, the next activation starts blind — no task context, no decisions,
+> no progress. Save first, always.
 
 ### ENTRY (When Activating)
 1. Read `agents/CHAT.md` (last 10-20 messages)
@@ -110,14 +124,18 @@ make chat MSG="<response>" PERSONA="<Name>" CMD="<command>"
 
 ### WORK
 5. Execute assigned tasks
-6. Post updates to `agents/CHAT.md`
+6. Post updates to `agents/CHAT.md` after each significant step
 
-### EXIT (Before Switching - MANDATORY)
-7. Update `context.md` - Key decisions, findings
-8. Update `current_task.md` - Progress %, next items
-9. Update `next_steps.md` - Resume plan
+### EXIT — HARD GATE: Save BEFORE switching
+7. Update `context.md` — key findings, decisions made this session
+8. Update `current_task.md` — progress %, completed items, exact next item
+9. Update `next_steps.md` — step-by-step resume instructions for a cold start
+10. Post handoff message to CHAT.md
+11. **Only now** switch personas or stop
 
-**State files are your WORKING MEMORY. Without them, you forget everything!**
+**Do not skip or defer steps 7-10. A context overflow or restart mid-task means
+the next session reads these files cold. Write them as if you will never be
+asked again and someone else must continue.**
 
 ---
 

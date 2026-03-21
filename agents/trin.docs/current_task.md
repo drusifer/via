@@ -1,4 +1,19 @@
-# Trin Current Task - Relationship Regression Fix
+# Trin Current Task - Query Doc Fixes
+
+## Task: Apply Drew's feedback from QUERY_DOC_REVIEW_2026_03_21.md
+**Status**: COMPLETE (100%)
+**Date**: 2026-03-21
+
+## Done
+- schema.py: fixed Ex02 (name-glob), Ex05 (basename pattern + note), Ex09 (method anchor + bug note)
+- schema.py description: added notes on -mg basename matching and -Vr scope limit
+- trin.docs/SKILL.md: fixed subclass query direction and references row
+- tests/uat/test_documented_queries_uat.py: 884→894 pass, 5→2 xfail
+- Remaining xfails: class-level -Vca bug (sprint 9) + -th lowercase invalid
+
+---
+
+# Previous Task - Relationship Regression Fix
 
 ## Task: Regression test for resolve_pending_relationships() gap
 **Status**: COMPLETE (100%)

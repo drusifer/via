@@ -153,12 +153,14 @@ make test   # confirm no regressions
 5. Execute assigned tasks
 6. Post updates to `agents/CHAT.md`
 
-**EXIT (Before Switching - MANDATORY):**
-7. Update `context.md` - Knowledge organization notes
-8. Update `current_task.md` - Progress %, completed items, next items
-9. Update `next_steps.md` - Resume plan for next activation
+**EXIT — HARD GATE: Save BEFORE switching (MANDATORY):**
+7. Update `context.md` — knowledge organization notes from this session
+8. Update `current_task.md` — progress %, completed items, exact next item
+9. Update `next_steps.md` — step-by-step resume instructions for a cold start
+10. Post handoff message to CHAT.md
 
-**State files are your WORKING MEMORY. Without them, you forget everything!**
+**Do NOT switch or stop until steps 7-10 are written.**
+**State files are the only memory that survives context overflow or conversation restart.**
 
 ---
 
@@ -171,7 +173,7 @@ The project has a live `via` MCP server. **Use `mcp__via__via_query` to answer `
 | Locate a class | `["-mg", "*ClassName*", "-tc"]` |
 | Locate a function | `["-mg", "*func_name*", "-tf"]` |
 | Find a file | `["-mg", "*filename*", "-tfi"]` |
-| Find a markdown section | `["-mg", "*SectionName*", "-th"]` |
+| Find a markdown section | `["-mg", "*SectionName*", "-tH"]` |
 | Find any symbol | `["-mg", "*pattern*"]` |
 
 Results include `file_path` and `line_number`. Always cite these when answering queries.
@@ -180,11 +182,16 @@ Use **via** for symbol/header lookups by name; use **Grep** for full-text conten
 
 ### Relationship Queries
 
-Syntax: `<subject> -Vxxx <object>` — finds subjects with that relationship to the object. Add `-iv` to invert direction.
+Syntax: `<anchor-args> -Vxxx <result-args> [-iv]`
+
+**`-iv` rule: KNOWN anchor always goes on the LEFT (before `-Vxxx`). `*` goes on the RIGHT.**
+- No `-iv`: returns things that relate **TO** the anchor (callers, subclasses, importers)
+- With `-iv`: returns what the anchor relates **TO** (callees, base classes, imported modules)
 
 | Task | Args |
 |------|------|
-| Who references `Symbol`? | `["-mg", "*", "-Vr", "-mg", "Symbol"]` |
+| Who references `Symbol`? | `["-mg", "Symbol", "-Vr", "-mg", "*"]` |
+| What does `Module` reference? | `["-mg", "Module", "-tc", "-Vr", "-iv", "-mg", "*"]` |
 | What imports `module`? | `["-mg", "*", "-Vimp", "-mg", "module_name"]` |
 | All subclasses of `Base` | `["-mg", "*", "-tc", "-Vinh", "-mg", "Base", "-tc"]` |
 

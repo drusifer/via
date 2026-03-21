@@ -144,7 +144,7 @@ class WatchService:
     # Internal
     # ------------------------------------------------------------------
 
-    def _handle_sigint(self, signum, frame) -> None:
+    def _handle_sigint(self, _signum, _frame) -> None:
         self._stop_event.set()
 
     def _shutdown(self) -> None:

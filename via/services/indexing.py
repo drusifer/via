@@ -245,7 +245,9 @@ class IndexingService:
             Dict with entity counts from _index_file
         """
         self.db_store.delete_file_completely(file_info.path)
-        return self._index_file(file_info)
+        result = self._index_file(file_info)
+        self.db_store.resolve_pending_relationships()
+        return result
 
     def _index_file(self, file_info: DiscoveredFile) -> dict:
         """
@@ -594,7 +596,7 @@ class IndexingService:
                 oversized=True,
             )
 
-    def _store_file_with_error(self, file_info: DiscoveredFile, error: str) -> None:
+    def _store_file_with_error(self, file_info: DiscoveredFile, _error: str) -> None:
         """Store file that had a parse error."""
         existing = self.db_store.get_file_by_path(file_info.path)
 

@@ -2478,3 +2478,229 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-21 02:14:40</small>] [**User**]->[**all**] **shutdown*:
  Shutdown complete. State saved. 837 tests passing. Sprint 9 next. MCP server ready for restart with: relationship queries live, schema migration on startup, rich tool description, gitignore-aware watch dirs, quiet logs.
+
+---
+[<small>2026-03-21 10:38:39</small>] [**User**]->[**neo**] **request*:
+ fix all lints
+
+---
+[<small>2026-03-21 10:38:49</small>] [**Neo**]->[**all**] **swe fix*:
+ Activating as Neo. Running lints to assess scope.
+
+---
+[<small>2026-03-21 10:38:54</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make lint | /home/drusifer/Projects/via/build/build.out
+Low: 0
+Medium: 0
+High: 0
+Total issues (by confidence):
+Undefined: 0
+Low: 0
+Medium: 0
+High: 0
+Files skipped (0):
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 10:39:05</small>] [**Neo**]->[**User**] **swe fix*:
+ Lint check complete. All checks passed — ruff: All checks passed, bandit: No issues identified. No lints to fix!
+
+---
+[<small>2026-03-21 10:39:27</small>] [**User**]->[**neo**] **request*:
+ lint full
+
+---
+[<small>2026-03-21 10:40:00</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make lint-slow | /home/drusifer/Projects/via/build/build.out
+Low: 0
+Medium: 0
+High: 0
+Total issues (by confidence):
+Undefined: 0
+Low: 0
+Medium: 0
+High: 0
+Files skipped (0):
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 10:40:52</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make lint-slow | /home/drusifer/Projects/via/build/build.out
+Low: 0
+Medium: 0
+High: 0
+Total issues (by confidence):
+Undefined: 0
+Low: 0
+Medium: 0
+High: 0
+Files skipped (0):
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 10:42:12</small>] [**Neo**]->[**User**] **swe fix*:
+ lint-slow fixed. Resolved W0613 (unused-argument 'error' → '_error' in _store_file_with_error) and E0401 (pylint false-positive on mcp.server.fastmcp import). Score: 9.09/10 (+0.02). Remaining: duplicate-code in SQL DDL strings (by design).
+
+---
+[<small>2026-03-21 10:42:57</small>] [**User**]->[**neo**] **request*:
+ why the pylint issue with venv? is the make target activating the venv first?
+
+---
+[<small>2026-03-21 10:43:49</small>] [**Neo**]->[**User**] **swe fix*:
+ Venv IS activated. E0401 is pylint/astroid's static resolver failing on mcp's transitive imports (starlette, pydantic, anyio) — not a missing venv. Fix applied: disable=import-error on that line. Cleaner alt: add ignored-modules=mcp to pyproject.toml.
+
+---
+[<small>2026-03-21 10:45:30</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make lint-slow | /home/drusifer/Projects/via/build/build.out
+Low: 0
+Medium: 0
+High: 0
+Total issues (by confidence):
+Undefined: 0
+Low: 0
+Medium: 0
+High: 0
+Files skipped (0):
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 10:48:16</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make lint-slow | /home/drusifer/Projects/via/build/build.out
+Low: 0
+Medium: 0
+High: 0
+Total issues (by confidence):
+Undefined: 0
+Low: 0
+Medium: 0
+High: 0
+Files skipped (0):
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 10:49:55</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+======================== 837 passed in 89.14s (0:01:29) ========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 10:52:09</small>] [**User**]->[**morpheus**] **request*:
+ Full Code Review - identify bad code smells - use arch docs - suggest refactorings for cleaner code - leverage via mcp to minimize token usage
+
+---
+[<small>2026-03-21 10:52:20</small>] [**Morpheus**]->[**all**] **lead review*:
+ Activating as Morpheus. Loading arch context. Using via MCP to map codebase structure before review.
+
+---
+[<small>2026-03-21 10:56:51</small>] [**Morpheus**]->[**User**] **lead review*:
+ Code review done. 14 smells, 5 TD tickets. See agents/morpheus.docs/CODE_REVIEW_2026_03_21.md. Top: SMELL-1 (DB computes render widths), SMELL-2 (.conn access from service), SMELL-6 (3 dup file-store methods).
+
+---
+[<small>2026-03-21 10:59:58</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make lint-fast | /home/drusifer/Projects/via/build/build.out
+=== RUFF: Complexity, Dead Code, Unused Imports ===
+. .venv/bin/activate && ruff check via/
+All checks passed!
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 11:09:42</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+======================== 837 passed in 88.55s (0:01:28) ========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 11:16:41</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make lint-fast | /home/drusifer/Projects/via/build/build.out
+=== RUFF: Complexity, Dead Code, Unused Imports ===
+. .venv/bin/activate && ruff check via/
+All checks passed!
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 11:18:01</small>] [**User**]->[**all**] **shutdown*:
+ Preparing for restart. Saving all state.
+
+---
+[<small>2026-03-21 11:20:20</small>] [**User**]->[**all**] **shutdown*:
+ State saved. 837 tests passing. Key wins: TD-1 closed (reindex_file now resolves pending relationships), pylint 9.46/10, -iv syntax corrected everywhere, full code review done (14 smells, 5 TD tickets). Sprint 9 next.
+
+---
+[<small>2026-03-21 11:21:40</small>] [**User**]->[**trin**] **request*:
+ implement uat tests for all documented via queries in skills and schema. Assert that the query results are consistent with the documentation
+
+---
+[<small>2026-03-21 11:30:30</small>] [**Trin**]->[**User**] **qa verify*:
+ Compiled query examples from all current SKILL.md files and schema.py. Listing before writing UAT tests.
+
+---
+[<small>2026-03-21 11:36:29</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+============= 837 passed, 5 xfailed, 47 errors in 89.68s (0:01:29) =============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 11:39:53</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+============= 7 failed, 877 passed, 5 xfailed in 96.68s (0:01:36) ==============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 11:44:47</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================== 884 passed, 5 xfailed in 97.36s (0:01:37) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 11:44:51</small>] [**Trin**]->[**User**] **qa report*:
+ UAT complete: 47 pass, 5 xfail (known doc bugs). Full suite 884 pass, 0 fail.
+
+---
+[<small>2026-03-21 11:47:58</small>] [**User**]->[**trin**] **request*:
+ put your findings in a document so I can provide feedback
+
+---
+[<small>2026-03-21 11:48:47</small>] [**Trin**]->[**User**] **qa report*:
+ Review doc written: agents/trin.docs/QUERY_DOC_REVIEW_2026_03_21.md — 5 findings with decision options. Please review and mark your choices.
+
+---
+[<small>2026-03-21 11:49:40</small>] [**User**]->[**bob**] **request*:
+ learn agent switching behavior: always update persona context before switching so we don't lose state when Claude's context fills up or we need to restart
+
+---
+[<small>2026-03-21 11:56:27</small>] [**Bob**]->[**all**] **learn*:
+ *learn applied: EXIT is now a HARD GATE in all SKILL.md files. Also fixed -th→-tH typos and added State Management Protocol to cypher.
+
+---
+[<small>2026-03-21 12:27:29</small>] [**Cypher**]->[**all**] **pm story*:
+ Capturing DECLARES relationship design decision for Sprint 9 story refinement.
+
+---
+[<small>2026-03-21 12:28:36</small>] [**Cypher**]->[**all**] **pm story*:
+ Sprint 9 Story 1 updated: -Vhas now backed by DECLARES relationship type. No parser changes needed — file_path + parent_name already carry all containment data. Story doc: agents/cypher.docs/SPRINT_9_USER_STORIES.md
+
+---
+[<small>2026-03-21 12:30:02</small>] [**User**]->[**all**] **request*:
+ Prepping for shutdown — saving all persona state now.
+
+---
+[<small>2026-03-21 12:31:21</small>] [**User**]->[**trin**] **request*:
+ see my feedback re docs issues
+
+---
+[<small>2026-03-21 12:34:09</small>] [**Trin**]->[**User**] **qa review*:
+ Activating as Trin. Reading Drew feedback on QUERY_DOC_REVIEW_2026_03_21.md — applying doc fixes now.
+
+---
+[<small>2026-03-21 12:40:16</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================== 894 passed, 2 xfailed in 97.06s (0:01:37) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 12:40:35</small>] [**Trin**]->[**User**] **qa report*:
+ Doc fixes done. 894 pass, 2 xfail (was 5). schema.py Ex02/05/09 fixed; trin SKILL.md subclass direction fixed.
+
+---
+[<small>2026-03-21 12:55:52</small>] [**User**]->[**all**] **shutdown*:
+ Shutting down. State saved. 894 pass, 2 xfail. Doc fixes complete. Sprint 9 ready.

@@ -1,5 +1,33 @@
 # Trin Context - Working Memory
 
+## Session: 2026-03-21 — Query Documentation UAT + Doc Fix
+
+### Query UAT Results (initial)
+- Created `tests/uat/test_documented_queries_uat.py` — 47 pass, 5 xfail
+- Full suite: 884 pass, 0 fail
+- 5 doc inconsistencies found, written to `agents/trin.docs/QUERY_DOC_REVIEW_2026_03_21.md`
+- Fixed `-th` → `-tH` typo in all persona SKILL.md files (oracle, morpheus, cypher, bob)
+
+### Doc Fixes Applied (per Drew feedback)
+- `schema.py` Ex02: replaced path-glob function search with valid name-glob example
+- `schema.py` Ex05: updated to basename pattern (`*service*`); added note that `-mg` matches basename not full path
+- `schema.py` Ex09: changed class-anchor to method-anchor for calls query; added note about class-level bug
+- `schema.py` description: added notes about `-mg` matching symbol names (not paths) and `-Vr` scope limitation
+- `trin.docs/SKILL.md`: fixed subclass query direction (Base on LEFT, `*` on RIGHT)
+- `trin.docs/SKILL.md`: fixed "Who references Symbol?" row (Symbol on LEFT)
+- `tests/uat/test_documented_queries_uat.py`: replaced 3 xfail test classes with passing tests; 2 real-bug xfails remain
+- Suite: 884 → 894 pass, 5 → 2 xfail
+
+### Remaining xfails (real bugs, not doc issues)
+1. Class-level `-Vca` anchor returns empty (bug: calls stored from methods, not classes) — sprint 9 backlog
+2. `-th` (lowercase) is invalid flag — confirmed impl limitation, docs already fixed to `-tH`
+
+### Bob Protocol Update
+- Bob updated all persona SKILL.md files: EXIT section is now "HARD GATE"
+- Rationale: state must be saved before switching to survive context overflow/restart
+- Updated: neo, trin, morpheus, oracle, mouse, cypher SKILL.md + bob-protocol/SKILL.md
+- Added State Management Protocol to cypher (was missing entirely)
+
 ## Current Sprint: Sprint 8 (Line Number Index) — SIGNED OFF
 
 ### Test Suite Health (2026-03-21)

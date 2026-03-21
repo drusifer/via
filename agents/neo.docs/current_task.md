@@ -1,50 +1,31 @@
 # Neo Current Task
 
-## Task: Sprint 7 — MCP Mode
+## Task: Session 2026-03-21 — Lint, Bug Fixes, MCP Schema
 **Status**: COMPLETE
-**Date**: 2026-03-20
+**Date**: 2026-03-21
 
-## What was built
+## What was done
 
-### P1 — JsonRenderer
-- `via/renderers/json_renderer.py` — `JsonRenderer` with `_to_dict()` static method
-- `RenderType.JSON` added to enum
-- `supports_render_type` refactored: base class handles JSON universally, subclasses implement `_supports_render_type`
-- `-oJ` / `--output-json` flag added to `OUTPUT_FLAGS`
-- `RendererFactory` registers `JsonRenderer`
+### Lint Fixes
+- `via/services/indexing.py:597` — renamed `error` → `_error` (W0613 unused arg)
+- `via/services/watch.py:147` — renamed `signum, frame` → `_signum, _frame`
+- `via/parsers/python_parser.py:193,199` — renamed `tree, node` → `_tree, _node` in stub methods
+- `via/__main__.py` — removed 2 redundant local `StatsCommand` imports
+- `pyproject.toml` — added `ignored-modules = ["mcp", "watchdog", "pygments"]`, fixed `source-roots = ["."]`
+- Pylint score: 9.07 → 9.46/10
 
-### P2 — DB Correctness
-- `DatabaseStore.connect()` now enables WAL mode (`PRAGMA journal_mode=WAL`)
-- `DatabaseStore.delete_file_completely(path)` — atomic triad in single transaction
-- `IndexingService.reindex_file(file_info)` — public method wrapping delete+index
+### Bug Fix: TD-1 (reindex_file missing resolve_pending_relationships)
+- `via/services/indexing.py:reindex_file()` — added `self.db_store.resolve_pending_relationships()` call
+- Flushed 854 stale pending relationships (571 resolved)
+- 837 tests passing
 
-### P3 — WatchService Logging Cleanup
-- `output: IO` parameter removed from `WatchService.__init__()`
-- `handle_signals: bool = True` parameter added
-- All `print()` calls replaced with `logger.info()`/`logger.debug()`
-- `_reindex_file` calls `indexing_service.reindex_file()` (not `_index_file`)
-- `_remove_file` calls `db_store.delete_file_completely()` (not 3 separate calls)
-
-### P4 — MCP Schema
-- `via/mcp/__init__.py` created
-- `via/mcp/schema.py` — `build_tool_schema()` with 10 examples
-- `via mcp schema` CLI command added
-
-### P5 — MCP Serve
-- `mcp>=1.26` added to `pyproject.toml` dependencies
-- `via/mcp/server.py` — `run_mcp_server(root_dir, db_path)` using FastMCP
-- `via mcp serve [directory]` CLI command added
-- Output flags stripped from `via_query` args (MCP always returns dicts)
-
-### P6 — Install / Status
-- `via/commands/install.py` — `InstallTarget` ABC + `McpInstallTarget` + `INSTALL_TARGETS` registry
-- `via install mcp`, `via uninstall mcp`, `via status mcp` CLI commands added
-
-### P7 — UAT
-- `tests/uat/test_sprint7_uat.py` — 10 UAT tests, all passing
+### MCP Schema Fix (with Bob/Morpheus)
+- `-iv` direction was backwards in all SKILL.md files and `via/mcp/schema.py`
+- Correct: KNOWN anchor LEFT, `*` RIGHT; no-iv returns relators, -iv returns relatees
+- Updated `via/mcp/schema.py` description and all examples
 
 ## Test Results
-- 794 passed, 0 failed (was 713 at Sprint 6 start, +81 new tests)
+- 837 passed, 0 failed
 
-## Next Sprint
-- Sprint 8 P3 UAT: Trin writes tests/uat/test_sprint8_uat.py (7 UAT cases)
+## Next
+- Sprint 9 stories TBD (TD-REVIEW-1 through TD-REVIEW-5 are candidates)

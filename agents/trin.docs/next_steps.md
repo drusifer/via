@@ -1,7 +1,9 @@
 # Trin Next Steps
 
 ## Immediate
-- Nothing blocking — Sprint 6 UAT complete and signed off.
+- Doc fixes complete. Awaiting Sprint 9 kick-off.
+- When Neo implements -Vhas (Story 1): write UAT for `via -Vhas` / `DECLARES` relationship
+- When Neo implements temporal matcher (Story 2a): write UAT for `--since` / mtime filtering
 
 ## Sprint 7 (MCP Mode)
 - When Neo implements MCP Mode: write UAT for `via --mcp` and `via mcp install`

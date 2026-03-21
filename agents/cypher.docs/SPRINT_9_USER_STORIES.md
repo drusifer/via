@@ -7,6 +7,54 @@
 
 ---
 
+## Design Decision: `-Vhas` backed by `DECLARES` relationship (Drew, 2026-03-21)
+
+**Summary of discussion:**
+
+The `-Vhas` implementation should be backed by a proper `DECLARES` relationship
+type — not a file-path JOIN and not re-using `-Vr` (REFERENCES).
+
+### Why not `-Vr`?
+
+`-Vr` (REFERENCES) is a **usage** relationship: it tracks `ast.Name` nodes with
+`Load` context inside function/method bodies only. It does NOT capture:
+- Class base class declarations (`class Child(Base):`)
+- Decorator names, type annotations, module-level usage
+- Anything outside a function/method body
+
+`DECLARES` is a **structural containment** relationship — entirely distinct.
+
+### What `DECLARES` means
+
+| Source (container) | declares | Target (member) |
+|-------------------|----------|-----------------|
+| `filepath` | declares | `class`, `function`, `global`, `import` |
+| `class` | declares | `method`, inner `class`, class-level `global` |
+| `function` | declares | nested `function` |
+
+This is multi-level: file→symbol, class→method, function→nested function.
+
+### Key implementation insight
+
+**No new parsing needed.** The data already exists:
+- Every symbol has `file_path` (which file declares it)
+- Every method/inner-class has `parent_name` (which class declares it)
+
+`_store_declares_relationships()` in `IndexingService` would simply materialize
+these into `symbol_references` rows at index time — no AST changes required.
+
+### Scope change to Story 1
+
+`-Vhas` is now properly specified as:
+> `-Vhas` is syntactic sugar over a `DECLARES` relationship query
+
+The flag `-Vhas` / `--via-has` should be added to `flag_groups.py` and mapped
+to `RelationshipType.DECLARES` (new). The query infrastructure stays the same.
+
+**Morpheus design inputs updated** (see Story 1 section below).
+
+---
+
 ## Epic: Has-A Relationship (`-Vhas`)
 
 Add a "has" relationship that lets users query: *which symbols live inside a container matching a pattern?*
@@ -95,11 +143,16 @@ via -mg '*/pipeline/*' -tF -Vhas -n 0
 via -mg 'test_*.py' -tN -Vhas -tf -n 0
 ```
 
-**Implementation Notes** (pending Morpheus design):
-- Likely reuses existing `symbol_references` table — declaration references may already be indexed
-- Container type dispatch in `PipelineExecutor._execute_relationship_query()` — new branch for `HAS`
-- Add `HAS = 'has'` to `RelationshipType` enum + `'has': RelationshipType.HAS` to `_SHORT_FLAGS`
-- Morpheus to specify: container type registry, join strategy, and valid container→member mappings
+**Implementation Notes** (updated 2026-03-21):
+- New `DECLARES = 'declares'` added to `RelationshipType` enum
+- `-Vhas` / `--via-has` maps to `RelationshipType.DECLARES` in `flag_groups.py` and `_SHORT_FLAGS`
+- New `_store_declares_relationships()` in `IndexingService` — no parser changes needed:
+  - For each non-filepath symbol: insert `(filepath_symbol_id → symbol_id, 'declares')`
+  - For each method/inner-class: insert `(parent_class_symbol_id → symbol_id, 'declares')`
+  - For each nested function: insert `(parent_function_symbol_id → symbol_id, 'declares')`
+- `PipelineExecutor._execute_relationship_query()` — new dispatch branch for `DECLARES`
+- `DatabaseStore.query_relationships()` handles it via existing infrastructure (same `symbol_references` table)
+- Morpheus to confirm: join strategy, container type validation, error messages for invalid stage types
 
 **Error Message Standard (applies to all stories)**:
 All invalid-argument errors must state:
@@ -206,22 +259,23 @@ prep_tldr incremental (after first run):
 
 ## Technical Context (for Morpheus — design exit criteria)
 
-### Story 1 (`-Vhas`) — Morpheus design inputs
+### Story 1 (`-Vhas` / `DECLARES`) — Morpheus design inputs
 
 | Item | Location | Current state |
 |------|----------|--------------|
-| `RelationshipType` enum | `via/core/relationship_types.py` | Add `HAS = 'has'` |
-| `-V<X>` flag definitions | `via/core/flag_groups.py` | Add `-Vhas` / `--via-has` |
-| `PipelineExecutor._execute_relationship_query()` | `via/pipeline/executor.py` | Add `HAS` dispatch branch |
-| `symbols.file_path` column | `via/db/schema.py` | Exists; may or may not be the join key |
-| `symbol_references` table | `via/db/schema.py` | Likely reused for declaration references |
-| `DatabaseStore.query_relationships()` | `via/db/store.py` | May extend or add `query_has()` |
+| `RelationshipType` enum | `via/core/relationship_types.py` | Add `DECLARES = 'declares'` |
+| `-V<X>` flag definitions | `via/core/flag_groups.py` | Add `-Vhas` / `--via-has` → `DECLARES` |
+| `_SHORT_FLAGS` dict | `via/core/relationship_types.py` | Add `RelationshipType.DECLARES: 'has'` |
+| `_store_declares_relationships()` | `via/services/indexing.py` | New method — no parser changes; uses `file_path` + `parent_name` |
+| `PipelineExecutor._execute_relationship_query()` | `via/pipeline/executor.py` | Add `DECLARES` dispatch branch |
+| `symbol_references` table | `via/db/schema.py` | Reused — no schema changes needed |
+| `DatabaseStore.query_relationships()` | `via/db/store.py` | No changes — existing infrastructure handles it |
 
-**Morpheus must spec**:
-- Container type registry (which `-t<X>` types are valid containers)
-- Declaration reference type mapping (container type → `reference_type` string in `symbol_references`)
-- Whether declaration references are already indexed or need parser changes
-- Polymorphic dispatch strategy in `PipelineExecutor`
+**Morpheus must confirm/spec**:
+- Container type validation: which `-t<X>` types are valid as stage 1 (anchor)
+- Error message format for invalid container type (per project error standard)
+- Whether nested function→function declarations should be in scope for this sprint
+- Polymorphic dispatch strategy in `PipelineExecutor` (or confirm direct `DECLARES` branch is sufficient)
 
 ### Story 2 (`temporal matcher`) — Morpheus design inputs
 

@@ -99,12 +99,14 @@ You are **The Engineer (SWE)**, a Senior Python Expert and Cryptography/NFC Spec
 5. Execute assigned tasks
 6. Post updates to `agents/CHAT.md`
 
-**EXIT (Before Switching - MANDATORY):**
-7. Update `context.md` - Key findings, decisions
-8. Update `current_task.md` - Progress %, completed items, next items
-9. Update `next_steps.md` - Resume plan for next activation
+**EXIT — HARD GATE: Save BEFORE switching (MANDATORY):**
+7. Update `context.md` — key findings, decisions made this session
+8. Update `current_task.md` — progress %, completed items, exact next item
+9. Update `next_steps.md` — step-by-step resume instructions for a cold start
+10. Post handoff message to CHAT.md
 
-**State files are your WORKING MEMORY. Without them, you forget everything!**
+**Do NOT switch or stop until steps 7-10 are written.**
+**State files are the only memory that survives context overflow or conversation restart.**
 
 ***
 
@@ -145,14 +147,18 @@ Use **via** for symbol lookup by name; use **Grep** for searching string content
 
 ### Relationship Queries
 
-Syntax: `<subject> -Vxxx <object>` — finds subjects with that relationship to the object. Add `-iv` to invert direction.
+Syntax: `<anchor-args> -Vxxx <result-args> [-iv]`
+
+**`-iv` rule: KNOWN anchor always goes on the LEFT (before `-Vxxx`). `*` goes on the RIGHT.**
+- No `-iv`: returns things that relate **TO** the anchor (callers, subclasses, importers)
+- With `-iv`: returns what the anchor relates **TO** (callees, base classes, imported modules)
 
 | Task | Args |
 |------|------|
-| What calls `my_func`? | `["-mg", "*", "-Vca", "-mg", "my_func", "-tf"]` |
+| What calls `my_func`? | `["-mg", "my_func", "-tf", "-Vca", "-mg", "*"]` |
 | What does `MyClass` call? | `["-mg", "MyClass", "-tc", "-Vca", "-iv", "-mg", "*", "-tf"]` |
-| What imports a module? | `["-mg", "*", "-Vimp", "-mg", "module_name"]` |
-| All subclasses of `Base` | `["-mg", "*", "-tc", "-Vinh", "-mg", "Base", "-tc"]` |
+| What imports `module_name`? | `["-mg", "module_name", "-Vimp", "-mg", "*"]` |
+| All subclasses of `Base` | `["-mg", "Base", "-tc", "-Vinh", "-mg", "*", "-tc"]` |
 
 **Use before refactoring** — know every caller before changing a function signature. Zero file reads.
 

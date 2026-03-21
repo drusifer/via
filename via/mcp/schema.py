@@ -42,6 +42,18 @@ def build_tool_schema() -> dict:
         f"Output formats: {output_help}\n"
         f"Format modifiers: {format_help}\n"
         f"Relationship queries: {rel_help}\n\n"
+        "Relationship query syntax: <anchor-args> -Vxxx <result-args> [-iv]\n"
+        "  KNOWN anchor goes on the LEFT (before -Vxxx). Wildcard * goes on the RIGHT.\n"
+        "  Without -iv: returns things that relate TO the anchor (callers, subclasses, importers).\n"
+        "    Example: find all subclasses of Renderer\n"
+        "      [\"-mg\", \"Renderer\", \"-tc\", \"-Vinh\", \"-mg\", \"*\", \"-tc\"]\n"
+        "  With -iv: returns what the anchor relates TO (callees, base classes, imported modules).\n"
+        "    Example: find what a method calls\n"
+        "      [\"-mg\", \"my_method\", \"-tm\", \"-Vca\", \"-iv\", \"-mg\", \"*\"]\n\n"
+        "Note: -mg matches against the symbol name (not file path). For filepath symbols (-tF),\n"
+        "the match is against the basename (e.g. 'utils.py'). Full-path matching not yet supported.\n\n"
+        "Note: -Vr (references) tracks name usages inside function/method bodies only. Class\n"
+        "inheritance declarations and module-level usages are not tracked by -Vr.\n\n"
         "Returns a JSON array of symbol objects when -oJ is used (default for MCP)."
     )
 
@@ -51,8 +63,8 @@ def build_tool_schema() -> dict:
             "args": ["-mg", "*Service*", "-tc"],
         },
         {
-            "description": "Find all functions in a specific file pattern",
-            "args": ["-mg", "via/core/*", "-tf"],
+            "description": "Find functions matching a name glob pattern",
+            "args": ["-mg", "*parse*", "-tf"],
         },
         {
             "description": "Find methods by regex, JSON output",
@@ -63,16 +75,24 @@ def build_tool_schema() -> dict:
             "args": ["-mg", "*", "-ti"],
         },
         {
-            "description": "Find all files matching a path pattern",
-            "args": ["-mg", "via/services/*", "-tF"],
+            "description": "Find files by basename pattern (-mg matches filename, not full path)",
+            "args": ["-mg", "*service*", "-tF"],
         },
         {
-            "description": "Find classes that inherit from a base class",
-            "args": ["-mg", "*", "-tc", "-Vinh", "BaseClass"],
+            "description": "Find all subclasses of a base class (anchor=base, result=subclasses)",
+            "args": ["-mg", "BaseClass", "-tc", "-Vinh", "-mg", "*", "-tc"],
         },
         {
-            "description": "Find symbols that call a specific function",
-            "args": ["-mg", "*", "-Vca", "connect"],
+            "description": "Find what a class inherits FROM (-iv returns the base classes)",
+            "args": ["-mg", "MyClass", "-tc", "-Vinh", "-iv", "-mg", "*", "-tc"],
+        },
+        {
+            "description": "Find callers of a function (anchor=func, result=callers)",
+            "args": ["-mg", "connect", "-tf", "-Vca", "-mg", "*"],
+        },
+        {
+            "description": "Find what a method calls (-iv returns the callees; anchor on method, not class)",
+            "args": ["-mg", "my_method", "-tm", "-Vca", "-iv", "-mg", "*"],
         },
         {
             "description": "Find all global variables as JSON",
@@ -83,8 +103,8 @@ def build_tool_schema() -> dict:
             "args": ["-mg", "*API*", "-tH"],
         },
         {
-            "description": "Find import relationships for a module",
-            "args": ["-mg", "*", "-Vimp", "logging"],
+            "description": "Find what imports a module (anchor=module, result=importers)",
+            "args": ["-mg", "logging", "-Vimp", "-mg", "*"],
         },
     ]
 

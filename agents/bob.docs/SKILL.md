@@ -108,7 +108,7 @@ The project has a live `via` MCP server. **Use `mcp__via__via_query` to find age
 
 | Task | Args |
 |------|------|
-| Find a SKILL.md section | `["-mg", "*SectionName*", "-th"]` |
+| Find a SKILL.md section | `["-mg", "*SectionName*", "-tH"]` |
 | Find a file by name | `["-mg", "*filename*", "-tfi"]` |
 | Find any symbol | `["-mg", "*pattern*"]` |
 
