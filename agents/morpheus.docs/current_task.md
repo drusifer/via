@@ -1,16 +1,16 @@
-# Morpheus Current Task - Sprint 7 Architecture
+# Morpheus Current Task - Sprint 8 Architecture
 
-## Task: Sprint 7 Architecture Design (MCP Mode)
+## Task: Sprint 8 Architecture Design (Line Number Index)
 **Status**: COMPLETE (100%)
 **Date**: 2026-03-20
 
-## Outcome: DESIGN READY
+## Outcome: DESIGN READY — awaiting Drew sign-off on 3 OQs
 
-Full design in `SPRINT_7_ARCHITECTURE.md`. Three areas:
-1. `JsonRenderer` + `RenderType.JSON` + `MatchRecord.to_dict()` — follows existing renderer arch exactly
-2. Watch + JSON-RPC concurrency — WatchService background thread, add `handle_signals` param
-3. `install`/`status`/`uninstall` polymorphism — `InstallTarget` ABC + `INSTALL_TARGETS` registry
+Full design in `SPRINT_8_ARCHITECTURE.md`. Key decisions:
+1. `line_offsets` table — FK→files CASCADE, PK=(file_id, line_number), SCHEMA_VERSION 3→4
+2. `-mL SLICE` as optional arg on match parser (not in MATCH_FLAGS mutex group)
+3. `_apply_line_slice()` in PipelineExecutor — updates byte_offset/byte_length post-match
+4. Zero renderer changes needed
 
-**TD-1 from Sprint 6 must be done first** — `reindex_file()` + `delete_file_completely()` — correctness issue now that watch is always-on.
-
-Neo implementation order specified in doc.
+**OQ-1** (relative vs absolute slice), **OQ-2** (which files), **OQ-3** (negative indices) need Drew approval.
+Neo starts P1 immediately (schema + indexing); P2 waits for OQ-1 sign-off.

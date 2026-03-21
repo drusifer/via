@@ -29,6 +29,7 @@ from ..core.types import MatchOp, SymbolType
 from .schema import (
     ALL_TABLES,
     CREATE_INDEXES,
+    CREATE_LINE_OFFSETS_TABLE,
     SCHEMA_VERSION,
 )
 
@@ -92,16 +93,49 @@ class DatabaseStore:
 
     @require_connection
     def initialize_schema(self) -> None:
-        """Create all tables and indexes if they don't exist."""
+        """Create all tables and indexes if they don't exist, applying migrations as needed."""
         cursor = self.conn.cursor()
 
-        # Create all tables
+        # Create core tables (metadata must exist first to read current version)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS metadata (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                version INTEGER PRIMARY KEY,
+                applied_at REAL NOT NULL,
+                description TEXT
+            );
+        """)
+        self._commit_if_needed()
+
+        # Read current schema version (0 if fresh database)
+        cursor.execute("SELECT value FROM metadata WHERE key = 'schema_version'")
+        row = cursor.fetchone()
+        current_version = int(row[0]) if row else 0
+
+        # Create all tables (IF NOT EXISTS — safe for existing DBs)
         for table_sql in ALL_TABLES:
             cursor.execute(table_sql)
 
         # Create all indexes
         for index_sql in CREATE_INDEXES:
             cursor.execute(index_sql)
+
+        # Apply incremental migrations for existing databases
+        if current_version < 4:
+            cursor.execute(CREATE_LINE_OFFSETS_TABLE)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_line_offsets_file ON line_offsets(file_id)"
+            )
+            cursor.execute(
+                "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
+                " VALUES (?, ?, ?)",
+                (4, time.time(), "Add line_offsets table for -mL line slice queries")
+            )
 
         # Store metadata
         cursor.execute(
@@ -113,7 +147,7 @@ class DatabaseStore:
             ("schema_version", str(SCHEMA_VERSION))
         )
 
-        # Record schema migration
+        # Record initial schema migration
         cursor.execute(
             """
             INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)
@@ -348,6 +382,90 @@ class DatabaseStore:
         except Exception:
             cursor.execute("ROLLBACK")
             raise
+
+    # Line offset methods (Sprint 8)
+
+    def upsert_line_offsets(
+        self,
+        file_id: int,
+        offsets: List[tuple],
+    ) -> None:
+        """Insert or replace line byte offsets for a file (atomic).
+
+        Deletes existing rows for file_id then bulk-inserts new ones.
+        Safe to call within an outer transaction.
+
+        Args:
+            file_id: File ID (FK to files.id)
+            offsets: List of (file_id, line_number, byte_offset, byte_length) tuples
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM line_offsets WHERE file_id = ?", (file_id,))
+        cursor.executemany(
+            "INSERT INTO line_offsets (file_id, line_number, byte_offset, byte_length)"
+            " VALUES (?, ?, ?, ?)",
+            offsets,
+        )
+        self._commit_if_needed()
+
+    def get_line_byte_range(
+        self,
+        file_path: str,
+        abs_start: int,
+        abs_end: int,
+    ) -> tuple:
+        """Return (byte_offset, byte_length) covering lines abs_start..abs_end inclusive.
+
+        Line numbers are 1-based absolute file line numbers.
+        Returns (0, 0) if the file or lines are not found in the index.
+
+        Args:
+            file_path: Absolute file path
+            abs_start: First line number (1-based, inclusive)
+            abs_end: Last line number (1-based, inclusive)
+
+        Returns:
+            (byte_offset, byte_length) tuple
+        """
+        rel_path = self._to_relative_path(file_path)
+        row = self.conn.execute(
+            """
+            SELECT
+                MIN(lo.byte_offset)                                         AS start_off,
+                MAX(lo.byte_offset) + MAX(lo.byte_length) - MIN(lo.byte_offset) AS length
+            FROM line_offsets lo
+            JOIN files f ON lo.file_id = f.id
+            WHERE f.path = ?
+              AND lo.line_number BETWEEN ? AND ?
+            """,
+            (rel_path, abs_start, abs_end),
+        ).fetchone()
+        if not row or row[0] is None:
+            return (0, 0)
+        return (row[0], row[1])
+
+    def get_line_count(self, file_path: str) -> int:
+        """Return total indexed line count for a file.
+
+        Used for resolving negative slice indices (last N lines).
+
+        Args:
+            file_path: Absolute file path
+
+        Returns:
+            Total line count, or 0 if file not indexed
+        """
+        rel_path = self._to_relative_path(file_path)
+        row = self.conn.execute(
+            """
+            SELECT MAX(lo.line_number)
+            FROM line_offsets lo
+            JOIN files f ON lo.file_id = f.id
+            WHERE f.path = ?
+            """,
+            (rel_path,),
+        ).fetchone()
+        return row[0] if row and row[0] else 0
 
     # Symbol CRUD operations
 

@@ -394,6 +394,10 @@ class PipelineParser:
         parser.add_argument('--nodelims', dest='nodelims', action='store_true', default=False,
                           help='Disable delimiter headers between matches')
 
+        # Line slice modifier (optional, combinable with any match flag)
+        parser.add_argument('-mL', '--match-lines', dest='line_slice', default=None, metavar='SLICE',
+                          help='Line slice: 5:10, 1:, :5, 7 (relative to matched symbol start)')
+
         return parser
 
     def _create_stats_parser(self) -> argparse.ArgumentParser:

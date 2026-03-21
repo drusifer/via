@@ -45,6 +45,36 @@ def safe_print(text: str, file: Optional[TextIO] = None) -> None:
         print(safe_text, file=file)
 
 
+def parse_line_slice(s: str) -> tuple:
+    """Parse a Python-style line slice string into (start, end).
+
+    Both values are 1-based relative to the matched symbol/file start.
+    None means "open end" (start=beginning, end=symbol end).
+
+    Examples:
+        '5:10' → (5, 10)   lines 5 through 10 inclusive
+        '1:'   → (1, None)  from line 1 to end
+        ':5'   → (None, 5)  from start through line 5
+        '7'    → (7, 7)     single line 7
+
+    Args:
+        s: Slice string
+
+    Returns:
+        (start, end) tuple where each may be int or None
+
+    Raises:
+        ValueError: If the string cannot be parsed
+    """
+    if ':' not in s:
+        n = int(s)
+        return (n, n)
+    left, right = s.split(':', 1)
+    start = int(left) if left else None
+    end = int(right) if right else None
+    return (start, end)
+
+
 def get_match_op(match_syntax: str) -> MatchOp:
     """Convert match syntax suffix to MatchOp enum.
 

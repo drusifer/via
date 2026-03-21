@@ -1,5 +1,28 @@
 # Trin Context - Working Memory
 
+## Current Sprint: Sprint 8 (Line Number Index) — SIGNED OFF
+
+### Test Suite Health (2026-03-21)
+- **Full suite**: 834 pass, 0 fail
+- **Sprint 8 UAT**: 7/7 pass (tests/uat/test_sprint8_uat.py)
+- **Sprint 7 UAT**: 10/10 pass (unchanged)
+- **No regressions**
+
+### Key Finding: pytest tmp_path naming
+- pytest names temp dirs after the test function, e.g. `test_top_func_not_in_class_sli0/`
+- Assertions like `assert "top_func" not in r.stdout` false-fail because the string appears in the FILE PATH in delimiters
+- Fix: assert against `"def top_func"` (with keyword prefix) to distinguish path from content
+
+### Key Finding: -oF skips filepath symbols
+- FormattedRenderer skips symbols that don't support -oF; filepath/filename types are skipped silently
+- UAT for -oF must use class/function/method symbols, not filepath/filename
+- stderr: `"1 record(s) skipped (don't support -oF): filepath(1)"`
+
+### Key Finding: force re-index and parse errors
+- If new file content is invalid Python (SyntaxError), the parser sets `parse_error`
+- `_store_file_with_error` is called, NOT `_store_parsed_file` — line_offsets are never updated
+- UAT86 fix: use valid Python content when testing force re-index
+
 ## Current Sprint: Sprint 6 (Watch Mode) — SIGNED OFF
 
 ### Test Suite Health (2026-03-19)

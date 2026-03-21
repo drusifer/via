@@ -26,6 +26,7 @@ from via.parsers.python_parser import PythonParser
 from via.parsers.registry import ParserRegistry
 from via.pipeline.executor import PipelineExecutor
 from via.pipeline.parser import PipelineParser
+from via.mcp.schema import build_tool_schema
 from via.renderers.json_renderer import JsonRenderer
 from via.services.indexing import IndexingService
 from via.services.watch import WatchService
@@ -56,6 +57,11 @@ def _configure_mcp_logging() -> None:
     root.addHandler(file_handler)
     root.setLevel(logging.DEBUG)
 
+    # Silence watchdog's internal inotify buffer — fires for every OS event
+    # regardless of whether our handler acts on it. Not useful in MCP logs.
+    logging.getLogger("watchdog.observers.inotify_buffer").setLevel(logging.WARNING)
+    logging.getLogger("watchdog").setLevel(logging.WARNING)
+
 
 def run_mcp_server(root_dir: str, db_path: str) -> int:
     """Start the FastMCP stdio server with WatchService in background thread.
@@ -73,13 +79,14 @@ def run_mcp_server(root_dir: str, db_path: str) -> int:
 
     registry = _build_registry()
 
-    # MCP read-only connection
-    mcp_store = DatabaseStore(db_path, root_dir)
-    mcp_store.connect()
-
-    # WatchService write connection
+    # WatchService write connection — owns schema initialization/migration
     watch_store = DatabaseStore(db_path, root_dir)
     watch_store.connect()
+    watch_store.initialize_schema()
+
+    # MCP read-only connection — schema already initialized by watch_store
+    mcp_store = DatabaseStore(db_path, root_dir)
+    mcp_store.connect()
 
     indexing_svc = IndexingService(watch_store, registry)
     watch_svc = WatchService(
@@ -99,9 +106,10 @@ def run_mcp_server(root_dir: str, db_path: str) -> int:
                      '--output-list', '--output-table', '--output-diagram',
                      '--output-usage', '--output-raw', '--output-formatted', '--output-json'}
 
-    @mcp.tool()
+    _schema = build_tool_schema()
+
+    @mcp.tool(description=_schema["description"])
     def via_query(args: list[str]) -> list[dict]:
-        """Query the VIA codebase index. Pass CLI args (e.g. ['-mg','*Test*','-tc'])."""
         try:
             # Strip output-format flags — MCP always returns JSON dicts
             clean_args = [a for a in args if a not in _OUTPUT_FLAGS]

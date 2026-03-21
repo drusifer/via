@@ -102,6 +102,21 @@ requires: ["bob-protocol"]
 
 ---
 
+## via MCP — Symbol Search
+
+The project has a live `via` MCP server. **Use `mcp__via__via_query` to find agent files and markdown sections** before editing — navigate by symbol name rather than guessing paths.
+
+| Task | Args |
+|------|------|
+| Find a SKILL.md section | `["-mg", "*SectionName*", "-th"]` |
+| Find a file by name | `["-mg", "*filename*", "-tfi"]` |
+| Find any symbol | `["-mg", "*pattern*"]` |
+
+Especially useful for locating specific headers inside agent docs without reading every file.
+Use **via** for symbol/header lookup; use **Grep** for content search inside files.
+
+---
+
 ## Built-in Tools
 
 ### Creating & Editing Agent Files

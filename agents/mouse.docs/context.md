@@ -13,7 +13,7 @@
 | 5 | Relationships | ✅ SHIPPED | 661 |
 | 6 | Watch Mode | ✅ SHIPPED | 713 |
 | 7 | MCP Mode | ✅ SHIPPED | 794 |
-| 8 | Line Index | ⬜ NOT STARTED | — |
+| 8 | Line Index | 🔵 PLANNED | — |
 
 ## Current Velocity
 - 794 tests passing, 0 failures (as of 2026-03-20)

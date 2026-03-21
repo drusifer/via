@@ -264,3 +264,25 @@ prep_tldr incremental (after first run):
 3. What valid values or alternatives look like
 
 This applies to all stories going forward — it's a project-wide standard, not just Sprint 9.
+
+---
+
+## Tech Debt Backlog
+
+### TD-WATCH-1: Extract `PathFilter` from `FileDiscovery`
+
+**Priority**: Low (functional fix already in place)
+**Area**: `via/core/`, `via/services/watch.py`, `via/core/discovery.py`
+
+**Problem**: `WatchService` calls `self._discovery._should_include_dir()` — a private method on `FileDiscovery`. This is fragile coupling.
+
+**Solution**: Extract exclusion logic into `via/core/path_filter.py`:
+```python
+class PathFilter:
+    def __init__(self, root_dir, extra_patterns=None): ...
+    def include_dir(self, dir_path: str) -> bool: ...
+    def include_file(self, file_path: str) -> bool: ...
+```
+- `FileDiscovery` composes `PathFilter` internally
+- `WatchService` takes a `PathFilter` directly — no `FileDiscovery` dependency
+- Gitignore spec stays in `PathFilter`

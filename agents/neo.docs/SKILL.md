@@ -130,6 +130,34 @@ You are **The Engineer (SWE)**, a Senior Python Expert and Cryptography/NFC Spec
 
 ---
 
+## via MCP — Symbol Search & Relationships
+
+The project has a live `via` MCP server. **Use `mcp__via__via_query` to find symbols before implementing** — always check if a class or function already exists.
+
+| Task | Args |
+|------|------|
+| Find a class | `["-mg", "*ClassName*", "-tc"]` |
+| Find a function | `["-mg", "*func_name*", "-tf"]` |
+| Find any symbol | `["-mg", "*pattern*"]` |
+
+Results include `file_path` and `line_number` — navigate directly.
+Use **via** for symbol lookup by name; use **Grep** for searching string content inside files.
+
+### Relationship Queries
+
+Syntax: `<subject> -Vxxx <object>` — finds subjects with that relationship to the object. Add `-iv` to invert direction.
+
+| Task | Args |
+|------|------|
+| What calls `my_func`? | `["-mg", "*", "-Vca", "-mg", "my_func", "-tf"]` |
+| What does `MyClass` call? | `["-mg", "MyClass", "-tc", "-Vca", "-iv", "-mg", "*", "-tf"]` |
+| What imports a module? | `["-mg", "*", "-Vimp", "-mg", "module_name"]` |
+| All subclasses of `Base` | `["-mg", "*", "-tc", "-Vinh", "-mg", "Base", "-tc"]` |
+
+**Use before refactoring** — know every caller before changing a function signature. Zero file reads.
+
+---
+
 ## Built-in Tools
 
 ### Reading & Exploring Code

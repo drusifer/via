@@ -1,4 +1,28 @@
-# Trin Current Task - Sprint 6 UAT
+# Trin Current Task - Relationship Regression Fix
+
+## Task: Regression test for resolve_pending_relationships() gap
+**Status**: COMPLETE (100%)
+**Date**: 2026-03-21
+
+## Root Cause
+`IndexingService.index()` stored relationships as pending but never called
+`resolve_pending_relationships()` before committing. All live relationship
+queries returned empty. Tests called resolve directly on `DatabaseStore`,
+masking the gap.
+
+## Fix
+1. Added `resolve_pending_relationships()` call in `via/services/indexing.py`
+   before `commit_transaction()` (line ~190)
+2. Added `tests/integration/test_indexing_resolves_relationships.py` with 3 tests:
+   - `test_inheritance_queryable_after_index` — inheritance via full index()
+   - `test_import_queryable_after_index` — imports via full index()
+   - `test_no_pending_relationships_after_index` — pending table empty after index()
+
+## Test Results: 837 passed, 0 failed
+
+---
+
+# Previous Task - Sprint 6 UAT
 
 ## Task: UAT for Sprint 6 Watch Mode
 **Status**: COMPLETE (100%)

@@ -120,6 +120,37 @@ You are **The Lead (SE)**, the Tech Lead, Architecture Authority, and Product Ma
 
 ---
 
+## via MCP — Symbol Search & Relationships
+
+The project has a live `via` MCP server. **Use `mcp__via__via_query` when mapping architecture** — find all classes, their locations, and relationships before designing.
+
+| Task | Args |
+|------|------|
+| Map all classes in a module | `["-mg", "*", "-tc"]` |
+| Find a specific class | `["-mg", "*ClassName*", "-tc"]` |
+| Find all functions | `["-mg", "*pattern*", "-tf"]` |
+| Find a section in an arch doc | `["-mg", "*SectionName*", "-th"]` |
+| Find any symbol | `["-mg", "*pattern*"]` |
+
+Results include `file_path`, `line_number`, and `qualified_name` — ideal for generating architecture maps.
+**`-th` (headers) is especially useful for Morpheus** — navigate directly to the right section in ARCH.md, ADRs, or sprint architecture docs without reading full files.
+Use **via** for symbol/header lookup; use **Grep** for searching patterns inside file content.
+
+### Relationship Queries
+
+Syntax: `<subject> -Vxxx <object>` — finds subjects with that relationship to the object. Add `-iv` to invert direction.
+
+| Task | Args |
+|------|------|
+| Full inheritance tree of `Base` | `["-mg", "*", "-tc", "-Vinh", "-mg", "Base", "-tc"]` |
+| Dependency map: who imports `module`? | `["-mg", "*", "-Vimp", "-mg", "module_name"]` |
+| All references to a symbol | `["-mg", "*", "-Vr", "-mg", "SymbolName"]` |
+| What does `Component` call? | `["-mg", "Component", "-tc", "-Vca", "-iv", "-mg", "*", "-tf"]` |
+
+**Use for architecture review** — build a complete component dependency or inheritance map as compact metadata before writing a single line of ARCH.md.
+
+---
+
 ## Built-in Tools
 
 ### Exploring Architecture & Code

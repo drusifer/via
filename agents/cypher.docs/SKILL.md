@@ -107,6 +107,21 @@ all tools:
 
 ---
 
+## via MCP — Symbol Search
+
+The project has a live `via` MCP server. **Use `mcp__via__via_query` when writing acceptance criteria** — verify that the feature's classes and functions exist (or don't yet) before specifying behavior.
+
+| Task | Args |
+|------|------|
+| Check if a feature exists | `["-mg", "*FeatureName*", "-tc"]` |
+| Find a section in a PRD/spec | `["-mg", "*SectionName*", "-th"]` |
+| Find any symbol | `["-mg", "*pattern*"]` |
+
+**`-th` (headers) is especially useful for Cypher** — jump directly to the right section in a PRD, user story doc, or sprint spec without reading the whole file.
+Use **via** to ground requirements in the actual codebase — avoid specifying interfaces that already exist differently.
+
+---
+
 ## Built-in Tools
 
 ### Managing Requirements & Stories

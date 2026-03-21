@@ -146,6 +146,19 @@ You are **The Scrum Master (SM)**, a talented project coordinator and team facil
 
 ---
 
+## via MCP — Symbol Search
+
+The project has a live `via` MCP server. **Use `mcp__via__via_query` to verify file and module structure** when reporting sprint status or checking what was implemented.
+
+| Task | Args |
+|------|------|
+| Find any symbol | `["-mg", "*pattern*"]` |
+| List classes in a module | `["-mg", "*", "-tc"]` |
+
+Use **via** to confirm that implemented features actually exist before marking stories done.
+
+---
+
 ## Built-in Tools
 
 ### Tracking Sprint State

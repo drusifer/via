@@ -62,6 +62,18 @@ via/db/store.py — WAL in connect(), delete_file_completely()
 
 **Sprint 6 Status**: COMPLETE (2026-03-19), 713 tests passing
 **Sprint 7 Status**: COMPLETE (2026-03-20), 794 tests passing (+81 new tests)
+**Sprint 8 Status**: COMPLETE (2026-03-21), 837 tests passing
+
+**Session 2026-03-21 Fixes**:
+- Bug: resolve_pending_relationships() not called in IndexingService.index() — all live relationship queries returned empty. Fixed: added call before commit_transaction().
+- Bug: MCP server never called initialize_schema() — old DBs missing line_offsets table. Fixed: watch_store.initialize_schema() on startup.
+- Bug: MCP tool description was one-liner docstring. Fixed: now uses build_tool_schema() rich description.
+- Improvement: WatchService switched from recursive=True to non-recursive per-dir watches using FileDiscovery._should_include_dir(). Excluded dirs (build/, __pycache__, .git) never get OS inotify watches.
+- Improvement: watchdog inotify_buffer logger silenced to WARNING in MCP mode.
+- Regression test added: tests/integration/test_indexing_resolves_relationships.py
+
+**Tech Debt (from this session)**:
+- TD-WATCH-1: Extract PathFilter from FileDiscovery (backlogged in SPRINT_9_USER_STORIES.md)
 
 **Tech Debt (Sprint 7 created)**:
 - TD-S7-1: Async queue for DB access (replace WAL+separate-connections) if concurrent writers added

@@ -1,6 +1,6 @@
 # Cypher Context - VIA Project
 
-**Last Updated**: 2026-03-19
+**Last Updated**: 2026-03-20
 
 ## Current Project
 Via - Python codebase indexing and querying CLI tool
@@ -32,8 +32,8 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 ```
 
 ### Roadmap (2026-03-20)
-- **Sprint 7** - MCP Mode (10pts): `via mcp serve` (watch+JSON-RPC), `via install mcp`, `via mcp schema` — **STORIES READY** (updated 2026-03-20), see SPRINT_7_USER_STORIES.md. Needs Morpheus design: watch+server concurrency, JsonRenderer arch, install/status polymorphism.
-- **Sprint 8** - Line Index (6pts): `-mL` match type with slice syntax, byte offset indexing
+- **Sprint 7** - MCP Mode (10pts): SHIPPED 2026-03-20 (commit e714929), 794 tests, 10/10 UAT
+- **Sprint 8** - Line Index (6pts): `-mL` match type with slice syntax, byte offset indexing — **STORIES READY**, needs Morpheus design
 - **Sprint 9** - Container Queries (~6pts): `-Vhas` has-a relationship (container→members) + temporal matcher in via query layer
 - **Sprint 10** - (planned) `prep_tldr` integration using temporal matcher (~2pts) + TBD
 - User stories reviewed 2026-03-19, Sprint 9 added 2026-03-20 per Drew request

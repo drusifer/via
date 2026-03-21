@@ -2306,3 +2306,175 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-20 16:37:25</small>] [**Cypher**]->[**all**] **pm req*:
  Sprint 7 LAUNCHED. Committing all Sprint 7 work and preparing Sprint 8 kickoff.
+
+---
+[<small>2026-03-20 16:39:47</small>] [**Cypher**]->[**morpheus**] **pm req*:
+ Sprint 8 kickoff: Line Index (6pts). Stories ready in SPRINT_8_USER_STORIES.md. @Morpheus *lead arch Sprint 8 — need design for: line_offsets DB schema, -mL match type in PipelineParser, slice syntax parser, renderer integration.
+
+---
+[<small>2026-03-20 16:42:29</small>] [**User**]->[**morpheus**] **request*:
+ arch Sprint 8
+
+---
+[<small>2026-03-20 16:42:51</small>] [**Morpheus**]->[**all**] **lead arch*:
+ Activated. Reading current schema, flag_groups, pipeline, and renderer code before designing Sprint 8 line index architecture.
+
+---
+[<small>2026-03-20 16:47:09</small>] [**Morpheus**]->[**all**] **lead arch*:
+ Sprint 8 arch DONE → SPRINT_8_ARCHITECTURE.md. line_offsets table, -mL flag, _apply_line_slice() in Executor. 3 OQs for Drew. @Neo P1 (schema+indexing) can start now.
+
+---
+[<small>2026-03-20 18:24:30</small>] [**User**]->[**mouse**] **request*:
+ plan sprint
+
+---
+[<small>2026-03-20 18:24:38</small>] [**Mouse**]->[**all**] **sm status*:
+ Activated. Reading Sprint 8 stories and arch doc to build task breakdown.
+
+---
+[<small>2026-03-20 18:25:46</small>] [**Mouse**]->[**all**] **sm status*:
+ Sprint 8 plan DONE → SPRINT_8_TASKS.md. 17 tasks, 3 phases. P1 (8 tasks, schema+indexing) unblocked — @Neo start now. P2 (6 tasks, pipeline) after P1-4. P3 UAT (Trin). OQ-3 negative indices deferred.
+
+---
+[<small>2026-03-20 18:25:53</small>] [**Neo**]->[**all**] **swe impl*:
+ Activated. Starting Sprint 8 P1: DB schema + line indexing. Tasks P1-1 through P1-8.
+
+---
+[<small>2026-03-20 23:35:22</small>] [**User**]->[**neo**] **request*:
+ @neo continue testing sprint 8
+
+---
+[<small>2026-03-20 23:37:30</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+============= 1 failed, 808 passed, 1 warning in 85.24s (0:01:25) ==============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 00:55:44</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+======================== 818 passed in 86.10s (0:01:26) ========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 00:55:53</small>] [**Neo**]->[**Trin**] **swe handoff*:
+ P1 + P2 complete. 818 tests passing (+24 new). Schema, indexing, parse_line_slice, _apply_line_slice all implemented and tested. Ready for P3 UAT. See SPRINT_8_TASKS.md P3 for test cases.
+
+---
+[<small>2026-03-21 00:56:26</small>] [**Trin**]->[**all**] **qa start*:
+ Starting P3 UAT for Sprint 8. Reading sprint tasks and existing UAT patterns.
+
+---
+[<small>2026-03-21 01:00:34</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+=================== 3 failed, 831 passed in 91.73s (0:01:31) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 01:03:54</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+=================== 3 failed, 831 passed in 89.25s (0:01:29) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 01:08:10</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+=================== 3 failed, 831 passed in 90.26s (0:01:30) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 01:12:16</small>] [**Trin**]->[**all**] **qa fix*:
+ 3 root causes found, fixing tests now.
+
+---
+[<small>2026-03-21 01:14:17</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+======================== 834 passed in 90.03s (0:01:30) ========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 01:14:22</small>] [**Trin**]->[**all**] **qa done*:
+ P3 UAT complete. All 7 UAT cases pass. 834 total tests (was 794 at Sprint 7). Sprint 8 DONE.
+
+---
+[<small>2026-03-21 01:29:39</small>] [**User**]->[**bob**] **request*:
+ we have a working via mcp now. Please update the common persona skills so the agents know how and when to use via
+
+---
+[<small>2026-03-21 01:32:13</small>] [**Bob**]->[**all**] **reprompt*:
+ Updated all 7 persona SKILL.md files with via MCP section. Agents now know: use mcp__via__via_query with [-mg, pattern] args instead of Grep for symbol lookup. Also covers md header search (-th flag). See each SKILL.md Built-in Tools section.
+
+---
+[<small>2026-03-21 01:37:41</small>] [**User**]->[**trin**] **request*:
+ trin address testing gap that missed this bug: resolve_pending_relationships() is never called in IndexingService.index() so all live relationship queries return empty. Tests call it directly, masking the gap.
+
+---
+[<small>2026-03-21 01:40:31</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+=================== 3 failed, 834 passed in 91.12s (0:01:31) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 01:42:18</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+=================== 1 failed, 836 passed in 91.64s (0:01:31) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 01:44:17</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+======================== 837 passed in 91.69s (0:01:31) ========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 01:44:38</small>] [**Trin**]->[**all**] **qa report*:
+ Regression fixed + test added. IndexingService.index() now calls resolve_pending_relationships() before commit. New: tests/integration/test_indexing_resolves_relationships.py (3 tests). 837 pass, 0 fail.
+
+---
+[<small>2026-03-21 01:47:32</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+======================== 837 passed in 91.78s (0:01:31) ========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 01:55:25</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+======================== 837 passed in 92.20s (0:01:32) ========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 01:59:22</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+======================== 837 passed in 93.80s (0:01:33) ========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 02:01:31</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+======================== 837 passed in 91.30s (0:01:31) ========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 02:07:35</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+======================== 837 passed in 90.62s (0:01:30) ========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 02:07:46</small>] [**User**]->[**morpheus**] **request*:
+ Arch needed: WatchService uses FileDiscovery._should_include_dir() (private) to prune inotify watches. Expose exclusion logic cleanly — Watcher shouldn't depend on FileDiscovery internals. See via/services/watch.py and via/core/discovery.py.
+
+---
+[<small>2026-03-21 02:08:28</small>] [**Morpheus**]->[**all**] **lead decide*:
+ Arch decision: extract PathFilter from FileDiscovery. New via/core/path_filter.py with include_dir()/include_file(). FileDiscovery composes it. WatchService takes PathFilter directly. Eliminates private method coupling. @Neo implement when ready.
+
+---
+[<small>2026-03-21 02:12:58</small>] [**Morpheus**]->[**all**] **lead story*:
+ TD-WATCH-1 backlogged in SPRINT_9_USER_STORIES.md — extract PathFilter from FileDiscovery. Functional watch fix already in place.
+
+---
+[<small>2026-03-21 02:13:19</small>] [**User**]->[**all**] **request*:
+ Preparing for shutdown. Saving all state.
+
+---
+[<small>2026-03-21 02:14:40</small>] [**User**]->[**all**] **shutdown*:
+ Shutdown complete. State saved. 837 tests passing. Sprint 9 next. MCP server ready for restart with: relationship queries live, schema migration on startup, rich tool description, gitignore-aware watch dirs, quiet logs.

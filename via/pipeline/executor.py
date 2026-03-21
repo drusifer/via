@@ -91,6 +91,10 @@ class PipelineExecutor:
                 self._execute_stats_stage(stage)
                 return None  # Stats is terminal stage
 
+        # Apply line slice if -mL was specified on the last match stage
+        if last_match_stage and getattr(last_match_stage.args, 'line_slice', None):
+            result_iter = self._apply_line_slice(result_iter, last_match_stage.args)
+
         # Check if last match stage has render_type (new design)
         if last_match_stage and hasattr(last_match_stage.args, 'render_type'):
             render_type = getattr(last_match_stage.args, 'render_type', None)
@@ -309,6 +313,46 @@ class PipelineExecutor:
             return bool(re.match(f'^{regex_pattern}$', value))
 
         return False
+
+    def _apply_line_slice(
+        self, records: Iterator[MatchRecord], args
+    ) -> Iterator[MatchRecord]:
+        """Update each record's byte_offset/byte_length to cover the requested line slice.
+
+        The slice is relative to the matched symbol/file start (line 1 = first
+        line of the matched thing). Absolute file line numbers are resolved by
+        adding (record.line_number - 1) to the relative start/end.
+
+        Records where the slice resolves to a zero-length range are skipped.
+
+        Args:
+            records: Upstream match records
+            args: Parsed argparse Namespace with 'line_slice' attribute
+
+        Yields:
+            Updated MatchRecord objects
+        """
+        from via.core.utils import parse_line_slice
+
+        rel_start, rel_end = parse_line_slice(args.line_slice)
+
+        for record in records:
+            # filepath/filename symbols use line_number=0 as "whole file" sentinel;
+            # treat as line 1 so relative slices resolve correctly.
+            sym_line = record.line_number if record.line_number > 0 else 1
+
+            # Resolve relative slice to absolute file line numbers
+            abs_start = sym_line + (rel_start - 1) if rel_start is not None else sym_line
+            abs_end = sym_line + (rel_end - 1) if rel_end is not None else sym_line + 9999
+
+            new_offset, new_length = self.db.get_line_byte_range(
+                record.file_path, abs_start, abs_end
+            )
+            if new_length > 0:
+                record.byte_offset = new_offset
+                record.byte_length = new_length
+                record.line_number = abs_start
+                yield record
 
     def _execute_render_stage(self, stage: PipelineStage, records: Iterator[MatchRecord]):
         """Render records to stdout.

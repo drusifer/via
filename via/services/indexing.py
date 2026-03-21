@@ -186,6 +186,10 @@ class IndexingService:
                         f"Indexing files", idx + 1, stats.total_files
                     )
 
+            # Resolve pending relationships before committing
+            resolved = self.db_store.resolve_pending_relationships()
+            logger.debug("Resolved %d pending relationships", resolved)
+
             # Commit transaction
             self.db_store.commit_transaction()
             logger.info("Index committed successfully")
@@ -275,22 +279,25 @@ class IndexingService:
             self._store_file_with_error(file_info, parse_result.parse_error)
             return {'functions': 0, 'classes': 0, 'imports': 0, 'globals': 0}
 
-        # Store in database
-        return self._store_parsed_file(file_info, parse_result)
+        # Store in database (pass content for line offset indexing)
+        return self._store_parsed_file(file_info, parse_result, content)
 
-    def _store_parsed_file(self, file_info: DiscoveredFile, parse_result) -> dict:
+    def _store_parsed_file(self, file_info: DiscoveredFile, parse_result, content: bytes = b'') -> dict:
         """
         Store parsed file and entities in database.
 
         Args:
             file_info: File information
             parse_result: Parse result with entities
+            content: Raw file bytes (used to build line offset index)
 
         Returns:
             Dict with entity counts
         """
-        self._upsert_file(file_info, parse_result)
+        file_id = self._upsert_file(file_info, parse_result)
         self._store_symbols(file_info, parse_result)
+        if content:
+            self._index_line_offsets(file_id, content)
 
         return {
             'functions': len(parse_result.functions) + sum(len(c.methods) for c in parse_result.classes),
@@ -532,6 +539,23 @@ class IndexingService:
                 byte_length=heading.byte_length,
                 parent_name=parent_name,
             )
+
+    def _index_line_offsets(self, file_id: int, content: bytes) -> None:
+        """Record byte offset of each line start for the given file.
+
+        Called after symbol indexing for parsed files. O(file_size) — same
+        content bytes already in memory from _index_file().
+
+        Args:
+            file_id: File ID (FK to files.id)
+            content: Raw file bytes
+        """
+        offsets = []
+        pos = 0
+        for line_num, line in enumerate(content.splitlines(keepends=True), start=1):
+            offsets.append((file_id, line_num, pos, len(line)))
+            pos += len(line)
+        self.db_store.upsert_line_offsets(file_id, offsets)
 
     def _store_unparsed_file(self, file_info: DiscoveredFile) -> None:
         """Store file as unparsed."""

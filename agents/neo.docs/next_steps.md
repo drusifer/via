@@ -1,14 +1,16 @@
 # Neo Next Steps
 
-## Resume Point: Sprint 8 — Line Index (`-mL`)
+## Resume Point: Sprint 9 — Has-A Relationship (`-Vhas`) + Incremental prep_tldr
 
-Sprint 7 is SHIPPED (2026-03-20). 794 tests passing.
+Sprint 8 SHIPPED (2026-03-21). 837 tests passing. Sprint 9 is next.
 
-### Before Starting Sprint 8
-1. Read `agents/mouse.docs/context.md` for sprint status
-2. Read `agents/cypher.docs/SPRINT_8_USER_STORIES.md` for stories
-3. Ask Morpheus for architecture review (`@Morpheus *lead arch Sprint 8`)
-4. TDD: write tests first, see red, implement, see green
+### Before Starting Sprint 9
+1. Read `agents/cypher.docs/SPRINT_9_USER_STORIES.md` for stories
+2. Ask Morpheus for architecture review
+3. TDD: write tests first, see red, implement, see green
+
+### Tech Debt to pick up (TD-WATCH-1)
+Extract `PathFilter` from `FileDiscovery` — WatchService currently calls private `_should_include_dir()`. Low urgency.
 
 ### Remaining Tech Debt (low priority)
 - TD-3: Move lazy `from via.core.discovery import DiscoveredFile` in `watch.py._reindex_file` to module level

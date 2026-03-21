@@ -145,6 +145,33 @@ You are **The Guardian (QA)**, the Lead SDET (Software Development Engineer in T
 
 ---
 
+## via MCP — Symbol Search & Relationships
+
+The project has a live `via` MCP server. **Use `mcp__via__via_query` to find classes and functions when mapping test coverage** — quickly locate what exists and whether tests cover it.
+
+| Task | Args |
+|------|------|
+| Find source classes | `["-mg", "*ClassName*", "-tc"]` |
+| Find corresponding tests | `["-mg", "*TestClassName*", "-tc"]` |
+| Find a function to test | `["-mg", "*func_name*", "-tf"]` |
+
+Cross-reference source symbols against `Test*` symbols to identify coverage gaps.
+Use **via** for symbol lookups; use **Grep** for searching assertion patterns inside test files.
+
+### Relationship Queries
+
+Syntax: `<subject> -Vxxx <object>` — finds subjects with that relationship to the object. Add `-iv` to invert direction.
+
+| Task | Args |
+|------|------|
+| Everything that calls `func` | `["-mg", "*", "-Vca", "-mg", "func", "-tf"]` |
+| All subclasses of `Base` | `["-mg", "*", "-tc", "-Vinh", "-mg", "Base", "-tc"]` |
+| All references to `Symbol` | `["-mg", "*", "-Vr", "-mg", "Symbol"]` |
+
+**Use before writing tests** — find every caller of a function to determine full test scope without reading any files. Subclass queries reveal all concrete types that need coverage.
+
+---
+
 ## Built-in Tools
 
 ### Reading & Exploring Tests

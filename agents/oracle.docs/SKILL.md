@@ -162,6 +162,36 @@ make test   # confirm no regressions
 
 ---
 
+## via MCP — Symbol Search & Relationships
+
+The project has a live `via` MCP server. **Use `mcp__via__via_query` to answer `*ora ask` queries about code** — find any class, function, or file by name instantly.
+
+| Task | Args |
+|------|------|
+| Locate a class | `["-mg", "*ClassName*", "-tc"]` |
+| Locate a function | `["-mg", "*func_name*", "-tf"]` |
+| Find a file | `["-mg", "*filename*", "-tfi"]` |
+| Find a markdown section | `["-mg", "*SectionName*", "-th"]` |
+| Find any symbol | `["-mg", "*pattern*"]` |
+
+Results include `file_path` and `line_number`. Always cite these when answering queries.
+**`-th` (headers) is especially powerful for Oracle** — navigate directly to the right section in any doc without reading full files.
+Use **via** for symbol/header lookups by name; use **Grep** for full-text content search.
+
+### Relationship Queries
+
+Syntax: `<subject> -Vxxx <object>` — finds subjects with that relationship to the object. Add `-iv` to invert direction.
+
+| Task | Args |
+|------|------|
+| Who references `Symbol`? | `["-mg", "*", "-Vr", "-mg", "Symbol"]` |
+| What imports `module`? | `["-mg", "*", "-Vimp", "-mg", "module_name"]` |
+| All subclasses of `Base` | `["-mg", "*", "-tc", "-Vinh", "-mg", "Base", "-tc"]` |
+
+**Use for `*ora ask` queries** — "where is X used?" answered as compact metadata, with exact file+line citations, without reading any files.
+
+---
+
 ## Built-in Tools
 
 ### Searching & Indexing Knowledge

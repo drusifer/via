@@ -47,4 +47,4 @@
 - 794 passed, 0 failed (was 713 at Sprint 6 start, +81 new tests)
 
 ## Next Sprint
-- Sprint 8: Async queue for DB (TD-S7-1), lighter MCP transport option (TD-S7-2)
+- Sprint 8 P3 UAT: Trin writes tests/uat/test_sprint8_uat.py (7 UAT cases)

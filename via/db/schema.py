@@ -18,7 +18,7 @@ License: GPL-3.0
 """
 
 # Schema version for migrations
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 # SQL statements for creating tables
 CREATE_METADATA_TABLE = """
@@ -88,6 +88,18 @@ CREATE TABLE IF NOT EXISTS pending_relationships (
 );
 """
 
+# Line byte offset index for -mL line slice queries
+CREATE_LINE_OFFSETS_TABLE = """
+CREATE TABLE IF NOT EXISTS line_offsets (
+    file_id     INTEGER NOT NULL,
+    line_number INTEGER NOT NULL,
+    byte_offset INTEGER NOT NULL,
+    byte_length INTEGER NOT NULL,
+    PRIMARY KEY (file_id, line_number),
+    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+);
+"""
+
 # Index definitions for performance
 CREATE_INDEXES = [
     # Files indexes
@@ -109,6 +121,9 @@ CREATE_INDEXES = [
     # Pending relationships indexes
     "CREATE INDEX IF NOT EXISTS idx_pending_rel_source ON pending_relationships(source_id);",
     "CREATE INDEX IF NOT EXISTS idx_pending_rel_target ON pending_relationships(target_name);",
+
+    # Line offsets index
+    "CREATE INDEX IF NOT EXISTS idx_line_offsets_file ON line_offsets(file_id);",
 ]
 
 # All table creation statements in dependency order
@@ -119,4 +134,5 @@ ALL_TABLES = [
     CREATE_SYMBOLS_TABLE,
     CREATE_REFERENCES_TABLE,
     CREATE_PENDING_RELATIONSHIPS_TABLE,
+    CREATE_LINE_OFFSETS_TABLE,
 ]
