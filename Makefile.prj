@@ -1,6 +1,6 @@
 # Makefile for the VIA project
 
-.PHONY: all venv test clean lint-fast lint lint-slow duplicates security analyze
+.PHONY: all venv test clean lint-fast lint lint-slow duplicates security analyze install-system
 
 # Variables
 PYTHON := python3
@@ -87,3 +87,7 @@ security: install-dev
 fix: install-dev
 	@echo "=== RUFF: fix ==="
 	. ${VENV_ACTIVATE} && ruff check --fix via/
+
+# Install via as a package available globally via pipx
+install-system: ## Install via globally using pipx (makes 'via' command available system-wide)
+	pipx install --editable . --force

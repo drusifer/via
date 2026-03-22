@@ -847,3 +847,24 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-22 18:24:18</small>] [**Trin**]->[**all**] **qa verify*:
  Session complete. UX-001+UX-002 fixed and verified. 970 tests passing. Awaiting user direction for next session.
+
+---
+[<small>2026-03-22 18:39:48</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make install-system | /home/drusifer/Projects/via/build/build.out
+hint: See PEP 668 for the detailed specification.
+make[1]: *** [Makefile.prj:93: install-system] Error 1
+
+---
+[<small>2026-03-22 18:42:03</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make install-system | /home/drusifer/Projects/via/build/build.out
+pipx install --editable . --force
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+make[1]: *** [Makefile.prj:93: install-system] Error 127
+
+---
+[<small>2026-03-22 18:43:45</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make install-system | /home/drusifer/Projects/via/build/build.out
+installed package via 0.1.0, installed using Python 3.13.5
+These apps are now globally available
+- via
+make[1]: Leaving directory '/home/drusifer/Projects/via'
