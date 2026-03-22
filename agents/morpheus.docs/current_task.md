@@ -1,6 +1,19 @@
 # Morpheus Current Task
 
-## Task: Session 2026-03-21 — Code Quality & MCP Schema
+## Task: Sprint 9 Architecture — ReferenceType + Temporal Matcher
+**Status**: COMPLETE (100%)
+**Date**: 2026-03-21
+
+## Delivered
+- `SPRINT_9_ARCHITECTURE.md` — full arch spec for both blockers
+- ReferenceType: rename RelationshipType→ReferenceType, add DECLARES/-Vhas, defer CLI unification to Sprint 10
+- Temporal: symbols.mtime schema migration (version 5), --newerthan/--olderthan flags, duration.py parser, library API as match() params
+- Implementation ordering: TD-REVIEW Phase 1 first, then Story 3/4/5, then Story 1, then Story 2a
+- 5 open questions for Drew (see arch doc)
+
+---
+
+## Previous Task: Session 2026-03-21 — Code Quality & MCP Schema
 **Status**: COMPLETE (100%)
 **Date**: 2026-03-21
 

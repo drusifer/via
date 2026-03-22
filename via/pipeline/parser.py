@@ -28,6 +28,7 @@ from via.core.flag_groups import (
     get_match_short_flags,
     get_type_short_flags,
 )
+from via.core.duration import parse_duration
 from via.core.relationship_types import RelationshipType
 from via.pipeline.relationship_filter import RelationshipFilter
 from via.pipeline.types import PipelineStage, StageType
@@ -248,13 +249,23 @@ class PipelineParser:
                 object_parsed = self.match_parser.parse_args(object_args)
                 self._finalize_symbol_types(object_parsed)
 
+                # Parse result-side temporal filters from object args
+                result_newerthan = None
+                result_olderthan = None
+                if getattr(object_parsed, 'newerthan', None):
+                    result_newerthan = parse_duration(object_parsed.newerthan)
+                if getattr(object_parsed, 'olderthan', None):
+                    result_olderthan = parse_duration(object_parsed.olderthan)
+
                 # Create relationship filter
                 parsed_args.relationship = RelationshipFilter(
                     relationship_type=rel_type,
                     object_pattern=object_parsed.pattern or '*',
                     object_match_syntax=getattr(object_parsed, 'match_syntax', 'glob'),
                     object_types=object_parsed.symbol_types or [],
-                    invert=invert
+                    invert=invert,
+                    result_newerthan_seconds=result_newerthan,
+                    result_olderthan_seconds=result_olderthan,
                 )
 
                 # Merge output/format flags from object args to subject
@@ -397,6 +408,12 @@ class PipelineParser:
         # Line slice modifier (optional, combinable with any match flag)
         parser.add_argument('-mL', '--match-lines', dest='line_slice', default=None, metavar='SLICE',
                           help='Line slice: 5:10, 1:, :5, 7 (relative to matched symbol start)')
+
+        # Temporal filters: per-stage modifiers for symbol mtime
+        parser.add_argument('--newerthan', dest='newerthan', default=None, metavar='DURATION',
+                          help='Filter: symbols whose file was modified within DURATION ago (e.g. 1h, 2d)')
+        parser.add_argument('--olderthan', dest='olderthan', default=None, metavar='DURATION',
+                          help='Filter: symbols whose file was NOT modified within DURATION (e.g. 1h, 2d)')
 
         return parser
 

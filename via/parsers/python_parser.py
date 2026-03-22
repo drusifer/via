@@ -138,10 +138,20 @@ class PythonParser(ParserABC):
         refs = self._extract_references(node, text, referencer_name=node.name, referencer_type='function')
         result.references.extend(refs)
 
+        # Extract decorator and type annotation references
+        refs = self._extract_decorator_references(node, text, referencer_name=node.name, referencer_type='function')
+        result.references.extend(refs)
+        refs = self._extract_annotation_references(node, text, referencer_name=node.name, referencer_type='function')
+        result.references.extend(refs)
+
     def _handle_class(self, node: ast.ClassDef, text: str, result: ParseResult) -> None:
         """Handle ClassDef nodes."""
         cls = self._extract_class(node, text)
         result.classes.append(cls)
+
+        # Extract base class, decorator, and class-body annotation references
+        refs = self._extract_class_structural_references(node, text)
+        result.references.extend(refs)
 
         # Extract calls and references from methods within the class
         for item in node.body:
@@ -155,6 +165,22 @@ class PythonParser(ParserABC):
                 result.calls.extend(calls)
 
                 refs = self._extract_references(
+                    item, text,
+                    referencer_name=item.name,
+                    referencer_type='method',
+                    referencer_parent=node.name
+                )
+                result.references.extend(refs)
+
+                refs = self._extract_decorator_references(
+                    item, text,
+                    referencer_name=item.name,
+                    referencer_type='method',
+                    referencer_parent=node.name
+                )
+                result.references.extend(refs)
+
+                refs = self._extract_annotation_references(
                     item, text,
                     referencer_name=item.name,
                     referencer_type='method',
@@ -522,6 +548,181 @@ class PythonParser(ParserABC):
             return func.attr
 
         return None
+
+    def _extract_class_structural_references(
+        self,
+        class_node: ast.ClassDef,
+        text: str,
+    ) -> list:
+        """Extract references from a class definition's structure.
+
+        Covers: base classes, class-level decorators, class-body annotations.
+        All references are attributed to the class symbol (referencer_type='class').
+        """
+        references = []
+        seen_names: Set[str] = set()
+        class_name = class_node.name
+
+        def _emit(name: str, lineno: int) -> None:
+            if name in seen_names or name in PYTHON_BUILTINS or name in PYTHON_CONSTANTS:
+                return
+            if name in ('self', 'cls'):
+                return
+            seen_names.add(name)
+            references.append(ReferenceEntity(
+                referencer_name=class_name,
+                referenced_name=name,
+                line_number=lineno,
+                byte_offset=self._get_byte_offset_for_line(lineno, text),
+                byte_length=len(name),
+                referencer_type='class',
+                referencer_parent=None,
+            ))
+
+        # Base classes
+        for base in class_node.bases:
+            if isinstance(base, ast.Name):
+                _emit(base.id, base.lineno)
+            elif isinstance(base, ast.Attribute):
+                _emit(base.attr, base.lineno)
+
+        # Class decorators
+        for dec in class_node.decorator_list:
+            if isinstance(dec, ast.Name):
+                _emit(dec.id, dec.lineno)
+            elif isinstance(dec, ast.Attribute):
+                _emit(dec.attr, dec.lineno)
+            elif isinstance(dec, ast.Call) and isinstance(dec.func, ast.Name):
+                _emit(dec.func.id, dec.func.lineno)
+
+        # Class-body annotations (ast.AnnAssign at class level)
+        for item in class_node.body:
+            if isinstance(item, ast.AnnAssign):
+                ann = item.annotation
+                if isinstance(ann, ast.Name):
+                    _emit(ann.id, ann.lineno)
+                elif isinstance(ann, ast.Attribute):
+                    _emit(ann.attr, ann.lineno)
+
+        return references
+
+    def _get_byte_offset_for_line(self, lineno: int, text: str) -> int:
+        """Return the byte offset of the start of a given line (1-indexed)."""
+        lines = text.splitlines(keepends=True)
+        offset = 0
+        for i, line in enumerate(lines):
+            if i + 1 == lineno:
+                return offset
+            offset += len(line.encode('utf-8'))
+        return offset
+
+    def _extract_decorator_references(
+        self,
+        func_node: ast.AST,
+        text: str,
+        referencer_name: str,
+        referencer_type: str = 'function',
+        referencer_parent: str = None,
+    ) -> list:
+        """Extract decorator names as REFERENCES for a function or method node."""
+        references = []
+        seen_names: Set[str] = set()
+        decorator_list = getattr(func_node, 'decorator_list', [])
+
+        for dec in decorator_list:
+            if isinstance(dec, ast.Name):
+                name = dec.id
+            elif isinstance(dec, ast.Attribute):
+                name = dec.attr
+            elif isinstance(dec, ast.Call) and isinstance(dec.func, ast.Name):
+                name = dec.func.id
+            else:
+                continue
+
+            if name in seen_names or name in PYTHON_BUILTINS or name in PYTHON_CONSTANTS:
+                continue
+            if name in ('self', 'cls'):
+                continue
+            seen_names.add(name)
+            references.append(ReferenceEntity(
+                referencer_name=referencer_name,
+                referenced_name=name,
+                line_number=dec.lineno,
+                byte_offset=self._get_byte_offset(dec, text),
+                byte_length=len(name),
+                referencer_type=referencer_type,
+                referencer_parent=referencer_parent,
+            ))
+
+        return references
+
+    def _extract_annotation_references(
+        self,
+        func_node: ast.AST,
+        text: str,
+        referencer_name: str,
+        referencer_type: str = 'function',
+        referencer_parent: str = None,
+    ) -> list:
+        """Extract type annotation names as REFERENCES for a function or method node.
+
+        Covers: parameter annotations and return type annotation.
+        Skips builtins (str, int, bool, etc.) and None.
+        """
+        references = []
+        seen_names: Set[str] = set()
+
+        def _emit_annotation(ann) -> None:
+            if ann is None:
+                return
+            if isinstance(ann, ast.Name):
+                name = ann.id
+                lineno = ann.lineno
+            elif isinstance(ann, ast.Attribute):
+                name = ann.attr
+                lineno = ann.lineno
+            elif isinstance(ann, ast.Constant):
+                return  # string annotations / literals — skip
+            elif isinstance(ann, ast.Subscript):
+                # e.g. Optional[X], List[X] — recurse into slice
+                _emit_annotation(ann.value)
+                _emit_annotation(ann.slice)
+                return
+            elif isinstance(ann, ast.Tuple):
+                for elt in ann.elts:
+                    _emit_annotation(elt)
+                return
+            else:
+                return
+
+            if name in seen_names or name in PYTHON_BUILTINS or name in PYTHON_CONSTANTS:
+                return
+            if name in ('self', 'cls'):
+                return
+            seen_names.add(name)
+            references.append(ReferenceEntity(
+                referencer_name=referencer_name,
+                referenced_name=name,
+                line_number=lineno,
+                byte_offset=self._get_byte_offset(ann, text),
+                byte_length=len(name),
+                referencer_type=referencer_type,
+                referencer_parent=referencer_parent,
+            ))
+
+        if isinstance(func_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            # Parameter annotations
+            for arg in (func_node.args.args + func_node.args.posonlyargs +
+                        func_node.args.kwonlyargs):
+                _emit_annotation(arg.annotation)
+            if func_node.args.vararg:
+                _emit_annotation(func_node.args.vararg.annotation)
+            if func_node.args.kwarg:
+                _emit_annotation(func_node.args.kwarg.annotation)
+            # Return annotation
+            _emit_annotation(func_node.returns)
+
+        return references
 
     def _extract_references(
         self,

@@ -1,19 +1,14 @@
 # Neo Next Steps
 
-## Resume Point: Sprint 9 planning (stories TBD)
+## Resume Point: Sprint 9 COMPLETE — Sprint 10 Prep
 
-Sprint 8 SHIPPED (2026-03-21). 837 tests passing.
+Sprint 9 is complete pending Trin UAT on Story 2a. All 4 phases done.
 
-### Before Starting Sprint 9
-1. Read `agents/CHAT.md` for latest assignments
-2. Read `agents/cypher.docs/SPRINT_9_USER_STORIES.md` for stories
-3. Ask Morpheus for architecture review if needed
-4. TDD: write tests first, see red, implement, see green
+### If Sprint 10 work arrives:
+Per SPRINT_9_ARCHITECTURE.md deferred items:
+- **ReferenceType CLI unification** (Sprint 10): `--ref-type <type>` as power-user alternative to `-V<X>` flags
+- **Cross-stage mtime comparison** (Sprint 10): `--stale` flag (result older than anchor)
+- Story 2b: `prep_tldr` integration using temporal matcher
 
-### Tech Debt Available (pick up anytime)
-- TD-REVIEW-2: Add `DatabaseStore.get_symbol_id()`, remove `.conn` direct access in indexing.py (small, clean)
-- TD-REVIEW-4: Extract `_upsert_raw_file()`, merge 3 near-identical file-storage methods
-- TD-REVIEW-5: Merge `_store_call_relationships` + `_store_reference_relationships`
-- TD-WATCH-1: Extract `PathFilter` from `FileDiscovery` (low urgency)
-- TD-REVIEW-1: Remove `_get_match_metadata()` from store.py (medium effort)
-- TD-REVIEW-3: Simplify `delete_file_completely` (verify FK CASCADE first)
+### TD-WATCH-1 (backlog):
+Extract `PathFilter` from `FileDiscovery` to fix WatchService coupling.

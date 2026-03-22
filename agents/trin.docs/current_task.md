@@ -1,73 +1,45 @@
-# Trin Current Task - Query Doc Fixes
+# Trin Current Task
 
-## Task: Apply Drew's feedback from QUERY_DOC_REVIEW_2026_03_21.md
-**Status**: COMPLETE (100%)
+## Task: Sprint 9 Cycle 4 UAT — Story 2a (Temporal Matcher)
+**Status**: COMPLETE — UAT PASSED
 **Date**: 2026-03-21
 
-## Done
-- schema.py: fixed Ex02 (name-glob), Ex05 (basename pattern + note), Ex09 (method anchor + bug note)
-- schema.py description: added notes on -mg basename matching and -Vr scope limit
-- trin.docs/SKILL.md: fixed subclass query direction and references row
-- tests/uat/test_documented_queries_uat.py: 884→894 pass, 5→2 xfail
-- Remaining xfails: class-level -Vca bug (sprint 9) + -th lowercase invalid
+## Review Results
 
----
+### Story 2a: Temporal Matcher ✅
 
-# Previous Task - Relationship Regression Fix
+**`via/db/schema.py`**: `SCHEMA_VERSION = 5`, `mtime REAL` in CREATE_SYMBOLS_TABLE,
+`idx_symbols_mtime` index added to CREATE_INDEXES. ✅
 
-## Task: Regression test for resolve_pending_relationships() gap
-**Status**: COMPLETE (100%)
-**Date**: 2026-03-21
+**`via/db/store.py`**:
+- Migration v5: PRAGMA table_info(symbols) check before ALTER TABLE — no duplicate column error on fresh DBs ✅
+- `insert_symbol()`: `mtime: Optional[float] = None` param, stored in INSERT ✅
+- `match()`: `newerthan_seconds`/`olderthan_seconds` → `mtime > (now - N)` / `mtime < (now - N)` WHERE clauses ✅
+- `_match_with_regex()`: same temporal params applied before Python-side regex filter ✅
+- `query_relationships()`: `result_newerthan_seconds`/`result_olderthan_seconds` applied to `select_from.mtime` ✅
 
-## Root Cause
-`IndexingService.index()` stored relationships as pending but never called
-`resolve_pending_relationships()` before committing. All live relationship
-queries returned empty. Tests called resolve directly on `DatabaseStore`,
-masking the gap.
+**`via/core/duration.py`**: `parse_duration` — regex `^(\d+)([smhdw])$`, dict of multipliers,
+raises `ValueError` with clear message on bad input ✅
 
-## Fix
-1. Added `resolve_pending_relationships()` call in `via/services/indexing.py`
-   before `commit_transaction()` (line ~190)
-2. Added `tests/integration/test_indexing_resolves_relationships.py` with 3 tests:
-   - `test_inheritance_queryable_after_index` — inheritance via full index()
-   - `test_import_queryable_after_index` — imports via full index()
-   - `test_no_pending_relationships_after_index` — pending table empty after index()
+**`via/services/indexing.py`**: All 7 `insert_symbol()` calls pass `mtime=file_info.mtime`
+(classes, methods, functions, imports, globals, filename, filepath, headers) ✅
 
-## Test Results: 837 passed, 0 failed
+**`via/pipeline/parser.py`**: `--newerthan`/`--olderthan` in `_create_match_parser()`,
+result-side temporal parsed from object args, `parse_duration` called at parse time ✅
 
----
+**`via/pipeline/relationship_filter.py`**: `result_newerthan_seconds`, `result_olderthan_seconds`
+Optional[float] fields with correct defaults ✅
 
-# Previous Task - Sprint 6 UAT
+**`via/pipeline/executor.py`**: temporal flags parsed in `_execute_match_stage()`,
+passed to `db.match()`; result-side from `rel.result_*` passed to `query_relationships()` ✅
 
-## Task: UAT for Sprint 6 Watch Mode
-**Status**: COMPLETE (100%)
-**Date**: 2026-03-19
+**`via/__main__.py`**: `--newerthan`/`--olderthan` in help text Options section ✅
 
-## Result: 17/17 PASS — SIGNED OFF
+## Test Results
+- **908 passed, 1 xfailed** (was 901 baseline from Cycle 3)
+- +7 net: 7 new Story 2a UAT tests
 
-## Bugs Found and Fixed
-
-### Bug 1: SQLite thread safety (CRITICAL)
-- **File**: `via/db/store.py` → `connect()`
-- **Root Cause**: `sqlite3.connect()` defaults to `check_same_thread=True`. WatchService runs `_execute` in `threading.Timer` threads. DB ops silently failed.
-- **Symptom**: "Re-indexed: X (0 symbols)" printed but nothing committed to DB.
-- **Fix**: `sqlite3.connect(self.db_path, check_same_thread=False)`
-- **Discovered via**: `tests/unit/test_watch_thread_safety.py` (diagnostic unit test)
-
-### Bug 2: Missing symbol deletion on file remove
-- **File**: `via/services/watch.py` → `_remove_file()`
-- **Root Cause**: `delete_file_by_path` deletes the `files` row but symbols table has no FK CASCADE from files. Symbols were orphaned.
-- **Symptom**: Deleted file's symbols still queryable after deletion.
-- **Fix**: Added `self.db_store.delete_symbols_by_file(path)` before `delete_file_by_path`
-
-## UAT Coverage
-| Story | AC Tested | Result |
-|-------|-----------|--------|
-| S1: Startup | blocks, initial index, "Watching" msg | ✅ 3/3 |
-| S2: Modify | re-indexes .py/.md, prints feedback, updates DB | ✅ 4/4 |
-| S3: Create | new file indexed, in DB | ✅ 2/2 |
-| S4: Delete | "Removed:", symbols gone from DB | ✅ 2/2 |
-| S5: SIGINT | exit 0, "stopped" message | ✅ 2/2 |
-| S6: Non-parseable | .json/.txt ignored | ✅ 2/2 |
-| S7: Exclusions | --exclude suppresses reindex | ✅ 1/1 |
-| S8: Resilience | syntax errors don't crash watcher | ✅ 1/1 |
+## Notes
+- `test_olderthan_filters_out_recent_symbols` is mildly timing-sensitive (assumes indexing was < 1h ago). Passes reliably in test runs since fixture is indexed in the same session.
+- `--newerthan` on first run (no prior index): all symbols have mtime set from fresh index = all qualify as "new". Correct behavior per spec.
+- No mtime on external module symbols (inserted as '<external>' with no file stat). mtime=NULL for module symbols. Temporal filter on module symbols returns nothing — acceptable edge case.

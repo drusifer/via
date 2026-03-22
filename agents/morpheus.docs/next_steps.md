@@ -1,6 +1,22 @@
 # Morpheus Next Steps
 
-## Resume Point: Sprint 9 Planning
+## Resume Point: Sprint 9 Implementation (after Drew review of arch doc)
+
+### Immediate on Resume
+1. Read `agents/morpheus.docs/SPRINT_9_ARCHITECTURE.md` — Sprint 9 arch spec
+2. Check CHAT.md for Drew's answers to the 5 open questions in the arch doc
+3. Update arch doc with any Drew corrections
+4. Hand off to Neo for implementation in Phase order
+
+### Implementation Phase Order
+- Phase 1: TD-REVIEW-2, TD-REVIEW-5, TD-REVIEW-3, TD-REVIEW-4, TD-REVIEW-1
+- Phase 2: Stories 3, 4, 5 (no blockers)
+- Phase 3: Story 1 (after TD-REVIEW-2 + TD-REVIEW-5)
+- Phase 4: Story 2a (schema migration)
+
+---
+
+## Previous Resume Point: Sprint 9 Planning
 
 Sprint 8 SHIPPED. Code review complete. 837 tests passing.
 

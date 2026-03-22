@@ -137,6 +137,23 @@ class DatabaseStore:
                 (4, time.time(), "Add line_offsets table for -mL line slice queries")
             )
 
+        if current_version < 5:
+            # Only ALTER if symbols.mtime column doesn't already exist.
+            # Fresh DBs have it from CREATE_SYMBOLS_TABLE; old DBs need ALTER.
+            existing_cols = {
+                row[1] for row in cursor.execute("PRAGMA table_info(symbols)")
+            }
+            if 'mtime' not in existing_cols:
+                cursor.execute("ALTER TABLE symbols ADD COLUMN mtime REAL")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_symbols_mtime ON symbols(mtime)"
+            )
+            cursor.execute(
+                "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
+                " VALUES (?, ?, ?)",
+                (5, time.time(), "Add symbols.mtime for temporal query operators")
+            )
+
         # Store metadata
         cursor.execute(
             "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
@@ -357,7 +374,8 @@ class DatabaseStore:
     def delete_file_completely(self, path: str) -> None:
         """Delete a file and all its symbols and relationships atomically.
 
-        Replaces the three-step delete pattern in WatchService._remove_file().
+        FK CASCADE on symbol_references handles relationship cleanup when symbols
+        are deleted. Replaces the three-step delete pattern in WatchService._remove_file().
 
         Args:
             path: Absolute file path
@@ -367,14 +385,7 @@ class DatabaseStore:
         cursor = self.conn.cursor()
         cursor.execute("BEGIN")
         try:
-            # Delete relationships (symbol_references) for all symbols in this file
-            cursor.execute(
-                """DELETE FROM symbol_references
-                   WHERE from_symbol_id IN (SELECT id FROM symbols WHERE file_path = ?)
-                      OR to_symbol_id   IN (SELECT id FROM symbols WHERE file_path = ?)""",
-                (path, path),
-            )
-            # Delete symbols (stored with absolute path)
+            # Delete symbols — FK CASCADE removes dependent symbol_references rows
             cursor.execute("DELETE FROM symbols WHERE file_path = ?", (path,))
             # Delete file record (stored with relative path)
             cursor.execute("DELETE FROM files WHERE path = ?", (rel_path,))
@@ -479,6 +490,7 @@ class DatabaseStore:
         byte_offset: Optional[int] = None,
         byte_length: Optional[int] = None,
         parent_name: Optional[str] = None,
+        mtime: Optional[float] = None,
     ) -> int:
         """
         Insert a symbol record into the denormalized symbols table.
@@ -492,6 +504,7 @@ class DatabaseStore:
             byte_offset: Byte offset in file (None for files)
             byte_length: Symbol byte length (None for files)
             parent_name: Parent class name for methods (None otherwise)
+            mtime: File modification time (Unix timestamp) when symbol was indexed
 
         Returns:
             Symbol ID
@@ -501,12 +514,12 @@ class DatabaseStore:
             """
             INSERT INTO symbols (
                 symbol_name, symbol_type, file_path, line_number,
-                byte_offset, byte_length, qualified_name, parent_name
+                byte_offset, byte_length, qualified_name, parent_name, mtime
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (symbol_name, symbol_type, file_path, line_number,
-             byte_offset, byte_length, qualified_name, parent_name)
+             byte_offset, byte_length, qualified_name, parent_name, mtime)
         )
         self._commit_if_needed()
         return cursor.lastrowid
@@ -550,50 +563,6 @@ class DatabaseStore:
         if not self._in_transaction and self.conn:
             self.conn.commit()
 
-    def _get_match_metadata(
-        self,
-        where_clause: str,
-        params: List[Any]
-    ) -> Dict[str, Any]:
-        """
-        Compute metadata for match results before streaming.
-
-        Runs a single aggregation query to get total count and max column widths.
-        This metadata is attached to every record for streaming renderers.
-
-        Args:
-            where_clause: SQL WHERE clause (without WHERE keyword)
-            params: Query parameters
-
-        Returns:
-            Dict with 'total_matches' and 'column_widths'
-        """
-        query = f"""
-            SELECT
-                COUNT(*) as total,
-                MAX(LENGTH(symbol_name)) as max_symbol_name,
-                MAX(LENGTH(qualified_name)) as max_qualified_name,
-                MAX(LENGTH(file_path)) as max_file_path,
-                MAX(LENGTH(symbol_type)) as max_symbol_type,
-                MAX(LENGTH(COALESCE(parent_name, ''))) as max_parent_name
-            FROM symbols
-            WHERE {where_clause}
-        """
-
-        cursor = self.conn.execute(query, params)
-        row = cursor.fetchone()
-
-        return {
-            'total_matches': row[0],
-            'column_widths': {
-                'symbol_name': row[1] or 0,
-                'qualified_name': row[2] or 0,
-                'file_path': row[3] or 0,
-                'symbol_type': row[4] or 0,
-                'parent_name': row[5] or 0,
-            }
-        }
-
     @require_connection
     def match(
         self,
@@ -602,7 +571,9 @@ class DatabaseStore:
         pattern: str,
         case_sensitive: bool = True,
         limit: Optional[int] = None,
-        match_qualified: bool = False
+        match_qualified: bool = False,
+        newerthan_seconds: Optional[float] = None,
+        olderthan_seconds: Optional[float] = None,
     ) -> Iterator[MatchRecord]:
         """
         Match symbols using denormalized symbols table.
@@ -626,7 +597,9 @@ class DatabaseStore:
         # SQLite doesn't have native REGEXP support
         if match_op == MatchOp.REGEXP:
             yield from self._match_with_regex(
-                symbol_type, pattern, case_sensitive, limit, match_qualified
+                symbol_type, pattern, case_sensitive, limit, match_qualified,
+                newerthan_seconds=newerthan_seconds,
+                olderthan_seconds=olderthan_seconds,
             )
             return
 
@@ -653,12 +626,19 @@ class DatabaseStore:
         where_parts.append(f"{column} {match_op.sql_op} ?")
         params.append(pattern)
 
+        # Temporal filters (per-stage --newerthan / --olderthan)
+        now = time.time()
+        if newerthan_seconds is not None:
+            where_parts.append("mtime > ?")
+            params.append(now - newerthan_seconds)
+        if olderthan_seconds is not None:
+            where_parts.append("mtime < ?")
+            params.append(now - olderthan_seconds)
+
         where_clause = ' AND '.join(where_parts)
 
-        # Get metadata BEFORE streaming results (for column widths, total count)
-        metadata = self._get_match_metadata(where_clause, params)
-
-        # Build results query
+        # COUNT(*) OVER () is a window function: gives total matching rows before LIMIT.
+        # This replaces the old pre-query aggregation in _get_match_metadata().
         query = f"""
             SELECT
                 symbol_name,
@@ -668,7 +648,8 @@ class DatabaseStore:
                 byte_offset,
                 byte_length,
                 qualified_name,
-                parent_name
+                parent_name,
+                COUNT(*) OVER () as total_count
             FROM symbols
             WHERE {where_clause}
             ORDER BY file_path, line_number
@@ -678,7 +659,7 @@ class DatabaseStore:
         if limit is not None and limit > 0:
             query += f"\nLIMIT {limit}"
 
-        # Execute and yield results using factory with metadata
+        # Execute and yield results; total_count from window function drives limit warning
         cursor = self.conn.execute(query, params)
         for row in cursor:
             row_dict = {
@@ -691,7 +672,7 @@ class DatabaseStore:
                 'qualified_name': row[6],
                 'parent_name': row[7],
             }
-            yield self._record_factory.create_from_row(row_dict, metadata)
+            yield self._record_factory.create_from_row(row_dict, {'total_matches': row[8]})
 
     def _match_with_regex(
         self,
@@ -699,7 +680,9 @@ class DatabaseStore:
         pattern: str,
         case_sensitive: bool,
         limit: Optional[int],
-        match_qualified: bool
+        match_qualified: bool,
+        newerthan_seconds: Optional[float] = None,
+        olderthan_seconds: Optional[float] = None,
     ) -> Iterator[MatchRecord]:
         """Match using Python regex instead of SQL REGEXP.
 
@@ -732,10 +715,16 @@ class DatabaseStore:
             where_parts.append("symbol_type = ?")
             params.append(symbol_type.value)
 
-        where_clause = ' AND '.join(where_parts) if where_parts else "1=1"
+        # Temporal filters
+        now = time.time()
+        if newerthan_seconds is not None:
+            where_parts.append("mtime > ?")
+            params.append(now - newerthan_seconds)
+        if olderthan_seconds is not None:
+            where_parts.append("mtime < ?")
+            params.append(now - olderthan_seconds)
 
-        # Get metadata for column widths
-        metadata = self._get_match_metadata(where_clause, params)
+        where_clause = ' AND '.join(where_parts) if where_parts else "1=1"
 
         # Query all symbols of type
         query = f"""
@@ -772,12 +761,41 @@ class DatabaseStore:
                     'qualified_name': row[6],
                     'parent_name': row[7],
                 }
-                yield self._record_factory.create_from_row(row_dict, metadata)
+                yield self._record_factory.create_from_row(row_dict)
                 count += 1
 
                 # Check limit
                 if limit is not None and 0 < limit <= count:
                     break
+
+    @require_connection
+    def get_symbol_id(
+        self,
+        name: str,
+        symbol_type: str,
+        file_path: str,
+        parent_name: Optional[str] = None,
+    ) -> Optional[int]:
+        """Return the id of a symbol by its identity fields, or None if not found.
+
+        Args:
+            name: Symbol name
+            symbol_type: Symbol type string (e.g. 'function', 'method')
+            file_path: Absolute file path
+            parent_name: Parent class/function name for methods and nested symbols
+
+        Returns:
+            Symbol id, or None if not found
+        """
+        cursor = self.conn.execute(
+            """SELECT id FROM symbols
+               WHERE symbol_name = ? AND symbol_type = ? AND file_path = ?
+               AND (parent_name = ? OR (parent_name IS NULL AND ? IS NULL))
+               LIMIT 1""",
+            (name, symbol_type, file_path, parent_name, parent_name),
+        )
+        row = cursor.fetchone()
+        return row[0] if row else None
 
     def count_symbols(self) -> int:
         """Count total symbols in database.
@@ -973,10 +991,13 @@ class DatabaseStore:
         object_pattern: Optional[str] = None,
         subject_type: Optional[str] = None,
         object_type: Optional[str] = None,
+        subject_parent_pattern: Optional[str] = None,
         invert: bool = False,
         match_op: MatchOp = MatchOp.GLOB,
         case_sensitive: bool = True,
-        limit: int = 100
+        limit: int = 100,
+        result_newerthan_seconds: Optional[float] = None,
+        result_olderthan_seconds: Optional[float] = None,
     ) -> Iterator[MatchRecord]:
         """Query symbols by relationship.
 
@@ -994,6 +1015,7 @@ class DatabaseStore:
             object_pattern: Pattern to filter object (target) symbols
             subject_type: Symbol type filter for subjects
             object_type: Symbol type filter for objects
+            subject_parent_pattern: Pattern to filter subject's parent_name (e.g. class name for methods)
             invert: If True, swap subject/object in query
             match_op: Match operator for pattern matching
             case_sensitive: Whether pattern matching is case-sensitive
@@ -1046,9 +1068,27 @@ class DatabaseStore:
             where_parts.append("s.symbol_type = ?")
             params.append(subject_type)
 
+        if subject_parent_pattern and subject_parent_pattern != '*':
+            column = "s.parent_name"
+            pat = subject_parent_pattern
+            if not case_sensitive:
+                column = "LOWER(s.parent_name)"
+                pat = pat.lower()
+            where_parts.append(f"{column} {match_op.sql_op} ?")
+            params.append(pat)
+
         if object_type:
             where_parts.append("t.symbol_type = ?")
             params.append(object_type)
+
+        # Temporal filter on the returned symbol (select_from)
+        now = time.time()
+        if result_newerthan_seconds is not None:
+            where_parts.append(f"{select_from}.mtime > ?")
+            params.append(now - result_newerthan_seconds)
+        if result_olderthan_seconds is not None:
+            where_parts.append(f"{select_from}.mtime < ?")
+            params.append(now - result_olderthan_seconds)
 
         # Build query
         where_clause = " AND ".join(where_parts)
@@ -1086,42 +1126,3 @@ class DatabaseStore:
             }
             yield self._record_factory.create_from_row(row_dict)
 
-    @require_connection
-    def delete_relationships_for_file(self, file_path: str) -> int:
-        """Delete all relationships involving symbols from a file.
-
-        Used when re-indexing a file to clean up stale relationships.
-
-        Args:
-            file_path: Path to the file
-
-        Returns:
-            Number of relationships deleted
-        """
-        # Get symbol IDs for this file
-        cursor = self.conn.execute(
-            "SELECT id FROM symbols WHERE file_path = ?",
-            (file_path,)
-        )
-        symbol_ids = [row[0] for row in cursor.fetchall()]
-
-        if not symbol_ids:
-            return 0
-
-        # Delete relationships where these symbols are source or target
-        placeholders = ",".join("?" * len(symbol_ids))
-        deleted = 0
-
-        cursor = self.conn.execute(
-            f"DELETE FROM symbol_references WHERE from_symbol_id IN ({placeholders})",
-            symbol_ids
-        )
-        deleted += cursor.rowcount
-
-        cursor = self.conn.execute(
-            f"DELETE FROM symbol_references WHERE to_symbol_id IN ({placeholders})",
-            symbol_ids
-        )
-        deleted += cursor.rowcount
-
-        return deleted

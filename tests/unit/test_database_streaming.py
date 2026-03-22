@@ -1,17 +1,15 @@
-"""Unit tests for DatabaseStore streaming and metadata features.
+"""Unit tests for DatabaseStore streaming and limit behavior.
 
 TLDR:
-    Verifies that DatabaseStore.match() attaches correct metadata (column_widths,
-    total_matches) to every record before yielding, that metadata reflects all
-    matches even when a limit is applied, and that results are produced as a lazy
-    iterator rather than a materialised list. Key test classes:
-    TestMetadataComputation (column widths and total_matches accuracy with and
-    without pattern filters), TestLimitParameter (default limit of 10, limit=0
-    means unlimited, total_matches unaffected by limit),
-    TestStreamingBehavior (match() returns an exhaustable iterator),
-    TestCaseSensitivity (metadata correctness under case-insensitive matching).
-    Role: protects the streaming/metadata contract of DatabaseStore relied upon
-    by all renderers; depends on DatabaseStore and schema fixtures.
+    Verifies that DatabaseStore.match() produces results as a lazy iterator,
+    that limit parameter correctly restricts result count, and that case
+    sensitivity works correctly. Column width computation moved to TableRenderer
+    (TD-REVIEW-1); total_matches is no longer pre-computed by the DB layer.
+    Key test classes: TestLimitParameter (default limit, limit=0 unlimited,
+    limit > total), TestStreamingBehavior (match() returns an exhaustable
+    iterator), TestCaseSensitivity (case-insensitive matching correctness).
+    Role: protects the streaming/limit contract of DatabaseStore; depends on
+    DatabaseStore and schema fixtures.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -55,103 +53,6 @@ def db_with_symbols(tmp_path):
     return db_path, tmp_path
 
 
-class TestMetadataComputation:
-    """Tests for metadata computation before streaming."""
-
-    def test_match_returns_records_with_metadata(self, db_with_symbols):
-        """Test that match() returns records with metadata attached."""
-        db_path, root = db_with_symbols
-
-        with DatabaseStore(str(db_path), str(root)) as db:
-            results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*'))
-
-            # All records should have metadata
-            assert len(results) == 5
-            for record in results:
-                assert record.column_widths is not None
-                assert record.total_matches is not None
-
-    def test_metadata_total_matches_accurate(self, db_with_symbols):
-        """Test that total_matches reflects actual count."""
-        db_path, root = db_with_symbols
-
-        with DatabaseStore(str(db_path), str(root)) as db:
-            results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*'))
-
-            # Should have 5 classes
-            assert results[0].total_matches == 5
-
-    def test_metadata_total_matches_with_pattern(self, db_with_symbols):
-        """Test that total_matches is accurate with pattern filter."""
-        db_path, root = db_with_symbols
-
-        with DatabaseStore(str(db_path), str(root)) as db:
-            # Match only names starting with 'L' or 'V'
-            results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '[LV]*'))
-
-            # Should match LongerClassName and VeryVeryLongClassName
-            assert len(results) == 2
-            assert results[0].total_matches == 2
-
-    def test_column_widths_contain_required_fields(self, db_with_symbols):
-        """Test that column_widths has all required fields."""
-        db_path, root = db_with_symbols
-
-        with DatabaseStore(str(db_path), str(root)) as db:
-            results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*'))
-
-            widths = results[0].column_widths
-            assert 'symbol_name' in widths
-            assert 'qualified_name' in widths
-            assert 'file_path' in widths
-            assert 'symbol_type' in widths
-
-    def test_column_widths_reflect_max_lengths(self, db_with_symbols):
-        """Test that column_widths reflect max length across all matches."""
-        db_path, root = db_with_symbols
-
-        with DatabaseStore(str(db_path), str(root)) as db:
-            results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*'))
-
-            widths = results[0].column_widths
-
-            # Max symbol_name is 'VeryVeryLongClassName' (21 chars)
-            assert widths['symbol_name'] == 21
-
-            # Max file_path is 'very_long_filename.py' (21 chars)
-            assert widths['file_path'] == 21
-
-            # Max qualified_name is 'deep.nested.module.VeryVeryLongClassName' (40 chars)
-            assert widths['qualified_name'] == 40
-
-    def test_metadata_same_for_all_records_in_batch(self, db_with_symbols):
-        """Test that all records in a batch have the same metadata."""
-        db_path, root = db_with_symbols
-
-        with DatabaseStore(str(db_path), str(root)) as db:
-            results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*'))
-
-            # All should have same metadata
-            first_widths = results[0].column_widths
-            first_total = results[0].total_matches
-
-            for record in results[1:]:
-                assert record.column_widths == first_widths
-                assert record.total_matches == first_total
-
-    def test_metadata_computed_for_methods(self, db_with_symbols):
-        """Test metadata computation works for methods."""
-        db_path, root = db_with_symbols
-
-        with DatabaseStore(str(db_path), str(root)) as db:
-            results = list(db.match(SymbolType.METHOD, MatchOp.GLOB, '*'))
-
-            assert len(results) == 2
-            assert results[0].total_matches == 2
-            # Max method name is 'much_longer_method_name' (23 chars)
-            assert results[0].column_widths['symbol_name'] == 23
-
-
 class TestLimitParameter:
     """Tests for limit parameter behavior."""
 
@@ -187,28 +88,6 @@ class TestLimitParameter:
         with DatabaseStore(str(db_path), str(root)) as db:
             results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*', limit=0))
             assert len(results) == 5  # All 5 classes
-
-    def test_metadata_total_matches_not_affected_by_limit(self, db_with_symbols):
-        """Test that total_matches shows total count, not limited count."""
-        db_path, root = db_with_symbols
-
-        with DatabaseStore(str(db_path), str(root)) as db:
-            results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*', limit=2))
-
-            # Even though we only get 2 results, total_matches should be 5
-            assert len(results) == 2
-            assert results[0].total_matches == 5
-
-    def test_column_widths_computed_from_all_matches_not_limited(self, db_with_symbols):
-        """Test that column_widths are computed from ALL matches, not just limited ones."""
-        db_path, root = db_with_symbols
-
-        with DatabaseStore(str(db_path), str(root)) as db:
-            # Get only 1 result, but widths should reflect all 5 classes
-            results = list(db.match(SymbolType.CLASS, MatchOp.GLOB, '*', limit=1))
-
-            # Even with limit=1, widths should include 'VeryVeryLongClassName'
-            assert results[0].column_widths['symbol_name'] == 21
 
     def test_limit_greater_than_total_returns_all(self, db_with_symbols):
         """Test that limit > total returns all results."""
@@ -256,8 +135,8 @@ class TestStreamingBehavior:
 class TestCaseSensitivity:
     """Tests for case sensitivity with metadata."""
 
-    def test_case_insensitive_metadata(self, db_with_symbols):
-        """Test metadata computation with case insensitive matching."""
+    def test_case_insensitive_matching(self, db_with_symbols):
+        """Test case insensitive matching returns correct results."""
         db_path, root = db_with_symbols
 
         with DatabaseStore(str(db_path), str(root)) as db:
@@ -271,4 +150,3 @@ class TestCaseSensitivity:
 
             assert len(results) == 1
             assert results[0].symbol_name == 'A'
-            assert results[0].total_matches == 1

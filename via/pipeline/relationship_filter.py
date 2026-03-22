@@ -15,7 +15,7 @@ Author: Drew Gutstein
 License: GPL-3.0
 """
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 from via.core.relationship_types import RelationshipType
 
@@ -30,9 +30,13 @@ class RelationshipFilter:
         object_match_syntax: Match syntax for object pattern (glob, regex, sql)
         object_types: Symbol types to filter object matches
         invert: If True, swap subject/object in the relationship query
+        result_newerthan_seconds: Filter results to symbols newer than N seconds ago
+        result_olderthan_seconds: Filter results to symbols older than N seconds ago
     """
     relationship_type: RelationshipType
     object_pattern: str
     object_match_syntax: str = 'glob'
     object_types: List[str] = field(default_factory=list)
     invert: bool = False
+    result_newerthan_seconds: Optional[float] = None
+    result_olderthan_seconds: Optional[float] = None

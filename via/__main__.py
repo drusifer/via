@@ -86,6 +86,8 @@ Options:
   -n, --limit N         Limit results to N matches
   -I, --case-insensitive  Case-insensitive matching
   -Q, --qualified       Match against qualified_name instead of symbol_name
+  --newerthan DURATION  Filter: symbols from files modified within DURATION (e.g. 1h, 2d, 1w)
+  --olderthan DURATION  Filter: symbols from files NOT modified within DURATION (e.g. 1h, 2d)
 
 Relationship Flags (-V<X> or --via <type>):
 {relationship_help}

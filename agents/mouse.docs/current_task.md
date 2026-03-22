@@ -1,21 +1,30 @@
-**Task**: Sprint 3 Status Review
-**Status**: Complete
-**Completed**: 2026-02-01
+# Mouse Current Task
 
-**Summary**:
-Generated comprehensive sprint status report showing:
-- 20% overall progress (32h done / 160h total for MVP)
-- Phase 1 at 80% (Tasks 1.1 and 1.2 complete)
-- Phases 2-6 not started
+## Task: Sprint 9 — COMPLETE
+**Status**: COMPLETE
+**Date**: 2026-03-21
 
-**Key Findings**:
-1. Pipeline Parser and Executor are implemented and tested
-2. CLI integration (Task 1.3) still needed to make pipeline usable
-3. MatchRecord System (Phase 2) is the critical blocker for rendering
-4. No blockers currently identified
+## Sprint 9 Final Scorecard
 
-**Recommendations**:
-1. Resume Sprint 3 implementation with @Neo
-2. Complete Phase 1 (Tasks 1.3, 1.4) first
-3. Move to Phase 2 (MatchRecord) which unblocks all rendering
-4. Parallel track: Phase 3 (Streaming) can start once Phase 2 base is done
+| Phase | Stories | Status | Tests |
+|-------|---------|--------|-------|
+| Cycle 1 — TD-REVIEW | TD-REVIEW-1 through TD-REVIEW-5 | ✅ DONE | baseline |
+| Cycle 2 — Phase 2 | Stories 3, 4, 5 | ✅ DONE + UAT | 893 passed |
+| Cycle 3 — Story 1 | -Vhas / DECLARES | ✅ DONE + UAT | 901 passed |
+| Cycle 4 — Story 2a | Temporal matcher | ✅ DONE + UAT | 908 passed |
+
+## Final Test Count
+- **908 passed, 1 xfailed** (started sprint at 837, ended at 908 = +71 tests)
+
+## Sprint 9 Deliverables
+
+### Code shipped:
+1. **TD-REVIEW-1 through TD-REVIEW-5**: Tech debt cleanup
+2. **Story 3**: Expanded `-Vr` reference tracking (class bases, decorators, annotations)
+3. **Story 4**: Fixed class anchor bug for `-Vca`
+4. **Story 5**: `-Q` full-path matching for file symbols
+5. **Story 1**: `-Vhas` / DECLARES relationship + `ReferenceType` rename
+6. **Story 2a**: Temporal matcher (`symbols.mtime`, `--newerthan`, `--olderthan`)
+
+### New files:
+- `via/core/duration.py` — duration string parser

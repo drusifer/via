@@ -289,8 +289,8 @@ class TestRelationshipFlagDefinitions:
         """Test RELATIONSHIP_FLAGS are defined."""
         from via.core.flag_groups import RELATIONSHIP_FLAGS
 
-        # Should have 4 relationship flags
-        assert len(RELATIONSHIP_FLAGS) == 4
+        # Should have 5 relationship flags (including -Vhas for DECLARES)
+        assert len(RELATIONSHIP_FLAGS) == 5
 
         # Check flag names
         flag_suffixes = [f.suffix for f in RELATIONSHIP_FLAGS]
@@ -298,6 +298,7 @@ class TestRelationshipFlagDefinitions:
         assert 'ca' in flag_suffixes
         assert 'imp' in flag_suffixes
         assert 'r' in flag_suffixes
+        assert 'has' in flag_suffixes
 
     def test_relationship_short_flags(self):
         """Test short flag format -V<suffix>."""

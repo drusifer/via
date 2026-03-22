@@ -1,28 +1,20 @@
-**Next Steps for Mouse**:
+# Mouse Next Steps
 
-1. **Resume Sprint 3 Tracking**:
-   - Monitor @Neo's progress as implementation resumes
-   - Track completion of Phase 1 remaining tasks (1.3, 1.4)
-   - Update status when Phase 2 begins
+## Resume Point: Sprint 10 Planning
 
-2. **Coordinate Implementation**:
-   - @Neo: Complete Task 1.3 (Wire Pipeline into CLI Entry Point)
-   - @Neo: Complete Task 1.4 (Integration Tests for Pipeline)
-   - @Neo: Start Phase 2 Task 2.1 (MatchRecord Base Class)
+Sprint 9 is complete. Next: plan Sprint 10.
 
-3. **Track Dependencies**:
-   - Phase 2 blocks Phase 3, 4, 5, 6
-   - Phase 3 enables streaming optimization
-   - Phase 4-6 require Phase 2 for record types
+### Sprint 10 candidates (from arch doc + backlog):
+1. **ReferenceType CLI unification**: `--ref-type <type>` power-user alternative to `-V<X>` flags (Morpheus deferred from Sprint 9)
+2. **Cross-stage mtime comparison** (`--stale` flag): result older than anchor (Sprint 10 per arch doc)
+3. **Story 2b**: `prep_tldr` integration using temporal matcher (~2pts)
+4. **TD-WATCH-1**: Extract PathFilter from FileDiscovery (coupling fix)
 
-4. **Quality Gates**:
-   - Coordinate with @Trin before marking Phase 1 complete
-   - Ensure integration tests pass (Task 1.4)
-   - Verify CLI backward compatibility
+### Sprint 10 kickoff:
+1. Cypher: write Sprint 10 user stories
+2. Morpheus: arch decisions on ReferenceType unification
+3. Mouse: plan cycles
 
-5. **Stand By For**:
-   - Blocker escalation
-   - Re-planning if requirements change
-   - Sprint velocity calculations after more tasks complete
-
-**Current State**: Status review complete, awaiting implementation resumption
+### Sprint summary files location:
+- `agents/cypher.docs/SPRINT_9_USER_STORIES.md` — Sprint 9 specs
+- `agents/morpheus.docs/SPRINT_9_ARCHITECTURE.md` — Sprint 9 arch decisions

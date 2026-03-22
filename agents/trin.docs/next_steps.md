@@ -1,20 +1,25 @@
 # Trin Next Steps
 
-## Immediate
-- Doc fixes complete. Awaiting Sprint 9 kick-off.
-- When Neo implements -Vhas (Story 1): write UAT for `via -Vhas` / `DECLARES` relationship
-- When Neo implements temporal matcher (Story 2a): write UAT for `--since` / mtime filtering
+## Immediate: Sprint 9 Cycle 3 UAT
+After Neo implements Story 1 (-Vhas / DECLARES):
+- Verify `RelationshipType` → `ReferenceType` rename — all imports updated project-wide
+- Verify `DECLARES` enum value added
+- Verify `-Vhas`/`--via-has` flag appears in `--help`
+- Verify `_store_declares_relationships()` in IndexingService:
+  - file→symbol relationships: all symbols in a file declared by the filepath symbol
+  - class→method/inner-class relationships
+  - function→nested-function relationships
+- Verify container type validation with precise error messages
+- Verify `via -mg 'store.py' -tN -Vhas -tc` returns classes in store.py
+- Verify `via -mg '*service*' -tF -Vhas -tf -n 0` returns functions in service files
+- Verify `--invert` gives clear error message
 
-## Sprint 7 (MCP Mode)
-- When Neo implements MCP Mode: write UAT for `via --mcp` and `via mcp install`
-- Spec: `agents/cypher.docs/SPRINT_7_USER_STORIES.md`
-
-## Sprint 8 (Line Index)
-- When Neo implements `-mL`: write UAT for slice queries
-- Spec: `agents/cypher.docs/SPRINT_8_USER_STORIES.md`
+## Sprint 9 UAT Queue
+- Cycle 4: Story 2a (temporal matcher) — write UAT for `--newerthan`/`--olderthan`
 
 ## Process Rule
 - Always use `make` skill (not raw Bash) for all test runs
+- Baseline: 893 passed, 1 xfailed (Sprint 9 Cycle 2 complete)
 
 ## Archived Plans
 - `archive/CLI_TEST_PLAN.md` - Sprint 1

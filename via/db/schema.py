@@ -18,7 +18,7 @@ License: GPL-3.0
 """
 
 # Schema version for migrations
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 # SQL statements for creating tables
 CREATE_METADATA_TABLE = """
@@ -60,7 +60,8 @@ CREATE TABLE IF NOT EXISTS symbols (
     byte_offset INTEGER,
     byte_length INTEGER,
     qualified_name TEXT NOT NULL,
-    parent_name TEXT
+    parent_name TEXT,
+    mtime REAL
 );
 """
 
@@ -124,6 +125,9 @@ CREATE_INDEXES = [
 
     # Line offsets index
     "CREATE INDEX IF NOT EXISTS idx_line_offsets_file ON line_offsets(file_id);",
+
+    # Symbols mtime index for temporal queries
+    "CREATE INDEX IF NOT EXISTS idx_symbols_mtime ON symbols(mtime);",
 ]
 
 # All table creation statements in dependency order

@@ -39,5 +39,34 @@ Examples that WORK:
 - Pylint score 9.07 → 9.46/10
 - 14 code smells identified, 5 TD tickets created
 
+## Sprint 9 Architecture Decisions (2026-03-21)
+
+### ReferenceType
+- `symbol_references.reference_type` column already EXISTS — no DB schema change for the type discriminator
+- `RelationshipType` → rename to `ReferenceType` (aligns Python with DB column name)
+- Add `DECLARES = 'declares'` to enum; map `-Vhas` to it
+- `_store_declares_relationships()`: no parser changes — uses `file_path` + `parent_name`
+- CLI unification (`--ref-type <value>` for raw column queries) → deferred Sprint 10
+
+### Temporal Matcher
+- `symbols.mtime REAL` — schema migration needed (SCHEMA_VERSION 4 → 5)
+- `symbols.mtime` set from file's `st_mtime` at index time; watch events update only symbols in changed file
+- CLI flags: `--newerthan <duration>` / `--olderthan <duration>` (global modifiers, not per-stage)
+- Duration format: `1h`, `2d`, `1w`, `30m`, `30s`
+- Library API: add `newerthan_seconds`/`olderthan_seconds` params to existing `match()`
+- Duration parser: `via/core/duration.py`
+- Full arch doc: `agents/morpheus.docs/SPRINT_9_ARCHITECTURE.md`
+
+### Implementation Order
+TD-REVIEW Phase 1 → Stories 3+4+5 → Story 1 → Story 2a
+
 ## Current Blockers
-None.
+None. All arch questions resolved. SPRINT_9_ARCHITECTURE.md is final.
+
+### Temporal Matcher — Key Design Points (updated 2026-03-21)
+- `--newerthan`/`--olderthan` are PER-STAGE, not global
+- Both flags added to `match_parser`; available on subject AND object sides of relationship queries
+- Object-side temporal routed via new fields on `RelationshipFilter`: `result_newerthan_seconds`, `result_olderthan_seconds`
+- Cross-stage mtime comparison (`--stale`, "tests older than their class") → Sprint 10
+- Duration: human-friendly strings at CLI; library accepts raw float seconds
+- mtime never NULL; schema migration only forward (no backward compat)

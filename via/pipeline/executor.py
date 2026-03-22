@@ -23,13 +23,24 @@ import re
 import sys
 from typing import Dict, Iterator, List, Optional
 
+from via.core.duration import parse_duration
 from via.core.match_record import FormatType, MatchRecord, RenderType
+from via.core.relationship_types import ReferenceType
 from via.core.types import MatchOp, SymbolType
 from via.core.utils import get_match_op, safe_print
 from via.db.store import DatabaseStore
 from via.pipeline.relationship_filter import RelationshipFilter
 from via.pipeline.types import PipelineStage, StageType
 from via.renderers.factory import RendererFactory
+
+# Valid container types for -Vhas (DECLARES) queries
+_VHAS_CONTAINER_TYPES = {'filepath', 'filename', 'class', 'function'}
+_VHAS_CONTAINER_FLAGS = {
+    'filepath': '-tF',
+    'filename': '-tN',
+    'class': '-tc',
+    'function': '-tf',
+}
 
 # User-friendly render type names for CLI flags
 RENDER_TYPE_FLAGS: Dict[RenderType, str] = {
@@ -142,9 +153,21 @@ class PipelineExecutor:
                 symbol_types, pattern, match_op, case_sensitive, limit, match_qualified
             )
 
+        # Temporal filters
+        newerthan_seconds = None
+        olderthan_seconds = None
+        if getattr(args, 'newerthan', None):
+            newerthan_seconds = parse_duration(args.newerthan)
+        if getattr(args, 'olderthan', None):
+            olderthan_seconds = parse_duration(args.olderthan)
+
         # Single type or all types
         st = SymbolType(symbol_type) if symbol_type else None
-        results = self.db.match(st, match_op, pattern, case_sensitive, limit, match_qualified)
+        results = self.db.match(
+            st, match_op, pattern, case_sensitive, limit, match_qualified,
+            newerthan_seconds=newerthan_seconds,
+            olderthan_seconds=olderthan_seconds,
+        )
         return results
 
     def _execute_relationship_query(self, stage: PipelineStage) -> Iterator[MatchRecord]:
@@ -191,6 +214,32 @@ class PipelineExecutor:
             subject_type = cli_relate_to_type
             object_type = cli_results_type
 
+        # -Vhas (DECLARES): validate container type and reject --invert
+        if rel.relationship_type == ReferenceType.DECLARES:
+            if rel.invert:
+                raise ValueError(
+                    "--invert with -Vhas means 'does not have (not-has)' — not yet supported."
+                )
+            # object_type is the container (anchor type, before -Vhas)
+            container_type = object_type
+            if container_type and container_type not in _VHAS_CONTAINER_TYPES:
+                valid = ', '.join(
+                    f'{_VHAS_CONTAINER_FLAGS[t]} ({t})' for t in sorted(_VHAS_CONTAINER_TYPES)
+                )
+                raise ValueError(
+                    f"-Vhas requires a container type as stage 1 anchor.\n"
+                    f"Received: '{container_type}' — not a valid container type.\n"
+                    f"Valid containers: {valid}."
+                )
+
+        # Story 4: calls stored from method symbols, not class symbols.
+        # When anchor is a class for -Vca, expand to include methods where parent_name = class_name.
+        subject_parent_pattern = None
+        if rel.relationship_type.value == 'calls' and subject_type == 'class':
+            subject_parent_pattern = subject_pattern
+            subject_pattern = '*'
+            subject_type = 'method'
+
         # Query relationships from database
         return self.db.query_relationships(
             relationship_type=rel.relationship_type.value,
@@ -198,9 +247,12 @@ class PipelineExecutor:
             object_pattern=object_pattern,
             subject_type=subject_type,
             object_type=object_type,
+            subject_parent_pattern=subject_parent_pattern,
             invert=rel.invert,
             limit=limit,
-            case_sensitive=case_sensitive
+            case_sensitive=case_sensitive,
+            result_newerthan_seconds=rel.result_newerthan_seconds,
+            result_olderthan_seconds=rel.result_olderthan_seconds,
         )
 
     def _match_multiple_types(

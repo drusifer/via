@@ -1,9 +1,29 @@
-# Sprint 9 - Has-A Relationship (`-Vhas`) + Incremental `prep_tldr`
+# Sprint 9 - Container Queries + Temporal Matching + Tech Debt Phase 1
 
 **Author**: Cypher (PM)
-**Date**: 2026-03-20 (updated with Drew feedback)
-**Theme**: Has-A Containment Queries + Temporal Matching
-**Points**: ~6 (Story 1: 3pts + Story 2a: ~3pts; Story 2b moved to Sprint 10 — Drew, 2026-03-20)
+**Date**: 2026-03-20 (updated 2026-03-21 with Drew feedback)
+**Theme**: ReferenceType architecture, `-Vhas`, temporal matching with per-symbol timestamps, tech debt phase 1
+**Points**: ~16–18 (see sprint summary — scope grew significantly from Drew's OQ answers)
+
+---
+
+## ⚠️ Architectural Pivot: ReferenceType (Drew, 2026-03-21)
+
+Drew confirmed OQ-9: **+1 for ReferenceType as a filter on `-Vr` to capture all relationship queries based on references.**
+
+This is a significant design direction. The current model has a flat `-V<X>` flag per relationship type (`-Vinh`, `-Vca`, `-Vimp`, `-Vr`). Drew's direction is to introduce a **`ReferenceType`** concept where `-Vr` becomes a unified reference query operator and `ReferenceType` acts as a sub-filter/type qualifier.
+
+**Implication for Story 1**: The design of `-Vhas` / `DECLARES` is now in flux. Options:
+- Keep `-Vhas` as syntactic sugar over `-Vr DECLARES` (new unified model)
+- Or keep flat model and defer ReferenceType to a future sprint
+
+**⚠️ Morpheus must spec the ReferenceType API before Story 1 implementation begins.** This is now a hard blocker on Story 1.
+
+Questions for Morpheus to resolve:
+1. Does `-Vr <ReferenceType>` replace all `-V<X>` flags, or are they kept as aliases?
+2. What is the CLI syntax for the type sub-filter? (`-Vr declares`, `--ref-type declares`, etc.)
+3. Does `ReferenceType` live in its own enum or as a property on `RelationshipType`?
+4. How does `-Vhas` relate to `-Vr` in the new model?
 
 ---
 
@@ -108,7 +128,7 @@ via -mg 'watch.py' -tN -Vhas -tm         # all methods in watch.py
 
 ---
 
-### Story 1: `-Vhas` Has-A Relationship (P0, 3pts — pending Morpheus design)
+### Story 1: `-Vhas` Has-A Relationship (P0, 3pts — **BLOCKED on ReferenceType arch spec**)
 
 **As a developer**, I want to query `via -mg '<pattern>' -t<Container> -Vhas -t<Member>` to find all symbols of a given type contained in things matching the pattern, so I can explore a module's contents without workarounds.
 
@@ -149,7 +169,7 @@ via -mg 'test_*.py' -tN -Vhas -tf -n 0
 - New `_store_declares_relationships()` in `IndexingService` — no parser changes needed:
   - For each non-filepath symbol: insert `(filepath_symbol_id → symbol_id, 'declares')`
   - For each method/inner-class: insert `(parent_class_symbol_id → symbol_id, 'declares')`
-  - For each nested function: insert `(parent_function_symbol_id → symbol_id, 'declares')`
+  - For each nested function: insert `(parent_function_symbol_id → symbol_id, 'declares')` **(OQ-1: IN SCOPE — Drew confirmed)**
 - `PipelineExecutor._execute_relationship_query()` — new dispatch branch for `DECLARES`
 - `DatabaseStore.query_relationships()` handles it via existing infrastructure (same `symbol_references` table)
 - Morpheus to confirm: join strategy, container type validation, error messages for invalid stage types
@@ -180,13 +200,30 @@ Drew's direction shifts Story 2 significantly: rather than a hardcoded `get_file
 
 > **Drew to confirm**: split OK, or keep as one larger story?
 
+**⚠️ Scope Pivot (Drew, 2026-03-21)**: Temporal tracking is per-**symbol**, not just per-file.
+
+> "We want timestamps captured as part of indexing including in watch mode. When a class is modified and detected by watch, the timestamp of that file and **that class** are updated to the file mtime. Other indexed objects that didn't change keep their old timestamp. Resets on full reindex."
+
+This means:
+- `symbols` table needs an `mtime` column (schema change — currently only `files.mtime` exists)
+- On watch event: update `mtime` on the file's symbols that changed, NOT all symbols in the file
+- Other symbols in unchanged files retain their previous `mtime`
+- Full reindex: reset all symbol mtimes
+
+**CLI operators** (Drew, OQ-4): Human-friendly: `olderthan`, `newerthan`, `xTimeAgo` style. Not raw Unix timestamps.
+
+**API surface** (Drew, OQ-2): Both CLI flag **and** Python library function.
+
 **Acceptance Criteria** (Story 2a — temporal matcher):
-- [ ] New temporal match capability in via query layer: filter files by `mtime` (newer-than / older-than a timestamp)
-- [ ] Morpheus to spec the API surface (via CLI flag vs. via library function vs. both)
-- [ ] `mtime` column in `files` table used as the change timestamp (already exists — ✅)
-- [ ] Temporal matcher honors `-w` watch mode semantics (tracks "freshness" consistently)
-- [ ] State (`last_run` timestamp) managed in via lib — not in `build/tldr_prep/`
-- [ ] First run (no stored timestamp): all files returned (full sweep)
+- [ ] `symbols` table gets `mtime` column (schema migration required)
+- [ ] On index: symbol `mtime` set to the file's `mtime` at index time
+- [ ] On watch event: only symbols in the **changed file** have their `mtime` updated
+- [ ] Symbols in unchanged files retain their previous `mtime`
+- [ ] Full reindex (`--force`): all symbol mtimes reset
+- [ ] New temporal query operators in via CLI: `olderthan <duration>`, `newerthan <duration>` (Morpheus to spec exact syntax)
+- [ ] API surface exposed as Python library function as well as CLI flag
+- [ ] First run (no prior timestamps): all symbols returned (full sweep)
+- [ ] Morpheus to spec: exact CLI syntax, duration format, integration point in pipeline
 
 **Acceptance Criteria** (Story 2b — `prep_tldr` integration):
 - [ ] `prep_tldr.py` uses via's temporal matcher (not own DB query) to get changed files
@@ -245,13 +282,76 @@ prep_tldr incremental (after first run):
 
 ---
 
+### Story 3: Expand `-Vr` Reference Tracking (P1, ~3pts — Drew confirmed Sprint 9)
+
+**As a developer**, I want `-Vr` to track reference usages beyond function/method bodies, so that class base declarations, decorators, and module-level usages are all queryable.
+
+**Context**: Trin doc review (Finding 5, 2026-03-21) found that `-Vr` only captures `ast.Name` nodes with `Load` context **inside function/method bodies**. The following are not currently tracked:
+- Class base class declarations: `class Child(Base):`
+- Decorator names: `@my_decorator`
+- Module-level name usage (outside any function/method)
+- Type annotations
+
+Drew confirmed: *"Agreed - we will tackle this in sprint 9"*
+
+**Acceptance Criteria**:
+- [ ] Class base class names are stored as REFERENCES relationships (e.g., `class Child(Base):` → `Child` references `Base`)
+- [ ] Decorator names are stored as REFERENCES relationships
+- [ ] Module-level name usages (e.g., top-level assignments referencing another symbol) are stored as REFERENCES
+- [ ] Type annotations in **function signatures** are stored as REFERENCES
+- [ ] Type annotations in **class bodies** (e.g., `field: MyType`) are stored as REFERENCES **(OQ-8: IN SCOPE — Drew confirmed)**
+- [ ] Existing function/method body reference tracking is unchanged
+- [ ] 5 xfail tests in `tests/uat/test_documented_queries_uat.py` (Finding 5 tests) now pass
+- [ ] No regression in existing reference query behavior
+
+**Implementation Notes**:
+- Parser change in `via/parsers/python_parser.py` — extend `ast.Name`/`ast.Annotation` node collection scope
+- `_store_reference_relationships()` in `via/services/indexing.py` unchanged — data model stays the same
+- Source of xfail tests: `tests/uat/test_documented_queries_uat.py` (5 tests, Finding 5)
+
+---
+
+### Story 4: Fix Class Anchor Bug for `-Vca` (TD/Bug, ~1pt — OQ-5 resolved Sprint 9)
+
+**As a developer**, when I use a class as an anchor with `-Vca`, I want to get the call relationships of its methods, so that `via -mg 'MyClass' -tc -Vca -tf` works as documented.
+
+**Background**: Call relationships are stored from method symbols (`symbol_type = 'method'`), not class symbols. Anchoring on `-tc` returns empty. Drew confirmed: *"This is a bug."*
+
+**Acceptance Criteria**:
+- [ ] `via -mg 'MyClass' -tc -Vca -mg '*' -tf` returns functions called by MyClass's methods
+- [ ] When anchor is `-tc` for `-Vca`, executor expands query to include all methods where `parent_name = class_name`
+- [ ] Existing `-tm` anchor behavior unchanged
+- [ ] Trin Finding 2 xfail test in `test_documented_queries_uat.py` now passes
+- [ ] `schema.py` example 9 and skill SKILL.md files updated to reflect correct behavior
+
+---
+
+### Story 5: `-Q` Full-Path Matching for File Symbols (TD/Enhancement, ~1pt — OQ-6 resolved Sprint 9)
+
+**As a developer**, I want `via -mg 'via/core/*' -tF -Q` to match file symbols by their full path, not just basename, so I can filter by directory path without a workaround.
+
+**Background**: Currently `-mg` matches `symbol_name` (basename only). For file symbols, `qualified_name = full_path`. Drew approved Option C: "Yes to C" — enable `-Q` to make `-mg` match `qualified_name` for file symbols.
+
+**Acceptance Criteria**:
+- [ ] `-Q` flag (already exists for symbol qualified name matching) works for file symbols (`-tF`)
+- [ ] `via -mg 'via/core/*' -tF -Q` returns all files under `via/core/`
+- [ ] Without `-Q`, file matching stays as basename only (no regression)
+- [ ] `schema.py` Ex05 updated to use correct form with `-Q`
+- [ ] Trin Finding 1 xfail test (Option C) now passes
+
+---
+
 ## Sprint 9 Summary
 
 | Story | Points | Priority | Description | Status |
 |-------|--------|----------|-------------|--------|
-| Story 1 | 3 | P0 | `-Vhas` has-a relationship (container→members) | Needs Morpheus design |
-| Story 2a | ~3 | P1 | Temporal matcher in via query layer | Needs Morpheus design |
-| **Total** | **~6** | | | |
+| Story 1 | ~3 | P0 | `-Vhas` has-a relationship (container→members) | **BLOCKED: ReferenceType arch spec** |
+| Story 2a | ~4 | P1 | Temporal matcher + per-symbol timestamps (schema change) | BLOCKED: Morpheus spec |
+| Story 3 | ~3 | P1 | Expand `-Vr` reference tracking (class bases, decorators, annotations) | Ready for Neo |
+| Story 4 | ~1 | P1 (bug) | Fix class anchor bug for `-Vca` | Ready for Neo |
+| Story 5 | ~1 | P2 | `-Q` full-path matching for file symbols | Ready for Neo |
+| TD-Phase-1 | ~3 | P2 | TD-REVIEW-1 through TD-REVIEW-5 (Morpheus code review) | Ready for Neo |
+| **Total** | **~15** | | | |
 
 **Story 2b** (`prep_tldr` integration using temporal matcher, ~2pts) → **moved to Sprint 10** (Drew, 2026-03-20).
 
@@ -271,10 +371,11 @@ prep_tldr incremental (after first run):
 | `symbol_references` table | `via/db/schema.py` | Reused — no schema changes needed |
 | `DatabaseStore.query_relationships()` | `via/db/store.py` | No changes — existing infrastructure handles it |
 
-**Morpheus must confirm/spec**:
+**Morpheus must confirm/spec** (updated 2026-03-21):
+- **ReferenceType architecture first** (OQ-9) — how `-Vhas`/`DECLARES` fits in the new model before implementation
 - Container type validation: which `-t<X>` types are valid as stage 1 (anchor)
 - Error message format for invalid container type (per project error standard)
-- Whether nested function→function declarations should be in scope for this sprint
+- Nested function→function declarations: **IN SCOPE** (OQ-1 resolved)
 - Polymorphic dispatch strategy in `PipelineExecutor` (or confirm direct `DECLARES` branch is sufficient)
 
 ### Story 2 (`temporal matcher`) — Morpheus design inputs
@@ -291,6 +392,43 @@ prep_tldr incremental (after first run):
 - Where last-run timestamp state lives in via lib
 - Whether this is part of `match()` or a separate query path
 - Integration point for `prep_tldr` to consume
+
+---
+
+## Open Questions
+
+These questions need Drew's input before Sprint 9 implementation begins.
+
+| # | Question | Story | Owner | Status |
+|---|----------|-------|-------|--------|
+| OQ-1 | Should nested function→function DECLARES relationships be in Sprint 9 scope? | Story 1 | Drew | ✅ YES — in scope |
+| OQ-2 | Story 2a API surface: CLI flag only, or also Python library function? | Story 2a | Drew | ✅ BOTH — CLI flag + Python library function |
+| OQ-3 | Where does timestamp state live? | Story 2a | Drew | ✅ Per-symbol — `symbols.mtime` column; updated on watch events per-file, resets on full reindex |
+| OQ-4 | Temporal matcher operators? | Story 2a | Drew | ✅ Human-friendly: `olderthan`, `newerthan`, `xTimeAgo` (Morpheus to spec exact syntax) |
+| OQ-5 | Class call query bug — Sprint 9? | Story 4 | Drew | ✅ Sprint 9 as TD (→ Story 4) |
+| OQ-6 | `-Q` path matching — Sprint 9? | Story 5 | Drew | ✅ Sprint 9 as TD (→ Story 5) |
+| OQ-7 | TD-REVIEW items — Sprint 9 scope? | Tech Debt | Drew | ✅ Sprint 9 Phase 1 — all 5 items |
+| OQ-8 | Class-body type annotations in Story 3 scope? | Story 3 | Drew | ✅ Sprint 9 — "interesting reference type use case" |
+| OQ-9 | ReferenceType concept vs. flat RelationshipType? | Arch | Drew | ✅ +1 for ReferenceType as filter on `-Vr` — **Morpheus must spec before Story 1** |
+
+### Context for OQ-9 (RelationshipType scalability)
+From a user perspective, both a flat `RelationshipType` extension and a grouped `ReferenceType` concept produce the same CLI behavior for Sprint 9. The concern becomes visible only in `--help` output and discoverability as flags grow. Currently 4 flags (`-Vinh`, `-Vca`, `-Vimp`, `-Vr`); Sprint 9 adds `-Vhas` = 5. If future sprints add `DECORATES`, `ANNOTATES`, `OVERRIDES`, a flat ungrouped list degrades. A `category` property on `RelationshipType` (e.g., `structural` vs. `behavioral`) could drive `--help` section headers at zero user-visible cost now. A full `ReferenceType` class adds user value only if it surfaces as a new query operator (e.g., `-Vany`, `-Vstructural`). Morpheus to decide whether to add grouping now or at the threshold of 6+ flags.
+
+### Context for OQ-5 (class call query bug)
+Trin Finding 2: `["-mg", "MyClass", "-tc", "-Vca", ...]` returns empty. Call relationships are stored from **method** symbols, not class symbols. To use a class as anchor for `-Vca`, the executor would need to expand the query to include all methods where `parent_name = class_name`. Drew confirmed this is a bug — fix scope TBD.
+
+### Context for OQ-6 (`-Q` path matching)
+Trin Finding 1, Option C: For `-tF` (filepath) symbols, `qualified_name = full_path`. Enabling `-Q` on `-mg` for file queries would make `via -mg 'via/core/*' -tF -Q` match full paths. Separate from `-Vhas` (which handles Finding 1 Ex02 queries via relationship pipeline). Drew approved: "Yes to C".
+
+### Context for OQ-7 (TD-REVIEW)
+Morpheus code review (2026-03-21) identified 5 prioritized tech debt items:
+- **P1**: TD-REVIEW-1 (remove `_get_match_metadata()`, move to `TableRenderer`) — perf + SRP
+- **P1**: TD-REVIEW-2 (add `DatabaseStore.get_symbol_id()`, remove `.conn` access) — abstraction
+- **P2**: TD-REVIEW-3 (simplify `delete_file_completely`, trust FK CASCADE)
+- **P2**: TD-REVIEW-4 (merge 3 file-storage methods into `_upsert_raw_file`)
+- **P2**: TD-REVIEW-5 (merge call+ref relationship methods)
+
+Note: Story 1 (`-Vhas`) adds `_store_declares_relationships()` — TD-REVIEW-2 and TD-REVIEW-5 should ideally be done **before** Story 1 lands to avoid making the smell worse.
 
 ---
 
@@ -322,6 +460,40 @@ This applies to all stories going forward — it's a project-wide standard, not 
 ---
 
 ## Tech Debt Backlog
+
+### TD-REVIEW-1: Remove `_get_match_metadata()`, push column widths to `TableRenderer`
+**Priority**: P1 (perf + SRP) | **Source**: Morpheus code review, 2026-03-21
+**Area**: `via/db/store.py:553–595`, `via/renderers/`
+**Problem**: Every `match()` call fires an extra aggregation SQL query for rendering column widths — even when output is `-oR` (raw). DB layer has no business knowing about column widths.
+**Prescription**: Remove `_get_match_metadata()`. `TableRenderer` computes widths during a first pass. `total_matches` count computed lazily only when limit warning is needed.
+**Sprint**: OQ-7 — awaiting Drew's sprint assignment
+
+### TD-REVIEW-2: Add `DatabaseStore.get_symbol_id()`, remove `.conn` access from IndexingService
+**Priority**: P1 (abstraction) | **Source**: Morpheus code review, 2026-03-21
+**Area**: `via/db/store.py`, `via/services/indexing.py:478,501`
+**Problem**: IndexingService directly executes SQL via `self.db_store.conn.execute(...)` — bypasses the DatabaseStore abstraction entirely.
+**Prescription**: Add `get_symbol_id(name, symbol_type, file_path, parent_name) -> Optional[int]` to DatabaseStore.
+**Sprint**: OQ-7 — awaiting Drew's sprint assignment. **Note**: Should be done before Story 1 `-Vhas` adds another similar method.
+
+### TD-REVIEW-3: Simplify `delete_file_completely`, remove `delete_relationships_for_file`
+**Priority**: P2 | **Source**: Morpheus code review, 2026-03-21
+**Area**: `via/db/store.py:357–384, 1089–1127`
+**Problem**: Both methods manually delete `symbol_references` rows that FK CASCADE already handles.
+**Prescription**: Delete from `symbols` → cascade handles references. Audit/remove `delete_relationships_for_file`.
+**Sprint**: OQ-7 — awaiting Drew's sprint assignment
+
+### TD-REVIEW-4: Merge 3 file-storage methods into `_upsert_raw_file()`
+**Priority**: P2 | **Source**: Morpheus code review, 2026-03-21
+**Area**: `via/services/indexing.py:560–616`
+**Problem**: `_store_unparsed_file`, `_store_oversized_file`, `_store_file_with_error` share identical skeleton differing only in a boolean flag.
+**Sprint**: OQ-7 — awaiting Drew's sprint assignment
+
+### TD-REVIEW-5: Merge `_store_call_relationships` + `_store_reference_relationships`
+**Priority**: P2 | **Source**: Morpheus code review, 2026-03-21
+**Area**: `via/services/indexing.py:472–516`
+**Problem**: Near-identical methods differing only in attribute names and `rel_type`.
+**Note**: Story 1 will add a third sibling (`_store_declares_relationships()`). Merging before Story 1 lands avoids proliferating the smell.
+**Sprint**: OQ-7 — awaiting Drew's sprint assignment
 
 ### TD-WATCH-1: Extract `PathFilter` from `FileDiscovery`
 

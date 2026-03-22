@@ -9,7 +9,6 @@ TLDR:
     schema.py Examples tested: Ex01–Ex12
     Skill-unique patterns tested: glob-any, references, header search
     Documentation issues surfaced as xfail tests:
-      - Ex09: class-level -Vca anchor returns empty (calls stored from methods, not classes — known bug)
       - Morpheus SKILL.md: -th (lowercase) is not a valid flag; correct is -tH (already fixed in docs)
 
 Author: Trin
@@ -110,6 +109,32 @@ def validate_input(data: dict) -> bool:
     return True
 """
 
+_EXTRAS_PY = """\
+\"\"\"Extras for Story 3: decorators, type annotations, class-body annotations.\"\"\"
+from services.my_service import BaseClass, MyClass
+
+
+def my_decorator(func):
+    \"\"\"A simple decorator for testing decorator reference tracking.\"\"\"
+    return func
+
+
+@my_decorator
+def decorated_func() -> BaseClass:
+    \"\"\"Function decorated with my_decorator; return type annotation is BaseClass.\"\"\"
+    return BaseClass()
+
+
+class AnnotatedClass(BaseClass):
+    \"\"\"Class with body annotations and annotated method parameters.\"\"\"
+
+    data: MyClass
+
+    def process(self, svc: BaseClass) -> MyClass:
+        \"\"\"Method with non-builtin parameter and return type annotations.\"\"\"
+        return MyClass()
+"""
+
 _API_MD = """\
 # API Overview
 
@@ -133,6 +158,7 @@ def proj(tmp_path_factory):
         models/child_model.py   — ChildModel(BaseClass)
         app/core/utils.py       — parse_config(), validate_input()  (not via/ — would shadow package)
         docs/API.md             — markdown headers
+        extras.py               — decorated_func, AnnotatedClass (Story 3 fixtures)
     """
     d = tmp_path_factory.mktemp("docquery")
 
@@ -154,6 +180,8 @@ def proj(tmp_path_factory):
 
     (d / "docs").mkdir()
     (d / "docs" / "API.md").write_text(_API_MD)
+
+    (d / "extras.py").write_text(_EXTRAS_PY)
 
     r = subprocess.run(
         [sys.executable, "-m", "via", "index", str(d)],
@@ -419,9 +447,8 @@ class TestSchemaEx09_WhatMethodCalls:
     Call relationships are stored from method/function symbols to their callees.
     Anchor on the method (-tm) to find what it calls.
 
-    Known bug: class-level anchor (-tc) with -Vca returns empty because calls are
-    stored from method symbols, not class symbols. Full class-level call aggregation
-    is a future enhancement.
+    Class-level anchor (-tc) with -Vca is also supported: executor expands the
+    class anchor to include all methods where parent_name = class_name.
     """
 
     def test_exit_0(self, proj):
@@ -432,9 +459,8 @@ class TestSchemaEx09_WhatMethodCalls:
         r = _q(proj, "-mg", "run", "-tm", "-Vca", "-iv", "-mg", "*")
         assert "helper_func" in r.stdout
 
-    @pytest.mark.xfail(reason="Known bug: calls indexed from method symbols; class anchor (-tc) returns empty")
     def test_class_anchor_returns_callees(self, proj):
-        """Class-level call query is a known bug — tracked for future fix."""
+        """Class-level -Vca: executor expands class anchor to include its methods."""
         r = _q(proj, "-mg", "MyClass", "-tc", "-Vca", "-iv", "-mg", "*", "-tf")
         assert r.returncode == 0
         assert "helper_func" in r.stdout
@@ -629,3 +655,206 @@ class TestSkillNeoMorpheus_WhoImports:
     def test_importer_present(self, proj):
         r = _q(proj, "-mg", "os", "-Vimp", "-mg", "*")
         assert "my_service" in r.stdout
+
+
+# ── Story 5: -Q full-path matching for file symbols ───────────────────────────
+
+class TestStory5_FullPathQualifiedMatching:
+    """-Q flag enables matching file symbols by their full relative path.
+
+    Story 5 (Sprint 9): via -mg 'app/core/*' -tF -Q should return files under
+    app/core/ by matching qualified_name (relative path) instead of symbol_name
+    (basename only).
+    """
+
+    def test_path_pattern_with_Q_returns_file(self, proj):
+        """-Q with path prefix pattern returns files matching the full relative path."""
+        r = _q(proj, "-mg", "app/core/*", "-tF", "-Q")
+        assert r.returncode == 0
+        assert "utils" in r.stdout
+
+    def test_basename_without_Q_still_works(self, proj):
+        """Baseline: matching by basename (without -Q) still works."""
+        r = _q(proj, "-mg", "utils.py", "-tF")
+        assert r.returncode == 0
+        assert "utils" in r.stdout
+
+    def test_path_pattern_without_Q_returns_nothing(self, proj):
+        """Without -Q, path prefix pattern does not match (basename only)."""
+        r = _q(proj, "-mg", "app/core/*", "-tF")
+        assert r.returncode == 0
+        assert "utils" not in r.stdout
+
+
+# ── Story 3: Expanded -Vr Reference Tracking ─────────────────────────────────
+
+class TestStory3_ExpandedVrTracking:
+    """-Vr now tracks references beyond function/method bodies.
+
+    Story 3 (Sprint 9): class bases, decorators, type annotations (function
+    signatures + class bodies) are stored as REFERENCES relationships.
+
+    Fixture: extras.py — AnnotatedClass(BaseClass), @my_decorator on
+    decorated_func, class body annotation (data: MyClass), annotated
+    method params (process(svc: BaseClass) -> MyClass).
+    """
+
+    def test_class_base_is_reference(self, proj):
+        """class AnnotatedClass(BaseClass) → AnnotatedClass references BaseClass."""
+        r = _q(proj, "-mg", "AnnotatedClass", "-tc", "-Vr", "-iv", "-mg", "*")
+        assert r.returncode == 0
+        assert "BaseClass" in r.stdout
+
+    def test_decorator_is_reference(self, proj):
+        """@my_decorator on decorated_func → decorated_func references my_decorator."""
+        r = _q(proj, "-mg", "decorated_func", "-tf", "-Vr", "-iv", "-mg", "*")
+        assert r.returncode == 0
+        assert "my_decorator" in r.stdout
+
+    def test_function_return_annotation_is_reference(self, proj):
+        """decorated_func() -> BaseClass → decorated_func references BaseClass."""
+        r = _q(proj, "-mg", "decorated_func", "-tf", "-Vr", "-iv", "-mg", "*")
+        assert r.returncode == 0
+        assert "BaseClass" in r.stdout
+
+    def test_method_param_annotation_is_reference(self, proj):
+        """process(self, svc: BaseClass) → process method references BaseClass."""
+        r = _q(proj, "-mg", "process", "-tm", "-Vr", "-iv", "-mg", "*")
+        assert r.returncode == 0
+        assert "BaseClass" in r.stdout
+
+    def test_class_body_annotation_is_reference(self, proj):
+        """data: MyClass in AnnotatedClass body → AnnotatedClass references MyClass."""
+        r = _q(proj, "-mg", "AnnotatedClass", "-tc", "-Vr", "-iv", "-mg", "*")
+        assert r.returncode == 0
+        assert "MyClass" in r.stdout
+
+
+# ── Story 1: -Vhas / DECLARES ─────────────────────────────────────────────────
+
+class TestStory1_Vhas:
+    """Sprint 9 Story 1: -Vhas has-a / DECLARES relationship queries.
+
+    via -mg '<container>' -t<C> -Vhas -t<Member>
+    Returns all members declared within containers matching the pattern.
+    """
+
+    def test_file_has_classes_by_filename(self, proj):
+        """via -mg 'my_service.py' -tN -Vhas -tc → BaseClass, MyClass, AnotherService."""
+        r = _q(proj, "-mg", "my_service.py", "-tN", "-Vhas", "-tc")
+        assert r.returncode == 0
+        assert "BaseClass" in r.stdout
+        assert "MyClass" in r.stdout
+        assert "AnotherService" in r.stdout
+
+    def test_file_has_functions_by_filename(self, proj):
+        """via -mg 'my_service.py' -tN -Vhas -tf → connect, helper_func."""
+        r = _q(proj, "-mg", "my_service.py", "-tN", "-Vhas", "-tf")
+        assert r.returncode == 0
+        assert "connect" in r.stdout
+        assert "helper_func" in r.stdout
+
+    def test_file_has_classes_by_filepath(self, proj):
+        """via -mg '*my_service*' -tF -Vhas -tc → classes in my_service.py."""
+        r = _q(proj, "-mg", "*my_service*", "-tF", "-Vhas", "-tc")
+        assert r.returncode == 0
+        assert "BaseClass" in r.stdout
+        assert "MyClass" in r.stdout
+
+    def test_class_has_methods(self, proj):
+        """via -mg 'MyClass' -tc -Vhas -tm → get_name, get_value, run."""
+        r = _q(proj, "-mg", "MyClass", "-tc", "-Vhas", "-tm")
+        assert r.returncode == 0
+        assert "get_name" in r.stdout
+        assert "get_value" in r.stdout
+        assert "run" in r.stdout
+
+    def test_class_has_methods_does_not_include_other_class(self, proj):
+        """via -mg 'BaseClass' -tc -Vhas -tm → only base_method, not get_name."""
+        r = _q(proj, "-mg", "BaseClass", "-tc", "-Vhas", "-tm")
+        assert r.returncode == 0
+        assert "base_method" in r.stdout
+        assert "get_name" not in r.stdout
+
+    def test_invert_raises_error(self, proj):
+        """via ... -Vhas -iv → clear error: not-has not yet supported."""
+        r = _q(proj, "-mg", "my_service.py", "-tN", "-Vhas", "-iv", "-tc")
+        assert r.returncode != 0
+        assert "not yet supported" in r.stderr or "not yet supported" in r.stdout
+
+    def test_invalid_container_type_raises_error(self, proj):
+        """via -mg 'run' -tm -Vhas -tc → error: method is not a container type."""
+        r = _q(proj, "-mg", "run", "-tm", "-Vhas", "-tc")
+        assert r.returncode != 0
+        err = r.stderr + r.stdout
+        assert "not a valid container" in err or "container" in err.lower()
+
+    def test_vhas_flag_in_help(self, proj):
+        """via --help → -Vhas appears in relationship flags section."""
+        r = _q(proj, "--help")
+        assert r.returncode == 0
+        assert "-Vhas" in r.stdout or "via-has" in r.stdout
+
+
+# ── Story 2a: Temporal matcher ────────────────────────────────────────────────
+
+class TestStory2a_TemporalMatcher:
+    """Sprint 9 Story 2a: --newerthan / --olderthan per-stage temporal filters.
+
+    symbols.mtime is set at index time from file's st_mtime.
+    --newerthan 1h: symbols whose file mtime is within last hour.
+    --olderthan 1d: symbols whose file mtime is more than 1 day old.
+    """
+
+    def test_newerthan_flag_in_help(self, proj):
+        """via --help → --newerthan appears."""
+        r = _q(proj, "--help")
+        assert r.returncode == 0
+        assert "newerthan" in r.stdout
+
+    def test_olderthan_flag_in_help(self, proj):
+        """via --help → --olderthan appears."""
+        r = _q(proj, "--help")
+        assert r.returncode == 0
+        assert "olderthan" in r.stdout
+
+    def test_newerthan_returns_recently_indexed_symbols(self, proj):
+        """--newerthan 1h returns symbols from files indexed within last hour."""
+        r = _q(proj, "-mg", "*", "-tc", "--newerthan", "1h")
+        assert r.returncode == 0
+        # All test fixture files were just indexed — should return classes
+        assert "BaseClass" in r.stdout or "MyClass" in r.stdout
+
+    def test_olderthan_filters_out_recent_symbols(self, proj):
+        """--olderthan 1h returns nothing for files indexed in the last second."""
+        r = _q(proj, "-mg", "*", "-tc", "--olderthan", "1h")
+        assert r.returncode == 0
+        # All test fixture files were just indexed — should return nothing
+        assert "BaseClass" not in r.stdout
+        assert "MyClass" not in r.stdout
+
+    def test_newerthan_with_very_large_duration_returns_all(self, proj):
+        """--newerthan 1w (1 week) returns all symbols (all indexed within last week)."""
+        r = _q(proj, "-mg", "*", "-tc", "--newerthan", "1w")
+        assert r.returncode == 0
+        assert "BaseClass" in r.stdout
+
+    def test_invalid_duration_raises_error(self, proj):
+        """--newerthan with invalid format → clear error."""
+        r = _q(proj, "-mg", "*", "-tc", "--newerthan", "2x")
+        assert r.returncode != 0
+        err = r.stderr + r.stdout
+        assert "Invalid duration" in err or "duration" in err.lower()
+
+    def test_symbols_have_mtime_in_database(self, proj):
+        """Verify symbols.mtime is set after indexing (schema v5)."""
+        import sqlite3
+        db_path = proj / ".via" / "index.db"
+        conn = sqlite3.connect(str(db_path))
+        row = conn.execute(
+            "SELECT mtime FROM symbols WHERE symbol_type='class' LIMIT 1"
+        ).fetchone()
+        conn.close()
+        assert row is not None
+        assert row[0] is not None, "symbols.mtime should be set at index time"
+        assert row[0] > 0, "symbols.mtime should be a positive Unix timestamp"

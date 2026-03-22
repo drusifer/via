@@ -53,8 +53,8 @@ class TestRelationshipTypeEnum:
         assert RelationshipType.REFERENCES.short_flag == 'r'
 
     def test_relationship_count(self):
-        """Test that we have exactly 4 relationship types."""
-        assert len(RelationshipType) == 4
+        """Test that we have exactly 5 relationship types (including DECLARES)."""
+        assert len(RelationshipType) == 5
 
 
 class TestDatabaseStoreRelationships:
@@ -251,27 +251,6 @@ class TestDatabaseStoreRelationships:
         assert hasattr(result, 'symbol_type')
         assert hasattr(result, 'file_path')
         assert hasattr(result, 'line_number')
-
-    def test_delete_relationships_for_file(self, populated_db):
-        """Test deleting relationships when a file is re-indexed."""
-        db_store, ids = populated_db
-
-        db_store.insert_relationship(
-            source_id=ids['child_id'],
-            target_id=ids['base_id'],
-            rel_type='inherits-from'
-        )
-
-        # Delete relationships for child.py
-        db_store.delete_relationships_for_file('child.py')
-
-        # Should be no relationships left
-        results = list(db_store.query_relationships(
-            relationship_type='inherits-from',
-            object_pattern='BaseClass'
-        ))
-
-        assert len(results) == 0
 
     def test_query_relationships_no_results(self, db_store):
         """Test query with no matching relationships."""

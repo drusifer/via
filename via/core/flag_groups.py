@@ -86,13 +86,14 @@ FORMAT_FLAGS: List[Flag] = [
     Flag(FlagGroup.FORMAT, 'p', 'format-png', 'format', 'png', 'PNG image'),
 ]
 
-# Relationship flags (Sprint 5)
-# These use -V prefix (Via) with suffixes matching RelationshipType.short_flag
+# Relationship flags (Sprint 5+)
+# These use -V prefix (Via) with suffixes matching ReferenceType.short_flag
 RELATIONSHIP_FLAGS: List[Flag] = [
     Flag(FlagGroup.RELATIONSHIP, 'inh', 'via-inherits-from', 'relationship_type', 'inherits-from', 'Inheritance'),
     Flag(FlagGroup.RELATIONSHIP, 'ca', 'via-calls', 'relationship_type', 'calls', 'Function/method calls'),
     Flag(FlagGroup.RELATIONSHIP, 'imp', 'via-imports', 'relationship_type', 'imports', 'Import relationships'),
     Flag(FlagGroup.RELATIONSHIP, 'r', 'via-references', 'relationship_type', 'references', 'Symbol references'),
+    Flag(FlagGroup.RELATIONSHIP, 'has', 'via-has', 'relationship_type', 'declares', 'Container membership (file/class/function has member)'),
 ]
 
 

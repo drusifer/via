@@ -2704,3 +2704,212 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-21 12:55:52</small>] [**User**]->[**all**] **shutdown*:
  Shutting down. State saved. 894 pass, 2 xfail. Doc fixes complete. Sprint 9 ready.
+
+---
+[<small>2026-03-21 13:04:40</small>] [**Cypher**]->[**all**] **pm update*:
+ Sprint 9 req review done. Story 3 added (-Vr expansion, Drew confirmed). 8 open questions in doc (OQ-1 thru OQ-8). TD-REVIEW-1..5 added to backlog. See SPRINT_9_USER_STORIES.md.
+
+---
+[<small>2026-03-21 13:22:33</small>] [**Cypher**]->[**all**] **pm update*:
+ Cypher activating. Reading Drew's inline answers on Sprint 9 OQs.
+
+---
+[<small>2026-03-21 13:25:36</small>] [**Cypher**]->[**all**] **pm update*:
+ OQs resolved. 3 pivots: ReferenceType arch (blocks Story 1), per-symbol timestamps (schema change), TD Phase 1 all 5 items. New Story 4+5. Sprint ~15pts. Details: SPRINT_9_USER_STORIES.md.
+
+---
+[<small>2026-03-21 13:32:18</small>] [**User**]->[**morpheus**] **request*:
+ @Morpheus Sprint 9 arch needed. Two blockers: ReferenceType spec + Story 2a temporal/per-symbol timestamps. See SPRINT_9_USER_STORIES.md for full context.
+
+---
+[<small>2026-03-21 13:32:32</small>] [**Morpheus**]->[**all**] **lead arch*:
+ Morpheus activating. Loading Sprint 9 context and codebase state.
+
+---
+[<small>2026-03-21 13:35:25</small>] [**Morpheus**]->[**all**] **lead arch*:
+ Sprint 9 arch done. SPRINT_9_ARCHITECTURE.md: rename RelationshipType→ReferenceType, symbols.mtime (schema v5), --newerthan/--olderthan flags, TD-REVIEW Phase 1 first. 5 Qs for Drew.
+
+---
+[<small>2026-03-21 13:42:45</small>] [**Morpheus**]->[**all**] **lead arch*:
+ Morpheus: reading Drew's arch feedback. Per-stage temporal is a significant design change — updating spec now.
+
+---
+[<small>2026-03-21 13:45:32</small>] [**Morpheus**]->[**all**] **lead arch*:
+ Arch final. Per-stage --newerthan/--olderthan in match_parser; RelationshipFilter gets result_newerthan/olderthan_seconds. Cross-stage --stale deferred Sprint 10. Ready for Neo.
+
+---
+[<small>2026-03-21 13:48:30</small>] [**User**]->[**all**] **request*:
+ orchestrate SPRINT 9 implementation: mouse plan phase -> neo tdd phase -> trin uat phase -> mouse plan phase. Keep it tight.
+
+---
+[<small>2026-03-21 13:49:02</small>] [**Mouse**]->[**all**] **sm plan*:
+ *sm plan* Kicking off Sprint 9. Arch fully resolved by Morpheus. Building task breakdown now.
+
+---
+[<small>2026-03-21 13:50:37</small>] [**Mouse**]->[**all**] **sm plan*:
+ *sm plan* Sprint 9 plan complete. SPRINT_9_TASKS.md created. Cycle 1 assigned to @Neo: implement all 5 TD-REVIEW items (Phase 1). Exit criteria: 837 tests still passing. @Trin UAT after. Arch spec: morpheus.docs/SPRINT_9_ARCHITECTURE.md
+
+---
+[<small>2026-03-21 13:50:57</small>] [**Neo**]->[**all**] **swe*:
+ *swe* Taking Cycle 1. Implementing all 5 TD-REVIEW items (Phase 1 TD batch). Starting with TD-REVIEW-2 (get_symbol_id) + TD-REVIEW-5 (merge store methods) since Story 1 depends on them. Then TD-REVIEW-3, 4, 1.
+
+---
+[<small>2026-03-21 13:59:16</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+============= 10 failed, 883 passed, 2 xfailed in 98.35s (0:01:38) =============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 14:02:41</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+============= 1 failed, 883 passed, 2 xfailed in 96.81s (0:01:36) ==============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 14:06:01</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================== 884 passed, 2 xfailed in 96.86s (0:01:36) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 14:06:41</small>] [**Neo**]->[**all**] **swe*:
+ *swe* Cycle 1 COMPLETE. All 5 TD-REVIEW items done. 884 passed, 2 xfailed. Details in neo.docs/current_task.md. Handing off to @Trin for UAT.
+
+---
+[<small>2026-03-21 14:09:54</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================== 884 passed, 2 xfailed in 97.19s (0:01:37) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 14:10:35</small>] [**Trin**]->[**all**] **qa*:
+ *qa* UAT PASSED — Sprint 9 Cycle 1 (Phase 1 TD-REVIEW). All 5 items verified. Fixed 2 minor issues: removed unused Optional import + updated stale TLDR in table.py. 884 passed, 2 xfailed. Handing off to @Mouse for Cycle 2 planning.
+
+---
+[<small>2026-03-21 14:35:30</small>] [**User**]->[**all**] **request*:
+ continue sprint9 impl cycle
+
+---
+[<small>2026-03-21 14:39:33</small>] [**Mouse**]->[**Neo**] **sm plan*:
+ Cycle 2 start: Stories 3/4/5. Story4 has xfail test; 3 and 5 need TDD. @Neo implement.
+
+---
+[<small>2026-03-21 14:39:42</small>] [**Neo**]->[**all**] **swe impl*:
+ Starting Cycle 2: Story4 first (executor fix), then Story5 (Q flag), then Story3 (expanded -Vr). TDD throughout.
+
+---
+[<small>2026-03-21 14:49:44</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================== 893 passed, 1 xfailed in 98.23s (0:01:38) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 14:49:55</small>] [**Neo**]->[**Trin**] **swe done*:
+ Cycle 2 DONE: Stories 3/4/5 all green. 893 pass, 1 xfailed. @Trin UAT time.
+
+---
+[<small>2026-03-21 14:51:30</small>] [**Trin**]->[**all**] **qa test*:
+ Starting Cycle 2 UAT: Stories 3/4/5. Verifying 893 baseline, checking all 3 stories.
+
+---
+[<small>2026-03-21 14:53:12</small>] [**Trin**]->[**Mouse**] **qa done*:
+ Cycle 2 UAT PASSED. 893 pass, 1 xfailed. Stories 3/4/5 verified. Ready for Cycle 3: Story 1 (-Vhas / DECLARES).
+
+---
+[<small>2026-03-21 15:32:29</small>] [**User**]->[**all**] **request*:
+ continue sprint 9 implementation cycle
+
+---
+[<small>2026-03-21 15:32:57</small>] [**Mouse**]->[**all**] **sm status*:
+ Sprint 9 status: Phase 1 (TD-REVIEW 1-5) ✅ Phase 2 (Stories 3/4/5) ✅ Trin UAT passed. Architecture spec complete. Kicking off Cycle 3: @Neo *swe impl Story 1 (-Vhas / DECLARES)
+
+---
+[<small>2026-03-21 15:33:07</small>] [**Neo**]->[**all**] **swe impl*:
+ Activating for Story 1: -Vhas / DECLARES. Starting implementation — rename RelationshipType→ReferenceType, add DECLARES, -Vhas flag, _store_declares_relationships(), executor dispatch, container validation.
+
+---
+[<small>2026-03-21 15:38:32</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test-unit | /home/drusifer/Projects/via/build/build.out
+make[1]: Entering directory '/home/drusifer/Projects/via'
+make[1]: *** No rule to make target 'test-unit'.  Stop.
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 15:40:18</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+============= 2 failed, 891 passed, 1 xfailed in 97.88s (0:01:37) ==============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 15:42:19</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================== 893 passed, 1 xfailed in 98.19s (0:01:38) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 15:44:44</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================== 901 passed, 1 xfailed in 99.72s (0:01:39) ===================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 16:11:59</small>] [**Neo**]->[**Trin**] **swe impl*:
+ Story 1 COMPLETE. Implemented -Vhas/-via-has (DECLARES): ReferenceType rename, DECLARES enum value, flag_groups -Vhas, _store_declares_relationships(), container validation + --invert error. 901 passed (+8), 1 xfailed. @Trin *qa Story 1 UAT
+
+---
+[<small>2026-03-21 16:12:31</small>] [**Trin**]->[**all**] **qa review*:
+ Activating for Story 1 UAT review. Test suite: 901 passed, 1 xfailed. Reviewing implementation.
+
+---
+[<small>2026-03-21 16:13:39</small>] [**Trin**]->[**Mouse**] **qa review*:
+ Story 1 UAT PASSED. 901 passed, 1 xfailed. All acceptance criteria met. Two notes: (1) markdown headers not in DECLARES (low priority), (2) nested function→function deferred (needs parser changes). @Mouse Cycle 3 complete, ready for Cycle 4: Story 2a
+
+---
+[<small>2026-03-21 16:13:50</small>] [**Mouse**]->[**Neo**] **sm status*:
+ Cycle 3 DONE. Sprint 9 scoreboard: Phase 1 ✅ Phase 2 ✅ Phase 3 ✅. Kicking off Cycle 4: @Neo *swe impl Story 2a (temporal matcher — schema migration, --newerthan/--olderthan)
+
+---
+[<small>2026-03-21 16:20:16</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+make[1]: *** [Makefile.prj:43: test] Error 1
+
+---
+[<small>2026-03-21 16:22:56</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+============= 2 failed, 899 passed, 1 xfailed in 101.25s (0:01:41) =============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 16:25:27</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================== 901 passed, 1 xfailed in 100.42s (0:01:40) ==================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 16:27:31</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+============= 2 failed, 906 passed, 1 xfailed in 101.17s (0:01:41) =============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 16:29:52</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================== 908 passed, 1 xfailed in 100.61s (0:01:40) ==================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-21 16:33:05</small>] [**Neo**]->[**Trin**] **swe impl*:
+ Story 2a COMPLETE: symbols.mtime, --newerthan/--olderthan, duration.py, schema v5. 908 passed (+7). @Trin *qa Story 2a UAT
+
+---
+[<small>2026-03-21 16:33:33</small>] [**Trin**]->[**all**] **qa review*:
+ Activating for Story 2a UAT. 908 passed, 1 xfailed. Reviewing temporal matcher implementation.
+
+---
+[<small>2026-03-21 16:34:09</small>] [**Trin**]->[**Mouse**] **qa review*:
+ Story 2a UAT PASSED. 908 passed, 1 xfailed. All acceptance criteria met. Sprint 9 ALL PHASES COMPLETE. @Mouse *sm sprint wrap-up
+
+---
+[<small>2026-03-21 16:34:38</small>] [**Mouse**]->[**all**] **sm status*:
+ SPRINT 9 COMPLETE ✅ All 4 cycles done. Final: 908 passed, 1 xfailed. Delivered: TD-REVIEW 1-5, Stories 3/4/5, Story 1 (-Vhas/DECLARES), Story 2a (temporal matcher). Ready for Sprint 10 planning.
