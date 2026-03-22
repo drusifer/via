@@ -1,8 +1,17 @@
-**Task**: Sprint 7 doc groom
+**Task**: Sprint 10 doc groom
 **Status**: COMPLETE (100%)
-**Completed**: 2026-03-20
+**Completed**: 2026-03-22
 
-- README.md updated: -oJ flag, MCP section, project structure, arch diagram, requirements
-- TEST_STATUS.md rewritten: current state 794 tests, Sprint 7 SHIPPED
-- docs/USER_GUIDE.md: -oJ output format, Watch Mode section, MCP Mode section
-- via/mcp/__init__.py: proper Code Module TLDR docstring
+## Changes Made
+
+### docs/USER_GUIDE.md
+- Updated TLDR: added `--ref-type` and `--stale` to relationship query description
+- Added new subsection `### '--stale': Cross-Stage Temporal Filter` after `--ref-type` section (with 3 examples and a note)
+
+### README.md
+- Updated TLDR: added `--ref-type` and `--stale` to relationship queries phrase
+- Features: added `--ref-type` to Relationship Queries bullet, added new `--stale` Stale Detection bullet
+- Relationship Queries table: added `--ref-type` and `--stale` rows
+
+## Note on --ref-type
+`--ref-type` was already documented in USER_GUIDE.md from a previous session (Sprint 10 Cycle 1 was done before this session's chat log). Only `--stale` was missing.

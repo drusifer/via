@@ -177,7 +177,7 @@ The project has a live `via` MCP server. **Use `mcp__via__via_query` to answer `
 | Find any symbol | `["-mg", "*pattern*"]` |
 
 Results include `file_path` and `line_number`. Always cite these when answering queries.
-**`-th` (headers) is especially powerful for Oracle** — navigate directly to the right section in any doc without reading full files.
+**`-tH` (headers) is especially powerful for Oracle** — navigate directly to the right section in any doc without reading full files.
 Use **via** for symbol/header lookups by name; use **Grep** for full-text content search.
 
 ### Relationship Queries

@@ -1,20 +1,20 @@
 # Mouse Next Steps
 
-## Resume Point: Sprint 10 Planning
+## Resume Point: Sprint 10 Cycle tracking
 
-Sprint 9 is complete. Next: plan Sprint 10.
+Sprint 10 planning complete. Task board: `agents/mouse.docs/SPRINT_10_TASKS.md`.
 
-### Sprint 10 candidates (from arch doc + backlog):
-1. **ReferenceType CLI unification**: `--ref-type <type>` power-user alternative to `-V<X>` flags (Morpheus deferred from Sprint 9)
-2. **Cross-stage mtime comparison** (`--stale` flag): result older than anchor (Sprint 10 per arch doc)
-3. **Story 2b**: `prep_tldr` integration using temporal matcher (~2pts)
-4. **TD-WATCH-1**: Extract PathFilter from FileDiscovery (coupling fix)
+### When Resuming
+1. Read CHAT.md for Neo/Trin progress
+2. Update task board as cycles complete
+3. After Trin UAT of each cycle, mark tasks [x] and hand to Neo for next cycle
 
-### Sprint 10 kickoff:
-1. Cypher: write Sprint 10 user stories
-2. Morpheus: arch decisions on ReferenceType unification
-3. Mouse: plan cycles
+### Cycle Status (on resume)
+- C1: Neo active (S10-1 `--ref-type`)
+- C2: Pending
+- C3: Pending
 
-### Sprint summary files location:
-- `agents/cypher.docs/SPRINT_9_USER_STORIES.md` — Sprint 9 specs
-- `agents/morpheus.docs/SPRINT_9_ARCHITECTURE.md` — Sprint 9 arch decisions
+### Sprint 10 Arch Reference
+- User stories: `agents/cypher.docs/SPRINT_10_USER_STORIES.md`
+- Architecture: `agents/morpheus.docs/SPRINT_10_ARCHITECTURE.md`
+- Smith Gate notes: `agents/smith.docs/gate2_approval.md`

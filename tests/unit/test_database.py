@@ -93,6 +93,76 @@ class TestDatabaseStore:
             # sqlite_sequence is auto-created for AUTOINCREMENT columns
             assert all(t in tables for t in expected_tables)
 
+    def test_schema_migration_from_v4_does_not_crash(self, temp_db):
+        """S9-001: initialize_schema() on a v4 DB (symbols lacks mtime) must not crash.
+
+        Simulates upgrading from Sprint 8 to Sprint 9: the symbols table exists
+        but has no mtime column, and metadata has schema_version = 4.
+        CREATE_INDEXES includes idx_symbols_mtime; if it runs before the ALTER TABLE
+        the index creation fails with 'no such column: mtime'.
+        """
+        import sqlite3 as _sqlite3
+        db_path, index_root = temp_db
+
+        # Bootstrap a v4 DB manually (symbols without mtime, metadata at version 4)
+        conn = _sqlite3.connect(db_path)
+        conn.execute("""
+            CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL)
+        """)
+        conn.execute("""
+            CREATE TABLE schema_migrations (
+                version INTEGER PRIMARY KEY, applied_at REAL NOT NULL, description TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path TEXT UNIQUE NOT NULL, language TEXT, size_bytes INTEGER,
+                mtime REAL, indexed_at REAL, parsed BOOLEAN DEFAULT 0,
+                oversized BOOLEAN DEFAULT 0
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE symbols (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol_name TEXT NOT NULL, symbol_type TEXT NOT NULL,
+                file_path TEXT NOT NULL, line_number INTEGER NOT NULL,
+                byte_offset INTEGER, byte_length INTEGER,
+                qualified_name TEXT NOT NULL, parent_name TEXT
+                -- NOTE: no mtime column — this is the v4 schema
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE symbol_references (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                from_symbol_id INTEGER NOT NULL, to_symbol_id INTEGER NOT NULL,
+                reference_type TEXT NOT NULL, line_number INTEGER
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE pending_relationships (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_id INTEGER NOT NULL, target_name TEXT NOT NULL, rel_type TEXT NOT NULL
+            )
+        """)
+        conn.execute("INSERT INTO metadata VALUES ('schema_version', '4')")
+        conn.execute("INSERT INTO metadata VALUES ('index_root', ?)", (index_root,))
+        conn.commit()
+        conn.close()
+
+        # This must not raise — the migration should add mtime before the index is created
+        store = DatabaseStore(db_path, index_root)
+        with store:
+            store.initialize_schema()  # Must not crash with 'no such column: mtime'
+            # Verify mtime column was added
+            cols = {
+                row[1]
+                for row in store.conn.execute("PRAGMA table_info(symbols)")
+            }
+            assert 'mtime' in cols, "symbols.mtime column missing after migration"
+            # Verify version updated
+            assert store.get_metadata("schema_version") == str(SCHEMA_VERSION)
+
     def test_insert_and_get_file(self, db_store):
         """Test file insertion and retrieval."""
         test_path = os.path.join(db_store.index_root, "test.py")
@@ -203,3 +273,93 @@ class TestDatabaseStore:
         # Verify we can retrieve by absolute path
         file_record2 = db_store.get_file_by_path(nested_path)
         assert file_record2["id"] == file_id
+
+
+class TestQueryRelationshipsStale:
+    """S10-2: query_relationships returns mtime + anchor_mtime on each record."""
+
+    def _insert_sym(self, store, name, sym_type, file_path, mtime):
+        return store.insert_symbol(
+            symbol_name=name,
+            symbol_type=sym_type,
+            file_path=file_path,
+            line_number=1,
+            qualified_name=name,
+            mtime=mtime,
+        )
+
+    def test_result_has_mtime_and_anchor_mtime(self, db_store):
+        """Results from query_relationships carry mtime and anchor_mtime."""
+        anchor_path = os.path.join(db_store.index_root, "base.py")
+        result_path = os.path.join(db_store.index_root, "child.py")
+        anchor_mtime = 1000.0
+        result_mtime = 900.0  # result is older than anchor (stale)
+
+        anchor_id = self._insert_sym(db_store, 'Base', 'class', anchor_path, anchor_mtime)
+        result_id = self._insert_sym(db_store, 'Child', 'class', result_path, result_mtime)
+        db_store.conn.execute(
+            "INSERT INTO symbol_references (from_symbol_id, to_symbol_id, reference_type) VALUES (?, ?, ?)",
+            (result_id, anchor_id, 'inherits-from')
+        )
+        db_store.conn.commit()
+
+        results = list(db_store.query_relationships('inherits-from'))
+        assert len(results) == 1
+        r = results[0]
+        assert r.mtime == result_mtime
+        assert r.anchor_mtime == anchor_mtime
+
+    def test_stale_result_identified_by_mtime(self, db_store):
+        """result.mtime < anchor.mtime identifies a stale result."""
+        anchor_path = os.path.join(db_store.index_root, "base.py")
+        result_path = os.path.join(db_store.index_root, "child.py")
+
+        anchor_id = self._insert_sym(db_store, 'Base', 'class', anchor_path, 2000.0)
+        result_id = self._insert_sym(db_store, 'Child', 'class', result_path, 1000.0)
+        db_store.conn.execute(
+            "INSERT INTO symbol_references (from_symbol_id, to_symbol_id, reference_type) VALUES (?, ?, ?)",
+            (result_id, anchor_id, 'inherits-from')
+        )
+        db_store.conn.commit()
+
+        results = list(db_store.query_relationships('inherits-from'))
+        assert len(results) == 1
+        r = results[0]
+        assert r.mtime < r.anchor_mtime  # stale
+
+    def test_fresh_result_identified_by_mtime(self, db_store):
+        """result.mtime >= anchor.mtime identifies a fresh result."""
+        anchor_path = os.path.join(db_store.index_root, "base.py")
+        result_path = os.path.join(db_store.index_root, "child.py")
+
+        anchor_id = self._insert_sym(db_store, 'Base', 'class', anchor_path, 1000.0)
+        result_id = self._insert_sym(db_store, 'Child', 'class', result_path, 2000.0)
+        db_store.conn.execute(
+            "INSERT INTO symbol_references (from_symbol_id, to_symbol_id, reference_type) VALUES (?, ?, ?)",
+            (result_id, anchor_id, 'inherits-from')
+        )
+        db_store.conn.commit()
+
+        results = list(db_store.query_relationships('inherits-from'))
+        assert len(results) == 1
+        r = results[0]
+        assert r.mtime >= r.anchor_mtime  # fresh
+
+    def test_none_mtime_when_not_indexed(self, db_store):
+        """anchor_mtime and mtime are None when symbols have no mtime."""
+        anchor_path = os.path.join(db_store.index_root, "base.py")
+        result_path = os.path.join(db_store.index_root, "child.py")
+
+        anchor_id = self._insert_sym(db_store, 'Base', 'class', anchor_path, None)
+        result_id = self._insert_sym(db_store, 'Child', 'class', result_path, None)
+        db_store.conn.execute(
+            "INSERT INTO symbol_references (from_symbol_id, to_symbol_id, reference_type) VALUES (?, ?, ?)",
+            (result_id, anchor_id, 'inherits-from')
+        )
+        db_store.conn.commit()
+
+        results = list(db_store.query_relationships('inherits-from'))
+        assert len(results) == 1
+        r = results[0]
+        assert r.mtime is None
+        assert r.anchor_mtime is None

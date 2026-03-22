@@ -25,7 +25,7 @@ from typing import Dict, List, Optional, Tuple
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from via.core.discovery import FileDiscovery
+from via.core.path_filter import PathFilter
 from via.db.store import DatabaseStore
 from via.services.indexing import IndexingService
 
@@ -92,19 +92,9 @@ class WatchService:
         self._pending: Dict[str, Tuple[str, threading.Timer]] = {}
         self._lock = threading.Lock()
 
-        # Build discovery for exclusion checks (gitignore + custom patterns)
+        # Build path filter for exclusion checks (gitignore + custom patterns)
         extra = exclude_patterns or []
-        self._discovery = FileDiscovery(
-            root_dir=self.root_dir,
-            parseable_extensions=WATCHED_EXTENSIONS,
-        )
-        # Merge extra exclude patterns into the gitignore spec
-        if extra:
-            import pathspec
-            extra_spec = pathspec.PathSpec.from_lines('gitignore', extra)
-            self._extra_spec = extra_spec
-        else:
-            self._extra_spec = None
+        self._filter = PathFilter(self.root_dir, extra_patterns=extra)
 
     # ------------------------------------------------------------------
     # Public API
@@ -168,14 +158,14 @@ class WatchService:
         """
         for root, dirs, _ in os.walk(self.root_dir):
             dirs[:] = [d for d in dirs
-                       if self._discovery._should_include_dir(root, d)]
+                       if self._filter.should_include_dir(root, d)]
             self._observer.schedule(self._handler, root, recursive=False)
 
     def _add_dir_watch(self, dir_path: str) -> None:
         """Dynamically add a watch for a newly created directory if not excluded."""
         parent = os.path.dirname(dir_path)
         name = os.path.basename(dir_path)
-        if self._discovery._should_include_dir(parent, name):
+        if self._filter.should_include_dir(parent, name):
             self._observer.schedule(self._handler, dir_path, recursive=False)
             logger.debug("Added watch: %s", os.path.relpath(dir_path, self.root_dir))
 
@@ -216,15 +206,9 @@ class WatchService:
         if ext not in WATCHED_EXTENSIONS:
             return False
 
-        # Check gitignore + default excludes
-        if not self._discovery._should_include_file(path):
+        # Check gitignore + default excludes + extra patterns
+        if not self._filter.should_include_file(path):
             return False
-
-        # Check extra exclude patterns
-        if self._extra_spec:
-            rel = os.path.relpath(path, self.root_dir)
-            if self._extra_spec.match_file(rel):
-                return False
 
         return True
 

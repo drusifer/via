@@ -49,7 +49,7 @@ import os
 from dataclasses import dataclass
 from typing import List, Optional, Set
 
-import pathspec
+from via.core.path_filter import PathFilter
 
 logger = logging.getLogger(__name__)
 @dataclass
@@ -100,8 +100,8 @@ class FileDiscovery:
         self.size_limit = size_limit
         self.respect_gitignore = respect_gitignore
 
-        # Build gitignore spec
-        self.gitignore_spec = self._build_gitignore_spec()
+        # Delegate path filtering to PathFilter
+        self._filter = PathFilter(root_dir, respect_gitignore)
 
     def discover(self) -> List[DiscoveredFile]:
         """
@@ -139,85 +139,13 @@ class FileDiscovery:
         logger.debug(f"Discovery complete: {len(discovered)} files found")
         return discovered
 
-    def _build_gitignore_spec(self) -> pathspec.PathSpec:
-        """
-        Build pathspec from .gitignore files.
-
-        Only reads the root .gitignore file. Nested .gitignore files are not
-        supported because their patterns would need to be applied relative to
-        their location, which is more complex. For now, we only support the
-        root .gitignore which covers most use cases.
-
-        Returns:
-            PathSpec object with exclusion patterns
-        """
-        # Always include default excludes
-        patterns = list(self.DEFAULT_EXCLUDES)
-        logger.debug(f"Default exclude patterns: {self.DEFAULT_EXCLUDES}")
-
-        if not self.respect_gitignore:
-            # Only use default excludes
-            logger.debug("Gitignore disabled, using only default excludes")
-            return pathspec.PathSpec.from_lines('gitignore', patterns)
-
-        # Only read the root .gitignore file
-        # (nested .gitignore files have patterns relative to their location,
-        # which we don't handle correctly yet)
-        root_gitignore = os.path.join(self.root_dir, '.gitignore')
-
-        if os.path.exists(root_gitignore):
-            try:
-                with open(root_gitignore, 'r', encoding='utf-8', errors='ignore') as f:
-                    file_patterns = []
-                    for line in f:
-                        line = line.strip()
-                        # Skip empty lines and comments
-                        if line and not line.startswith('#'):
-                            patterns.append(line)
-                            file_patterns.append(line)
-                    logger.debug(f"Root .gitignore: {len(file_patterns)} patterns")
-            except IOError:
-                logger.debug(f"Root .gitignore: unreadable")
-        else:
-            logger.debug("No root .gitignore found")
-
-        logger.debug(f"Total gitignore patterns: {len(patterns)}")
-
-        # Create pathspec
-        return pathspec.PathSpec.from_lines('gitignore', patterns)
-
     def _should_include_dir(self, parent_path: str, dirname: str) -> bool:
-        """
-        Check if directory should be included.
-
-        Args:
-            parent_path: Parent directory path
-            dirname: Directory name
-
-        Returns:
-            True if directory should be included
-        """
-        dir_path = os.path.join(parent_path, dirname)
-        rel_path = os.path.relpath(dir_path, self.root_dir)
-
-        # Check with trailing slash (for directory patterns)
-        matched = self.gitignore_spec.match_file(rel_path + '/')
-        if matched:
-            logger.debug(f"  Dir excluded by gitignore: {rel_path}/")
-        return not matched
+        """Check if directory should be included (delegates to PathFilter)."""
+        return self._filter.should_include_dir(parent_path, dirname)
 
     def _should_include_file(self, file_path: str) -> bool:
-        """
-        Check if file should be included.
-
-        Args:
-            file_path: File path
-
-        Returns:
-            True if file should be included
-        """
-        rel_path = os.path.relpath(file_path, self.root_dir)
-        return not self.gitignore_spec.match_file(rel_path)
+        """Check if file should be included (delegates to PathFilter)."""
+        return self._filter.should_include_file(file_path)
 
     def _get_file_info(self, file_path: str) -> Optional[DiscoveredFile]:
         """

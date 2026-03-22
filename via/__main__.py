@@ -84,13 +84,15 @@ Symbol Type Flags (-t<X>):
 
 Options:
   -n, --limit N         Limit results to N matches
-  -I, --case-insensitive  Case-insensitive matching
+  -I, --case-insensitive  Case-insensitive matching (all -m<X> patterns are case-sensitive by default)
   -Q, --qualified       Match against qualified_name instead of symbol_name
   --newerthan DURATION  Filter: symbols from files modified within DURATION (e.g. 1h, 2d, 1w)
   --olderthan DURATION  Filter: symbols from files NOT modified within DURATION (e.g. 1h, 2d)
 
-Relationship Flags (-V<X> or --via <type>):
+Relationship Flags (-V<X> or --via <type> or --ref-type <type>):
 {relationship_help}
+  --ref-type TYPE       Relationship type: inherits-from, calls, imports, references, declares
+  --stale               Filter: results older than their anchor (e.g. stale tests). Example: via -mg '*' -tc -Vinh -mg 'test_*' -tf --stale
   --invert, -iv         Invert relationship direction
 
 Output Flags (-o<X>):
@@ -106,7 +108,8 @@ Context Lines (for -oR, -oF):
 
 Examples:
   via index .                                        # Index current directory
-  via -mg '*Test*' -tc                               # Classes matching *Test*
+  via -mg '*Test*' -tc                               # Classes matching *Test* (case-sensitive)
+  via -mg '*test*' -tc -I                            # Classes matching *test* (case-insensitive)
   via -mg 'parse' -tf -n 10                          # First 10 functions with 'parse'
   via -mg '*' -tc -oT                                # All classes as table
   via -mg 'main' -tf -oR -C 3                        # Function source with context

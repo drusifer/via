@@ -306,3 +306,34 @@ def func2():
 
         assert result.parse_error is None
         assert len(result.functions) == 1
+
+    def test_decorator_references_not_duplicated(self, parser):
+        """S9-002: Decorator names must appear exactly once in references.
+
+        Before the fix, ast.walk(func_node) in _extract_references visited the
+        decorator_list, so decorator names were captured both by _extract_references
+        (body walk) AND by _extract_decorator_references. Each decorated method
+        produced two pending relationships for the same decorator → duplicate results.
+        """
+        code = b'''
+def my_decorator(fn):
+    return fn
+
+@my_decorator
+def decorated_function():
+    pass
+
+class MyClass:
+    @my_decorator
+    def decorated_method(self):
+        pass
+'''
+        result = parser.parse("test.py", code)
+
+        ref_pairs = [(r.referencer_name, r.referenced_name) for r in result.references]
+
+        # Each decorator reference must appear exactly once per referencer
+        assert ref_pairs.count(('decorated_function', 'my_decorator')) == 1, \
+            "decorator reference duplicated for function"
+        assert ref_pairs.count(('decorated_method', 'my_decorator')) == 1, \
+            "decorator reference duplicated for method"

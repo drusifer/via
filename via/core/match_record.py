@@ -67,6 +67,10 @@ class MatchRecord(ABC, ArgumentProvider, HelpProvider):
     column_widths: Optional[Dict[str, int]] = None
     total_matches: Optional[int] = None
 
+    # Temporal fields (Sprint 10 — set by query_relationships for --stale)
+    mtime: Optional[float] = None           # this symbol's file mtime at index time
+    anchor_mtime: Optional[float] = None    # anchor's mtime (relationship queries only)
+
     @classmethod
     def add_arguments(cls, parser):
         # Placeholder: to be implemented per record type
@@ -288,7 +292,12 @@ class MatchRecordFactory:
             'byte_offset': row.get('byte_offset'),
             'byte_length': row.get('byte_length'),
             'parent_name': row.get('parent_name'),
+            'mtime': row.get('mtime'),
         }
+
+        # Populate base_classes for class records from the joined base_names column
+        if row['symbol_type'] == 'class' and row.get('base_names'):
+            kwargs['base_classes'] = row['base_names'].split(',')
 
         # Add metadata if provided
         if metadata:

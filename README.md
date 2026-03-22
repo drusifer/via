@@ -6,8 +6,12 @@ TLDR:
     database, and exposes them through a composable pipeline CLI with glob, regex,
     and SQL LIKE matching. Supports multiple output formats (list, table, raw,
     syntax-highlighted, Mermaid diagram, JSON), relationship queries (inheritance,
-    calls, imports, references), watch mode (auto re-index on change), and MCP
+    calls, imports, references, container membership via -Vhas, --ref-type alternative
+    specifier, --stale cross-stage temporal filter), temporal filtering
+    (--newerthan / --olderthan with human-friendly durations), full-path file matching
+    (-Q), per-symbol timestamps, watch mode (auto re-index on change), and MCP
     server mode (`via mcp serve`) for AI agent integration via JSON-RPC 2.0.
+    All patterns are case-sensitive by default; use -I to ignore case.
     Run `via index .` to build the database, then query with `via -mg PATTERN -t<type>`.
     Consumed by developers and AI agents; depends on Python 3.9+, Pygments, watchdog, mcp.
 
@@ -18,11 +22,16 @@ VIA is a command-line tool for indexing and searching Python codebases. It parse
 ## Features
 
 - **Fast Indexing**: AST-based parsing of Python files with incremental updates
-- **Pattern Matching**: Search using glob (`*`), SQL LIKE (`%`), or regex patterns
-- **Multiple Output Formats**: List, table, raw source, or syntax-highlighted
+- **Pattern Matching**: Glob (`*`), SQL LIKE (`%`), or regex — case-sensitive by default, `-I` to ignore case
+- **Multiple Output Formats**: List, table, raw source, syntax-highlighted, JSON, Mermaid diagram
 - **Context Lines**: Show surrounding code with `-A`, `-B`, `-C` flags
-- **Relationship Queries**: Inheritance, calls, imports, references
-- **Watch Mode**: Auto re-index on file changes (`via index -w`)
+- **Relationship Queries**: Inheritance, calls, imports, references, container membership (`-Vhas`), `--ref-type` alternative specifier
+- **Stale Detection**: `--stale` flag finds results older than their anchor (e.g. test files not updated since their classes changed)
+- **Temporal Queries**: Filter by symbol age with `--newerthan` / `--olderthan` (e.g. `1h`, `2d`, `1w`)
+- **Per-Symbol Timestamps**: Watch mode tracks mtime per symbol, not just per file
+- **Full-Path Matching**: `-Q` flag enables path-based file queries (`via -mg 'via/core/*' -tF -Q`)
+- **Watch Mode**: Auto re-index on file changes (`via index . -w`)
+- **MCP Server**: Expose `via_query` to Claude Code and other MCP clients via JSON-RPC 2.0
 - **Streaming Architecture**: O(1) memory usage for large result sets
 - **Result Cap Warning**: Notifies when results hit `--limit` with total match count
 
@@ -103,7 +112,10 @@ via -m<X> PATTERN -t<Y> [OPTIONS] [-o<Z>] [-f<W>]
 | `-Vinh` | Inheritance |
 | `-Vca` | Function/method calls |
 | `-Vimp` | Import relationships |
-| `-Vr` | Symbol references |
+| `-Vr` | Symbol references (class bases, decorators, annotations, body) |
+| `-Vhas` | Container membership — file/class/function has member |
+| `--ref-type` | Alternative relationship specifier (`inherits-from`, `calls`, `imports`, `references`, `declares`) |
+| `--stale` | Filter results older than their anchor (cross-stage temporal filter) |
 | `--invert` | Invert relationship direction |
 
 ```bash
@@ -286,6 +298,18 @@ via/
 3. **Polymorphic Records**: Each symbol type has its own `MatchRecord` subclass
 4. **Pipeline Syntax**: `via -m<X> PATTERN -t<Y> [-o<Z>] [-f<W>] [OPTIONS]`
 5. **`--via` is for relationships**: Output flags (`-oT`, `-oL`, etc.) are standalone — do not prefix with `--via`
+
+## Sprint History
+
+| Sprint | Theme | Tests | Key Features |
+|--------|-------|-------|--------------|
+| Sprint 1-4 | Core indexing + output formats | — | AST parsing, glob/regex/SQL matching, list/table/diagram/usage/raw/highlighted output |
+| Sprint 5 | Relationship queries | — | `-Vinh`, `-Vca`, `-Vimp`, `-Vr` |
+| Sprint 6 | Incremental indexing + globals | — | Watch triggers, globals type, cascade deletion fix |
+| Sprint 7 | MCP server mode | — | `via mcp serve`, JSON output (`-oJ`), MCP install/uninstall |
+| Sprint 8 | Headers + container queries | — | `-tH` (markdown headers), `-Vhas`, `-Vr` references |
+| Sprint 9 | Temporal + stale + `-Q` path matching | 908 | `--newerthan`/`--olderthan`, per-symbol mtime, `DECLARES`, `-Q`, case-sensitivity docs |
+| **Sprint 10** | `--ref-type` + `--stale` + incremental `prep_tldr` | **968** | `--ref-type` (alternative relationship specifier), `--stale` (cross-stage temporal filter), `prep_tldr` incremental mode, `PathFilter` extraction |
 
 ## Requirements
 

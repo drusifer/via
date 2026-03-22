@@ -753,7 +753,12 @@ class PythonParser(ParserABC):
         locals_vars = self._collect_locals(func_node)
         seen_names = set()
 
-        for node in ast.walk(func_node):
+        # Walk only the function body — not decorator_list or annotations.
+        # Decorators are tracked by _extract_decorator_references; annotations
+        # by _extract_annotation_references. Walking the full node caused
+        # decorator names to be captured twice (S9-002).
+        body_stmts = getattr(func_node, 'body', [func_node])
+        for node in (n for stmt in body_stmts for n in ast.walk(stmt)):
             if not isinstance(node, ast.Name) or not isinstance(node.ctx, ast.Load):
                 continue
 

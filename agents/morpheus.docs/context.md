@@ -60,8 +60,35 @@ Examples that WORK:
 ### Implementation Order
 TD-REVIEW Phase 1 → Stories 3+4+5 → Story 1 → Story 2a
 
+## Sprint 10 Architecture Decisions (2026-03-22)
+
+### S10-1: `--ref-type`
+- Third relationship specifier: detected in `_find_relationship_split()` alongside `-Vinh` and `--via`
+- Added to `match_parser` with `choices=` for help visibility (pre-parsed, not used at parse time)
+- Error message lists valid values from `ReferenceType.get_value_map()`
+
+### S10-2: `--stale`
+- Add `mtime: Optional[float]` and `anchor_mtime: Optional[float]` to `MatchRecord` base
+- `query_relationships()` SQL JOINs both anchor and result mtime columns
+- `result_stale: bool` field on `RelationshipFilter`; executor post-filters
+- `--stale` parsed from object_args side of relationship query
+
+### S10-3: `prep_tldr` Incremental
+- Last-run file: `.via/prep_tldr_last_run` (float seconds via `time.time()`)
+- Add proper argparse: positional `root`, `--force`/`-f` flag
+- Use `MAX(mtime)` per file from `symbols` table for incremental selection
+- Stale data files for deleted sources: removed on incremental run too
+
+### TD-WATCH-1: PathFilter
+- New `via/core/path_filter.py` — `PathFilter(root_dir, respect_gitignore, extra_patterns)`
+- Public API: `should_include_dir(parent, dirname)`, `should_include_file(path)`
+- `FileDiscovery` delegates to `PathFilter`; `WatchService` constructs own `PathFilter`
+- Removes private method access (`self._discovery._should_include_*`) from `WatchService`
+
+### Full arch doc: `agents/morpheus.docs/SPRINT_10_ARCHITECTURE.md`
+
 ## Current Blockers
-None. All arch questions resolved. SPRINT_9_ARCHITECTURE.md is final.
+None. Sprint 10 arch complete. Pending Smith Gate 2 approval.
 
 ### Temporal Matcher — Key Design Points (updated 2026-03-21)
 - `--newerthan`/`--olderthan` are PER-STAGE, not global

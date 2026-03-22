@@ -241,7 +241,7 @@ class PipelineExecutor:
             subject_type = 'method'
 
         # Query relationships from database
-        return self.db.query_relationships(
+        results = list(self.db.query_relationships(
             relationship_type=rel.relationship_type.value,
             subject_pattern=subject_pattern,
             object_pattern=object_pattern,
@@ -253,7 +253,21 @@ class PipelineExecutor:
             case_sensitive=case_sensitive,
             result_newerthan_seconds=rel.result_newerthan_seconds,
             result_olderthan_seconds=rel.result_olderthan_seconds,
-        )
+        ))
+
+        # --stale post-filter: keep results whose mtime < anchor's mtime
+        if rel.result_stale:
+            if results and all(r.mtime is None for r in results):
+                raise ValueError(
+                    '--stale requires symbols.mtime — rebuild index with `via index --force`.'
+                )
+            results = [
+                r for r in results
+                if r.anchor_mtime is not None and r.mtime is not None
+                and r.mtime < r.anchor_mtime
+            ]
+
+        return iter(results)
 
     def _match_multiple_types(
         self,

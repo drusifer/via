@@ -31,6 +31,7 @@ Each persona is defined in `agents/<name>.docs/SKILL.md`:
 | **Mouse** | Scrum Master | `*sm` | Sprint tracking, coordination |
 | **Cypher** | Product Manager | `*pm` | Requirements, user stories |
 | **Bob** | Prompt Engineer | `*prompt` | Agent creation, process improvement |
+| **Smith** | Expert User | `*user` | User story review, usability testing, sprint review gates |
 
 ---
 
@@ -152,6 +153,65 @@ Use `@mentions` in CHAT.md:
 
 ---
 
+## Sprint Implementation Cycle
+
+When implementing a complete sprint, follow this ordered cycle. Each step requires a **user review gate** before continuing.
+
+```
+1. Cypher   *pm plan sprint      → Define stories, acceptance criteria, scope
+   ── SMITH REVIEW GATE: *user review <stories> → *user approve OR *user reject ──
+2. Morpheus *lead arch sprint    → Architecture decisions, technical design
+   ── SMITH REVIEW GATE: *user feedback <arch>  → *user approve OR *user reject ──
+3. Mouse    *sm plan sprint      → Break sprint into short phases (1-3 tasks each)
+   ── NO GATE — proceed to phase loop ──────────────────────────────────────
+```
+
+**Phase Loop** (repeat for each phase until sprint is complete):
+
+```
+4. Neo      *swe impl <phase N>  → TDD implementation: tests first, then code
+5. Trin     *qa uat <phase N>    → UAT: run tests, verify acceptance criteria
+6. Morpheus *lead review <N>     → Code review: quality, architecture alignment
+   ── If review passes: proceed to next phase ──────────────────────────────
+   ── If review fails:  @Neo fix, @Trin re-test, @Morpheus re-review ────────
+```
+
+**All phases done** — proceed to sprint close:
+
+```
+7. Oracle  *ora groom             → Update docs, record decisions, archive sprint artifacts
+8. Smith   *user test <sprint>    → End-to-end user testing of all delivered features
+           *user feedback          → Holistic UX feedback on the completed sprint
+   ── If issues found: *user bug → Trin triage → fix loop before launch ────
+9. Cypher  *pm launch <sprint>    → Announce release, update changelog, close sprint
+```
+
+**Sprint Complete** when Cypher posts `*pm launch`.
+
+### Quick Reference
+
+| Step | Persona | Command | Gate |
+|------|---------|---------|------|
+| 1 | Cypher | `*pm plan sprint` | Smith review (`*user review`) |
+| 1a | Smith | `*user approve` / `*user reject` | Must approve to proceed |
+| 2 | Morpheus | `*lead arch sprint` | Smith review (`*user feedback`) |
+| 2a | Smith | `*user approve` / `*user reject` | Must approve to proceed |
+| 3 | Mouse | `*sm plan sprint` | None |
+| 4 | Neo | `*swe impl <phase N>` | Trin UAT |
+| 5 | Trin | `*qa uat <phase N>` | Morpheus review |
+| 6 | Morpheus | `*lead review <phase N>` | Next phase or fix loop |
+| 7 | Oracle | `*ora groom` | None |
+| 8 | Smith | `*user test <sprint>` + `*user feedback` | Issues → fix loop before launch |
+| 9 | Cypher | `*pm launch <sprint>` | Sprint complete |
+
+### Rules
+- **Short phases**: Mouse must keep each phase to 1-3 tasks. Large phases cause context overflow.
+- **No skipping gates**: Smith's review gates after Cypher and Morpheus are mandatory — do not auto-proceed. Smith must explicitly `*user approve` before moving forward.
+- **Fix loop**: If Trin UAT or Morpheus review fails, loop back to Neo for that phase only — don't restart the sprint.
+- **State saves**: Every persona saves state before handoff (see State Management above).
+
+---
+
 ## Anti-Loop Protocol
 
 If a fix fails ONCE:
@@ -251,6 +311,9 @@ make chat MSG="Fixed line 42 in parser.py..." PERSONA="Neo" CMD="swe fix"
 | `*chat @mouse *status` | Mouse | `*sm status` |
 | `*chat @cypher *req R` | Cypher | `*pm req R` |
 | `*chat @bob *prompt P` | Bob | `*prompt P` |
+| `*chat @smith *user review S` | Smith | `*user review S` |
+| `*chat @smith *user approve` | Smith | `*user approve` |
+| `*chat @smith *user test F` | Smith | `*user test F` |
 
 **CHAT.md now contains:**
 ```

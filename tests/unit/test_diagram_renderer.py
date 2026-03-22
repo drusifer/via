@@ -122,6 +122,34 @@ class TestDiagramRendererOutput:
         # Check inheritance relationship
         assert 'Parent <|-- Child' in output
 
+    def test_render_inheritance_arrow_when_parent_not_in_result_set(self):
+        """Test arrows drawn even when parent class is not in the result set.
+
+        Regression test for UX-002: relationship queries return only children
+        (anchor is not in results), so arrows must render without the parent
+        being present as a class node.
+        """
+        renderer = DiagramRenderer(MermaidAsciiFormatter())
+
+        # Only the child is in results — parent (MatchRecord) is the anchor, not returned
+        records = [
+            ClassMatchRecord(
+                symbol_type='class',
+                symbol_name='ClassMatchRecord',
+                qualified_name='module.ClassMatchRecord',
+                file_path='test.py',
+                line_number=10,
+                base_classes=['MatchRecord'],
+            ),
+        ]
+
+        output = renderer.render(iter(records))
+
+        assert 'classDiagram' in output
+        assert 'class ClassMatchRecord' in output
+        # Arrow must appear even though MatchRecord has no class block
+        assert 'MatchRecord <|-- ClassMatchRecord' in output
+
     def test_render_empty_records(self):
         """Test rendering with no records."""
         renderer = DiagramRenderer(MermaidAsciiFormatter())

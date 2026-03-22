@@ -595,25 +595,23 @@ class TestSkillMorpheus_WhoReferences:
 # ── Skill: Find section in arch doc (header search) ──────────────────────────
 
 class TestSkillMorpheus_HeaderSearch:
-    """morpheus SKILL.md: ["-mg", "*SectionName*", "-tH"] (note: docs show -th)
+    """morpheus SKILL.md: ["-mg", "*SectionName*", "-tH"]
        → 'Find a section in an arch doc'
 
-    The documented flag is -th (lowercase h) but the correct flag is -tH.
-    This test uses -tH (correct). The xfail test confirms -th is invalid.
+    S9-005: Docs were updated from -th (lowercase) to -tH (uppercase).
+    -tH is the only valid flag; -th is not an alias.
     """
 
     def test_correct_flag_tH_works(self, proj):
-        """-tH (uppercase) is the correct flag for header type."""
+        """-tH (uppercase) is the correct and only flag for header type."""
         r = _q(proj, "-mg", "*Auth*", "-tH")
         assert r.returncode == 0
         assert "Authentication" in r.stdout
 
-    @pytest.mark.xfail(reason="Morpheus SKILL.md documents -th (lowercase) but correct flag is -tH (uppercase)")
-    def test_documented_flag_th_lowercase(self, proj):
-        """-th (lowercase h, as documented in morpheus SKILL.md) should work."""
+    def test_flag_th_lowercase_is_invalid(self, proj):
+        """-th (lowercase) is not a valid flag — docs now use -tH. S9-005."""
         r = _q(proj, "-mg", "*Auth*", "-th")
-        assert r.returncode == 0
-        assert "Authentication" in r.stdout
+        assert r.returncode != 0
 
 
 # ── Skill: Trin subclass query ────────────────────────────────────────────────
@@ -858,3 +856,257 @@ class TestStory2a_TemporalMatcher:
         assert row is not None
         assert row[0] is not None, "symbols.mtime should be set at index time"
         assert row[0] > 0, "symbols.mtime should be a positive Unix timestamp"
+
+
+class TestS10_1_RefTypeFlag:
+    """Sprint 10 S10-1: --ref-type CLI unification.
+
+    --ref-type <value> is a third way to specify relationship type,
+    equivalent to -Vinh / --via inherits-from / etc.
+    Results must match the corresponding short-flag alias exactly.
+    """
+
+    def test_ref_type_appears_in_help(self, proj):
+        """via --help → --ref-type appears with valid choices listed."""
+        r = _q(proj, "--help")
+        assert r.returncode == 0
+        assert "ref-type" in r.stdout
+
+    def test_ref_type_inherits_from_matches_vinh(self, proj):
+        """--ref-type inherits-from returns same classes as -Vinh."""
+        r_vinh = _q(proj, "-mg", "BaseClass", "-tc", "-Vinh", "-mg", "*", "-tc")
+        r_ref = _q(proj, "-mg", "BaseClass", "-tc", "--ref-type", "inherits-from", "-mg", "*", "-tc")
+        assert r_vinh.returncode == 0
+        assert r_ref.returncode == 0
+        # Both should contain the same subclasses
+        assert "MyClass" in r_vinh.stdout
+        assert "MyClass" in r_ref.stdout
+        assert "AnotherService" in r_vinh.stdout
+        assert "AnotherService" in r_ref.stdout
+
+    def test_ref_type_inherits_from_json_matches_vinh_json(self, proj):
+        """--ref-type inherits-from JSON output equals -Vinh JSON output."""
+        vinh = _json(proj, "-mg", "BaseClass", "-tc", "-Vinh", "-mg", "*", "-tc", "-oJ")
+        ref = _json(proj, "-mg", "BaseClass", "-tc", "--ref-type", "inherits-from", "-mg", "*", "-tc", "-oJ")
+        vinh_names = sorted(item["symbol_name"] for item in vinh)
+        ref_names = sorted(item["symbol_name"] for item in ref)
+        assert vinh_names == ref_names, f"Mismatch: -Vinh={vinh_names} vs --ref-type={ref_names}"
+
+    def test_ref_type_calls_matches_vca(self, proj):
+        """--ref-type calls returns same results as -Vca."""
+        # run_connection is a function (-tf), not a method — no type filter on result
+        r_vca = _q(proj, "-mg", "connect", "-tf", "-Vca", "-mg", "*", "-tf")
+        r_ref = _q(proj, "-mg", "connect", "-tf", "--ref-type", "calls", "-mg", "*", "-tf")
+        assert r_vca.returncode == 0
+        assert r_ref.returncode == 0
+        # Both should find run_connection as a caller
+        assert "run_connection" in r_vca.stdout
+        assert "run_connection" in r_ref.stdout
+
+    def test_ref_type_imports_matches_vimp(self, proj):
+        """--ref-type imports returns same results as -Vimp."""
+        r_vimp = _q(proj, "-mg", "my_service", "-Vimp", "-mg", "*")
+        r_ref = _q(proj, "-mg", "my_service", "--ref-type", "imports", "-mg", "*")
+        assert r_vimp.returncode == 0
+        assert r_ref.returncode == 0
+
+    def test_ref_type_declares_matches_vhas(self, proj):
+        """--ref-type declares returns same results as -Vhas."""
+        r_vhas = _q(proj, "-mg", "BaseClass", "-tc", "-Vhas", "-mg", "*", "-tm")
+        r_ref = _q(proj, "-mg", "BaseClass", "-tc", "--ref-type", "declares", "-mg", "*", "-tm")
+        assert r_vhas.returncode == 0
+        assert r_ref.returncode == 0
+        # BaseClass declares base_method
+        assert "base_method" in r_vhas.stdout
+        assert "base_method" in r_ref.stdout
+
+    def test_ref_type_invalid_value_nonzero_exit(self, proj):
+        """--ref-type with unknown value → non-zero exit."""
+        r = _q(proj, "-mg", "*", "-tc", "--ref-type", "foobar", "-mg", "*")
+        assert r.returncode != 0
+
+    def test_ref_type_invalid_value_lists_valid_types(self, proj):
+        """Error message for bad --ref-type lists valid types."""
+        r = _q(proj, "-mg", "*", "-tc", "--ref-type", "foobar", "-mg", "*")
+        err = r.stderr + r.stdout
+        assert "Valid types" in err or "valid" in err.lower()
+
+    def test_ref_type_with_invert_flag(self, proj):
+        """--ref-type inherits-from -iv → inverted direction (what does X inherit FROM?)."""
+        r = _q(proj, "-mg", "MyClass", "-tc", "--ref-type", "inherits-from", "-iv", "-mg", "*", "-tc")
+        assert r.returncode == 0
+        # MyClass inherits FROM BaseClass
+        assert "BaseClass" in r.stdout
+
+
+# ── Sprint 10 S10-2: --stale flag ─────────────────────────────────────────────
+
+_STALE_BASE_PY = """\
+class StaleBase:
+    def base_method(self):
+        return "base"
+"""
+
+_STALE_CHILD_PY = """\
+from stale_base import StaleBase
+
+class StaleChild(StaleBase):
+    def child_method(self):
+        return "child"
+"""
+
+_FRESH_CHILD_PY = """\
+from stale_base import StaleBase
+
+class FreshChild(StaleBase):
+    def child_method(self):
+        return "fresh_child"
+"""
+
+
+@pytest.fixture(scope="module")
+def stale_proj(tmp_path_factory):
+    """Synthetic project with controlled mtimes for --stale UAT.
+
+    stale_base.py  mtime = T+100  (newer — updated anchor)
+    stale_child.py mtime = T      (older than anchor → STALE result)
+    fresh_child.py mtime = T+200  (newer than anchor → FRESH result)
+    """
+    import os
+    import time
+
+    d = tmp_path_factory.mktemp("stale_proj")
+
+    base_file = d / "stale_base.py"
+    stale_child_file = d / "stale_child.py"
+    fresh_child_file = d / "fresh_child.py"
+
+    base_file.write_text(_STALE_BASE_PY)
+    stale_child_file.write_text(_STALE_CHILD_PY)
+    fresh_child_file.write_text(_FRESH_CHILD_PY)
+
+    # Set controlled mtimes: base is updated AFTER stale_child but BEFORE fresh_child
+    T = time.time() - 1000
+    os.utime(str(stale_child_file), (T, T))        # T: old (stale)
+    os.utime(str(base_file), (T + 100, T + 100))   # T+100: updated (anchor)
+    os.utime(str(fresh_child_file), (T + 200, T + 200))  # T+200: newest (fresh)
+
+    r = subprocess.run(
+        [sys.executable, "-m", "via", "index", str(d)],
+        capture_output=True, text=True, timeout=60, cwd=str(d),
+    )
+    assert r.returncode == 0, f"stale_proj index failed:\n{r.stderr}"
+    return d
+
+
+class TestS10_2_StaleFlag:
+    """Sprint 10 S10-2: --stale post-filter on relationship results.
+
+    Acceptance criteria:
+    - --stale returns only results whose mtime < anchor's mtime
+    - Without --stale, all results are returned
+    - --stale appears in --help
+    """
+
+    def test_stale_appears_in_help(self, stale_proj):
+        """via -mg '*' --help → --stale appears."""
+        r = _q(stale_proj, "--help")
+        assert r.returncode == 0
+        assert "stale" in r.stdout
+
+    def test_stale_filter_returns_only_stale_results(self, stale_proj):
+        """--stale returns StaleChild (old) but not FreshChild (new)."""
+        r = _q(stale_proj, "-mg", "StaleBase", "-tc", "-Vinh", "-mg", "*", "-tc", "--stale")
+        assert r.returncode == 0
+        assert "StaleChild" in r.stdout
+        assert "FreshChild" not in r.stdout
+
+    def test_without_stale_returns_all_results(self, stale_proj):
+        """Without --stale, both StaleChild and FreshChild are returned."""
+        r = _q(stale_proj, "-mg", "StaleBase", "-tc", "-Vinh", "-mg", "*", "-tc")
+        assert r.returncode == 0
+        assert "StaleChild" in r.stdout
+        assert "FreshChild" in r.stdout
+
+    def test_stale_with_no_stale_results_excludes_fresh(self, stale_proj):
+        """FreshChild (T+200) is newer than StaleBase anchor (T+100): --stale excludes it."""
+        # Filter result side to FreshChild only — it's newer than anchor so not stale
+        r = _q(stale_proj, "-mg", "StaleBase", "-tc", "-Vinh", "-mg", "FreshChild", "-tc", "--stale")
+        assert r.returncode == 0
+        # FreshChild mtime (T+200) > StaleBase mtime (T+100) → not stale → excluded
+        assert "FreshChild" not in r.stdout
+
+
+# ── Sprint 10 S10-3: prep_tldr incremental ───────────────────────────────────
+
+class TestS10_3_PrepTldrIncremental:
+    """Sprint 10 S10-3: prep_tldr.py argparse + incremental mode.
+
+    Acceptance criteria:
+    - --force flag accepted
+    - --help works (argparse interface)
+    - Full mode: processes all files, writes last-run timestamp
+    - Incremental mode: second run skips unchanged files
+    """
+
+    def test_prep_tldr_help_works(self, proj):
+        """prep_tldr --help exits 0 and shows --force."""
+        prep = str(
+            __import__('pathlib').Path(__file__).resolve().parent.parent.parent
+            / 'agents' / 'tools' / 'prep_tldr.py'
+        )
+        r = subprocess.run(
+            [sys.executable, prep, "--help"],
+            capture_output=True, text=True, timeout=10,
+        )
+        assert r.returncode == 0
+        assert "force" in r.stdout
+
+    def test_prep_tldr_force_flag_accepted(self, proj):
+        """prep_tldr <root> --force runs without error."""
+        prep = str(
+            __import__('pathlib').Path(__file__).resolve().parent.parent.parent
+            / 'agents' / 'tools' / 'prep_tldr.py'
+        )
+        r = subprocess.run(
+            [sys.executable, prep, str(proj), "--force"],
+            capture_output=True, text=True, timeout=120, cwd=str(proj),
+        )
+        assert r.returncode == 0, f"prep_tldr --force failed:\n{r.stderr}"
+        assert "Full mode" in r.stdout
+
+    def test_prep_tldr_writes_last_run_file(self, proj):
+        """After full run, .via/prep_tldr_last_run exists."""
+        import pathlib
+        prep = str(
+            pathlib.Path(__file__).resolve().parent.parent.parent
+            / 'agents' / 'tools' / 'prep_tldr.py'
+        )
+        subprocess.run(
+            [sys.executable, prep, str(proj), "--force"],
+            capture_output=True, text=True, timeout=120, cwd=str(proj),
+        )
+        last_run_path = proj / ".via" / "prep_tldr_last_run"
+        assert last_run_path.exists(), "prep_tldr_last_run not created"
+        ts = float(last_run_path.read_text().strip())
+        assert ts > 0
+
+    def test_prep_tldr_second_run_uses_incremental_mode(self, proj):
+        """After first full run, second run reports incremental mode."""
+        import pathlib
+        prep = str(
+            pathlib.Path(__file__).resolve().parent.parent.parent
+            / 'agents' / 'tools' / 'prep_tldr.py'
+        )
+        # First run (full)
+        subprocess.run(
+            [sys.executable, prep, str(proj), "--force"],
+            capture_output=True, text=True, timeout=120, cwd=str(proj),
+        )
+        # Second run (incremental)
+        r = subprocess.run(
+            [sys.executable, prep, str(proj)],
+            capture_output=True, text=True, timeout=120, cwd=str(proj),
+        )
+        assert r.returncode == 0, f"incremental run failed:\n{r.stderr}"
+        assert "Incremental mode" in r.stdout

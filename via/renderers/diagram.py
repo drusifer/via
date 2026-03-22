@@ -78,9 +78,6 @@ class DiagramRenderer(Renderer):
         """
         lines = ['classDiagram']
 
-        # Build class name set for relationship filtering
-        class_names = {cls.symbol_name for cls in classes}
-
         for cls in classes:
             # Class definition
             lines.append(f'    class {cls.symbol_name} {{')
@@ -97,10 +94,9 @@ class DiagramRenderer(Renderer):
 
             lines.append('    }')
 
-            # Inheritance relationships (only if parent in result set)
+            # Inheritance relationships (draw even if parent not in result set)
             if cls.base_classes:
                 for base in cls.base_classes:
-                    if base in class_names:
-                        lines.append(f'    {base} <|-- {cls.symbol_name}')
+                    lines.append(f'    {base} <|-- {cls.symbol_name}')
 
         return '\n'.join(lines)

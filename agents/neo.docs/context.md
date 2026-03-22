@@ -1,67 +1,40 @@
-# Neo Context (2026-03-21)
+# Neo Context
 
-## Current State
-- 893 tests passing, 1 xfailed
-- Sprint 9 Cycle 2 complete: Stories 3, 4, 5 done
-- Baseline: 884→893 (+9: 8 new tests + 1 xfail fixed)
+## Post-Sprint Defect Fixes (2026-03-22)
 
-## Key Patterns
+### UX-001: MCP Schema stale text
+- `via/mcp/schema.py:54` — "Full-path matching not yet supported" → now documents `-Q` flag
+- 1 test added: `test_schema_description_mentions_Q_flag_for_full_path`
 
-### Qualified Names
-`_calculate_qualified_name(file_path, entity_name, parent_class)` in `indexing.py`
+### UX-002: Diagram arrows missing in relationship queries
+- Root cause: `ClassMatchRecord.base_classes` never populated from DB (parent names in `symbol_references`, not `symbols`)
+- Fix: LEFT JOIN with GROUP_CONCAT in `match()`, `_match_with_regex()`, `query_relationships()` in store.py
+- `create_from_row()` splits `base_names` → `base_classes` list for class records
+- `diagram.py`: removed `if base in class_names` guard + unused `class_names` set
+- 1 test added: `test_render_inheritance_arrow_when_parent_not_in_result_set`
+- **Key lesson**: `symbols` table has NO base class column — inheritance lives in `symbol_references` only
 
-### Transaction Pattern
-Use `db_store.begin_transaction()` / `commit_transaction()` / `rollback_transaction()` — never raw `cursor.execute("BEGIN")`
+## Sprint 10 — Cycle 2 Complete (2026-03-22)
 
-### File Upsert Pattern
-`get_file_by_path()` → if existing: `update_file()` else: `insert_file()`
+### Key Decisions Made
 
-### Relationship Resolution
-- `insert_pending_relationship()` during indexing
-- `resolve_pending_relationships()` after ALL symbols indexed (called in both `index()` and `reindex_file()`)
+1. **`query_relationships` SQL**: Added `anchor_alias` variable (`"t" if select_from == "s" else "s"`) to correctly fetch anchor mtime regardless of invert flag.
 
-### `_store_relationships()` (NEW — Sprint 9 TD-REVIEW-5)
-Merged replacement for old `_store_call_relationships` + `_store_reference_relationships`:
-```python
-self._store_relationships(
-    file_info, parse_result.calls, 'calls',
-    lambda c: (c.caller_type, c.caller_parent, c.caller_name, c.callee_name),
-)
-```
+2. **`executor.py` materialization**: Changed `query_relationships` return from a generator pass-through to `list()` + `iter()` so the stale post-filter can inspect all results. Minimal overhead for typical relationship query result sets.
 
-### FK CASCADE
-`symbol_references` has FK CASCADE on `symbols(id)`. Deleting a symbol automatically removes its relationships. `delete_file_completely()` now relies on this.
+3. **Error check for `--stale` with no mtime**: Checks `all(r.mtime is None for r in results)` — only raises if ALL results lack mtime. Partial None: those records just fail the filter condition and are excluded.
 
-### Window Function for total_matches
-`match()` uses `COUNT(*) OVER ()` in SELECT to get total_matches without a pre-query. Regex path (`_match_with_regex`) does not set total_matches (no buffering).
+4. **`get_changed_files` None handling**: When `MAX(mtime)` returns NULL (file has no indexed symbols), treat as "changed" (0.0 < last_run would wrongly skip; explicit None check solves it).
 
-## via MCP Relationship Queries (VERIFIED 2026-03-21)
-- **KNOWN anchor LEFT (before -Vxxx), `*` RIGHT (after -Vxxx)**
-- No -iv: returns things that relate TO anchor (callers, subclasses, importers)
-- With -iv: returns what anchor relates TO (callees, base classes, imported modules)
+5. **prep_tldr incremental stale cleanup**: Incremental mode removes data files for source paths no longer in the current file set. Full mode wipes all (existing behavior preserved).
 
-## Sprint 9 Phase 1 Done
-All 5 TD-REVIEW items complete. Files modified:
-- `via/db/store.py` — added `get_symbol_id()`, removed `_get_match_metadata()`, removed `delete_relationships_for_file()`, simplified `delete_file_completely()`, added window function to `match()`
-- `via/services/indexing.py` — `_store_relationships()` replaces two old methods, `_upsert_raw_file()` replaces three old methods
-- `via/renderers/table.py` — computes column widths from actual data now
-- `tests/unit/test_database_streaming.py` — removed 9 stale metadata tests
-- `tests/unit/test_relationships.py` — removed `test_delete_relationships_for_file`
+### Files Modified
+- `via/core/match_record.py` — factory passes mtime
+- `via/db/store.py` — query_relationships SQL + anchor_mtime
+- `via/pipeline/relationship_filter.py` — result_stale field
+- `via/pipeline/parser.py` — --stale flag + result_stale wiring
+- `via/pipeline/executor.py` — --stale post-filter
+- `agents/tools/prep_tldr.py` — incremental mode + argparse
 
-## Sprint 9 Cycle 2 Done — Key Decisions
-
-### Story 4: Class Anchor Fix (executor.py + store.py)
-- `subject_parent_pattern` added to `query_relationships` for `s.parent_name GLOB ?`
-- Executor: detects `rel_type='calls' + subject_type='class'` → transforms to method+parent lookup
-
-### Story 5: Filepath Qualified Name (indexing.py)
-- `file_info.path` is ABSOLUTE. Was stored as `qualified_name` → broken for `-Q` path patterns
-- Fix: `os.path.relpath(file_info.path, db_store.index_root)` for filepath `qualified_name`
-
-### Story 3: Expanded -Vr (python_parser.py + indexing.py)
-- 3 new extraction methods: `_extract_class_structural_references`, `_extract_decorator_references`, `_extract_annotation_references`
-- Class-level refs use `referencer_type='class'` → `_store_relationships` updated to handle 'class' actor type
-- Fixture: `extras.py` added to UAT project (AnnotatedClass, decorated_func)
-
-## Next Sprint 9 Work (Cycle 3)
-- Story 1: `-Vhas` / DECLARES — rename RelationshipType→ReferenceType, add DECLARES, add _store_declares_relationships()
+### Test count
+931 → 948 (+17)

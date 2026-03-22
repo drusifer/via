@@ -126,8 +126,9 @@ CREATE_INDEXES = [
     # Line offsets index
     "CREATE INDEX IF NOT EXISTS idx_line_offsets_file ON line_offsets(file_id);",
 
-    # Symbols mtime index for temporal queries
-    "CREATE INDEX IF NOT EXISTS idx_symbols_mtime ON symbols(mtime);",
+    # NOTE: idx_symbols_mtime is intentionally absent here.
+    # It is created inside the v5 migration block in store.initialize_schema()
+    # so that the ALTER TABLE adding symbols.mtime always runs first.
 ]
 
 # All table creation statements in dependency order

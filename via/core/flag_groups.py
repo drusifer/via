@@ -50,9 +50,9 @@ class Flag:
 
 # Match syntax flags
 MATCH_FLAGS: List[Flag] = [
-    Flag(FlagGroup.MATCH, 'g', 'match-glob', 'pattern', None, 'Glob pattern (*, ?)'),
-    Flag(FlagGroup.MATCH, 'r', 'match-regex', 'pattern', None, 'Regex pattern'),
-    Flag(FlagGroup.MATCH, 's', 'match-sql', 'pattern', None, 'SQL LIKE pattern (%, _)'),
+    Flag(FlagGroup.MATCH, 'g', 'match-glob', 'pattern', None, 'Glob pattern (*, ?) — case-sensitive; use -I to ignore case'),
+    Flag(FlagGroup.MATCH, 'r', 'match-regex', 'pattern', None, 'Regex pattern — case-sensitive; use -I to ignore case'),
+    Flag(FlagGroup.MATCH, 's', 'match-sql', 'pattern', None, 'SQL LIKE pattern (%%, _) — case-sensitive; use -I to ignore case'),
 ]
 
 # Symbol type flags

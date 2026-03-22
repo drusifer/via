@@ -14,9 +14,10 @@
 | 6 | Watch Mode | ✅ SHIPPED | 713 |
 | 7 | MCP Mode | ✅ SHIPPED | 794 |
 | 8 | Line Index | ✅ SHIPPED | 837 |
-| 9 | ReferenceType + -Vhas + Temporal | 🔵 IN PROGRESS | 837 baseline |
+| 9 | ReferenceType + -Vhas + Temporal | ✅ SHIPPED | 908 |
+| 10 | --ref-type + --stale + prep_tldr incr + PathFilter | 🔵 IN PROGRESS | 908 baseline |
 
-## Current Sprint: Sprint 9
+## Current Sprint: Sprint 10
 
 **Cycle Protocol**: Mouse plan → Neo TDD → Trin UAT → Mouse plan (next)
 **User clears context between cycles.**

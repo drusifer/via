@@ -1,30 +1,32 @@
 # Trin Next Steps
 
-## Immediate: Sprint 9 Cycle 3 UAT
-After Neo implements Story 1 (-Vhas / DECLARES):
-- Verify `RelationshipType` → `ReferenceType` rename — all imports updated project-wide
-- Verify `DECLARES` enum value added
-- Verify `-Vhas`/`--via-has` flag appears in `--help`
-- Verify `_store_declares_relationships()` in IndexingService:
-  - file→symbol relationships: all symbols in a file declared by the filepath symbol
-  - class→method/inner-class relationships
-  - function→nested-function relationships
-- Verify container type validation with precise error messages
-- Verify `via -mg 'store.py' -tN -Vhas -tc` returns classes in store.py
-- Verify `via -mg '*service*' -tF -Vhas -tf -n 0` returns functions in service files
-- Verify `--invert` gives clear error message
+## Resume Point: Sprint 10 Cycle 2 UAT
 
-## Sprint 9 UAT Queue
-- Cycle 4: Story 2a (temporal matcher) — write UAT for `--newerthan`/`--olderthan`
+After Neo delivers Cycle 2 (S10-2 `--stale` + S10-3 `prep_tldr`):
 
-## Process Rule
-- Always use `make` skill (not raw Bash) for all test runs
-- Baseline: 893 passed, 1 xfailed (Sprint 9 Cycle 2 complete)
+### S10-2 `--stale` — what to verify
+1. `--stale` appears in `via --help` with example
+2. `via -mg '*' -tc -Vinh -mg '*' -tc --stale` → only returns results where result.mtime < anchor.mtime
+3. Old index (no mtime) → clear error message
+4. `--stale` + `--newerthan` combination works
+5. For test fixture: use `os.utime()` to set known mtime differences
 
-## Archived Plans
-- `archive/CLI_TEST_PLAN.md` - Sprint 1
-- `archive/SPRINT_2_TEST_PLAN.md` - Sprint 2
-- `archive/SPRINT_3_TEST_PLAN.md` - Sprint 3
-- `archive/UAT_REPORT_SPRINT_4.md` - Sprint 4
-- `SPRINT_5_UAT_PLAN.md` - Sprint 5 (25/25 pass)
-- `tests/uat/test_sprint6_uat.py` - Sprint 6 (17/17 pass)
+### S10-3 `prep_tldr` — what to verify
+1. First run: creates `.via/prep_tldr_last_run`, regenerates all files
+2. Second run (no changes): skips all files, prints "M skipped"
+3. `--force`: ignores last-run, regenerates all
+4. Modified file: gets reprocessed on second run
+
+### Cycle 3: TD-WATCH-1 — what to verify
+1. All existing FileDiscovery tests pass (regression)
+2. `PathFilter` class exists in `via/core/path_filter.py`
+3. WatchService no longer calls `_discovery._should_include_*`
+
+## Sprint 10 Baseline
+- 931 tests after Cycle 1 UAT (S10-1 --ref-type)
+- Arch: `agents/morpheus.docs/SPRINT_10_ARCHITECTURE.md`
+- Task board: `agents/mouse.docs/SPRINT_10_TASKS.md`
+
+## Process Rules
+- Always use `make` skill (not raw Bash) for test runs
+- Bugs go to Neo to fix, then Trin re-verifies

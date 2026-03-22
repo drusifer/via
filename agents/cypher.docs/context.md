@@ -56,5 +56,10 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 - Sprint 9: ~6pts (Story 1 + Story 2a); Story 2b (prep_tldr) → Sprint 10 (Drew confirmed 2026-03-20)
 - Error messages project-wide standard: must state what/why/valid-alternatives
 
+### Sprint 10 — Planned (2026-03-22)
+- Sprint 10 user stories written: `agents/cypher.docs/SPRINT_10_USER_STORIES.md`
+- ~8pts: S10-1 `--ref-type` (P0,3pt), S10-2 `--stale` (P1,2pt), S10-3 prep_tldr incremental (P1,2pt), TD-WATCH-1 PathFilter (P2,1pt)
+- Pending: Smith review, then Morpheus arch (SPRINT_10_ARCHITECTURE.md)
+
 ## Blockers
 None

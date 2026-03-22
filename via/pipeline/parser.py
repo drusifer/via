@@ -183,6 +183,22 @@ class PipelineParser:
                     object_args, invert = self._extract_invert_flag(args[i + 2:])
                     return (subject_args, rel_type, object_args, invert)
 
+        # Look for --ref-type <value> (explicit column form — Sprint 10)
+        # Note: if both --via and --ref-type appear, --via wins (scanned first).
+        for i, arg in enumerate(args):
+            if arg == '--ref-type' and i + 1 < len(args):
+                next_arg = args[i + 1]
+                if next_arg in value_map:
+                    rel_type = value_map[next_arg]
+                    subject_args = args[:i]
+                    object_args, invert = self._extract_invert_flag(args[i + 2:])
+                    return (subject_args, rel_type, object_args, invert)
+                valid = ', '.join(sorted(value_map.keys()))
+                raise PipelineParseError(
+                    f"Error: Unknown --ref-type '{next_arg}'.\n"
+                    f"Valid types: {valid}."
+                )
+
         return None
 
     def _parse_stage(self, args: List[str]) -> PipelineStage:
@@ -266,6 +282,7 @@ class PipelineParser:
                     invert=invert,
                     result_newerthan_seconds=result_newerthan,
                     result_olderthan_seconds=result_olderthan,
+                    result_stale=getattr(object_parsed, 'stale', False),
                 )
 
                 # Merge output/format flags from object args to subject
@@ -388,7 +405,8 @@ class PipelineParser:
             )
 
         # Match options
-        parser.add_argument('-I', '--case-insensitive', dest='case_insensitive', action='store_true', default=False)
+        parser.add_argument('-I', '--case-insensitive', dest='case_insensitive', action='store_true', default=False,
+                          help='Case-insensitive matching (patterns are case-sensitive by default)')
         parser.add_argument('-n', '--limit', type=int, default=10)
         parser.add_argument('-Q', '--qualified', dest='match_qualified', action='store_true', default=False,
                           help='Match against qualified_name instead of symbol_name')
@@ -414,6 +432,21 @@ class PipelineParser:
                           help='Filter: symbols whose file was modified within DURATION ago (e.g. 1h, 2d)')
         parser.add_argument('--olderthan', dest='olderthan', default=None, metavar='DURATION',
                           help='Filter: symbols whose file was NOT modified within DURATION (e.g. 1h, 2d)')
+        parser.add_argument('--stale', dest='stale', action='store_true', default=False,
+                          help='Filter relationship results to those older than their anchor (e.g. stale tests). '
+                               "Example: via -mg '*' -tc -Vinh -mg 'test_*' -tf --stale")
+
+        # --ref-type: relationship specifier (alternative to -Vinh, -Vca, etc.)
+        # Listed here for --help visibility; extracted pre-parse by _find_relationship_split().
+        valid_types = sorted(RelationshipType.get_value_map().keys())
+        parser.add_argument(
+            '--ref-type',
+            dest='ref_type',
+            default=None,
+            choices=valid_types,
+            metavar='{' + ','.join(valid_types) + '}',
+            help='Relationship type (alternative to -Vinh, -Vca, etc.): ' + ', '.join(valid_types),
+        )
 
         return parser
 

@@ -122,3 +122,10 @@ class TestViaMcpSchemaCLI:
         )
         parsed = json.loads(result.stdout)
         assert parsed.get('name') == 'via_query'
+
+    def test_schema_description_mentions_Q_flag_for_full_path(self):
+        from via.mcp.schema import build_tool_schema
+        result = build_tool_schema()
+        desc = result['description']
+        assert '-Q' in desc, "Schema description must mention -Q for full-path matching"
+        assert 'full-path' in desc.lower() or 'full path' in desc.lower()

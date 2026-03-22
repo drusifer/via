@@ -639,20 +639,31 @@ class DatabaseStore:
 
         # COUNT(*) OVER () is a window function: gives total matching rows before LIMIT.
         # This replaces the old pre-query aggregation in _get_match_metadata().
+        # LEFT JOIN with aggregated inherits-from relationships populates base_classes
+        # for ClassMatchRecord diagram rendering.
         query = f"""
             SELECT
-                symbol_name,
-                symbol_type,
-                file_path,
-                line_number,
-                byte_offset,
-                byte_length,
-                qualified_name,
-                parent_name,
-                COUNT(*) OVER () as total_count
-            FROM symbols
+                s.symbol_name,
+                s.symbol_type,
+                s.file_path,
+                s.line_number,
+                s.byte_offset,
+                s.byte_length,
+                s.qualified_name,
+                s.parent_name,
+                COUNT(*) OVER () as total_count,
+                b.base_names
+            FROM symbols s
+            LEFT JOIN (
+                SELECT sr.from_symbol_id,
+                       GROUP_CONCAT(s2.symbol_name, ',') as base_names
+                FROM symbol_references sr
+                JOIN symbols s2 ON sr.to_symbol_id = s2.id
+                WHERE sr.reference_type = 'inherits-from'
+                GROUP BY sr.from_symbol_id
+            ) b ON b.from_symbol_id = s.id
             WHERE {where_clause}
-            ORDER BY file_path, line_number
+            ORDER BY s.file_path, s.line_number
         """
 
         # Add limit if specified (0 means unlimited)
@@ -671,6 +682,7 @@ class DatabaseStore:
                 'byte_length': row[5],
                 'qualified_name': row[6],
                 'parent_name': row[7],
+                'base_names': row[9],
             }
             yield self._record_factory.create_from_row(row_dict, {'total_matches': row[8]})
 
@@ -726,20 +738,29 @@ class DatabaseStore:
 
         where_clause = ' AND '.join(where_parts) if where_parts else "1=1"
 
-        # Query all symbols of type
+        # Query all symbols of type, with base class names for diagram support
         query = f"""
             SELECT
-                symbol_name,
-                symbol_type,
-                file_path,
-                line_number,
-                byte_offset,
-                byte_length,
-                qualified_name,
-                parent_name
-            FROM symbols
+                s.symbol_name,
+                s.symbol_type,
+                s.file_path,
+                s.line_number,
+                s.byte_offset,
+                s.byte_length,
+                s.qualified_name,
+                s.parent_name,
+                b.base_names
+            FROM symbols s
+            LEFT JOIN (
+                SELECT sr.from_symbol_id,
+                       GROUP_CONCAT(s2.symbol_name, ',') as base_names
+                FROM symbol_references sr
+                JOIN symbols s2 ON sr.to_symbol_id = s2.id
+                WHERE sr.reference_type = 'inherits-from'
+                GROUP BY sr.from_symbol_id
+            ) b ON b.from_symbol_id = s.id
             WHERE {where_clause}
-            ORDER BY file_path, line_number
+            ORDER BY s.file_path, s.line_number
         """
 
         cursor = self.conn.execute(query, params)
@@ -760,6 +781,7 @@ class DatabaseStore:
                     'byte_length': row[5],
                     'qualified_name': row[6],
                     'parent_name': row[7],
+                    'base_names': row[8],
                 }
                 yield self._record_factory.create_from_row(row_dict)
                 count += 1
@@ -1090,6 +1112,9 @@ class DatabaseStore:
             where_parts.append(f"{select_from}.mtime < ?")
             params.append(now - result_olderthan_seconds)
 
+        # Anchor is the other symbol in the join (used for --stale)
+        anchor_alias = "t" if select_from == "s" else "s"
+
         # Build query
         where_clause = " AND ".join(where_parts)
         query = f"""
@@ -1101,10 +1126,21 @@ class DatabaseStore:
                 {select_from}.byte_offset,
                 {select_from}.byte_length,
                 {select_from}.qualified_name,
-                {select_from}.parent_name
+                {select_from}.parent_name,
+                {select_from}.mtime,
+                {anchor_alias}.mtime AS anchor_mtime,
+                b.base_names
             FROM symbol_references r
             JOIN symbols s ON r.{join_source} = s.id
             JOIN symbols t ON r.{join_target} = t.id
+            LEFT JOIN (
+                SELECT sr2.from_symbol_id,
+                       GROUP_CONCAT(s2.symbol_name, ',') as base_names
+                FROM symbol_references sr2
+                JOIN symbols s2 ON sr2.to_symbol_id = s2.id
+                WHERE sr2.reference_type = 'inherits-from'
+                GROUP BY sr2.from_symbol_id
+            ) b ON b.from_symbol_id = {select_from}.id
             WHERE {where_clause}
             ORDER BY {select_from}.file_path, {select_from}.line_number
             LIMIT ?
@@ -1123,6 +1159,10 @@ class DatabaseStore:
                 'byte_length': row[5],
                 'qualified_name': row[6],
                 'parent_name': row[7],
+                'mtime': row[8],
+                'base_names': row[10],
             }
-            yield self._record_factory.create_from_row(row_dict)
+            record = self._record_factory.create_from_row(row_dict)
+            record.anchor_mtime = row[9]
+            yield record
 

@@ -4,9 +4,12 @@ TLDR:
     Covers every aspect of VIA usage: installation, incremental indexing, the
     pipeline query syntax (`via -m<X> PATTERN -t<Y> -o<Z>`), all output formats
     (list, table, raw, formatted, usage/docstring, JSON via -oJ), context-line
-    flags (-A/-B/-C), relationship queries (inheritance, calls, imports, references
-    with --invert), watch mode (`via index . -w`), and MCP server mode
-    (`via mcp serve` / `via install mcp`) for AI agent integration.
+    flags (-A/-B/-C), relationship queries (inheritance, calls, imports, references,
+    container membership -Vhas, `--ref-type` alternative specifier, `--stale`
+    cross-stage temporal filter, with --invert), temporal filtering (--newerthan /
+    --olderthan with human-friendly durations), watch mode (`via index . -w`),
+    and MCP server mode (`via mcp serve` / `via install mcp`) for AI agent integration.
+    All pattern matching is case-sensitive by default; use -I to ignore case.
     Includes a practical examples section and a troubleshooting guide for common
     errors (missing database, no REGEXP support, slow indexing).
     Intended for end-users and AI agents; complements the README and the
@@ -25,11 +28,13 @@ A complete guide to using VIA for indexing and searching Python codebases.
 5. [Output Formats](#output-formats)
 6. [Context Lines](#context-lines)
 7. [Relationship Queries](#relationship-queries)
-8. [Watch Mode](#watch-mode)
-9. [MCP Mode (AI Agent Integration)](#mcp-mode-ai-agent-integration)
-10. [Legacy Subcommand Syntax](#legacy-subcommand-syntax)
-11. [Practical Examples](#practical-examples)
-12. [Troubleshooting](#troubleshooting)
+8. [Container Queries (-Vhas)](#container-queries--vhas)
+9. [Temporal Queries](#temporal-queries)
+10. [Watch Mode](#watch-mode)
+11. [MCP Mode (AI Agent Integration)](#mcp-mode-ai-agent-integration)
+12. [Legacy Subcommand Syntax](#legacy-subcommand-syntax)
+13. [Practical Examples](#practical-examples)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -138,13 +143,14 @@ via -m<X> PATTERN [-t<Y>...] [-o<Z>] [-f<W>] [OPTIONS]
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `-c` | class | Class definitions |
-| `-m` | method | Class methods |
-| `-f` | function | Top-level functions |
-| `-i` | import | Import statements |
-| `-G` | global | Module-level variables |
-| `-F` | filepath | Full file paths |
-| `-N` | filename | File names only |
+| `-tc` | class | Class definitions |
+| `-tm` | method | Class methods |
+| `-tf` | function | Top-level functions |
+| `-ti` | import | Import statements |
+| `-tg` | global | Module-level variables |
+| `-tF` | filepath | Full file paths |
+| `-tN` | filename | File names only |
+| `-tH` | header | Markdown headers |
 
 **Omit type flags to search all symbol types.**
 
@@ -154,7 +160,10 @@ via -m<X> PATTERN [-t<Y>...] [-o<Z>] [-f<W>] [OPTIONS]
 |--------|-------------|---------|
 | `-n N` | Limit results | 10 |
 | `-n 0` | Unlimited results | - |
-| `-I` | Case-insensitive | Off |
+| `-I` | Case-insensitive matching (all patterns are case-sensitive by default) | Off |
+| `-Q` | Match against qualified name (useful with `-tF` for full-path matching) | Off |
+| `--newerthan DURATION` | Only symbols from files modified within duration (e.g. `1h`, `2d`, `1w`) | Off |
+| `--olderthan DURATION` | Only symbols from files NOT modified within duration | Off |
 
 ### Examples
 
@@ -338,6 +347,45 @@ via -m<X> SUBJECT -t<Y> -V<rel> -m<X> OBJECT -t<Y> [--invert]
 | Calls | `--via calls` | `-Vca` | Find callers of X | Find callees of X |
 | Imports | `--via imports` | `-Vimp` | Find importers of X | Find imports by X |
 | References | `--via references` | `-Vr` | Find referencers of X | Find references by X |
+| Container membership | `--via-has` | `-Vhas` | Find members of container X | (not supported) |
+
+### `--ref-type`: Alternative Relationship Specifier
+
+`--ref-type <value>` is a third way to specify relationship type — equivalent to `-V<X>` short flags and `--via <type>` long forms. Useful when scripting or when you prefer explicit column names.
+
+Valid values: `inherits-from`, `calls`, `imports`, `references`, `declares`
+
+```bash
+# These three are exactly equivalent:
+via -mg 'BaseClass' -tc -Vinh -mg '*' -tc
+via -mg 'BaseClass' -tc --via inherits-from -mg '*' -tc
+via -mg 'BaseClass' -tc --ref-type inherits-from -mg '*' -tc
+
+# --ref-type with --invert
+via -mg 'MyClass' -tc --ref-type inherits-from -iv -mg '*' -tc
+
+# --ref-type declares (same as -Vhas)
+via -mg 'MyClass' -tc --ref-type declares -mg '*' -tm
+```
+
+> **Note**: If both `--via` and `--ref-type` appear in the same stage, `--via` wins (scan order). An invalid value exits with an error listing valid choices.
+
+### `--stale`: Cross-Stage Temporal Filter
+
+`--stale` filters relationship results to those where the **result symbol's file is older than the anchor's file**. Use it to find stale dependencies — code that was last touched *before* the thing it depends on.
+
+```bash
+# Find test files that haven't been updated since the classes they test changed
+via -mg '*' -tc -Vinh -mg 'test_*' -tf --stale
+
+# Find subclasses older than their base class (may need to catch up with parent changes)
+via -mg 'Base*' -tc -Vinh -mg '*' -tc --stale
+
+# Find callers that pre-date the function they call (stale call sites)
+via -mg 'my_func' -tf -Vca -mg '*' -tf --stale
+```
+
+> **Note**: `--stale` only applies to relationship queries (stages separated by `-V*` or `--via`). On a plain match query with no relationship it is a no-op. If mtime data is missing, rebuild the index with `via index --force`.
 
 ### Inheritance Examples
 
@@ -400,6 +448,85 @@ via -mg 'BaseClass' -tc -Vinh -mg '*' -tc --via -oT
 # Show source of all callers
 via -mg 'validate' -tf -Vca -mg '*' -tf --via -oR
 ```
+
+---
+
+## Container Queries (`-Vhas`)
+
+`-Vhas` queries "what lives inside this container?" — file→symbols, class→methods, function→nested functions. It replaces awkward qualified-name workarounds.
+
+### Syntax
+
+```
+via -m<X> CONTAINER_PATTERN -t<container> -Vhas -t<member>
+```
+
+Valid container types: `-tF` (filepath), `-tN` (filename), `-tc` (class), `-tf` (function)
+
+### Examples
+
+```bash
+# All classes defined in store.py
+via -mg 'store.py' -tN -Vhas -tc
+
+# All methods of DatabaseStore
+via -mg 'DatabaseStore' -tc -Vhas -tm
+
+# All functions in service files
+via -mg '*service*' -tF -Vhas -tf -n 0
+
+# All methods in executor.py, as table
+via -mg 'executor.py' -tN -Vhas -tm -oT -n 0
+
+# All test functions across all test files
+via -mg 'test_*.py' -tN -Vhas -tf -n 0
+```
+
+> **Note**: All patterns are case-sensitive. Use `-I` for case-insensitive matching.
+> `--invert` is not supported with `-Vhas`.
+
+---
+
+## Temporal Queries
+
+Filter symbols by when their source file was last modified. Useful for finding recently changed code or stale symbols.
+
+### Syntax
+
+```
+via -m<X> PATTERN -t<Y> --newerthan DURATION
+via -m<X> PATTERN -t<Y> --olderthan DURATION
+```
+
+### Duration Format
+
+Human-friendly durations: `30s`, `5m`, `2h`, `1d`, `1w`
+
+| Unit | Example | Meaning |
+|------|---------|---------|
+| `s` | `30s` | 30 seconds |
+| `m` | `5m` | 5 minutes |
+| `h` | `2h` | 2 hours |
+| `d` | `1d` | 1 day |
+| `w` | `1w` | 1 week |
+
+### Examples
+
+```bash
+# Classes in files modified in the last hour
+via -mg '*' -tc --newerthan 1h
+
+# All symbols changed today
+via -mg '*' --newerthan 1d -n 0
+
+# Functions in files not touched in over a week (stale code)
+via -mg '*' -tf --olderthan 1w
+
+# Recently changed test functions
+via -mg 'test_*' -tf --newerthan 2d
+```
+
+> **Note**: Timestamps are per-symbol. Watch mode updates symbol mtimes as files change — only modified symbols get new timestamps, not all symbols in the file.
 
 ---
 
@@ -549,14 +676,17 @@ via -mg '*' -tg
 via -mg '*_*' -tg
 ```
 
-### Find Files by Name
+### Find Files by Name or Path
 
 ```bash
-# Find test files
+# Find test files (by filename)
 via -mg '*test*' -tN
 
-# Find files in tests directory
-via -mg '*tests*' -tF
+# Find files in a directory (by full path — requires -Q)
+via -mg 'via/core/*' -tF -Q
+
+# Find all Python files under a subdirectory
+via -mg '*/pipeline/*' -tF -Q -n 0
 ```
 
 ### Complex Pipeline: Search and Format
@@ -591,10 +721,11 @@ $ via -mg '*' -tc
 
 ### No Results
 
-1. **Broaden pattern**: Try `via -mg '*' -tc` to see if anything matches
-2. **Check type**: Try different type flags (`-c`, `-m`, `-f`)
-3. **Case sensitivity**: Add `-I` for case-insensitive
-4. **Re-index**: Run `via index . --force`
+1. **Case sensitivity**: Patterns are case-sensitive by default. `*store*` won't match `DatabaseStore` — use `*Store*` or add `-I` for case-insensitive matching.
+2. **Broaden pattern**: Try `via -mg '*' -tc` to see if anything matches
+3. **Check type**: Try different type flags (`-tc`, `-tm`, `-tf`)
+4. **File path matching**: Use `-Q` with `-tF` to match by full directory path: `via -mg 'via/core/*' -tF -Q`
+5. **Re-index**: Run `via index . --force`
 
 ### REGEXP Not Available
 
@@ -656,13 +787,22 @@ via ... -Vinh ...              # Inheritance (inherits-from)
 via ... -Vca ...               # Calls
 via ... -Vimp ...              # Imports
 via ... -Vr ...                # References
+via ... -Vhas ...              # Container membership (file/class has member)
 via ... --invert               # Flip direction (or -iv)
+```
+
+### Temporal Commands
+
+```bash
+via ... --newerthan 1d         # Symbols from files changed in last day
+via ... --olderthan 1w         # Symbols from files not changed in last week
 ```
 
 ### Pattern Types
 
 ```bash
--mg 'pattern'                 # Glob: * ?
+-mg 'pattern'                 # Glob: * ?  (case-sensitive; add -I to ignore case)
 -ms 'pattern'                 # SQL LIKE: % _
 -mr 'pattern'                 # Regex (if available)
+-Q                            # Match qualified name (full path for -tF)
 ```

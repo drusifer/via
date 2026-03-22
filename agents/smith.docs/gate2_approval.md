@@ -1,0 +1,1 @@
+*user approve Gate 2. Arch APPROVED. Notes for Neo: (1) S10-1: --via+--ref-type together silently uses --via (by scan order) — document or warn; (2) S10-2: --stale on subject side silently ignored — verify or warn. Both are impl notes, not blockers. @Mouse: sprint proceeds to planning.
