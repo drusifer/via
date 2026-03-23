@@ -1202,3 +1202,29 @@ class DatabaseStore:
             record.anchor_mtime = row[9]
             yield record
 
+    @require_connection
+    def get_counts(self) -> dict:
+        """Return file and symbol counts for the index.
+
+        Returns:
+            dict with keys 'files' (int) and 'symbols' (int).
+        """
+        file_count = self.conn.execute("SELECT COUNT(*) FROM files").fetchone()[0]
+        symbol_count = self.conn.execute("SELECT COUNT(*) FROM symbols").fetchone()[0]
+        return {"files": file_count, "symbols": symbol_count}
+
+    @require_connection
+    def get_last_indexed_iso(self) -> Optional[str]:
+        """Return the most recent indexed_at timestamp as an ISO8601 UTC string.
+
+        Returns:
+            ISO8601 string (e.g. '2026-03-22T20:00:00+00:00') or None if no
+            files are indexed.
+        """
+        import datetime as _dt
+        row = self.conn.execute("SELECT MAX(indexed_at) FROM files").fetchone()
+        if row is None or row[0] is None:
+            return None
+        ts = float(row[0])
+        return _dt.datetime.fromtimestamp(ts, tz=_dt.timezone.utc).isoformat()
+

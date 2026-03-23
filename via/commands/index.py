@@ -49,6 +49,18 @@ class IndexCommand(ArgumentProvider, HelpProvider):
             metavar="PATH",
             help="Database path (default: <dir>/.via/index.db)",
         )
+        parser.add_argument(
+            "--port",
+            type=int,
+            default=7891,
+            metavar="PORT",
+            help="Web UI port when using --watch (default: 7891)",
+        )
+        parser.add_argument(
+            "--no-web",
+            action="store_true",
+            help="Disable the web UI when using --watch",
+        )
 
     @classmethod
     def get_help(cls) -> str:

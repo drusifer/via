@@ -1,18 +1,19 @@
 # Morpheus Current Task
 
-## Task: Sprint 11 JavaScript/TypeScript Architecture
-**Status**: COMPLETE
-**Date**: 2026-03-22
+**Task**: Sprint 12 Architecture — Web UI for via
+**Status**: BLOCKED — awaiting Smith Gate 2
+**Updated**: 2026-03-22
 
 ## Done
-- Written `agents/morpheus.docs/JAVASCRIPT_SUPPORT_ARCHITECTURE.md`
-- Resolved OQ-1 to OQ-5 + Smith Gate 1 Notes 1-4
-- Sprint split: S11 (parser, 10pts) / S12 (relationships+lang, 5pts)
-- Schema: add `symbol_subtype` + `language` columns via migration
-- Library: tree-sitter (JS + TS grammars)
-- Arrow functions → FunctionEntity with subtype='arrow_function'
-- `--lang js` covers `.jsx`; `--lang ts` covers `.tsx`
+- Written `agents/morpheus.docs/SPRINT_12_ARCHITECTURE.md`
+- All 5 OQs resolved
+- 8-phase implementation order defined for Mouse
 
-## Next
-- Smith Gate 2 review → Mouse sprint 11 planning → Neo implementation
-- Sprint 12 arch after S12 stories defined by Cypher
+## Key Decisions
+- stdlib ThreadingHTTPServer (no new deps)
+- Single HTML file embedded in package (CDN for Material Web + Mermaid)
+- PipelineExecutor called in-process; fresh DB connection per request
+- WatchService gets add_reindex_listener() hook
+
+## Next (after Smith approves)
+- Handoff to Mouse: *sm plan sprint — use SPRINT_12_ARCHITECTURE.md phases as guide

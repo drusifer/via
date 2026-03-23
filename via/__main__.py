@@ -220,6 +220,18 @@ def _create_parser() -> argparse.ArgumentParser:
         default=".",
         help="Root directory to watch and serve (default: current directory)",
     )
+    mcp_serve.add_argument(
+        "--port",
+        type=int,
+        default=7891,
+        metavar="PORT",
+        help="Web UI port (default: 7891)",
+    )
+    mcp_serve.add_argument(
+        "--no-web",
+        action="store_true",
+        help="Disable the web UI",
+    )
 
     return parser
 
@@ -240,7 +252,13 @@ def _progress_callback(message: str, current: int, total: int) -> None:
         print(f"\r{message}: {current}", end="", flush=True)
 
 
-def _run_index_watch(db_path: Path, target_dir: Path, exclude_patterns: list) -> int:
+def _run_index_watch(
+    db_path: Path,
+    target_dir: Path,
+    exclude_patterns: list,
+    port: int = 7891,
+    no_web: bool = False,
+) -> int:
     """Start index watch mode."""
     from via.services.watch import WatchService
     watch_logger = logging.getLogger('via.services.watch')
@@ -261,7 +279,18 @@ def _run_index_watch(db_path: Path, target_dir: Path, exclude_patterns: list) ->
             root_dir=str(target_dir),
             exclude_patterns=exclude_patterns,
         )
-        watch_service.start()
+        web_server = None
+        if not no_web:
+            from via.web import WebServer
+            web_server = WebServer(port=port)
+            watch_service.add_reindex_listener(web_server.notify_reindex)
+            web_server.start()
+            print(f"Web UI: http://localhost:{web_server.port}")
+        try:
+            watch_service.start()
+        finally:
+            if web_server:
+                web_server.stop()
     return EXIT_SUCCESS
 
 
@@ -302,7 +331,11 @@ def _run_index_command(args: argparse.Namespace) -> int:
 
     # Watch mode
     if args.watch:
-        return _run_index_watch(db_path, target_dir, exclude_patterns)
+        return _run_index_watch(
+            db_path, target_dir, exclude_patterns,
+            port=getattr(args, 'port', 7891),
+            no_web=getattr(args, 'no_web', False),
+        )
 
     if exclude_patterns:
         logging.info(f"Additional exclusion patterns: {exclude_patterns}")
@@ -571,14 +604,18 @@ def _run_mcp_command(args: argparse.Namespace) -> int:
         return EXIT_SUCCESS
 
     if mcp_cmd == 'serve':
-        return _run_mcp_serve(getattr(args, 'directory', '.'))
+        return _run_mcp_serve(
+            getattr(args, 'directory', '.'),
+            port=getattr(args, 'port', 7891),
+            no_web=getattr(args, 'no_web', False),
+        )
 
     # No sub-command — print help
     print("Usage: via mcp {schema,serve}", file=sys.stderr)
     return EXIT_ERROR
 
 
-def _run_mcp_serve(directory: str) -> int:
+def _run_mcp_serve(directory: str, port: int = 7891, no_web: bool = False) -> int:
     """Start the FastMCP stdio server."""
     target_dir = Path(directory).resolve()
     index_dir = target_dir / DEFAULT_INDEX_DIR
@@ -589,7 +626,7 @@ def _run_mcp_serve(directory: str) -> int:
         return EXIT_ERROR
 
     from via.mcp.server import run_mcp_server
-    return run_mcp_server(str(target_dir), str(db_path))
+    return run_mcp_server(str(target_dir), str(db_path), port=port, no_web=no_web)
 
 
 def main() -> int:

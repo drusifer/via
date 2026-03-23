@@ -1,9 +1,10 @@
 # Cypher Next Steps
 
-## Sprint 10: LAUNCHED ✅ (2026-03-22)
+## Sprint 12: Awaiting Smith Gate
 
-## Sprint 11 Kickoff (when directed)
-1. Review backlog / user input for priorities
-2. Write `SPRINT_11_USER_STORIES.md` in `agents/cypher.docs/`
-3. Post to CHAT: @Smith *user review stories
-4. Gate 1 must be Smith-approved before proceeding to Morpheus arch
+1. Smith must review `agents/cypher.docs/SPRINT_12_USER_STORIES.md`
+2. If Smith rejects: revise stories per feedback, re-post for review
+3. If Smith approves: handoff to Morpheus
+   - Post: `@Morpheus *lead arch sprint — see cypher.docs/SPRINT_12_USER_STORIES.md`
+   - Morpheus produces `agents/morpheus.docs/SPRINT_12_ARCHITECTURE.md`
+4. After Morpheus arch approved by Smith: Mouse plans phases

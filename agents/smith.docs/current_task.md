@@ -1,21 +1,13 @@
-**Task**: Sprint 11 End-to-End User Test
-**Status**: COMPLETE (100%) — HOLD filed
-**Updated**: 2026-03-22
+**Task**: Standby — Sprint 12 Complete
+**Status**: COMPLETE (100%)
+**Updated**: 2026-03-23
 
-## Results
-- Verdict: HOLD — BUG-S11-01 filed
-- Full report: `agents/smith.docs/SPRINT_11_USER_TEST.md`
-
-## What Passed
-- S11-5: node_modules + dist excluded ✅
-- S11-1: JS/TS file discovery ✅
-- S11-2: All symbol types extracted ✅, language column ✅
-
-## Bug Filed (BUG-S11-01)
-- `symbol_subtype` is NULL for all symbols — interfaces/enums show as `class`
-- Root cause: `ClassEntity`/`FunctionEntity` missing `symbol_subtype` field; `indexing.py` never passes it
+## Sprint 12 Summary
+- S12-1: Web UI served from `via index -w` and `via mcp serve` ✅
+- S12-2: Full POST /api/query API ✅
+- S12-3/4: Material Design SPA — all via args as controls ✅
+- S12-5: Status bar + toast notifications ✅
+- *user approve issued → Cypher launched Sprint 12
 
 ## Next
-- Wait for Neo fix + Trin retest
-- Re-run `*user test Sprint 11` after Neo's fix
-- If all pass: approve → Cypher launch
+- Awaiting user direction for Sprint 13 or further testing

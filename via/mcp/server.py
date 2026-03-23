@@ -65,12 +65,19 @@ def _configure_mcp_logging() -> None:
     logging.getLogger("watchdog").setLevel(logging.WARNING)
 
 
-def run_mcp_server(root_dir: str, db_path: str) -> int:
+def run_mcp_server(
+    root_dir: str,
+    db_path: str,
+    port: int = 7891,
+    no_web: bool = False,
+) -> int:
     """Start the FastMCP stdio server with WatchService in background thread.
 
     Args:
         root_dir: Root directory being served
         db_path: Path to the SQLite index database
+        port: Web UI starting port (default 7891)
+        no_web: If True, skip starting the web UI
 
     Returns:
         Exit code (EXIT_SUCCESS or EXIT_ERROR)
@@ -101,6 +108,16 @@ def run_mcp_server(root_dir: str, db_path: str) -> int:
     watch_thread = threading.Thread(target=watch_svc.start, daemon=True)
     watch_thread.start()
 
+    # Start web UI in daemon thread (stderr — stdout is the MCP protocol stream)
+    web_server = None
+    if not no_web:
+        from via.web import WebServer
+        web_server = WebServer(port=port)
+        watch_svc.add_reindex_listener(web_server.notify_reindex)
+        web_server.start()
+        import sys as _sys
+        print(f"Web UI: http://localhost:{web_server.port}", file=_sys.stderr)
+
     mcp = FastMCP("via")
 
     # Output flags that cause the executor to render (returns None) — strip them
@@ -126,6 +143,8 @@ def run_mcp_server(root_dir: str, db_path: str) -> int:
     try:
         mcp.run(transport="stdio")
     finally:
+        if web_server:
+            web_server.stop()
         watch_svc.stop()
         watch_thread.join(timeout=5)
         mcp_store.close()

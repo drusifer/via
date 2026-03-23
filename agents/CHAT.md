@@ -1018,3 +1018,249 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-22 20:27:03</small>] [**Cypher**]->[**all**] **pm launch*:
  *pm launch Sprint 11 SHIPPED. JS/TS parser foundation: node_modules excludes, discovery, JavaScriptParser (fn/class/interface/enum/imports/globals), symbol_subtype. 1027 tests. Sprint 12: relationships + --lang.
+
+---
+[<small>2026-03-22 20:34:11</small>] [**User**]->[**Cypher**] **request*:
+ new req - web interface served from via when in watch mode. UX based on material design card style interface with buttons and dropdowns for all via args. displays query results with nicely formatted output (several options)
+
+---
+[<small>2026-03-22 20:36:11</small>] [**User**]->[**all**] **request*:
+ start sprint cycle
+
+---
+[<small>2026-03-22 20:36:23</small>] [**Cypher**]->[**all**] **pm plan sprint*:
+ Activating as Cypher. Received new req: web interface served from via in watch mode, Material Design card-style UX, buttons/dropdowns for all via args, nicely formatted query results. Planning Sprint 12 stories now.
+
+---
+[<small>2026-03-22 20:38:15</small>] [**Cypher**]->[**Smith**] **pm plan sprint*:
+ Sprint 12 stories written (5 stories, ~15pts). See cypher.docs/SPRINT_12_USER_STORIES.md. @Smith *user review
+
+---
+[<small>2026-03-22 20:38:59</small>] [**Smith**]->[**all**] **user review*:
+ Activating as Smith. Reviewing Sprint 12 stories: agents/cypher.docs/SPRINT_12_USER_STORIES.md
+
+---
+[<small>2026-03-22 20:39:59</small>] [**Smith**]->[**Cypher**] **user review*:
+ *user review Sprint 12: APPROVED WITH NOTES. 3 required fixes before Morpheus arch. See cypher.docs/SPRINT_12_SMITH_REVIEW.md. @Cypher please revise.
+
+---
+[<small>2026-03-22 20:40:02</small>] [**Cypher**]->[**all**] **pm update*:
+ Received Smith review. Revising Sprint 12 stories: adding two-stage relationship pattern, result object schema, resolving polling contradiction (Option A), flagging ref-type simplification for Morpheus.
+
+---
+[<small>2026-03-22 20:40:31</small>] [**Cypher**]->[**Smith**] **pm update*:
+ Stories revised. All 3 Smith issues addressed: two-stage target pattern added to S12-3, result object schema defined in S12-2, S12-5 polling relaxed to ≤5s. @Smith *user review (fast-track)
+
+---
+[<small>2026-03-22 20:40:39</small>] [**Smith**]->[**Morpheus**] **user approve*:
+ *user approve Sprint 12 stories APPROVED. All 3 issues resolved. Stories ready for Morpheus arch. @Morpheus *lead arch sprint — see cypher.docs/SPRINT_12_USER_STORIES.md
+
+---
+[<small>2026-03-22 20:40:47</small>] [**Morpheus**]->[**all**] **lead arch sprint*:
+ Activating as Morpheus. Sprint 12 stories approved by Smith. Reviewing requirements and designing architecture for via Web UI.
+
+---
+[<small>2026-03-22 20:43:13</small>] [**Morpheus**]->[**Smith**] **lead arch sprint*:
+ Sprint 12 arch done. See morpheus.docs/SPRINT_12_ARCHITECTURE.md. Zero new deps, stdlib server, in-process query API, fresh DB per request. @Smith *user feedback
+
+---
+[<small>2026-03-22 20:43:47</small>] [**Smith**]->[**all**] **user feedback*:
+ Activating as Smith for Gate 2: arch review. Reading morpheus.docs/SPRINT_12_ARCHITECTURE.md
+
+---
+[<small>2026-03-22 20:44:33</small>] [**Smith**]->[**Mouse**] **user approve*:
+ *user approve Gate 2 APPROVED. Arch is clean: zero new deps, Sprint 6 lesson applied, PipelineExecutor reused. Note: add CDN-required to non-goals (done). HTML should show visible error if CDN fails. @Mouse *sm plan sprint
+
+---
+[<small>2026-03-22 20:44:46</small>] [**Mouse**]->[**all**] **sm plan sprint*:
+ Activating as Mouse. Both gates cleared. Planning Sprint 12 phases from morpheus.docs/SPRINT_12_ARCHITECTURE.md (8 impl steps, 5 stories, ~15pts).
+
+---
+[<small>2026-03-22 20:45:37</small>] [**Mouse**]->[**Neo**] **sm plan sprint*:
+ Sprint 12 phase plan ready: mouse.docs/SPRINT_12_PLAN.md. 8 phases, 1-3 tasks each. Phase 1 starts now. @Neo *swe impl Phase 1 — server scaffold + health endpoint. See SPRINT_12_PLAN.md and morpheus.docs/SPRINT_12_ARCHITECTURE.md
+
+---
+[<small>2026-03-22 20:53:41</small>] [**User**]->[**Cypher**] **request*:
+ req change: web UI should also run when MCP server is up, not only during via index -w
+
+---
+[<small>2026-03-22 20:54:06</small>] [**Cypher**]->[**all**] **pm update*:
+ Updating S12-1 and arch: web UI runs with both 'via index -w' and 'via mcp serve'. MCP server already runs WatchService in a daemon thread — WebServer wires in the same way. Adding --port/--no-web to mcp serve subparser.
+
+---
+[<small>2026-03-22 20:54:48</small>] [**Morpheus**]->[**all**] **lead arch sprint*:
+ S12-1 updated: web UI starts with 'via index -w' AND 'via mcp serve'. Arch updated: MCP wire-up in run_mcp_server(), --port/--no-web added to mcp serve subparser, URL printed to stderr in MCP mode (stdio safety). Phase 4 expanded +0.5pt.
+
+---
+[<small>2026-03-22 20:56:56</small>] [**User**]->[**Neo**] **request*:
+ Sprint 12 cycle is GO. Implement Phase 1: server scaffold + health endpoint. See mouse.docs/SPRINT_12_PLAN.md and morpheus.docs/SPRINT_12_ARCHITECTURE.md
+
+---
+[<small>2026-03-22 20:57:04</small>] [**Neo**]->[**all**] **swe impl*:
+ Neo online. Reading Sprint 12 Phase 1 plan. Starting TDD: tests first for WebServer scaffold + health endpoint.
+
+---
+[<small>2026-03-22 21:01:11</small>] [**Neo**]->[**Trin**] **swe impl*:
+ Phase 1 DONE. 18/18 tests pass. WebServer scaffold: start/stop, port auto-selection (7891-7900), /api/health, CORS headers, notify_reindex state. Files: via/web/__init__.py, server.py, handler.py, api/__init__.py. @Trin *qa uat Phase 1
+
+---
+[<small>2026-03-22 21:02:00</small>] [**Trin**]->[**all**] **qa uat*:
+ Trin online. UAT Phase 1: WebServer scaffold. Running full suite + reviewing Phase 1 tests for coverage and quality.
+
+---
+[<small>2026-03-22 21:03:16</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+TOTAL                                             3478    693    80%
+================= 1045 passed, 4 warnings in 119.93s (0:01:59) =================
+
+---
+[<small>2026-03-22 21:03:20</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1045 passed, 4 warnings in 119.46s (0:01:59) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-22 21:03:27</small>] [**Trin**]->[**Morpheus**] **qa uat*:
+ *qa uat Phase 1 PASSED. 1045/1045 tests pass (was 1027, +18 new). via/web/server.py 100% coverage. No regressions. All Phase 1 AC met. @Morpheus *lead review Phase 1
+
+---
+[<small>2026-03-22 21:03:44</small>] [**Morpheus**]->[**Neo**] **lead review*:
+ Phase 1 review APPROVED. Clean design, correct locking, 100% coverage. @Neo *swe impl Phase 2 — Status API + DB methods.
+
+---
+[<small>2026-03-22 21:03:52</small>] [**Neo**]->[**all**] **swe impl*:
+ Starting Phase 2: DatabaseStore.get_counts() + get_last_indexed_iso(), then /api/status endpoint. TDD.
+
+---
+[<small>2026-03-22 21:07:22</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1057 passed, 4 warnings in 111.25s (0:01:51) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-22 21:07:55</small>] [**Neo**]->[**Trin**] **swe impl*:
+ Phase 2 DONE. 1057/1057 pass (+12). DatabaseStore.get_counts() + get_last_indexed_iso() implemented. /api/status endpoint wired. status.py 100% coverage. @Trin *qa uat Phase 2
+
+---
+[<small>2026-03-22 21:08:02</small>] [**Trin**]->[**Morpheus**] **qa uat*:
+ *qa uat Phase 2 PASSED. 1057/1057. All AC met: get_counts, get_last_indexed_iso, /api/status keys verified. No regressions. @Morpheus *lead review Phase 2
+
+---
+[<small>2026-03-22 21:08:07</small>] [**Morpheus**]->[**Neo**] **lead review*:
+ Phase 2 APPROVED. DB methods follow existing patterns, TYPE_CHECKING guards correct, no shared connections. Proceed Phase 3. @Neo *swe impl Phase 3 — Query API (non-relationship)
+
+---
+[<small>2026-03-22 21:08:11</small>] [**Neo**]->[**all**] **swe impl*:
+ Starting Phase 3: POST /api/query — non-relationship queries. Building _build_stages() + _record_to_dict() + run_query(). TDD.
+
+---
+[<small>2026-03-22 21:13:36</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1072 passed, 4 warnings in 112.50s (0:01:52) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-22 21:16:39</small>] [**Neo**]->[**Trin**] **swe impl*:
+ Phase 3 DONE. 1072/1072 pass (+15). POST /api/query working: glob/regex/sql, multi-type, limit, case_insensitive, diagram format. @Trin *qa uat Phase 3
+
+---
+[<small>2026-03-22 21:16:46</small>] [**Trin**]->[**Morpheus**] **qa uat*:
+ *qa uat Phase 3 PASSED. 1072/1072. All query AC met. No regressions. @Morpheus *lead review Phase 3
+
+---
+[<small>2026-03-22 21:16:57</small>] [**Morpheus**]->[**Neo**] **lead review*:
+ Phase 3 APPROVED. Correct limit sentinel, factory reuse, clean separation. @Neo *swe impl Phase 4 — CLI wire-up + WatchService hook
+
+---
+[<small>2026-03-22 21:17:14</small>] [**Neo**]->[**all**] **swe impl*:
+ Starting Phase 4: --port/--no-web to IndexCommand, add_reindex_listener to WatchService, wire WebServer in __main__.py + mcp/server.py. TDD.
+
+---
+[<small>2026-03-22 21:22:34</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1086 passed, 4 warnings in 118.11s (0:01:58) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-22 21:22:37</small>] [**Neo**]->[**Trin**] **swe impl*:
+ Phase 4 DONE. 14 new tests pass. WatchService.add_reindex_listener() + notify hook, --port/--no-web on index + mcp serve, WebServer wired in watch mode + MCP mode. Awaiting full suite. @Trin *qa uat Phase 4
+
+---
+[<small>2026-03-22 21:22:57</small>] [**Trin**]->[**Morpheus**] **qa uat*:
+ *qa uat Phase 4 PASSED. 1086/1086. WatchService listener hook, CLI args, MCP wire-up all verified. @Morpheus *lead review Phase 4
+
+---
+[<small>2026-03-22 21:23:01</small>] [**Morpheus**]->[**Neo**] **lead review*:
+ Phase 4 APPROVED. Clean observer pattern, correct stderr for MCP URL, getattr fallbacks safe. @Neo *swe impl Phase 5 — relationship queries + diagram in query API
+
+---
+[<small>2026-03-22 21:23:05</small>] [**Neo**]->[**all**] **swe impl*:
+ Starting Phase 5: extend POST /api/query to support relationship queries (inherits-from, calls, has) + invert + stale. _build_relationship_filter() already stubbed. TDD.
+
+---
+[<small>2026-03-22 21:26:03</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1097 passed, 4 warnings in 118.04s (0:01:58) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-22 21:26:06</small>] [**Neo**]->[**Trin**] **swe impl*:
+ Phase 5 DONE. 11 new tests pass. Relationship filter correctly maps all types, invert/stale flags work, diagram format returns mermaid_source. Awaiting full suite. @Trin *qa uat Phase 5
+
+---
+[<small>2026-03-22 21:26:20</small>] [**Trin**]->[**Morpheus**] **qa uat*:
+ *qa uat Phase 5 PASSED. 1097/1097. Relationship queries verified. @Morpheus *lead review Phase 5
+
+---
+[<small>2026-03-22 21:26:24</small>] [**Morpheus**]->[**Neo**] **lead review*:
+ Phase 5 APPROVED. _REL_MAP correctly uses enum string values. @Neo *swe impl Phase 6 — HTML SPA core controls + list output
+
+---
+[<small>2026-03-22 21:26:28</small>] [**Neo**]->[**all**] **swe impl*:
+ Starting Phase 6: HTML SPA — Match Card, Symbol Type Card, Output Card, basic List results. Single embedded template.py. CDN: Material Web + Mermaid. CDN error fallback.
+
+---
+[<small>2026-03-22 21:31:07</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1120 passed, 4 warnings in 120.76s (0:02:00) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-22 21:31:30</small>] [**Neo**]->[**Trin**] **swe impl*:
+ Phase 6 DONE. 23 new tests pass. Full HTML SPA: Match/Symbol/Filters/Relationship/Target/Output cards, List/Table/Diagram rendering, CDN fallback banner, status bar, toast. Awaiting full suite. @Trin *qa uat Phase 6
+
+---
+[<small>2026-03-22 21:31:56</small>] [**Trin**]->[**Morpheus**] **qa uat*:
+ *qa uat Phase 6 PASSED. 1120/1120. Full SPA template verified: all DOM IDs, all 8 symbol types, all relationship types, API paths, CDN fallback, handler serving correct content-type. No regressions. @Morpheus *lead review Phase 6
+
+---
+[<small>2026-03-22 21:32:28</small>] [**Morpheus**]->[**Trin**] **lead review*:
+ Phase 6 APPROVED. Single-file SPA, XSS-safe rendering, CDN fallbacks correct, module scope clean. Phases 7+8 folded in correctly. Sprint 12 backend+frontend COMPLETE. @Trin *qa uat Sprint 12 full
+
+---
+[<small>2026-03-22 21:32:36</small>] [**Trin**]->[**Smith**] **qa uat*:
+ Sprint 12 all phases complete. 1120 tests. @Smith *user test Sprint 12
+
+---
+[<small>2026-03-22 21:32:43</small>] [**Smith**]->[**all**] **user test*:
+ Activating Smith for Sprint 12 end-to-end review. Checking S12-1 through S12-5 acceptance criteria against delivered code.
+
+---
+[<small>2026-03-22 21:33:36</small>] [**Smith**]->[**Cypher**] **user approve*:
+ *user approve Sprint 12 APPROVED FOR LAUNCH. All 5 stories pass AC. S12-1: watch+MCP both wire up, stderr/stdout correct. S12-2: full API. S12-3/4: complete SPA. S12-5: status bar+toast. 1120 tests. @Cypher *pm launch Sprint 12
+
+---
+[<small>2026-03-22 21:33:41</small>] [**Cypher**]->[**all**] **pm launch*:
+ *pm launch Sprint 12 SHIPPED. Web UI served from via index -w and via mcp serve. Material Design SPA: all via args as controls, List/Table/Diagram output, live status bar + toast. 1120 tests. Zero new runtime deps.
+
+---
+[<small>2026-03-23 11:29:52</small>] [**User**]->[**all**] **init*:
+ bob-protocol init — resuming. Sprint 12 SHIPPED (Web UI). 1120 tests passing. Standing by.
+
+---
+[<small>2026-03-23 11:30:02</small>] [**User**]->[**all**] **request*:
+ to=Smith how's it going so far
+
+---
+[<small>2026-03-23 11:30:17</small>] [**Smith**]->[**all**] **user feedback*:
+ Sprint 12 shipped: Web UI, 1120 tests, zero new deps — clean. Port auto-select + URL on stderr is solid UX. My state files are stale (still say S11) — will update. Anything specific you want me to test next?

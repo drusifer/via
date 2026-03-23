@@ -20,7 +20,7 @@ import os
 import signal
 import threading
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -96,6 +96,9 @@ class WatchService:
         extra = exclude_patterns or []
         self._filter = PathFilter(self.root_dir, extra_patterns=extra)
 
+        # Re-index listeners: called with files_changed count after each batch
+        self._reindex_listeners: List[Any] = []
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -130,9 +133,31 @@ class WatchService:
         self._stop_event.set()
         self._shutdown()
 
+    def add_reindex_listener(self, callback: Callable[[int], None]) -> None:
+        """Register a callback to be called after each re-index batch.
+
+        Args:
+            callback: Callable receiving files_changed count (int). Exceptions
+                      raised by the callback are caught and logged so they
+                      cannot crash the watcher.
+        """
+        self._reindex_listeners.append(callback)
+
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
+
+    def _notify_reindex_listeners(self, files_changed: int) -> None:
+        """Fire all registered re-index listeners, swallowing exceptions.
+
+        Args:
+            files_changed: Number of files processed in this batch.
+        """
+        for cb in self._reindex_listeners:
+            try:
+                cb(files_changed)
+            except Exception:
+                logger.exception("Re-index listener raised an exception")
 
     def _handle_sigint(self, _signum, _frame) -> None:
         self._stop_event.set()
@@ -197,6 +222,7 @@ class WatchService:
                 self._remove_file(path)
             else:
                 self._reindex_file(path)
+                self._notify_reindex_listeners(1)
         except Exception as e:
             logger.error("Error processing %s: %s", path, e)
 
