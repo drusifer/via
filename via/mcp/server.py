@@ -21,6 +21,7 @@ from mcp.server.fastmcp import FastMCP
 
 from via.core.constants import EXIT_SUCCESS
 from via.db.store import DatabaseStore
+from via.parsers.javascript_parser import JavaScriptParser
 from via.parsers.markdown_parser import MarkdownParser
 from via.parsers.python_parser import PythonParser
 from via.parsers.registry import ParserRegistry
@@ -36,6 +37,7 @@ def _build_registry() -> ParserRegistry:
     registry = ParserRegistry()
     registry.register(PythonParser())
     registry.register(MarkdownParser())
+    registry.register(JavaScriptParser())
     return registry
 
 

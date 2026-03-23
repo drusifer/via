@@ -18,7 +18,7 @@ License: GPL-3.0
 """
 
 # Schema version for migrations
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 # SQL statements for creating tables
 CREATE_METADATA_TABLE = """
@@ -61,7 +61,9 @@ CREATE TABLE IF NOT EXISTS symbols (
     byte_length INTEGER,
     qualified_name TEXT NOT NULL,
     parent_name TEXT,
-    mtime REAL
+    mtime REAL,
+    language TEXT,
+    symbol_subtype TEXT
 );
 """
 
@@ -126,9 +128,9 @@ CREATE_INDEXES = [
     # Line offsets index
     "CREATE INDEX IF NOT EXISTS idx_line_offsets_file ON line_offsets(file_id);",
 
-    # NOTE: idx_symbols_mtime is intentionally absent here.
-    # It is created inside the v5 migration block in store.initialize_schema()
-    # so that the ALTER TABLE adding symbols.mtime always runs first.
+    # NOTE: idx_symbols_mtime, idx_symbols_language, idx_symbols_subtype are
+    # intentionally absent here — they are created inside the v5/v6 migration
+    # blocks in store.initialize_schema() so that the ALTER TABLE always runs first.
 ]
 
 # All table creation statements in dependency order

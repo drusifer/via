@@ -67,6 +67,9 @@ class MatchRecord(ABC, ArgumentProvider, HelpProvider):
     column_widths: Optional[Dict[str, int]] = None
     total_matches: Optional[int] = None
 
+    # JS/TS subtype (Sprint 11)
+    symbol_subtype: Optional[str] = None    # e.g. 'interface', 'enum', 'arrow_function'
+
     # Temporal fields (Sprint 10 — set by query_relationships for --stale)
     mtime: Optional[float] = None           # this symbol's file mtime at index time
     anchor_mtime: Optional[float] = None    # anchor's mtime (relationship queries only)
@@ -293,6 +296,7 @@ class MatchRecordFactory:
             'byte_length': row.get('byte_length'),
             'parent_name': row.get('parent_name'),
             'mtime': row.get('mtime'),
+            'symbol_subtype': row.get('symbol_subtype'),
         }
 
         # Populate base_classes for class records from the joined base_names column

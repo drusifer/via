@@ -154,6 +154,32 @@ class DatabaseStore:
                 (5, time.time(), "Add symbols.mtime for temporal query operators")
             )
 
+        if current_version < 6:
+            existing_cols = {
+                row[1] for row in cursor.execute("PRAGMA table_info(symbols)")
+            }
+            if 'language' not in existing_cols:
+                cursor.execute("ALTER TABLE symbols ADD COLUMN language TEXT")
+                # Backfill language from files table for existing rows
+                cursor.execute(
+                    "UPDATE symbols SET language = ("
+                    "  SELECT f.language FROM files f WHERE f.path = symbols.file_path"
+                    ") WHERE language IS NULL"
+                )
+            if 'symbol_subtype' not in existing_cols:
+                cursor.execute("ALTER TABLE symbols ADD COLUMN symbol_subtype TEXT")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_symbols_language ON symbols(language)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_symbols_subtype ON symbols(symbol_subtype)"
+            )
+            cursor.execute(
+                "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
+                " VALUES (?, ?, ?)",
+                (6, time.time(), "Add symbols.language and symbols.symbol_subtype columns")
+            )
+
         # Store metadata
         cursor.execute(
             "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
@@ -491,6 +517,8 @@ class DatabaseStore:
         byte_length: Optional[int] = None,
         parent_name: Optional[str] = None,
         mtime: Optional[float] = None,
+        language: Optional[str] = None,
+        symbol_subtype: Optional[str] = None,
     ) -> int:
         """
         Insert a symbol record into the denormalized symbols table.
@@ -505,6 +533,8 @@ class DatabaseStore:
             byte_length: Symbol byte length (None for files)
             parent_name: Parent class name for methods (None otherwise)
             mtime: File modification time (Unix timestamp) when symbol was indexed
+            language: Source language ('python', 'javascript', 'typescript', 'markdown')
+            symbol_subtype: Optional subtype ('interface', 'enum', 'arrow_function', etc.)
 
         Returns:
             Symbol ID
@@ -514,12 +544,14 @@ class DatabaseStore:
             """
             INSERT INTO symbols (
                 symbol_name, symbol_type, file_path, line_number,
-                byte_offset, byte_length, qualified_name, parent_name, mtime
+                byte_offset, byte_length, qualified_name, parent_name, mtime,
+                language, symbol_subtype
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (symbol_name, symbol_type, file_path, line_number,
-             byte_offset, byte_length, qualified_name, parent_name, mtime)
+             byte_offset, byte_length, qualified_name, parent_name, mtime,
+             language, symbol_subtype)
         )
         self._commit_if_needed()
         return cursor.lastrowid
@@ -652,7 +684,8 @@ class DatabaseStore:
                 s.qualified_name,
                 s.parent_name,
                 COUNT(*) OVER () as total_count,
-                b.base_names
+                b.base_names,
+                s.symbol_subtype
             FROM symbols s
             LEFT JOIN (
                 SELECT sr.from_symbol_id,
@@ -683,6 +716,7 @@ class DatabaseStore:
                 'qualified_name': row[6],
                 'parent_name': row[7],
                 'base_names': row[9],
+                'symbol_subtype': row[10],
             }
             yield self._record_factory.create_from_row(row_dict, {'total_matches': row[8]})
 
@@ -749,7 +783,8 @@ class DatabaseStore:
                 s.byte_length,
                 s.qualified_name,
                 s.parent_name,
-                b.base_names
+                b.base_names,
+                s.symbol_subtype
             FROM symbols s
             LEFT JOIN (
                 SELECT sr.from_symbol_id,
@@ -782,6 +817,7 @@ class DatabaseStore:
                     'qualified_name': row[6],
                     'parent_name': row[7],
                     'base_names': row[8],
+                    'symbol_subtype': row[9],
                 }
                 yield self._record_factory.create_from_row(row_dict)
                 count += 1

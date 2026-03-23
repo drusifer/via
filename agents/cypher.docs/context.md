@@ -61,5 +61,12 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 - ~8pts: S10-1 `--ref-type` (P0,3pt), S10-2 `--stale` (P1,2pt), S10-3 prep_tldr incremental (P1,2pt), TD-WATCH-1 PathFilter (P2,1pt)
 - Pending: Smith review, then Morpheus arch (SPRINT_10_ARCHITECTURE.md)
 
+### JavaScript/TypeScript Support (2026-03-22)
+- User requested JS support → requirements written: `cypher.docs/JAVASCRIPT_SUPPORT_REQUIREMENTS.md`
+- Proposed as Sprint 11 (~15pts, 5 stories): S11-1 discovery, S11-5 node_modules excludes, S11-2 JavaScriptParser (tree-sitter), S11-3 relationships, S11-4 --lang filter
+- Uses existing ParserABC/ParserRegistry seams — no query/CLI/renderer changes needed
+- 5 open questions (OQ-1 to OQ-5) for Morpheus arch review
+- Pending: Smith user review gate → Morpheus arch → Neo implementation
+
 ## Blockers
 None

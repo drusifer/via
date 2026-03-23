@@ -1,4 +1,4 @@
-Complete reference for indexing, searching, and navigating Python codebases with VIA.
+Complete reference for indexing, searching, and navigating Python, JavaScript, and TypeScript codebases with VIA.
 
 TLDR:
     Covers every aspect of VIA usage: installation, incremental indexing, the
@@ -17,7 +17,7 @@ TLDR:
 
 # VIA User Guide
 
-A complete guide to using VIA for indexing and searching Python codebases.
+A complete guide to using VIA for indexing and searching Python, JavaScript, and TypeScript codebases.
 
 ## Table of Contents
 
@@ -93,15 +93,27 @@ via index . -vv    # More detail
 via index . -vvv   # Even more detail
 ```
 
+### Supported Languages
+
+| Language | Extensions | Symbols Extracted |
+|----------|-----------|-------------------|
+| Python | `.py`, `.pyx`, `.pyi` | classes, methods, functions, imports, globals |
+| JavaScript | `.js`, `.mjs`, `.cjs`, `.jsx` | classes, methods, functions, imports, globals |
+| TypeScript | `.ts`, `.tsx` | classes, interfaces, enums, methods, functions, imports, globals, type aliases |
+| Markdown | `.md`, `.markdown` | headers |
+
+**Default excluded directories**: `node_modules/`, `dist/`, `.next/`, `.nuxt/`, `.svelte-kit/`, `coverage/`, `.turbo/`, `__pycache__/`, `.git/`. Add more with `--exclude`.
+
 ### What Gets Indexed
 
 | Symbol Type | Example | Description |
 |-------------|---------|-------------|
-| class | `class User:` | Class definitions |
-| method | `def save(self):` | Methods inside classes |
-| function | `def main():` | Top-level functions |
-| import | `import json` | Import statements |
-| global | `MAX_SIZE = 100` | Module-level variables |
+| class | `class User:` / `class Server extends Base {}` | Class definitions (Python + JS/TS) |
+| method | `def save(self):` / `render() {}` | Methods inside classes |
+| function | `def main():` / `function main() {}` / `const fn = () => {}` | Top-level functions |
+| import | `import json` / `import { X } from 'y'` | Import statements |
+| global | `MAX_SIZE = 100` / `const PORT = 3000` | Module-level variables |
+| header | `## Section` | Markdown headers |
 
 ### Incremental Updates
 

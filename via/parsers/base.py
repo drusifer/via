@@ -52,6 +52,7 @@ class FunctionEntity:
     args: Optional[str] = None
     decorators: Optional[str] = None
     docstring: Optional[str] = None
+    symbol_subtype: Optional[str] = None  # e.g. 'arrow_function' for JS arrow consts
 @dataclass
 class ClassEntity:
     """Represents a class definition."""
@@ -64,6 +65,7 @@ class ClassEntity:
     bases: Optional[str] = None
     decorators: Optional[str] = None
     docstring: Optional[str] = None
+    symbol_subtype: Optional[str] = None  # e.g. 'interface', 'enum' for TS constructs
     methods: List[FunctionEntity] = field(default_factory=list)  # Methods defined in this class
 @dataclass
 class ImportEntity:

@@ -1,12 +1,14 @@
-**Task**: Master PRD created — all user stories documented
+**Task**: JavaScript/TypeScript Support Requirements
 **Status**: COMPLETE (100%)
 **Updated**: 2026-03-22
 
 ## Done
-- Created `agents/cypher.docs/PRD.md` — master PRD consolidating all user stories across Sprints 1-10
-- Covers: Sprint goals, story tables (title, points, status), feature summary, test count history, future backlog
-- Source: SPRINT_2_PRD.md (Sprint 2 specific) replaced by comprehensive master PRD
-- All ~80+ user stories documented with shipped status ✅
+- Written `agents/cypher.docs/JAVASCRIPT_SUPPORT_REQUIREMENTS.md`
+- 5 stories, ~15pts, proposed Sprint 11
+- Architecture uses existing ParserABC/ParserRegistry seams
+- 5 open questions filed for Morpheus (OQ-1 to OQ-5)
 
 ## Next
-- Sprint 11 planning (wait for user input on priorities)
+- Smith user review gate (`*user review cypher.docs/JAVASCRIPT_SUPPORT_REQUIREMENTS.md`)
+- After Smith approval → Morpheus arch (`agents/morpheus.docs/JAVASCRIPT_SUPPORT_ARCHITECTURE.md`)
+- After Morpheus arch → Mouse sprint plan → Neo implementation

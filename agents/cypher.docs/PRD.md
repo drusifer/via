@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-VIA is a fast, pattern-based symbol search and indexing tool for Python codebases. It indexes Python and Markdown files using AST parsing, stores symbols in a local SQLite database, and exposes them through a composable pipeline CLI with glob, regex, and SQL LIKE matching.
+VIA is a fast, pattern-based symbol search and indexing tool for Python, JavaScript, and TypeScript codebases. It indexes Python, JS/TS, and Markdown files using AST parsing (tree-sitter for JS/TS), stores symbols in a local SQLite database, and exposes them through a composable pipeline CLI with glob, regex, and SQL LIKE matching.
 
 **Primary users**: Developers and AI agents who need fast, precise code navigation without spinning up a language server.
 
@@ -181,6 +181,16 @@ VIA is a fast, pattern-based symbol search and indexing tool for Python codebase
 
 **Total**: 8pts
 
+### Sprint 11 — JavaScript/TypeScript Parser Foundation ✅ SHIPPED
+
+| Story | Title | Points | Status |
+|-------|-------|--------|--------|
+| S11-1 | JS/TS file discovery (`.js`, `.mjs`, `.cjs`, `.jsx`, `.ts`, `.tsx`) | 1 | ✅ |
+| S11-5 | `node_modules/`, `dist/`, `.next/`, `.nuxt/`, `.svelte-kit/`, `coverage/`, `.turbo/` default excludes | 1 | ✅ |
+| S11-2 | `JavaScriptParser` via tree-sitter — functions, classes (with inheritance), imports, globals, TS interfaces/enums/type aliases | 8 | ✅ |
+
+**Total**: 10pts | **Tests**: 1022 (+52 from Sprint 10) | **Schema**: v6 (language + symbol_subtype columns)
+
 ---
 
 ## Feature Summary (all shipped)
@@ -188,6 +198,7 @@ VIA is a fast, pattern-based symbol search and indexing tool for Python codebase
 | Feature Area | Flags / Commands | Sprint |
 |---|---|---|
 | **Indexing** | `via index .`, `--force`, incremental mtime | 1 |
+| **Multi-language** | Python, JavaScript (`.js`/`.jsx`/`.mjs`/`.cjs`), TypeScript (`.ts`/`.tsx`), Markdown | 11 |
 | **Pattern matching** | `-mg`, `-mr`, `-ms`, `-I` (case-insensitive), `-Q` (full-path) | 2, 9 |
 | **Symbol types** | `-tc`, `-tf`, `-tm`, `-ti`, `-tg`, `-tF`, `-tN`, `-tH` | 2, 4 |
 | **Output formats** | `-oL`, `-oT`, `-oR`, `-oF`, `-oD`, `-oU`, `-oJ` | 3, 7 |
@@ -210,12 +221,13 @@ VIA is a fast, pattern-based symbol search and indexing tool for Python codebase
 | Sprint 8 | 837 | +43 |
 | Sprint 9 | 908 | +71 |
 | Sprint 10 | 968 | +60 |
+| Sprint 11 | 1022 | +54 |
 
 ---
 
 ## Open Questions / Future Backlog
 
-- **Sprint 11+**: TBD — awaiting user input on priorities
+- **Sprint 12**: JS/TS relationships (inherits-from, imports, calls, declares) + `--lang` filter flag (S11-3 + S11-4 from backlog)
 - **Boolean operators in queries**: `AND`, `OR`, `NOT` across pipeline stages
 - **Cross-project queries**: multiple `.via/index.db` sources
 - **Interactive TUI**: browsable results (deferred since Sprint 2)

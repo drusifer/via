@@ -58,7 +58,7 @@ class TableRenderer(Renderer):
         widths: Dict[str, int] = {col_key: len(col_name) for col_key, col_name in COLUMNS}
         for record in buffered:
             values = {
-                'symbol_type': record.symbol_type or '',
+                'symbol_type': record.symbol_subtype or record.symbol_type or '',
                 'symbol_name': record.symbol_name or '',
                 'file_path': record.file_path or '',
                 'line_number': str(record.line_number),

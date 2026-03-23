@@ -1,9 +1,9 @@
-Fast, pattern-based symbol search for Python codebases backed by SQLite.
+Fast, pattern-based symbol search for Python, JavaScript, and TypeScript codebases backed by SQLite.
 
 TLDR:
-    VIA indexes Python and Markdown files using AST parsing, stores symbols
-    (classes, methods, functions, imports, globals, headers) in a local SQLite
-    database, and exposes them through a composable pipeline CLI with glob, regex,
+    VIA indexes Python, JavaScript, TypeScript, and Markdown files using AST parsing,
+    stores symbols (classes, methods, functions, imports, globals, headers) in a local
+    SQLite database, and exposes them through a composable pipeline CLI with glob, regex,
     and SQL LIKE matching. Supports multiple output formats (list, table, raw,
     syntax-highlighted, Mermaid diagram, JSON), relationship queries (inheritance,
     calls, imports, references, container membership via -Vhas, --ref-type alternative
@@ -13,15 +13,16 @@ TLDR:
     server mode (`via mcp serve`) for AI agent integration via JSON-RPC 2.0.
     All patterns are case-sensitive by default; use -I to ignore case.
     Run `via index .` to build the database, then query with `via -mg PATTERN -t<type>`.
-    Consumed by developers and AI agents; depends on Python 3.9+, Pygments, watchdog, mcp.
+    Consumed by developers and AI agents; depends on Python 3.8+, Pygments, watchdog, mcp, tree-sitter.
 
-# VIA - Python Codebase Indexing and Query Tool
+# VIA - Multi-Language Codebase Indexing and Query Tool
 
-VIA is a command-line tool for indexing and searching Python codebases. It parses Python and Markdown files, extracts code entities (classes, methods, functions, imports, globals, headers), and stores them in a SQLite database for fast pattern-based searching with multiple output formats.
+VIA is a command-line tool for indexing and searching Python, JavaScript, and TypeScript codebases. It parses source files using AST parsing (Python's built-in `ast` module for Python, tree-sitter for JS/TS), extracts code entities (classes, methods, functions, imports, globals, headers), and stores them in a SQLite database for fast pattern-based searching with multiple output formats.
 
 ## Features
 
-- **Fast Indexing**: AST-based parsing of Python files with incremental updates
+- **Multi-Language Indexing**: Python, JavaScript, TypeScript, and Markdown — tree-sitter for JS/TS, built-in AST for Python
+- **Fast Indexing**: AST-based parsing with incremental updates (only changed files re-indexed)
 - **Pattern Matching**: Glob (`*`), SQL LIKE (`%`), or regex — case-sensitive by default, `-I` to ignore case
 - **Multiple Output Formats**: List, table, raw source, syntax-highlighted, JSON, Mermaid diagram
 - **Context Lines**: Show surrounding code with `-A`, `-B`, `-C` flags

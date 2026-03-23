@@ -94,7 +94,7 @@ class AsciiTableFormatter(TableFormatter):
     def format_row(self, record: MatchRecord, widths: Dict[str, int]) -> str:
         """Create ASCII data row."""
         values = {
-            'symbol_type': record.symbol_type,
+            'symbol_type': record.symbol_subtype or record.symbol_type,
             'symbol_name': record.symbol_name,
             'file_path': record.file_path,
             'line_number': str(record.line_number),
@@ -139,7 +139,7 @@ class MarkdownTableFormatter(TableFormatter):
     def format_row(self, record: MatchRecord, widths: Dict[str, int]) -> str:
         """Create Markdown data row."""
         values = [
-            record.symbol_type,
+            record.symbol_subtype or record.symbol_type,
             record.symbol_name,
             record.file_path,
             str(record.line_number),
@@ -168,7 +168,7 @@ class HtmlTableFormatter(TableFormatter):
     def format_row(self, record: MatchRecord, widths: Dict[str, int]) -> str:
         """Create HTML table row."""
         values = [
-            record.symbol_type,
+            record.symbol_subtype or record.symbol_type,
             record.symbol_name,
             record.file_path,
             str(record.line_number),

@@ -377,6 +377,8 @@ class IndexingService:
                 byte_length=cls.byte_length,
                 parent_name=None,
                 mtime=file_info.mtime,
+                language=parse_result.language,
+                symbol_subtype=getattr(cls, 'symbol_subtype', None),
             )
 
             # Create pending relationships for inheritance
@@ -402,6 +404,7 @@ class IndexingService:
                     byte_length=method.byte_length,
                     parent_name=cls.name,
                     mtime=file_info.mtime,
+                    language=parse_result.language,
                 )
 
     def _store_function_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
@@ -418,6 +421,8 @@ class IndexingService:
                 byte_length=func.byte_length,
                 parent_name=None,
                 mtime=file_info.mtime,
+                language=parse_result.language,
+                symbol_subtype=getattr(func, 'symbol_subtype', None),
             )
 
     def _store_import_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
@@ -435,6 +440,7 @@ class IndexingService:
                 byte_length=imp.byte_length,
                 parent_name=None,
                 mtime=file_info.mtime,
+                language=parse_result.language,
             )
 
             module_name = imp.module if imp.module else symbol_name
@@ -458,6 +464,7 @@ class IndexingService:
                 byte_length=glob.byte_length,
                 parent_name=None,
                 mtime=file_info.mtime,
+                language=parse_result.language,
             )
 
     def _store_file_path_symbols(self, file_info: DiscoveredFile) -> None:
@@ -588,6 +595,7 @@ class IndexingService:
                 byte_length=heading.byte_length,
                 parent_name=parent_name,
                 mtime=file_info.mtime,
+                language=parse_result.language,
             )
 
     def _index_line_offsets(self, file_id: int, content: bytes) -> None:

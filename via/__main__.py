@@ -40,6 +40,7 @@ from via.core.constants import (
 from via.core.logging import setup_logging
 from via.core.utils import safe_print
 from via.db.store import DatabaseStore
+from via.parsers.javascript_parser import JavaScriptParser
 from via.parsers.markdown_parser import MarkdownParser
 from via.parsers.python_parser import PythonParser
 from via.parsers.registry import ParserRegistry
@@ -252,6 +253,7 @@ def _run_index_watch(db_path: Path, target_dir: Path, exclude_patterns: list) ->
         parser_registry = ParserRegistry()
         parser_registry.register(PythonParser())
         parser_registry.register(MarkdownParser())
+        parser_registry.register(JavaScriptParser())
         indexing_service = IndexingService(db_store, parser_registry)
         watch_service = WatchService(
             indexing_service=indexing_service,
@@ -315,6 +317,7 @@ def _run_index_command(args: argparse.Namespace) -> int:
             parser_registry = ParserRegistry()
             parser_registry.register(PythonParser())
             parser_registry.register(MarkdownParser())
+            parser_registry.register(JavaScriptParser())
 
             # Initialize indexing service
             indexing_service = IndexingService(db_store, parser_registry)

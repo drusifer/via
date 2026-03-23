@@ -38,6 +38,14 @@ class PathFilter:
         '.via/',
         '.svn/',
         '.hg/',
+        # JavaScript/Node.js project directories
+        'node_modules/',
+        'dist/',
+        '.next/',
+        '.nuxt/',
+        '.svelte-kit/',
+        'coverage/',
+        '.turbo/',
     ]
 
     def __init__(

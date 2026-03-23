@@ -1,15 +1,18 @@
 # Morpheus Current Task
 
-## Task: Sprint 10 All Cycles — Code Review Complete
+## Task: Sprint 11 JavaScript/TypeScript Architecture
 **Status**: COMPLETE
 **Date**: 2026-03-22
 
-## Reviews Done
-- Cycle 1 (S10-1 --ref-type): PASSED (Trin UAT Cycle 1)
-- Cycle 2 (S10-2 --stale + S10-3 prep_tldr): PASSED
-- Cycle 3 (TD-WATCH-1 PathFilter): PASSED
+## Done
+- Written `agents/morpheus.docs/JAVASCRIPT_SUPPORT_ARCHITECTURE.md`
+- Resolved OQ-1 to OQ-5 + Smith Gate 1 Notes 1-4
+- Sprint split: S11 (parser, 10pts) / S12 (relationships+lang, 5pts)
+- Schema: add `symbol_subtype` + `language` columns via migration
+- Library: tree-sitter (JS + TS grammars)
+- Arrow functions → FunctionEntity with subtype='arrow_function'
+- `--lang js` covers `.jsx`; `--lang ts` covers `.tsx`
 
 ## Next
-- Oracle groming sprint 10 artifacts
-- Smith end-to-end user testing
-- Cypher sprint launch
+- Smith Gate 2 review → Mouse sprint 11 planning → Neo implementation
+- Sprint 12 arch after S12 stories defined by Cypher
