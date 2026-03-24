@@ -112,7 +112,7 @@ def run_mcp_server(
     web_server = None
     if not no_web:
         from via.web import WebServer
-        web_server = WebServer(port=port)
+        web_server = WebServer(port=port, db_path=db_path, index_root=root_dir)
         watch_svc.add_reindex_listener(web_server.notify_reindex)
         web_server.start()
         import sys as _sys

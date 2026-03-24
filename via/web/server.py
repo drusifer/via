@@ -33,10 +33,18 @@ class WebServer:
         port_range: Number of ports to try before raising (default 10).
     """
 
-    def __init__(self, port: int = 7891, port_range: int = 10) -> None:
+    def __init__(
+        self,
+        port: int = 7891,
+        port_range: int = 10,
+        db_path: Optional[str] = None,
+        index_root: Optional[str] = None,
+    ) -> None:
         self._configured_port = port
         self._port_range = port_range
         self._actual_port: int = port
+        self._db_path: Optional[str] = db_path
+        self._index_root: Optional[str] = index_root
         self._httpd: Optional[ThreadingHTTPServer] = None
         self._thread: Optional[threading.Thread] = None
         self._reindex_count: int = 0
@@ -89,6 +97,16 @@ class WebServer:
             self._reindex_count += 1
             self._reindex_last_count = files_changed
             self._reindex_last_time = now
+
+    @property
+    def db_path(self) -> Optional[str]:
+        """Path to the SQLite index database, or None if not set."""
+        return self._db_path
+
+    @property
+    def index_root(self) -> Optional[str]:
+        """Indexed root directory, or None if not set."""
+        return self._index_root
 
     @property
     def reindex_state(self) -> dict:

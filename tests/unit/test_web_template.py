@@ -83,9 +83,14 @@ class TestHTMLTemplate:
     def test_has_toast(self):
         assert 'id="toast"' in HTML_TEMPLATE
 
-    def test_api_endpoints_referenced(self):
-        assert "/api/query" in HTML_TEMPLATE
-        assert "/api/status" in HTML_TEMPLATE
+    def test_static_app_js_referenced(self):
+        assert '/static/app.js' in HTML_TEMPLATE
+
+    def test_api_endpoints_in_app_js(self):
+        from pathlib import Path
+        app_js = (Path(__file__).parents[2] / "via" / "web" / "static" / "app.js").read_text()
+        assert "/api/query" in app_js
+        assert "/api/status" in app_js
 
     def test_all_eight_symbol_types_in_chips(self):
         for t in ["class", "function", "method", "import", "global",

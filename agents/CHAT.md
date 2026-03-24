@@ -1264,3 +1264,248 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-23 11:30:17</small>] [**Smith**]->[**all**] **user feedback*:
  Sprint 12 shipped: Web UI, 1120 tests, zero new deps — clean. Port auto-select + URL on stderr is solid UX. My state files are stale (still say S11) — will update. Anything specific you want me to test next?
+
+---
+[<small>2026-03-23 11:52:28</small>] [**Bob**]->[**all**] **init*:
+ bob-protocol init — Bob Protocol online. Sprint 12 SHIPPED (Web UI, 1120 tests). State files are stale (mouse/neo/trin context shows Sprint 9). Ready for next sprint or ad-hoc tasks. Standing by.
+
+---
+[<small>2026-03-23 11:53:14</small>] [**User**]->[**Trin**] **request*:
+ does the latest sprint UAT have any UX tests (playwright)?
+
+---
+[<small>2026-03-23 11:54:31</small>] [**Trin**]->[**User**] **qa report*:
+ No Playwright tests exist. Sprint 12 Web UI = unit tests only (test_web_*.py x6, all in tests/unit/). No Sprint 12 UAT file. SPA has zero browser-level UX coverage.
+
+---
+[<small>2026-03-23 12:01:56</small>] [**User**]->[**Trin**] **request*:
+ @Trin: yes - unit test JS first (Test Pyramid), then Playwright E2E. Advise Neo on best approach for JS unit tests. Once Neo is done, Trin owns the Playwright layer.
+
+---
+[<small>2026-03-23 12:02:28</small>] [**Trin**]->[**Neo**] **qa review*:
+ @Neo JS unit test plan. See agents/trin.docs/JS_TEST_PLAN.md for full spec. Summary: 1) Extract inline JS from template.py to via/web/static/app.js 2) Setup Vitest+jsdom (package.json) 3) Test pure fns + DOM. I own Playwright after you ship.
+
+---
+[<small>2026-03-23 12:05:59</small>] [**User**]->[**all**] **request*:
+ Cycle on JS_TEST_PLAN.md until complete. Neo: implement. Trin: UAT. Morpheus: review. Loop until all pass.
+
+---
+[<small>2026-03-23 12:06:54</small>] [**Neo**]->[**all**] **swe impl*:
+ Starting JS implementation. Plan: 1) Extract JS to via/web/static/app.js + utils.js 2) Add /static/ route 3) Setup Vitest 4) Write tests. Will hand to Trin when make test-js passes.
+
+---
+[<small>2026-03-23 12:30:16</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+============ 1 failed, 1119 passed, 4 warnings in 122.73s (0:02:02) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 12:30:17</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test-js | /home/drusifer/Projects/via/build/build.out
+============ 1 failed, 1119 passed, 4 warnings in 122.73s (0:02:02) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 12:33:06</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1121 passed, 4 warnings in 122.07s (0:02:02) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 12:42:04</small>] [**Neo**]->[**Trin**] **swe impl*:
+ Python 1121 pass, JS 63 pass (22 utils + 41 DOM). All green. Handing to Trin for UAT.
+
+---
+[<small>2026-03-23 12:42:33</small>] [**Trin**]->[**all**] **qa uat*:
+ Starting UAT. Verifying JS implementation against JS_TEST_PLAN.md. Running test-js + checking coverage against plan.
+
+---
+[<small>2026-03-23 20:40:01</small>] [**Bob**]->[**all**] **init*:
+ Resuming. Trin mid-UAT on JS implementation. Checking what Neo shipped.
+
+---
+[<small>2026-03-23 20:40:09</small>] [**Trin**]->[**all**] **qa uat*:
+ UAT starting. Checking JS test coverage against JS_TEST_PLAN.md — running test-js and test.
+
+---
+[<small>2026-03-23 20:40:18</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test-js | /home/drusifer/Projects/via/build/build.out
+Duration  1.49s (transform 154ms, setup 0ms, collect 109ms, tests 479ms, environment 1.14s, prepare 255ms)
+
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 20:42:29</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1121 passed, 4 warnings in 122.64s (0:02:02) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 20:45:33</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test-js | /home/drusifer/Projects/via/build/build.out
+Duration  1.60s (transform 167ms, setup 0ms, collect 141ms, tests 616ms, environment 1.12s, prepare 229ms)
+
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 20:45:42</small>] [**Trin**]->[**Morpheus**] **qa uat*:
+ JS UAT COMPLETE. 74 pass (was 63, +11). Gaps filled: showToast, output format toggle, reset button, toast-on-reindex. All plan Priority 1+2+3 covered. Python 1121 pass. @Morpheus review.
+
+---
+[<small>2026-03-23 20:45:49</small>] [**Morpheus**]->[**all**] **lead review*:
+ Morpheus reviewing JS tests. Checking test quality, coverage, and architecture alignment.
+
+---
+[<small>2026-03-23 20:46:33</small>] [**Morpheus**]->[**Trin**] **lead review*:
+ JS tests APPROVED. Architecture sound: DOM fixture prevents listener accumulation, toast two-call pattern correct, stubIdleFetch clean. Minor: fake timers in test body (showToast) — acceptable. @Trin: Playwright layer.
+
+---
+[<small>2026-03-23 20:46:48</small>] [**Trin**]->[**User**] **qa status*:
+ Playwright: no tests yet — JS unit layer just completed (74 pass) and Morpheus approved. Now starting Playwright E2E implementation: query flow, status bar, reset, error states, diagram. Setting up @playwright/test now.
+
+---
+[<small>2026-03-23 20:53:02</small>] [**Trin**]->[**User**] **qa update*:
+ On it. Adding always-on screenshots + explicit UX captures at key states (initial load, results, table, diagram, error). Saved to tests/e2e/screenshots/ for Smith review.
+
+---
+[<small>2026-03-23 21:00:11</small>] [**Trin**]->[**User**] **qa status*:
+ Wait = webServer startup. Playwright config runs 'via index -w --port 18765 tests/e2e/fixture' and waits for /api/health before launching tests. Server is now up — tests running.
+
+---
+[<small>2026-03-23 21:00:21</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test-e2e | /home/drusifer/Projects/via/build/build.out
+4 passed (6.6m)
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 21:05:36</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1121 passed, 4 warnings in 122.67s (0:02:02) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 21:08:32</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test-e2e | /home/drusifer/Projects/via/build/build.out
+[chromium] › tests/e2e/app.spec.js:174:3 › Reset Flow › clears result list ─────────────────────
+8 passed (2.7m)
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 21:11:57</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1121 passed, 4 warnings in 122.86s (0:02:02) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 21:12:24</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test-e2e | /home/drusifer/Projects/via/build/build.out
+
+15 passed (19.7s)
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 21:12:39</small>] [**Trin**]->[**Morpheus**] **qa done*:
+ Trin: E2E COMPLETE. 15/15 Playwright tests pass (19.7s). Screenshots in tests/e2e/screenshots/ for @Smith review. BONUS: fixed 2 prod bugs found by E2E — _handle_status + _handle_query both had wrong db_store arg. Python still 1121 pass.
+
+---
+[<small>2026-03-23 21:12:59</small>] [**Morpheus**]->[**all**] **lead review*:
+ Morpheus reviewing: Playwright E2E + handler bug fixes. Checking architecture, test quality, and production fix correctness.
+
+---
+[<small>2026-03-23 21:13:24</small>] [**Morpheus**]->[**Smith**] **lead review*:
+ APPROVED. Handler fixes correct, WebServer db_path/index_root clean, E2E 15/15. @Smith: screenshots in tests/e2e/screenshots/ for UX review.
+
+---
+[<small>2026-03-23 21:15:59</small>] [**Smith**]->[**all**] **user test*:
+ Reviewing tests/e2e/screenshots/ for UX feedback.
+
+---
+[<small>2026-03-23 21:17:21</small>] [**Smith**]->[**all**] **user feedback*:
+ UX review done. Report: smith.docs/UX_REVIEW_WEB_UI_2026_03_23.md. 2xP1: 'result' grammar + placeholder values look real. 2xP2: Run button buried below fold + absolute paths in results. P3: diagram centering, watch dot size, table columns.
+
+---
+[<small>2026-03-23 21:20:20</small>] [**Trin**]->[**Neo**] **qa triage*:
+ Trin on deck. Triaging Smith's 8 findings. P1 both: fix now. P2: UX-003 (sticky Run), UX-004 (relative paths), UX-005 (empty CTA) fix now. P3: defer to backlog. Routing to @Neo for implementation.
+
+---
+[<small>2026-03-23 21:20:23</small>] [**Neo**]->[**all**] **swe fix*:
+ Neo on deck. Fixing UX-WEB-001 through 005. Starting with app.js changes (grammar, relative paths), then template.py (placeholders, sticky Run, empty CTA).
+
+---
+[<small>2026-03-23 21:23:55</small>] [**Neo**]->[**all**] **swe fix*:
+ Neo resuming. Fixing UX-WEB-001 through 005: plural grammar, placeholder text, sticky Run button, relative paths, initial empty CTA.
+
+---
+[<small>2026-03-23 21:27:07</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+================= 1121 passed, 4 warnings in 122.27s (0:02:02) =================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 21:27:11</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test_js | /home/drusifer/Projects/via/build/build.out
+make[1]: Entering directory '/home/drusifer/Projects/via'
+make[1]: *** No rule to make target 'test_js'.  Stop.
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 21:27:18</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test-js | /home/drusifer/Projects/via/build/build.out
+
+
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+make[1]: *** [Makefile.prj:47: test-js] Error 1
+
+---
+[<small>2026-03-23 21:27:50</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test-js | /home/drusifer/Projects/via/build/build.out
+Duration  1.58s (transform 179ms, setup 0ms, collect 147ms, tests 585ms, environment 1.11s, prepare 283ms)
+
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 21:28:04</small>] [**Neo**]->[**Trin**] **handoff*:
+ UX-WEB-001 through 005 DONE. 1121 Python + 74 JS all pass. @Trin: user requests E2E tests updated to cover Smith's 5 findings (UX-WEB-001 to 005).
+
+---
+[<small>2026-03-23 21:29:49</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test-e2e | /home/drusifer/Projects/via/build/build.out
+
+22 passed (27.6s)
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-23 21:30:47</small>] [**Trin**]->[**all**] **qa done*:
+ E2E DONE. 22/22 pass (+7 new UX fix tests: UX-001 plural, UX-002 placeholders, UX-003 sticky, UX-004 relative paths, UX-005 initial CTA). 1121 Python + 74 JS also pass.
+
+---
+[<small>2026-03-23 21:33:34</small>] [**User**]->[**Trin**] **request*:
+ are the screenshots updated?
+
+---
+[<small>2026-03-23 21:33:41</small>] [**Trin**]->[**User**] **qa*:
+ Yes — all screenshots updated at 21:29 (just now). Named snapshots ux-01 through ux-05 are fresh from this run. Also 7 new per-test screenshots for the UX Fixes suite (UX-001 through UX-005 in tests/e2e/screenshots/).
+
+---
+[<small>2026-03-23 21:34:08</small>] [**User**]->[**Smith**] **request*:
+ review new screenshots
+
+---
+[<small>2026-03-23 21:34:12</small>] [**Smith**]->[**User**] **user test*:
+ On it. Loading updated screenshots for UX review.
+
+---
+[<small>2026-03-23 21:35:14</small>] [**Smith**]->[**all**] **user feedback*:
+ UX review DONE. All 5 P1/P2 fixed and verified. P3 (diagram centering, watch dot, table cols) still open — not launch blockers. Full notes: agents/smith.docs/UX_REVIEW_WEB_UI_2026_03_23.md. APPROVE.
+
+---
+[<small>2026-03-23 21:35:59</small>] [**User**]->[**Cypher**] **request*:
+ go for launch
+
+---
+[<small>2026-03-23 21:36:02</small>] [**Cypher**]->[**all**] **pm launch*:
+ Cypher on deck. Reviewing sprint deliverables before launch announcement.
+
+---
+[<small>2026-03-23 21:37:18</small>] [**Cypher**]->[**all**] **pm launch*:
+ LAUNCHED. Sprint 12 Web UI + UX Polish. See CHANGELOG.md. 1121 Python + 74 JS + 22 E2E green. Sprint CLOSED.

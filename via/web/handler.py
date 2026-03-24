@@ -14,6 +14,7 @@ License: GPL-3.0
 import json
 import logging
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,8 @@ class ViaRequestHandler(BaseHTTPRequestHandler):
             self._handle_status()
         elif self.path in ("/", "/index.html"):
             self._handle_index()
+        elif self.path.startswith("/static/"):
+            self._handle_static()
         else:
             self._not_found()
 
@@ -54,11 +57,13 @@ class ViaRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_status(self) -> None:
         web_server = getattr(self.server, "web_server", None)
-        if web_server is None:
+        if web_server is None or web_server.db_path is None or web_server.index_root is None:
             self._json({"error": "server not initialised"}, status=500)
             return
+        from via.db.store import DatabaseStore
         from via.web.api.status import get_status
-        data = get_status(web_server)
+        with DatabaseStore(web_server.db_path, web_server.index_root) as db_store:
+            data = get_status(db_store=db_store, web_server=web_server)
         self._json(data)
 
     def _handle_query(self) -> None:
@@ -70,15 +75,36 @@ class ViaRequestHandler(BaseHTTPRequestHandler):
             self._json({"error": "invalid JSON"}, status=400)
             return
         web_server = getattr(self.server, "web_server", None)
-        if web_server is None:
+        if web_server is None or web_server.db_path is None or web_server.index_root is None:
             self._json({"error": "server not initialised"}, status=500)
             return
+        from via.db.store import DatabaseStore
         from via.web.api.query import run_query
         try:
-            result = run_query(web_server, body)
+            with DatabaseStore(web_server.db_path, web_server.index_root) as db_store:
+                result = run_query(db_store, body)
             self._json(result)
         except Exception as exc:
             self._json({"error": str(exc)}, status=500)
+
+    def _handle_static(self) -> None:
+        filename = self.path[len("/static/"):]
+        # Reject directory traversal and non-JS files
+        if "/" in filename or not filename.endswith(".js"):
+            self._not_found()
+            return
+        static_dir = Path(__file__).parent / "static"
+        file_path = static_dir / filename
+        if not file_path.is_file():
+            self._not_found()
+            return
+        body = file_path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/javascript; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self._add_cors_headers()
+        self.end_headers()
+        self.wfile.write(body)
 
     def _handle_index(self) -> None:
         try:

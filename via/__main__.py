@@ -282,7 +282,7 @@ def _run_index_watch(
         web_server = None
         if not no_web:
             from via.web import WebServer
-            web_server = WebServer(port=port)
+            web_server = WebServer(port=port, db_path=str(db_path), index_root=str(target_dir))
             watch_service.add_reindex_listener(web_server.notify_reindex)
             web_server.start()
             print(f"Web UI: http://localhost:{web_server.port}")

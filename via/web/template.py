@@ -245,7 +245,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     }
 
     /* Action buttons */
-    .actions { display: flex; gap: 8px; margin-top: 4px; }
+    .actions {
+      display: flex; gap: 8px; margin-top: 4px;
+      position: sticky; bottom: 0;
+      background: var(--md-sys-color-surface);
+      padding: 8px 0 4px;
+    }
     .btn-primary {
       flex: 1;
       padding: 10px;
@@ -305,8 +310,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Empty / error state */
-    #empty-state, #error-state {
-      display: none;
+    #initial-state { display: block; }
+    #empty-state, #error-state { display: none; }
+    #initial-state, #empty-state, #error-state {
       padding: 40px;
       text-align: center;
       color: var(--md-sys-color-on-surface-variant);
@@ -475,11 +481,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
       <div class="field">
         <label for="newerthan">Newer than (e.g. 1h, 2d)</label>
-        <input type="text" id="newerthan" placeholder="1h">
+        <input type="text" id="newerthan" placeholder="e.g. 1h">
       </div>
       <div class="field">
         <label for="olderthan">Older than (e.g. 2d)</label>
-        <input type="text" id="olderthan" placeholder="2d">
+        <input type="text" id="olderthan" placeholder="e.g. 2d">
       </div>
     </div>
 
@@ -570,6 +576,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       Running query…
     </div>
 
+    <div id="initial-state">Enter a pattern and click Run Query to search.</div>
     <div id="empty-state">No results. Try broadening your pattern.</div>
     <div id="error-state"></div>
 
@@ -602,328 +609,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 <div id="toast"></div>
 
-<script type="module">
-// -------------------------------------------------------------------------
-// Mermaid CDN load
-// -------------------------------------------------------------------------
-let mermaidReady = false;
-const mermaidScript = document.createElement('script');
-mermaidScript.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
-mermaidScript.onload = () => {
-  mermaid.initialize({ startOnLoad: false, theme: 'default' });
-  mermaidReady = true;
-};
-mermaidScript.onerror = () => {
-  console.warn('Mermaid CDN unavailable — diagram text fallback active');
-};
-document.head.appendChild(mermaidScript);
-
-// -------------------------------------------------------------------------
-// State
-// -------------------------------------------------------------------------
-let outputFormat = 'list';
-let lastStatus = null;
-let tableData = [];
-let sortCol = 'symbol_name';
-let sortAsc = true;
-
-// -------------------------------------------------------------------------
-// DOM refs
-// -------------------------------------------------------------------------
-const $ = id => document.getElementById(id);
-
-// -------------------------------------------------------------------------
-// Chip toggling
-// -------------------------------------------------------------------------
-function initChips(groupId) {
-  $$(groupId + ' .chip').forEach(chip => {
-    chip.addEventListener('click', () => chip.classList.toggle('selected'));
-  });
-}
-function $$(sel) { return Array.from(document.querySelectorAll(sel)); }
-function selectedChips(groupId) {
-  return $$('#' + groupId + ' .chip.selected').map(c => c.dataset.type);
-}
-
-initChips('type-chips');
-initChips('target-type-chips');
-
-// -------------------------------------------------------------------------
-// Output format toggle
-// -------------------------------------------------------------------------
-$$('#output-format-group button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    $$('#output-format-group button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    outputFormat = btn.dataset.fmt;
-  });
-});
-
-// -------------------------------------------------------------------------
-// Relationship → show/hide target card
-// -------------------------------------------------------------------------
-$('relationship').addEventListener('change', () => {
-  $('target-card').style.display = $('relationship').value ? 'block' : 'none';
-});
-
-// -------------------------------------------------------------------------
-// Status bar polling
-// -------------------------------------------------------------------------
-async function updateStatus() {
-  try {
-    const r = await fetch('/api/status');
-    if (!r.ok) return;
-    const s = await r.json();
-
-    $('status-dir').textContent = s.directory || '—';
-    $('status-files').textContent = (s.file_count ?? '—') + ' files';
-    $('status-symbols').textContent = (s.symbol_count ?? '—') + ' symbols';
-    $('status-time').textContent = s.last_indexed ? relTime(s.last_indexed) : '—';
-    $('watch-dot').className = 'watch-dot' + (s.watching ? '' : ' idle');
-
-    // Toast on new reindex
-    if (lastStatus && s.last_reindex_count > lastStatus.last_reindex_count) {
-      showToast('Re-indexed ' + s.last_reindex_files + ' file' + (s.last_reindex_files === 1 ? '' : 's'));
-    }
-    lastStatus = s;
-  } catch (_) { /* server not ready yet */ }
-}
-
-function relTime(iso) {
-  const diff = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 5)  return 'just now';
-  if (diff < 60) return diff + 's ago';
-  if (diff < 3600) return Math.round(diff/60) + 'm ago';
-  return Math.round(diff/3600) + 'h ago';
-}
-
-updateStatus();
-setInterval(updateStatus, 5000);
-
-// -------------------------------------------------------------------------
-// Toast
-// -------------------------------------------------------------------------
-function showToast(msg) {
-  const t = $('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-// -------------------------------------------------------------------------
-// Badge colour helper
-// -------------------------------------------------------------------------
-function badgeClass(type) {
-  const map = {
-    function: 'badge-function', class: 'badge-class', method: 'badge-method',
-    import: 'badge-import', global: 'badge-global',
-    filepath: 'badge-filepath', filename: 'badge-filename', header: 'badge-header',
-  };
-  return map[type] || 'badge-global';
-}
-
-// -------------------------------------------------------------------------
-// Run query
-// -------------------------------------------------------------------------
-$('run-btn').addEventListener('click', runQuery);
-$('pattern').addEventListener('keydown', e => { if (e.key === 'Enter') runQuery(); });
-
-async function runQuery() {
-  showLoading();
-
-  const rel = $('relationship').value || null;
-  const body = {
-    match_type:       $('match-type').value,
-    pattern:          $('pattern').value || '*',
-    symbol_types:     selectedChips('type-chips'),
-    limit:            parseInt($('limit').value) || 0,
-    case_insensitive: $('case-insensitive').checked,
-    qualified:        $('qualified').checked,
-    newerthan:        $('newerthan').value || null,
-    olderthan:        $('olderthan').value || null,
-    relationship:     rel,
-    invert:           $('invert').checked,
-    stale:            $('stale').checked,
-    output_format:    outputFormat,
-  };
-  if (rel) {
-    body.target_match_type  = $('target-match-type').value;
-    body.target_pattern     = $('target-pattern').value || '*';
-    body.target_symbol_types = selectedChips('target-type-chips');
-  }
-
-  try {
-    const r = await fetch('/api/query', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Query failed');
-    displayResults(data);
-  } catch (err) {
-    showError(err.message);
-  }
-}
-
-// -------------------------------------------------------------------------
-// Display results
-// -------------------------------------------------------------------------
-function showLoading() {
-  $('loading').style.display = 'block';
-  $('empty-state').style.display = 'none';
-  $('error-state').style.display = 'none';
-  $('result-list').innerHTML = '';
-  $('result-table-wrap').style.display = 'none';
-  $('diagram-wrap').style.display = 'none';
-  $('result-count').textContent = '';
-}
-
-function showError(msg) {
-  $('loading').style.display = 'none';
-  $('error-state').textContent = '⚠ ' + msg;
-  $('error-state').style.display = 'block';
-}
-
-function displayResults(data) {
-  $('loading').style.display = 'none';
-
-  const fmt = data.format;
-  const elapsed = data.elapsed_ms ?? 0;
-
-  if (fmt === 'diagram') {
-    renderDiagram(data.mermaid_source || '');
-    $('result-count').textContent = data.count + ' nodes (' + elapsed + 'ms)';
-    return;
-  }
-
-  const results = data.results || [];
-  $('result-count').textContent = results.length + ' results (' + elapsed + 'ms)';
-
-  if (results.length === 0) {
-    $('empty-state').style.display = 'block';
-    return;
-  }
-
-  if (fmt === 'table') {
-    renderTable(results);
-  } else {
-    renderList(results);
-  }
-}
-
-// -------------------------------------------------------------------------
-// List renderer
-// -------------------------------------------------------------------------
-function renderList(results) {
-  const list = $('result-list');
-  list.innerHTML = results.map(r => `
-    <div class="result-card">
-      <span class="type-badge ${badgeClass(r.symbol_type)}">${r.symbol_type}</span>
-      <div>
-        <div class="name">${esc(r.symbol_name)}</div>
-        <div class="path">${esc(r.file_path)}:${r.line_number}</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-// -------------------------------------------------------------------------
-// Table renderer
-// -------------------------------------------------------------------------
-function renderTable(results) {
-  tableData = results;
-  sortCol = 'symbol_name';
-  sortAsc = true;
-  $('result-table-wrap').style.display = 'block';
-  renderTableBody();
-}
-
-function renderTableBody() {
-  const sorted = [...tableData].sort((a, b) => {
-    const av = String(a[sortCol] ?? '');
-    const bv = String(b[sortCol] ?? '');
-    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-  });
-  $('result-tbody').innerHTML = sorted.map(r => `
-    <tr>
-      <td>${esc(r.symbol_name)}</td>
-      <td><span class="type-badge ${badgeClass(r.symbol_type)}" style="font-size:10px">${r.symbol_type}</span></td>
-      <td>${esc(r.file_path)}</td>
-      <td>${r.line_number}</td>
-    </tr>
-  `).join('');
-}
-
-$$('#result-table th[data-col]').forEach(th => {
-  th.addEventListener('click', () => {
-    if (sortCol === th.dataset.col) sortAsc = !sortAsc;
-    else { sortCol = th.dataset.col; sortAsc = true; }
-    $$('#result-table th').forEach(h => {
-      h.textContent = h.textContent.replace(/ [▾▴]$/, '');
-    });
-    th.textContent += sortAsc ? ' ▾' : ' ▴';
-    renderTableBody();
-  });
-});
-
-// -------------------------------------------------------------------------
-// Diagram renderer
-// -------------------------------------------------------------------------
-async function renderDiagram(src) {
-  $('diagram-wrap').style.display = 'block';
-  const renderEl = $('diagram-render');
-  const fallback = $('diagram-fallback');
-
-  if (!src) {
-    renderEl.innerHTML = '<p style="color:var(--md-sys-color-on-surface-variant)">No diagram data.</p>';
-    return;
-  }
-
-  if (mermaidReady) {
-    try {
-      const { svg } = await mermaid.render('via-diagram', src);
-      renderEl.innerHTML = svg;
-      fallback.style.display = 'none';
-      return;
-    } catch (_) { /* fall through to text fallback */ }
-  }
-  renderEl.innerHTML = '';
-  fallback.textContent = src;
-  fallback.style.display = 'block';
-}
-
-// -------------------------------------------------------------------------
-// Reset
-// -------------------------------------------------------------------------
-$('reset-btn').addEventListener('click', () => {
-  $('match-type').value = 'glob';
-  $('pattern').value = '*';
-  $('case-insensitive').checked = false;
-  $('qualified').checked = false;
-  $('limit').value = '0';
-  $('newerthan').value = '';
-  $('olderthan').value = '';
-  $('relationship').value = '';
-  $('target-card').style.display = 'none';
-  $('invert').checked = false;
-  $('stale').checked = false;
-  $$('.chip.selected').forEach(c => c.classList.remove('selected'));
-  $$('#output-format-group button').forEach(b => b.classList.remove('active'));
-  $$('#output-format-group button')[0].classList.add('active');
-  outputFormat = 'list';
-  $('result-list').innerHTML = '';
-  $('result-count').textContent = '';
-  $('empty-state').style.display = 'none';
-  $('error-state').style.display = 'none';
-});
-
-// -------------------------------------------------------------------------
-// Escape HTML
-// -------------------------------------------------------------------------
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-</script>
+<script type="module" src="/static/app.js"></script>
 </body>
 </html>"""

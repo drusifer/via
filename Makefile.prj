@@ -42,6 +42,17 @@ install-dev: $(INSTALL_DEV_STAMP)
 test: install-dev
 	. ${VENV_ACTIVATE} && pytest tests/
 
+# Run JavaScript unit tests
+test-js:
+	npm test
+
+# Run Playwright E2E tests (requires via installed; screenshots saved to tests/e2e/screenshots/)
+test-e2e:
+	npx playwright test
+
+# Run all tests: Python + JavaScript + E2E
+test-all: test test-js test-e2e
+
 # Clean up the project directory
 clean:
 	rm -rf .via/
