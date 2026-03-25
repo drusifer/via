@@ -1695,3 +1695,19 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-24 23:05:59</small>] [**User**]->[**Cypher**] **request*:
  ship it
+
+---
+[<small>2026-03-24 23:06:55</small>] [**Cypher**]->[**all**] **pm launch*:
+ Sprint 13 SHIPPED. Commit 37117ba pushed to main. --via/--sans/--not live. 42 files, 2481 insertions. Breaking: old -V<rel>/--invert flags removed.
+
+---
+[<small>2026-03-24 23:17:39</small>] [**Oracle**]->[**all**] **ora groom*:
+ Groom done. Sprint 13 flags updated in README.md + USER_GUIDE.md. DESIGN_*.md moved to docs/.
+
+---
+[<small>2026-03-24 23:38:11</small>] [**User**]->[**all**] **request*:
+ @Oracle add Smith's 20 questions and web interface to USER_GUIDE. Include Trin's screenshots.
+
+---
+[<small>2026-03-24 23:40:55</small>] [**Oracle**]->[**all**] **ora groom*:
+ USER_GUIDE.md updated: added Web Interface section (5 screenshots, controls/results/status docs) and 20 Real-World Queries section from Smith's use-case doc. TOC updated (16 sections). README doc link updated.

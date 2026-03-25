@@ -5,15 +5,15 @@ TLDR:
     stores symbols (classes, methods, functions, imports, globals, headers) in a local
     SQLite database, and exposes them through a composable pipeline CLI with glob, regex,
     and SQL LIKE matching. Supports multiple output formats (list, table, raw,
-    syntax-highlighted, Mermaid diagram, JSON), relationship queries (inheritance,
-    calls, imports, references, container membership via -Vhas, --ref-type alternative
-    specifier, --stale cross-stage temporal filter), temporal filtering
+    syntax-highlighted, Mermaid diagram, JSON), relationship queries (--via <rel> positive,
+    --sans <rel> not-exists, --not negate — inheritance, calls, imports, references,
+    declares; --stale cross-stage temporal filter), temporal filtering
     (--newerthan / --olderthan with human-friendly durations), full-path file matching
-    (-Q), per-symbol timestamps, watch mode (auto re-index on change), and MCP
-    server mode (`via mcp serve`) for AI agent integration via JSON-RPC 2.0.
+    (-Q), per-symbol timestamps, watch mode (auto re-index on change), web UI
+    (`via web`), and MCP server mode (`via mcp serve`) for AI agent integration.
     All patterns are case-sensitive by default; use -I to ignore case.
     Run `via index .` to build the database, then query with `via -mg PATTERN -t<type>`.
-    Consumed by developers and AI agents; depends on Python 3.8+, Pygments, watchdog, mcp, tree-sitter.
+    Consumed by developers and AI agents; depends on Python 3.9+, Pygments, watchdog, mcp, tree-sitter.
 
 # VIA - Multi-Language Codebase Indexing and Query Tool
 
@@ -26,7 +26,7 @@ VIA is a command-line tool for indexing and searching Python, JavaScript, and Ty
 - **Pattern Matching**: Glob (`*`), SQL LIKE (`%`), or regex — case-sensitive by default, `-I` to ignore case
 - **Multiple Output Formats**: List, table, raw source, syntax-highlighted, JSON, Mermaid diagram
 - **Context Lines**: Show surrounding code with `-A`, `-B`, `-C` flags
-- **Relationship Queries**: Inheritance, calls, imports, references, container membership (`-Vhas`), `--ref-type` alternative specifier
+- **Relationship Queries**: `--via <rel>` (positive), `--sans <rel>` (not-exists), `--not` (negate pattern) — inheritance, calls, imports, references, declares
 - **Stale Detection**: `--stale` flag finds results older than their anchor (e.g. test files not updated since their classes changed)
 - **Temporal Queries**: Filter by symbol age with `--newerthan` / `--olderthan` (e.g. `1h`, `2d`, `1w`)
 - **Per-Symbol Timestamps**: Watch mode tracks mtime per symbol, not just per file
@@ -106,25 +106,24 @@ via -m<X> PATTERN -t<Y> [OPTIONS] [-o<Z>] [-f<W>]
 
 ### Relationship Queries
 
-`--via` flags query relationships between symbols:
+Relationship queries use a two-stage pipeline: `<anchor> --via <rel> <result>`.
 
 | Flag | Description |
 |------|-------------|
-| `-Vinh` | Inheritance |
-| `-Vca` | Function/method calls |
-| `-Vimp` | Import relationships |
-| `-Vr` | Symbol references (class bases, decorators, annotations, body) |
-| `-Vhas` | Container membership — file/class/function has member |
-| `--ref-type` | Alternative relationship specifier (`inherits-from`, `calls`, `imports`, `references`, `declares`) |
+| `--via inherits-from` / `-V inherits-from` | Find subclasses of anchor |
+| `--via calls` / `-V calls` | Find callers of anchor |
+| `--via imports` / `-V imports` | Find importers of anchor |
+| `--via references` / `-V references` | Find referencers of anchor |
+| `--via declares` / `-V declares` | Container membership (file/class has member) |
+| `--sans <rel>` / `-S <rel>` | Negative: subjects with NO relationship to matching objects |
+| `--not` | Negate the immediately following pattern flag |
 | `--stale` | Filter results older than their anchor (cross-stage temporal filter) |
-| `--invert` | Invert relationship direction |
 
 ```bash
-via -mg 'Base' -tc -Vinh -mg '*' -tc              # Who inherits from Base?
-via -mg 'MyClass' -tc -Vinh -mg '*' -tc --invert  # What does MyClass inherit?
-via -mg 'helper' -tf -Vca -mg '*' -tf             # Who calls helper()?
-via -mg 'main' -tf -Vca -mg '*' -tf --invert      # What does main() call?
-via -mg 'typing' -Vimp -mg '*' -tF                # Files importing typing
+via -mg 'Base' -tc --via inherits-from -mg '*' -tc         # Who inherits from Base?
+via -mg '*' -tc --sans inherits-from -mg '*' -tc           # Root classes (no parent)
+via -mg 'helper' -tf --via calls -mg '*' -tf               # Who calls helper()?
+via -mg 'typing' --via imports -mg '*' -tF                 # Files importing typing
 ```
 
 ### Result Limit and Cap Warning
@@ -177,7 +176,7 @@ The server auto-starts watch mode so the index is always current. Claude Code ca
 
 ## Documentation
 
-- **[User Guide](docs/USER_GUIDE.md)** - Complete usage examples and reference
+- **[User Guide](docs/USER_GUIDE.md)** - Complete usage reference, web UI guide, and 20 real-world queries
 - **[Architecture](agents/morpheus.docs/VIA_ARCHITECTURE.md)** - System design
 
 ## Development
@@ -310,7 +309,9 @@ via/
 | Sprint 7 | MCP server mode | — | `via mcp serve`, JSON output (`-oJ`), MCP install/uninstall |
 | Sprint 8 | Headers + container queries | — | `-tH` (markdown headers), `-Vhas`, `-Vr` references |
 | Sprint 9 | Temporal + stale + `-Q` path matching | 908 | `--newerthan`/`--olderthan`, per-symbol mtime, `DECLARES`, `-Q`, case-sensitivity docs |
-| **Sprint 10** | `--ref-type` + `--stale` + incremental `prep_tldr` | **968** | `--ref-type` (alternative relationship specifier), `--stale` (cross-stage temporal filter), `prep_tldr` incremental mode, `PathFilter` extraction |
+| Sprint 10 | `--stale` + incremental `prep_tldr` | 968 | `--stale` (cross-stage temporal filter), `prep_tldr` incremental mode, `PathFilter` extraction |
+| Sprint 11–12 | Web UI + UX polish | — | `via web` SPA, JS/TS Vitest suite (74 tests), Playwright E2E (22 tests), UX fixes |
+| **Sprint 13** | CLI relationship redesign | **1121** | `--via <rel>` / `--sans <rel>` / `--not` replace all old `-Vxxx`/`--invert` flags **(breaking change)** |
 
 ## Requirements
 

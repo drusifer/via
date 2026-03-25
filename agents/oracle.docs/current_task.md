@@ -1,17 +1,25 @@
-**Task**: Sprint 10 doc groom
+**Task**: Web UI + 20 Questions addition to USER_GUIDE
 **Status**: COMPLETE (100%)
-**Completed**: 2026-03-22
+**Completed**: 2026-03-24
 
 ## Changes Made
 
-### docs/USER_GUIDE.md
-- Updated TLDR: added `--ref-type` and `--stale` to relationship query description
-- Added new subsection `### '--stale': Cross-Stage Temporal Filter` after `--ref-type` section (with 3 examples and a note)
-
 ### README.md
-- Updated TLDR: added `--ref-type` and `--stale` to relationship queries phrase
-- Features: added `--ref-type` to Relationship Queries bullet, added new `--stale` Stale Detection bullet
-- Relationship Queries table: added `--ref-type` and `--stale` rows
+- TLDR: replaced `-Vhas`/`--ref-type`/`--invert` with `--via <rel>`/`--sans <rel>`/`--not`
+- Features → Relationship Queries: updated to new flag syntax
+- Relationship Queries table: replaced old flags with `--via`/`--sans`/`--not`/`--stale`
+- Sprint History: added Sprint 11-12 (Web UI) and Sprint 13 (CLI redesign, 1121 tests)
 
-## Note on --ref-type
-`--ref-type` was already documented in USER_GUIDE.md from a previous session (Sprint 10 Cycle 1 was done before this session's chat log). Only `--stale` was missing.
+### docs/USER_GUIDE.md
+- TLDR: updated to reflect new relationship flag syntax
+- Table of Contents: "Container Queries (-Vhas)" → "Container Queries (--via declares)"
+- Relationship Queries section: complete rewrite — new syntax, `--sans`, `--not` explained
+- `--ref-type` section: removed (flag no longer exists)
+- `--invert`/`-iv`: removed throughout
+- All examples: updated from `-Vinh`/`-Vca`/`-Vimp`/`-Vr`/`-Vhas` to `--via <rel>`
+- Container Queries section: `-Vhas` → `--via declares`
+- Quick Reference: updated relationship commands block
+
+### File Organization
+- `DESIGN_RENDER_PIPELINE.md` → moved to `docs/`
+- `DESIGN_SPRINT3_INTERNAL_PIPELINE.md` → moved to `docs/`

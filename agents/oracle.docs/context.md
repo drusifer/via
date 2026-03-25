@@ -1,51 +1,48 @@
 # Oracle Context
 
-**Last Updated**: 2026-03-22
+**Last Updated**: 2026-03-24
 
-## Sprint 10 Doc Groom (2026-03-22)
+## Sprint 13 Doc Groom (2026-03-24)
 
 ### Changes Made
-- `docs/USER_GUIDE.md`:
-  - TLDR updated: added `--ref-type` and `--stale` to relationship query description
-  - New section: **`--stale`: Cross-Stage Temporal Filter** (after `--ref-type` section)
-    - 3 examples: stale test files, stale subclasses, stale call sites
-    - Note: no-op on plain queries, rebuild index if mtime missing
-- `README.md`:
-  - TLDR updated: added `--ref-type` and `--stale` to relationship queries description
-  - Features: added `--ref-type` mention, added new **Stale Detection** bullet for `--stale`
-  - Relationship Queries table: added `--ref-type` and `--stale` rows
+- `README.md`: Updated TLDR, Features, Relationship Queries table, Sprint History through Sprint 13
+- `docs/USER_GUIDE.md`: Full rewrite of Relationship Queries and Container Queries sections for new `--via`/`--sans`/`--not` syntax
+- Moved `DESIGN_RENDER_PIPELINE.md` and `DESIGN_SPRINT3_INTERNAL_PIPELINE.md` from root to `docs/`
 
-### Sprint 10 Features (for reference)
-- S10-1: `--ref-type` flag (alternative to `-Vinh`/`--via inherits-from` etc.) — valid values: `inherits-from`, `calls`, `imports`, `references`, `declares`
-- S10-2: `--stale` flag — filters relationship results where result.mtime < anchor.mtime
-- S10-3: `prep_tldr.py` incremental mode — argparse with `root` + `--force`/`-f`; `.via/prep_tldr_last_run` timestamp file
-- TD-WATCH-1: `PathFilter` extracted from `FileDiscovery` into `via/core/path_filter.py`
+### Sprint 13 Features (for reference)
+- `--via <rel>` / `-V <rel>` — positive relationship filter (replaces `-Vinh`/`-Vca`/`-Vimp`/`-Vr`/`-Vhas`)
+- `--sans <rel>` / `-S <rel>` — NOT EXISTS negative relationship (replaces `--invert`/`-iv`)
+- `--not` — negate the immediately following pattern flag
+- `--ref-type` REMOVED (was Sprint 10; removed in Sprint 13 CLI redesign)
+- All old `-Vxxx` short flags REMOVED — breaking change
 
 ## Key Files
 - `docs/USER_GUIDE.md` - Main user-facing documentation (current)
 - `README.md` - Project overview (current)
-- `via/core/flag_groups.py` - Flag definitions
+- `via/core/flag_groups.py` - Flag definitions (RELATIONSHIP group removed)
 - `via/__main__.py` - CLI help text
 
 ## Sprint Status
-- Sprint 9: COMPLETE — shipped
-- Sprint 10: implementation COMPLETE (3 cycles, all Morpheus reviews passed, Oracle groomed)
-- Next: Smith end-to-end test → Cypher launch
+- Sprint 10: COMPLETE — doc groomed 2026-03-22
+- Sprint 11-12: COMPLETE — Web UI (no doc groom needed; CHANGELOG has it)
+- Sprint 13: COMPLETE — CLI relationship redesign; doc groomed 2026-03-24
 
 ## Lessons Learned (Sprints 1-7, carried forward)
 ### L1: SQLite + threading.Timer = check_same_thread=False required
 ### L2: Symbols table is NOT cascade-linked to files table (plain TEXT column)
 ### L3: IndexingService._index_file() bypasses transactions (use reindex_file())
 
-## Sprint 9 Decisions Recorded
+## Sprint 9-10 Decisions Recorded
 - DECLARES relationship = -Vhas syntactic sugar over structural containment
 - Temporal tracking is per-symbol (symbols.mtime), not just per-file
 - -Q flag enables full-path matching for -tF queries
 - All patterns case-sensitive by default; -I for case-insensitive
 - -th (lowercase) is invalid; -tH (uppercase) is the only header type flag
-
-## Sprint 10 Decisions Recorded
 - --stale filter logic: result.mtime < anchor.mtime (strict less-than)
-- --stale on subject-side is silently ignored (no-op; safe behavior)
-- PathFilter extracted as standalone class; WatchService gets its own instance (no longer accesses FileDiscovery private methods)
-- prep_tldr last-run file lives in .via/prep_tldr_last_run (runtime state, not build output)
+- PathFilter extracted as standalone class
+
+## Sprint 13 Decisions Recorded
+- --via/--sans/--not replace all old -Vxxx/--invert/--ref-type flags (breaking change)
+- is_negative bool in RelationshipFilter replaces invert bool
+- --sans uses NOT EXISTS SQL subquery (query_negative_relationships())
+- --not negates the immediately following -mg/-mr/-ms flag only
