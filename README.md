@@ -304,14 +304,14 @@ via/
 | Sprint | Theme | Tests | Key Features |
 |--------|-------|-------|--------------|
 | Sprint 1-4 | Core indexing + output formats | — | AST parsing, glob/regex/SQL matching, list/table/diagram/usage/raw/highlighted output |
-| Sprint 5 | Relationship queries | — | `-Vinh`, `-Vca`, `-Vimp`, `-Vr` |
+| Sprint 5 | Relationship queries | — | Inheritance, calls, imports, references relationships |
 | Sprint 6 | Incremental indexing + globals | — | Watch triggers, globals type, cascade deletion fix |
 | Sprint 7 | MCP server mode | — | `via mcp serve`, JSON output (`-oJ`), MCP install/uninstall |
-| Sprint 8 | Headers + container queries | — | `-tH` (markdown headers), `-Vhas`, `-Vr` references |
+| Sprint 8 | Headers + container queries | — | `-tH` (markdown headers), container membership, references |
 | Sprint 9 | Temporal + stale + `-Q` path matching | 908 | `--newerthan`/`--olderthan`, per-symbol mtime, `DECLARES`, `-Q`, case-sensitivity docs |
 | Sprint 10 | `--stale` + incremental `prep_tldr` | 968 | `--stale` (cross-stage temporal filter), `prep_tldr` incremental mode, `PathFilter` extraction |
 | Sprint 11–12 | Web UI + UX polish | — | `via web` SPA, JS/TS Vitest suite (74 tests), Playwright E2E (22 tests), UX fixes |
-| **Sprint 13** | CLI relationship redesign | **1121** | `--via <rel>` / `--sans <rel>` / `--not` replace all old `-Vxxx`/`--invert` flags **(breaking change)** |
+| **Sprint 13** | CLI relationship redesign | **1121** | `--via <rel>` / `--sans <rel>` / `--not` — unified relationship syntax |
 
 ## Requirements
 

@@ -1711,3 +1711,7 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-24 23:40:55</small>] [**Oracle**]->[**all**] **ora groom*:
  USER_GUIDE.md updated: added Web Interface section (5 screenshots, controls/results/status docs) and 20 Real-World Queries section from Smith's use-case doc. TOC updated (16 sections). README doc link updated.
+
+---
+[<small>2026-03-25 00:43:54</small>] [**User**]->[**all**] **request*:
+ @Oracle remove all old flag references from docs. No backward compat needed.
