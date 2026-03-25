@@ -284,99 +284,86 @@ class TestStatsStage:
         assert stage.args.json is True
 
 
-class TestRefTypeFlag:
-    """Tests for --ref-type CLI unification (Sprint 10, S10-1).
+class TestViaFlag:
+    """Tests for --via / -V relationship type flags (Sprint 13).
 
-    --ref-type is a third way to specify relationship type alongside -Vinh and --via.
-    Detected pre-parse in _find_relationship_split(); listed in match_parser for --help.
+    --via TYPE and -V TYPE are the canonical ways to specify relationship type.
+    Detected pre-parse in _find_relationship_split().
     """
 
-    def test_ref_type_inherits_from_equals_vinh(self):
-        """--ref-type inherits-from produces same result as -Vinh."""
+    def test_via_inherits_from(self):
+        """--via inherits-from produces the correct relationship type."""
         parser = PipelineParser()
-        argv_vinh = ['-mg', 'Base', '-tc', '-Vinh', '-mg', '*', '-tc']
-        argv_ref = ['-mg', 'Base', '-tc', '--ref-type', 'inherits-from', '-mg', '*', '-tc']
+        argv_V = ['-mg', 'Base', '-tc', '-V', 'inherits-from', '-mg', '*', '-tc']
+        argv_via = ['-mg', 'Base', '-tc', '--via', 'inherits-from', '-mg', '*', '-tc']
 
-        stage_vinh = parser._parse_stage(argv_vinh)
-        stage_ref = parser._parse_stage(argv_ref)
+        stage_V = parser._parse_stage(argv_V)
+        stage_via = parser._parse_stage(argv_via)
 
-        assert stage_vinh.args.relationship.relationship_type == stage_ref.args.relationship.relationship_type
-        assert stage_ref.args.relationship.relationship_type.value == 'inherits-from'
+        assert stage_V.args.relationship.relationship_type == stage_via.args.relationship.relationship_type
+        assert stage_via.args.relationship.relationship_type.value == 'inherits-from'
 
-    def test_ref_type_calls(self):
-        """--ref-type calls works correctly."""
+    def test_V_calls(self):
+        """-V calls works correctly."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'MyClass', '-tc', '--ref-type', 'calls', '-mg', '*', '-tm'])
+        stage = parser._parse_stage(['-mg', 'MyClass', '-tc', '-V', 'calls', '-mg', '*', '-tm'])
         assert stage.args.relationship is not None
         assert stage.args.relationship.relationship_type.value == 'calls'
 
-    def test_ref_type_imports(self):
-        """--ref-type imports works correctly."""
+    def test_V_imports(self):
+        """-V imports works correctly."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'my_module', '--ref-type', 'imports', '-mg', '*'])
+        stage = parser._parse_stage(['-mg', 'my_module', '-V', 'imports', '-mg', '*'])
         assert stage.args.relationship.relationship_type.value == 'imports'
 
-    def test_ref_type_references(self):
-        """--ref-type references works correctly."""
+    def test_V_references(self):
+        """-V references works correctly."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'MyClass', '-tc', '--ref-type', 'references', '-mg', '*', '-tm'])
+        stage = parser._parse_stage(['-mg', 'MyClass', '-tc', '-V', 'references', '-mg', '*', '-tm'])
         assert stage.args.relationship.relationship_type.value == 'references'
 
-    def test_ref_type_declares(self):
-        """--ref-type declares equals -Vhas."""
+    def test_V_declares(self):
+        """-V declares works correctly."""
         parser = PipelineParser()
-        argv_vhas = ['-mg', 'MyClass', '-tc', '-Vhas', '-mg', '*', '-tm']
-        argv_ref = ['-mg', 'MyClass', '-tc', '--ref-type', 'declares', '-mg', '*', '-tm']
+        stage = parser._parse_stage(['-mg', 'MyClass', '-tc', '-V', 'declares', '-mg', '*', '-tm'])
+        assert stage.args.relationship.relationship_type.value == 'declares'
 
-        stage_vhas = parser._parse_stage(argv_vhas)
-        stage_ref = parser._parse_stage(argv_ref)
-
-        assert stage_vhas.args.relationship.relationship_type == stage_ref.args.relationship.relationship_type
-        assert stage_ref.args.relationship.relationship_type.value == 'declares'
-
-    def test_ref_type_all_five_types(self):
-        """All five valid ref types parse without error."""
+    def test_V_all_five_types(self):
+        """All five valid relationship types parse without error via -V."""
         parser = PipelineParser()
         valid_types = ['inherits-from', 'calls', 'imports', 'references', 'declares']
         for rt in valid_types:
-            stage = parser._parse_stage(['-mg', 'Anchor', '-tc', '--ref-type', rt, '-mg', '*'])
+            stage = parser._parse_stage(['-mg', 'Anchor', '-tc', '-V', rt, '-mg', '*'])
             assert stage.args.relationship.relationship_type.value == rt
 
-    def test_ref_type_invalid_value_raises(self):
-        """--ref-type with unknown value raises PipelineParseError with valid types listed."""
+    def test_V_invalid_value_raises(self):
+        """--via with unknown value raises PipelineParseError."""
         parser = PipelineParser()
-        with pytest.raises(PipelineParseError, match="Unknown --ref-type 'foobar'"):
-            parser._parse_stage(['-mg', 'X', '-tc', '--ref-type', 'foobar', '-mg', '*'])
+        with pytest.raises(PipelineParseError):
+            parser._parse_stage(['-mg', 'X', '-tc', '--via', 'bad-type', '-mg', '*'])
 
-    def test_ref_type_error_message_lists_valid_types(self):
-        """Error message for bad --ref-type includes 'Valid types:'."""
+    def test_V_error_message_lists_valid_types(self):
+        """Error message for bad -V type includes 'Valid:'."""
         parser = PipelineParser()
-        with pytest.raises(PipelineParseError, match="Valid types:"):
-            parser._parse_stage(['-mg', 'X', '--ref-type', 'bad-type', '-mg', '*'])
+        with pytest.raises(PipelineParseError, match="Valid:"):
+            parser._parse_stage(['-mg', 'X', '-V', 'bad-type', '-mg', '*'])
 
-    def test_ref_type_with_newerthan_on_subject(self):
-        """--ref-type combined with --newerthan on subject side."""
+    def test_V_with_newerthan_on_subject(self):
+        """-V combined with --newerthan on subject side."""
         parser = PipelineParser()
         stage = parser._parse_stage([
             '-mg', '*', '-tc', '--newerthan', '1h',
-            '--ref-type', 'declares',
+            '-V', 'declares',
             '-mg', '*', '-tm', '-n', '0',
         ])
         assert stage.args.relationship is not None
         assert stage.args.relationship.relationship_type.value == 'declares'
         assert stage.args.newerthan == '1h'
 
-    def test_ref_type_invert_flag(self):
-        """--ref-type with -iv (invert) flag works."""
+    def test_V_object_pattern_and_type(self):
+        """-V preserves object pattern and type filters."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'Child', '-tc', '--ref-type', 'inherits-from', '-iv', '-mg', '*', '-tc'])
-        assert stage.args.relationship.relationship_type.value == 'inherits-from'
-        assert stage.args.relationship.invert is True
-
-    def test_ref_type_object_pattern_and_type(self):
-        """--ref-type preserves object pattern and type filters."""
-        parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'MyMod', '--ref-type', 'imports', '-mg', 'test_*', '-tm'])
+        stage = parser._parse_stage(['-mg', 'MyMod', '-V', 'imports', '-mg', 'test_*', '-tm'])
         rel = stage.args.relationship
         assert rel.object_pattern == 'test_*'
         assert 'method' in rel.object_types
@@ -388,20 +375,20 @@ class TestStaleFlag:
     def test_stale_sets_result_stale_true(self):
         """--stale on result stage sets result_stale=True on RelationshipFilter."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'Base', '-tc', '-Vinh', '-mg', '*', '-tc', '--stale'])
+        stage = parser._parse_stage(['-mg', 'Base', '-tc', '-V', 'inherits-from', '-mg', '*', '-tc', '--stale'])
         assert stage.args.relationship.result_stale is True
 
     def test_stale_default_is_false(self):
         """Without --stale, result_stale defaults to False."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'Base', '-tc', '-Vinh', '-mg', '*', '-tc'])
+        stage = parser._parse_stage(['-mg', 'Base', '-tc', '-V', 'inherits-from', '-mg', '*', '-tc'])
         assert stage.args.relationship.result_stale is False
 
-    def test_stale_with_ref_type(self):
-        """--stale works with --ref-type specifier."""
+    def test_stale_with_via_flag(self):
+        """--stale works with --via specifier."""
         parser = PipelineParser()
         stage = parser._parse_stage([
-            '-mg', 'Base', '-tc', '--ref-type', 'inherits-from', '-mg', '*', '-tc', '--stale'
+            '-mg', 'Base', '-tc', '--via', 'inherits-from', '-mg', '*', '-tc', '--stale'
         ])
         assert stage.args.relationship.result_stale is True
         assert stage.args.relationship.relationship_type.value == 'inherits-from'
@@ -410,7 +397,7 @@ class TestStaleFlag:
         """--stale can combine with --newerthan on the anchor side."""
         parser = PipelineParser()
         stage = parser._parse_stage([
-            '-mg', '*', '-tc', '--newerthan', '1h', '-Vinh', '-mg', '*', '-tc', '--stale'
+            '-mg', '*', '-tc', '--newerthan', '1h', '-V', 'inherits-from', '-mg', '*', '-tc', '--stale'
         ])
         assert stage.args.relationship.result_stale is True
         assert stage.args.newerthan == '1h'

@@ -25,22 +25,12 @@ from typing import Dict, Iterator, List, Optional
 
 from via.core.duration import parse_duration
 from via.core.match_record import FormatType, MatchRecord, RenderType
-from via.core.relationship_types import ReferenceType
 from via.core.types import MatchOp, SymbolType
 from via.core.utils import get_match_op, safe_print
 from via.db.store import DatabaseStore
 from via.pipeline.relationship_filter import RelationshipFilter
 from via.pipeline.types import PipelineStage, StageType
 from via.renderers.factory import RendererFactory
-
-# Valid container types for -Vhas (DECLARES) queries
-_VHAS_CONTAINER_TYPES = {'filepath', 'filename', 'class', 'function'}
-_VHAS_CONTAINER_FLAGS = {
-    'filepath': '-tF',
-    'filename': '-tN',
-    'class': '-tc',
-    'function': '-tf',
-}
 
 # User-friendly render type names for CLI flags
 RENDER_TYPE_FLAGS: Dict[RenderType, str] = {
@@ -131,6 +121,8 @@ class PipelineExecutor:
         # Check if this is a relationship query
         relationship = getattr(args, 'relationship', None)
         if relationship:
+            if relationship.is_negative:
+                return self._execute_negative_relationship_query(stage)
             return self._execute_relationship_query(stage)
 
         # Extract arguments - check for symbol_types list (OR'd) or symbol_type (single)
@@ -141,6 +133,7 @@ class PipelineExecutor:
         case_sensitive = not args.case_insensitive
         limit = args.limit
         match_qualified = getattr(args, 'match_qualified', False)
+        negated = getattr(args, 'negate_pattern', False)
 
         # Determine match operator from match_syntax attribute
         # match_syntax is the suffix from flag groups: 'g' (glob), 'r' (regex), 's' (sql)
@@ -150,7 +143,8 @@ class PipelineExecutor:
         # Handle multiple symbol types (OR'd together)
         if len(symbol_types) > 1:
             return self._match_multiple_types(
-                symbol_types, pattern, match_op, case_sensitive, limit, match_qualified
+                symbol_types, pattern, match_op, case_sensitive, limit,
+                match_qualified, negated
             )
 
         # Temporal filters
@@ -167,14 +161,20 @@ class PipelineExecutor:
             st, match_op, pattern, case_sensitive, limit, match_qualified,
             newerthan_seconds=newerthan_seconds,
             olderthan_seconds=olderthan_seconds,
+            negated=negated,
         )
         return results
 
     def _execute_relationship_query(self, stage: PipelineStage) -> Iterator[MatchRecord]:
-        """Execute relationship query against database.
+        """Execute positive relationship query (--via) against database.
+
+        Direction convention:
+          Pattern BEFORE --via = object_pattern (the "known" anchor side)
+          Pattern AFTER --via  = subject_pattern (filter on results returned)
+          Returns subjects (sources) that have the relationship TO the object.
 
         Args:
-            stage: PipelineStage with relationship filter
+            stage: PipelineStage with relationship filter (is_negative=False)
 
         Returns:
             Iterator of MatchRecord from database
@@ -182,58 +182,31 @@ class PipelineExecutor:
         args = stage.args
         rel: RelationshipFilter = args.relationship
 
-        # Extract query params from CLI
-        # - Pattern BEFORE --via: what user is relating TO (the "known" thing)
-        # - Pattern AFTER --via: filter on results (defaults to '*' = all)
-        cli_relate_to_pattern = args.pattern
-        cli_results_pattern = rel.object_pattern
+        # Pattern BEFORE --via: anchor/object filter (what we're relating through)
+        object_pattern = args.pattern
+        # Pattern AFTER --via: result/subject filter (what gets returned)
+        subject_pattern = rel.object_pattern
 
-        cli_relate_to_types = getattr(args, 'symbol_types', None) or []
-        cli_relate_to_type = args.symbol_type if hasattr(args, 'symbol_type') else None
-        if cli_relate_to_types:
-            cli_relate_to_type = cli_relate_to_types[0]
+        object_types = getattr(args, 'symbol_types', None) or []
+        object_type = args.symbol_type if hasattr(args, 'symbol_type') else None
+        if object_types:
+            object_type = object_types[0]
 
-        cli_results_type = rel.object_types[0] if rel.object_types else None
+        subject_type = rel.object_types[0] if rel.object_types else None
+
+        # declares requires a container (file or class) as the object type
+        _DECLARES_CONTAINER_TYPES = {'file', 'class', 'filepath', 'filename', None}
+        if rel.relationship_type.value == 'declares' and object_type not in _DECLARES_CONTAINER_TYPES:
+            raise ValueError(
+                f"'{object_type}' is not a valid container type for --via declares. "
+                f"Valid container types: class, file/filepath."
+            )
 
         case_sensitive = not args.case_insensitive
         limit = args.limit
 
-        # Map CLI patterns to DB query based on invert flag
-        # Without invert: relate TO = targets (parents), results = sources (children)
-        # With invert: relate TO = sources (children), results = targets (parents)
-        if not rel.invert:
-            # "Find children that inherit FROM parents matching pattern"
-            subject_pattern = cli_results_pattern   # filter results (sources/children)
-            object_pattern = cli_relate_to_pattern  # filter what we relate TO (targets/parents)
-            subject_type = cli_results_type
-            object_type = cli_relate_to_type
-        else:
-            # "Find parents that are inherited BY children matching pattern"
-            subject_pattern = cli_relate_to_pattern  # filter what we query about (sources/children)
-            object_pattern = cli_results_pattern     # filter results (targets/parents)
-            subject_type = cli_relate_to_type
-            object_type = cli_results_type
-
-        # -Vhas (DECLARES): validate container type and reject --invert
-        if rel.relationship_type == ReferenceType.DECLARES:
-            if rel.invert:
-                raise ValueError(
-                    "--invert with -Vhas means 'does not have (not-has)' — not yet supported."
-                )
-            # object_type is the container (anchor type, before -Vhas)
-            container_type = object_type
-            if container_type and container_type not in _VHAS_CONTAINER_TYPES:
-                valid = ', '.join(
-                    f'{_VHAS_CONTAINER_FLAGS[t]} ({t})' for t in sorted(_VHAS_CONTAINER_TYPES)
-                )
-                raise ValueError(
-                    f"-Vhas requires a container type as stage 1 anchor.\n"
-                    f"Received: '{container_type}' — not a valid container type.\n"
-                    f"Valid containers: {valid}."
-                )
-
-        # Story 4: calls stored from method symbols, not class symbols.
-        # When anchor is a class for -Vca, expand to include methods where parent_name = class_name.
+        # calls stored from method symbols, not class symbols.
+        # When object side is a class for calls, expand to include methods.
         subject_parent_pattern = None
         if rel.relationship_type.value == 'calls' and subject_type == 'class':
             subject_parent_pattern = subject_pattern
@@ -248,7 +221,7 @@ class PipelineExecutor:
             subject_type=subject_type,
             object_type=object_type,
             subject_parent_pattern=subject_parent_pattern,
-            invert=rel.invert,
+            invert=False,
             limit=limit,
             case_sensitive=case_sensitive,
             result_newerthan_seconds=rel.result_newerthan_seconds,
@@ -269,6 +242,58 @@ class PipelineExecutor:
 
         return iter(results)
 
+    def _execute_negative_relationship_query(self, stage: PipelineStage) -> Iterator[MatchRecord]:
+        """Execute NOT EXISTS relationship query (--sans) against database.
+
+        Returns symbols that do NOT have the specified relationship
+        to any symbol matching the object pattern.
+
+        Args:
+            stage: PipelineStage with relationship filter (is_negative=True)
+
+        Returns:
+            Iterator of MatchRecord from database
+        """
+        args = stage.args
+        rel: RelationshipFilter = args.relationship
+
+        # --sans declares is not yet supported (NOT EXISTS on container membership is ambiguous)
+        if rel.relationship_type.value == 'declares':
+            raise ValueError(
+                "--sans declares is not yet supported. "
+                "Use --via declares to find symbols declared by a container."
+            )
+
+        # Subject = the anchor side (BEFORE --sans): symbols to test for absence of relation
+        subject_pattern = args.pattern
+        object_pattern = rel.object_pattern
+
+        subject_types = getattr(args, 'symbol_types', None) or []
+        subject_type = args.symbol_type if hasattr(args, 'symbol_type') else None
+        if subject_types:
+            subject_type = subject_types[0]
+
+        object_type = rel.object_types[0] if rel.object_types else None
+
+        case_sensitive = not args.case_insensitive
+        limit = args.limit
+
+        match_syntax = getattr(args, 'match_syntax', 'g')
+        match_op = get_match_op(match_syntax)
+
+        return self.db.query_negative_relationships(
+            relationship_type=rel.relationship_type.value,
+            subject_pattern=subject_pattern,
+            object_pattern=object_pattern,
+            subject_type=subject_type,
+            object_type=object_type,
+            match_op=match_op,
+            case_sensitive=case_sensitive,
+            limit=limit,
+            result_newerthan_seconds=rel.result_newerthan_seconds,
+            result_olderthan_seconds=rel.result_olderthan_seconds,
+        )
+
     def _match_multiple_types(
         self,
         symbol_types: List[str],
@@ -276,7 +301,8 @@ class PipelineExecutor:
         match_op: MatchOp,
         case_sensitive: bool,
         limit: int,
-        match_qualified: bool
+        match_qualified: bool,
+        negated: bool = False,
     ) -> Iterator[MatchRecord]:
         """Query database for multiple symbol types (OR'd together).
 
@@ -287,6 +313,7 @@ class PipelineExecutor:
             case_sensitive: Whether to match case-sensitively
             limit: Max results per type
             match_qualified: Whether to match qualified names
+            negated: If True, invert the pattern match (--not semantics)
 
         Yields:
             MatchRecord objects from database
@@ -295,7 +322,8 @@ class PipelineExecutor:
         for type_str in symbol_types:
             st = SymbolType(type_str)
             for record in self.db.match(
-                st, match_op, pattern, case_sensitive, limit, match_qualified
+                st, match_op, pattern, case_sensitive, limit, match_qualified,
+                negated=negated,
             ):
                 yield record
                 count += 1
@@ -332,6 +360,7 @@ class PipelineExecutor:
 
         pattern = args.pattern
         case_sensitive = not args.case_insensitive
+        negated = getattr(args, 'negate_pattern', False)
 
         # Determine match operator from match_syntax attribute
         # match_syntax is the suffix from flag groups: 'g' (glob), 'r' (regex), 's' (sql)
@@ -343,8 +372,11 @@ class PipelineExecutor:
             if allowed_types and record.symbol_type not in allowed_types:
                 continue
 
-            # Apply pattern match
-            if self._pattern_matches(record.symbol_name, pattern, match_op, case_sensitive):
+            # Apply pattern match (optionally negated)
+            matches = self._pattern_matches(record.symbol_name, pattern, match_op, case_sensitive)
+            if negated:
+                matches = not matches
+            if matches:
                 yield record
 
     def _pattern_matches(

@@ -3,10 +3,11 @@ Flag group definitions for the VIA CLI.
 
 TLDR:
     Defines the canonical set of prefix-based CLI flags used throughout VIA.
-    Flag, FlagGroup, and five flag lists (MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS,
-    FORMAT_FLAGS, RELATIONSHIP_FLAGS) encode short/long names, dest attributes,
-    and help text. Helper functions (get_match_short_flags, get_type_short_flags,
-    etc.) return sets used by the pipeline parser for stage detection.
+    Flag, FlagGroup, and four flag lists (MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS,
+    FORMAT_FLAGS) encode short/long names, dest attributes, and help text.
+    Helper functions (get_match_short_flags, get_type_short_flags, etc.) return
+    sets used by the pipeline parser for stage detection. Relationship flags
+    (--via/--sans/--not) are handled directly in the parser, not as Flag objects.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -24,7 +25,6 @@ class FlagGroup(Enum):
     TYPE = 't'
     OUTPUT = 'o'
     FORMAT = 'f'
-    RELATIONSHIP = 'V'  # Via relationship queries
 
 
 @dataclass
@@ -86,20 +86,9 @@ FORMAT_FLAGS: List[Flag] = [
     Flag(FlagGroup.FORMAT, 'p', 'format-png', 'format', 'png', 'PNG image'),
 ]
 
-# Relationship flags (Sprint 5+)
-# These use -V prefix (Via) with suffixes matching ReferenceType.short_flag
-RELATIONSHIP_FLAGS: List[Flag] = [
-    Flag(FlagGroup.RELATIONSHIP, 'inh', 'via-inherits-from', 'relationship_type', 'inherits-from', 'Inheritance'),
-    Flag(FlagGroup.RELATIONSHIP, 'ca', 'via-calls', 'relationship_type', 'calls', 'Function/method calls'),
-    Flag(FlagGroup.RELATIONSHIP, 'imp', 'via-imports', 'relationship_type', 'imports', 'Import relationships'),
-    Flag(FlagGroup.RELATIONSHIP, 'r', 'via-references', 'relationship_type', 'references', 'Symbol references'),
-    Flag(FlagGroup.RELATIONSHIP, 'has', 'via-has', 'relationship_type', 'declares', 'Container membership (file/class/function has member)'),
-]
-
-
 def get_all_flags() -> List[Flag]:
     """Return all flag definitions."""
-    return MATCH_FLAGS + TYPE_FLAGS + OUTPUT_FLAGS + FORMAT_FLAGS + RELATIONSHIP_FLAGS
+    return MATCH_FLAGS + TYPE_FLAGS + OUTPUT_FLAGS + FORMAT_FLAGS
 
 
 def get_match_short_flags() -> set:
@@ -120,8 +109,3 @@ def get_output_short_flags() -> set:
 def get_format_short_flags() -> set:
     """Return set of short format flags for stage detection."""
     return {f.short for f in FORMAT_FLAGS}
-
-
-def get_relationship_short_flags() -> set:
-    """Return set of short relationship flags for stage detection."""
-    return {f.short for f in RELATIONSHIP_FLAGS}

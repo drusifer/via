@@ -57,13 +57,12 @@ def _build_pipeline_help() -> str:
     - Type: -tc (class), -tf (function), -tm (method), etc.
     - Output: -oL (list), -oT (table), -oD (diagram), etc.
     - Format: -fa (ascii), -fm (markdown), -fh (html), -fp (png)
-    - Relationship: -Vinh (inherits-from), -Vca (calls), etc.
+    - Relationship: --via/-V (positive), --sans/-S (negative), --not (negation)
     """
     from via.core.flag_groups import (
         FORMAT_FLAGS,
         MATCH_FLAGS,
         OUTPUT_FLAGS,
-        RELATIONSHIP_FLAGS,
         TYPE_FLAGS,
     )
 
@@ -71,7 +70,6 @@ def _build_pipeline_help() -> str:
     type_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in TYPE_FLAGS)
     output_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in OUTPUT_FLAGS)
     format_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in FORMAT_FLAGS)
-    relationship_help = "\n".join(f"  {f.short}, {f.long:20} {f.help}" for f in RELATIONSHIP_FLAGS)
 
     return f"""\
 Pipeline Syntax (alternative to subcommands):
@@ -87,14 +85,16 @@ Options:
   -n, --limit N         Limit results to N matches
   -I, --case-insensitive  Case-insensitive matching (all -m<X> patterns are case-sensitive by default)
   -Q, --qualified       Match against qualified_name instead of symbol_name
+  --not                 Negate the match pattern (return non-matching symbols)
   --newerthan DURATION  Filter: symbols from files modified within DURATION (e.g. 1h, 2d, 1w)
   --olderthan DURATION  Filter: symbols from files NOT modified within DURATION (e.g. 1h, 2d)
 
-Relationship Flags (-V<X> or --via <type> or --ref-type <type>):
-{relationship_help}
-  --ref-type TYPE       Relationship type: inherits-from, calls, imports, references, declares
-  --stale               Filter: results older than their anchor (e.g. stale tests). Example: via -mg '*' -tc -Vinh -mg 'test_*' -tf --stale
-  --invert, -iv         Invert relationship direction
+Relationship Flags:
+  --via REL, -V REL     Positive relationship: return subjects WITH the relationship to an object
+  --sans REL, -S REL    Negative relationship: return subjects with NO relationship to any object
+                        REL is one of: inherits-from, calls, imports, references, declares
+  --stale               Filter: results older than their anchor (e.g. stale tests)
+                        Example: via -mg '*' -tc --via inherits-from -mg 'test_*' -tf --stale
 
 Output Flags (-o<X>):
 {output_help}
@@ -108,21 +108,21 @@ Context Lines (for -oR, -oF):
   -C N                  Show N lines before and after
 
 Examples:
-  via index .                                        # Index current directory
-  via -mg '*Test*' -tc                               # Classes matching *Test* (case-sensitive)
-  via -mg '*test*' -tc -I                            # Classes matching *test* (case-insensitive)
-  via -mg 'parse' -tf -n 10                          # First 10 functions with 'parse'
-  via -mg '*' -tc -oT                                # All classes as table
-  via -mg 'main' -tf -oR -C 3                        # Function source with context
-  via stats                                          # Database statistics
+  via index .                                          # Index current directory
+  via -mg '*Test*' -tc                                 # Classes matching *Test* (case-sensitive)
+  via -mg '*test*' -tc -I                              # Classes matching *test* (case-insensitive)
+  via -mg 'parse' -tf -n 10                            # First 10 functions with 'parse'
+  via -mg '*' -tc -oT                                  # All classes as table
+  via -mg 'main' -tf -oR -C 3                          # Function source with context
+  via --not -mg '_*' -tm                               # Methods NOT starting with underscore
+  via stats                                            # Database statistics
 
 Relationship Queries:
-  via -mg 'Base' -tc -Vinh -mg '*' -tc               # Who inherits from Base?
-  via -mg 'MyClass' -tc -Vinh -mg '*' -tc --invert   # What does MyClass inherit?
-  via -mg 'helper' -tf -Vca -mg '*' -tf              # Who calls helper()?
-  via -mg 'main' -tf -Vca -mg '*' -tf --invert       # What does main() call?
-  via -mg 'typing' -Vimp -mg '*' -tF                 # Files importing typing
-  via -mg 'MAX_SIZE' -tG -Vr -mg '*' -tf             # Who references MAX_SIZE?
+  via -mg 'Base' -tc --via inherits-from -mg '*' -tc   # Who inherits from Base?
+  via -mg 'Base' -tc -V inherits-from -mg '*' -tc      # Same, short form
+  via -mg 'helper' -tf --via calls -mg '*' -tf         # Who calls helper()?
+  via -mg 'typing' --via imports -mg '*' -tF           # Files importing typing
+  via -mg '*' -tf --sans calls -mg '*' -tf             # Functions that call nothing
 """
 
 

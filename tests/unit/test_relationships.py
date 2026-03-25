@@ -45,13 +45,6 @@ class TestRelationshipTypeEnum:
         """Test REFERENCES enum value."""
         assert RelationshipType.REFERENCES.value == 'references'
 
-    def test_short_flags(self):
-        """Test short flag mappings."""
-        assert RelationshipType.INHERITS_FROM.short_flag == 'inh'
-        assert RelationshipType.CALLS.short_flag == 'ca'
-        assert RelationshipType.IMPORTS.short_flag == 'imp'
-        assert RelationshipType.REFERENCES.short_flag == 'r'
-
     def test_relationship_count(self):
         """Test that we have exactly 5 relationship types (including DECLARES)."""
         assert len(RelationshipType) == 5

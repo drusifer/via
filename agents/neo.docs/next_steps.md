@@ -1,9 +1,8 @@
 # Neo Next Steps
 
-## Post-Sprint Defect Fixes: COMPLETE ✅
+## Sprint 13 — COMPLETE
 
-UX-001 + UX-002 fixed, 970 tests passing, Smith re-test pending.
+All tasks done. 1121 tests passing.
 
-## Sprint 11 (when directed by Mouse)
-- Wait for Cypher stories → Smith gate → Morpheus arch → Mouse planning → Neo impl
-- Standard TDD cycle: tests first, then code
+If returning: wait for Trin UAT + Morpheus review results.
+If fixes needed: read Trin's UAT report in CHAT.md for specific failures.

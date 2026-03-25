@@ -147,18 +147,20 @@ Use **via** for symbol lookup by name; use **Grep** for searching string content
 
 ### Relationship Queries
 
-Syntax: `<anchor-args> -Vxxx <result-args> [-iv]`
+Syntax: `<anchor-args> --via <rel> <result-args>` or `<anchor-args> --sans <rel> <result-args>`
 
-**`-iv` rule: KNOWN anchor always goes on the LEFT (before `-Vxxx`). `*` goes on the RIGHT.**
-- No `-iv`: returns things that relate **TO** the anchor (callers, subclasses, importers)
-- With `-iv`: returns what the anchor relates **TO** (callees, base classes, imported modules)
+**Direction rule:** anchor (BEFORE `--via`) is what you know; results (AFTER `--via`) are what you find.
+- `--via <rel>`: returns symbols that have the relationship TO the anchor
+- `--sans <rel>`: returns symbols with NO relationship to anything matching the object pattern
 
 | Task | Args |
 |------|------|
-| What calls `my_func`? | `["-mg", "my_func", "-tf", "-Vca", "-mg", "*"]` |
-| What does `MyClass` call? | `["-mg", "MyClass", "-tc", "-Vca", "-iv", "-mg", "*", "-tf"]` |
-| What imports `module_name`? | `["-mg", "module_name", "-Vimp", "-mg", "*"]` |
-| All subclasses of `Base` | `["-mg", "Base", "-tc", "-Vinh", "-mg", "*", "-tc"]` |
+| What calls `my_func`? | `["-mg", "my_func", "-tf", "--via", "calls", "-mg", "*"]` |
+| Who imports `module_name`? | `["-mg", "module_name", "--via", "imports", "-mg", "*"]` |
+| All subclasses of `Base` | `["-mg", "Base", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"]` |
+| Who references `Symbol`? | `["-mg", "Symbol", "--via", "references", "-mg", "*"]` |
+| Functions that call nothing | `["-mg", "*", "-tf", "--sans", "calls", "-mg", "*", "-tf"]` |
+| Root classes (no parent) | `["-mg", "*", "-tc", "--sans", "inherits-from", "-mg", "*", "-tc"]` |
 
 **Use before refactoring** — know every caller before changing a function signature. Zero file reads.
 

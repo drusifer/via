@@ -76,10 +76,10 @@ class TestBuildToolSchema:
 
     def test_schema_includes_relationship_flags(self):
         from via.mcp.schema import build_tool_schema
-        from via.core.flag_groups import RELATIONSHIP_FLAGS
         result = build_tool_schema()
         dumped = json.dumps(result)
-        assert any(f.short in dumped or f.long in dumped for f in RELATIONSHIP_FLAGS)
+        # New relationship flags: --via and --sans should appear in schema
+        assert "--via" in dumped or "-V" in dumped or "inherits-from" in dumped
 
     def test_schema_has_at_least_8_examples(self):
         from via.mcp.schema import build_tool_schema

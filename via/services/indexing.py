@@ -502,9 +502,9 @@ class IndexingService:
           - symbol → filename_symbol  (symbol is declared in this file, by basename)
           - method → class_symbol     (method is declared in this class)
 
-        This enables -Vhas queries like:
-          via -mg 'store.py' -tN -Vhas -tc    # all classes in store.py
-          via -mg 'MyClass' -tc -Vhas -tm     # all methods of MyClass
+        This enables --via declares queries like:
+          via -mg 'store.py' -tN --via declares -tc    # all classes in store.py
+          via -mg 'MyClass' -tc --via declares -tm     # all methods of MyClass
         """
         filename = os.path.basename(file_info.path)
 

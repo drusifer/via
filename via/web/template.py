@@ -505,7 +505,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </select>
       </div>
       <div class="toggle-row">
-        <span>Invert direction (--invert)</span>
+        <span>Negative relationship (--sans)</span>
         <label class="toggle"><input type="checkbox" id="invert"><span class="slider"></span></label>
       </div>
       <div class="toggle-row" style="margin-top:8px">

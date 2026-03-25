@@ -5,8 +5,8 @@ TLDR:
     build_tool_schema() constructs the MCP tool definition for via_query,
     including name, description, inputSchema (args: list[str]), and at least
     8 annotated examples. Reads MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS,
-    RELATIONSHIP_FLAGS, and FORMAT_FLAGS to build a comprehensive description
-    that Claude can use to construct correct via CLI invocations.
+    and FORMAT_FLAGS to build a comprehensive description that Claude can use
+    to construct correct via CLI invocations.
     Used by `via mcp schema` (human inspection) and `tools/list` (FastMCP).
 
 Author: Drew Gutstein
@@ -18,7 +18,6 @@ from via.core.flag_groups import (
     FORMAT_FLAGS,
     MATCH_FLAGS,
     OUTPUT_FLAGS,
-    RELATIONSHIP_FLAGS,
     TYPE_FLAGS,
 )
 
@@ -33,28 +32,29 @@ def build_tool_schema() -> dict:
     type_help = ", ".join(f"{f.short}/{f.long} ({f.help})" for f in TYPE_FLAGS)
     output_help = ", ".join(f"{f.short}/{f.long} ({f.help})" for f in OUTPUT_FLAGS)
     format_help = ", ".join(f"{f.short}/{f.long} ({f.help})" for f in FORMAT_FLAGS)
-    rel_help = ", ".join(f"{f.short}/{f.long} ({f.help})" for f in RELATIONSHIP_FLAGS)
 
     description = (
         "Query the VIA codebase index. Pass CLI args as a list of strings.\n\n"
         f"Match flags: {match_help}\n"
         f"Type filters: {type_help}\n"
         f"Output formats: {output_help}\n"
-        f"Format modifiers: {format_help}\n"
-        f"Relationship queries: {rel_help}\n\n"
-        "Relationship query syntax: <anchor-args> -Vxxx <result-args> [-iv]\n"
-        "  KNOWN anchor goes on the LEFT (before -Vxxx). Wildcard * goes on the RIGHT.\n"
-        "  Without -iv: returns things that relate TO the anchor (callers, subclasses, importers).\n"
+        f"Format modifiers: {format_help}\n\n"
+        "Relationship query syntax:\n"
+        "  --via/-V REL  Positive: return subjects WITH the relationship to the object.\n"
+        "  --sans/-S REL Negative: return subjects with NO such relationship.\n"
+        "  REL is one of: inherits-from, calls, imports, references, declares\n\n"
+        "  KNOWN anchor goes on the LEFT (before --via/--sans). Wildcard * goes on the RIGHT.\n"
+        "  --via: returns things that relate TO the anchor (callers, subclasses, importers).\n"
         "    Example: find all subclasses of Renderer\n"
-        "      [\"-mg\", \"Renderer\", \"-tc\", \"-Vinh\", \"-mg\", \"*\", \"-tc\"]\n"
-        "  With -iv: returns what the anchor relates TO (callees, base classes, imported modules).\n"
-        "    Example: find what a method calls\n"
-        "      [\"-mg\", \"my_method\", \"-tm\", \"-Vca\", \"-iv\", \"-mg\", \"*\"]\n\n"
+        "      [\"-mg\", \"Renderer\", \"-tc\", \"--via\", \"inherits-from\", \"-mg\", \"*\", \"-tc\"]\n"
+        "  --sans: returns subjects with no matching relationship.\n"
+        "    Example: find functions that call nothing\n"
+        "      [\"-mg\", \"*\", \"-tf\", \"--sans\", \"calls\", \"-mg\", \"*\", \"-tf\"]\n\n"
         "Note: -mg matches against the symbol name (not file path). For filepath symbols (-tF),\n"
         "the match is against the basename (e.g. 'utils.py'). For full-path matching, add -Q\n"
         "(e.g. via -mg 'via/core/*' -tF -Q matches by directory path, not just filename).\n\n"
-        "Note: -Vr (references) tracks name usages inside function/method bodies only. Class\n"
-        "inheritance declarations and module-level usages are not tracked by -Vr.\n\n"
+        "Note: --via references tracks name usages inside function/method bodies only. Class\n"
+        "inheritance declarations and module-level usages are not tracked by references.\n\n"
         "Returns a JSON array of symbol objects when -oJ is used (default for MCP)."
     )
 
@@ -81,19 +81,19 @@ def build_tool_schema() -> dict:
         },
         {
             "description": "Find all subclasses of a base class (anchor=base, result=subclasses)",
-            "args": ["-mg", "BaseClass", "-tc", "-Vinh", "-mg", "*", "-tc"],
+            "args": ["-mg", "BaseClass", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"],
         },
         {
-            "description": "Find what a class inherits FROM (-iv returns the base classes)",
-            "args": ["-mg", "MyClass", "-tc", "-Vinh", "-iv", "-mg", "*", "-tc"],
+            "description": "Find what a class inherits FROM (swap anchor and result sides)",
+            "args": ["-mg", "MyClass", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"],
         },
         {
             "description": "Find callers of a function (anchor=func, result=callers)",
-            "args": ["-mg", "connect", "-tf", "-Vca", "-mg", "*"],
+            "args": ["-mg", "connect", "-tf", "--via", "calls", "-mg", "*"],
         },
         {
-            "description": "Find what a method calls (-iv returns the callees; anchor on method, not class)",
-            "args": ["-mg", "my_method", "-tm", "-Vca", "-iv", "-mg", "*"],
+            "description": "Find what a method calls (anchor on method, result=callees)",
+            "args": ["-mg", "my_method", "-tm", "--via", "calls", "-mg", "*"],
         },
         {
             "description": "Find all global variables as JSON",
@@ -105,7 +105,11 @@ def build_tool_schema() -> dict:
         },
         {
             "description": "Find what imports a module (anchor=module, result=importers)",
-            "args": ["-mg", "logging", "-Vimp", "-mg", "*"],
+            "args": ["-mg", "logging", "--via", "imports", "-mg", "*"],
+        },
+        {
+            "description": "Find classes that inherit from nothing (--sans negation)",
+            "args": ["-mg", "*", "-tc", "--sans", "inherits-from", "-mg", "*", "-tc"],
         },
     ]
 

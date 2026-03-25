@@ -182,18 +182,18 @@ Use **via** for symbol/header lookups by name; use **Grep** for full-text conten
 
 ### Relationship Queries
 
-Syntax: `<anchor-args> -Vxxx <result-args> [-iv]`
+Syntax: `<anchor-args> --via <rel> <result-args>` or `<anchor-args> --sans <rel> <result-args>`
 
-**`-iv` rule: KNOWN anchor always goes on the LEFT (before `-Vxxx`). `*` goes on the RIGHT.**
-- No `-iv`: returns things that relate **TO** the anchor (callers, subclasses, importers)
-- With `-iv`: returns what the anchor relates **TO** (callees, base classes, imported modules)
+**Direction rule:** anchor (BEFORE `--via`) is what you know; results (AFTER `--via`) are what you find.
+- `--via <rel>`: returns symbols that have the relationship TO the anchor
+- `--sans <rel>`: returns symbols with NO relationship to anything matching the object pattern
 
 | Task | Args |
 |------|------|
-| Who references `Symbol`? | `["-mg", "Symbol", "-Vr", "-mg", "*"]` |
-| What does `Module` reference? | `["-mg", "Module", "-tc", "-Vr", "-iv", "-mg", "*"]` |
-| What imports `module`? | `["-mg", "*", "-Vimp", "-mg", "module_name"]` |
-| All subclasses of `Base` | `["-mg", "*", "-tc", "-Vinh", "-mg", "Base", "-tc"]` |
+| Who references `Symbol`? | `["-mg", "Symbol", "--via", "references", "-mg", "*"]` |
+| What imports `module`? | `["-mg", "module_name", "--via", "imports", "-mg", "*"]` |
+| All subclasses of `Base` | `["-mg", "Base", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"]` |
+| What calls `func`? | `["-mg", "func", "-tf", "--via", "calls", "-mg", "*"]` |
 
 **Use for `*ora ask` queries** — "where is X used?" answered as compact metadata, with exact file+line citations, without reading any files.
 

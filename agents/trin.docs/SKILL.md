@@ -162,18 +162,18 @@ Use **via** for symbol lookups; use **Grep** for searching assertion patterns in
 
 ### Relationship Queries
 
-Syntax: `<anchor-args> -Vxxx <result-args> [-iv]`
+Syntax: `<anchor-args> --via <rel> <result-args>` or `<anchor-args> --sans <rel> <result-args>`
 
-**`-iv` rule: KNOWN anchor always goes on the LEFT (before `-Vxxx`). `*` goes on the RIGHT.**
-- No `-iv`: returns things that relate **TO** the anchor (callers, subclasses, importers)
-- With `-iv`: returns what the anchor relates **TO** (callees, base classes, imported modules)
+**Direction rule:** anchor (BEFORE `--via`) is what you know; results (AFTER `--via`) are what you find.
+- `--via <rel>`: returns symbols that have the relationship TO the anchor
+- `--sans <rel>`: returns symbols with NO relationship to anything matching the object pattern
 
 | Task | Args |
 |------|------|
-| Everything that calls `func` | `["-mg", "func", "-tf", "-Vca", "-mg", "*"]` |
-| What does `MyClass` call? | `["-mg", "MyClass", "-tc", "-Vca", "-iv", "-mg", "*", "-tf"]` |
-| All subclasses of `Base` | `["-mg", "Base", "-tc", "-Vinh", "-mg", "*", "-tc"]` |
-| Who references `Symbol`? | `["-mg", "Symbol", "-Vr", "-mg", "*"]` |
+| Everything that calls `func` | `["-mg", "func", "-tf", "--via", "calls", "-mg", "*"]` |
+| All subclasses of `Base` | `["-mg", "Base", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"]` |
+| Who references `Symbol`? | `["-mg", "Symbol", "--via", "references", "-mg", "*"]` |
+| Functions that call nothing | `["-mg", "*", "-tf", "--sans", "calls", "-mg", "*", "-tf"]` |
 
 **Use before writing tests** — find every caller of a function to determine full test scope without reading any files. Subclass queries reveal all concrete types that need coverage.
 

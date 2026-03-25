@@ -5,8 +5,8 @@ TLDR:
     produce correct results for inheritance, calls, and imports queries regardless
     of file indexing order. Key fixture: relationship_project (tmp_path project
     indexed via IndexingService with multi-file inheritance and call chains).
-    Key test classes: TestRelationshipPipelineExecution (forward/inverted queries
-    for each relationship type), TestRelationshipResolutionOrder (regression for
+    Key test classes: TestRelationshipPipelineExecution (forward queries and
+    --sans negative queries), TestRelationshipResolutionOrder (regression for
     resolve_pending_relationships bug where import symbols were preferred over
     definition symbols when indexing order varied).
     Role: end-to-end regression guard for the pipeline query path; depends on
@@ -108,52 +108,46 @@ class TestRelationshipPipelineExecution:
         project_dir, db_path = relationship_project
         records = self._execute_pipeline(
             db_path, project_dir,
-            ["-mg", "BaseClass", "-tc", "-Vinh", "-mg", "*", "-tc"],
+            ["-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"],
         )
         names = [r.symbol_name for r in records]
         assert "ChildClass" in names, f"Expected ChildClass in {names}"
 
-    def test_inverted_inheritance(self, relationship_project):
-        """Inverted inheritance query returns parent."""
-        project_dir, db_path = relationship_project
-        records = self._execute_pipeline(
-            db_path, project_dir,
-            ["-mg", "ChildClass", "-tc", "-Vinh", "-mg", "*", "-tc", "--invert"],
-        )
-        names = [r.symbol_name for r in records]
-        assert "BaseClass" in names, f"Expected BaseClass in {names}"
+    def test_forward_inheritance_is_not_negative(self, relationship_project):
+        """Forward --via query has is_negative=False on the RelationshipFilter."""
+        parser = PipelineParser()
+        stages = parser.parse(["-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"])
+        rel = stages[0].args.relationship
+        assert rel.is_negative is False
 
     def test_forward_calls(self, relationship_project):
         """Forward calls query returns callers."""
         project_dir, db_path = relationship_project
         records = self._execute_pipeline(
             db_path, project_dir,
-            ["-mg", "func_a", "-tf", "-Vca", "-mg", "*", "-tf"],
+            ["-mg", "func_a", "-tf", "-V", "calls", "-mg", "*", "-tf"],
         )
         names = [r.symbol_name for r in records]
         assert "func_b" in names, f"Expected func_b in {names}"
 
-    def test_inverted_calls(self, relationship_project):
-        """Inverted calls query returns callees."""
-        project_dir, db_path = relationship_project
-        records = self._execute_pipeline(
-            db_path, project_dir,
-            ["-mg", "func_b", "-tf", "-Vca", "-mg", "*", "--invert"],
-        )
-        names = [r.symbol_name for r in records]
-        assert "func_a" in names or "helper_util" in names, f"Expected callees in {names}"
+    def test_sans_calls_is_negative(self, relationship_project):
+        """--sans calls sets is_negative=True on the RelationshipFilter."""
+        parser = PipelineParser()
+        stages = parser.parse(["-mg", "func_b", "-tf", "--sans", "calls", "-mg", "*"])
+        rel = stages[0].args.relationship
+        assert rel.is_negative is True
 
     def test_pipeline_stage_parsing(self, relationship_project):
         """Verify pipeline parser correctly parses relationship args."""
         parser = PipelineParser()
-        stages = parser.parse(["-mg", "BaseClass", "-tc", "-Vinh", "-mg", "*", "-tc"])
+        stages = parser.parse(["-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"])
         assert len(stages) == 1
         stage = stages[0]
         args = stage.args
         assert args.pattern == "BaseClass"
         assert args.relationship is not None
         assert args.relationship.object_pattern == "*"
-        assert args.relationship.invert is False
+        assert args.relationship.is_negative is False
 
 
 class TestRelationshipResolutionOrder:
@@ -236,7 +230,7 @@ def func_b():
         """Forward inheritance query works regardless of indexing order."""
         project_dir, db_path = reverse_indexed_project
         parser = PipelineParser()
-        stages = parser.parse(["-mg", "BaseClass", "-tc", "-Vinh", "-mg", "*", "-tc"])
+        stages = parser.parse(["-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"])
         with DatabaseStore(str(db_path), str(project_dir)) as db:
             executor = PipelineExecutor(db)
             result = executor.execute(stages)
@@ -248,7 +242,7 @@ def func_b():
         """CLI subprocess works regardless of indexing order."""
         project_dir, db_path = reverse_indexed_project
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "BaseClass", "-tc", "-Vinh", "-mg", "*", "-tc"],
+            [sys.executable, "-m", "via", "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,

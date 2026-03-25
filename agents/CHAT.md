@@ -1509,3 +1509,189 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-23 21:37:18</small>] [**Cypher**]->[**all**] **pm launch*:
  LAUNCHED. Sprint 12 Web UI + UX Polish. See CHANGELOG.md. 1121 Python + 74 JS + 22 E2E green. Sprint CLOSED.
+
+---
+[<small>2026-03-23 22:26:35</small>] [**User**]->[**Smith**] **request*:
+ give me 20 questions that you wish you could answer about code with via
+
+---
+[<small>2026-03-23 22:30:08</small>] [**Smith**]->[**all**] **user feedback*:
+ Done. agents/smith.docs/USE_CASES_20_QUESTIONS.md — 20 questions with exact via commands. 4 gaps identified: group-by-class count, compound AND query, path filtering, standalone unused-symbol detection.
+
+---
+[<small>2026-03-23 22:52:03</small>] [**Smith**]->[**all**] **user feedback*:
+ CLI design decision documented: agents/smith.docs/CLI_DESIGN_VIA_SANS_FLAGS.md. -V/--via (positive) + -S/--sans (negative) replace -Vrel + --invert. --not for match negation. Direction via arg order, no --invert needed.
+
+---
+[<small>2026-03-23 22:55:23</small>] [**Smith**]->[**all**] **user feedback*:
+ Design doc updated with all 20 use cases (old vs new style) + 9 queries unlocked by -S/--sans. agents/smith.docs/CLI_DESIGN_VIA_SANS_FLAGS.md
+
+---
+[<small>2026-03-23 23:05:52</small>] [**User**]->[**Cypher**] **request*:
+ Let's setup the next sprint to take Smiths doc into account. No backward compatibility - completely get rid of the old way in favor of --via, --sans and --not.
+
+---
+[<small>2026-03-23 23:05:56</small>] [**Cypher**]->[**all**] **pm plan*:
+ Cypher on deck. Reading Smith's design doc before writing stories.
+
+---
+[<small>2026-03-23 23:07:50</small>] [**Cypher**]->[**all**] **pm plan*:
+ Sprint 13 PRD ready: agents/cypher.docs/SPRINT_13_PRD.md. 5 stories — replace -Vrel/--invert with --via/--sans/--not. No compat. @Smith: review gate.
+
+---
+[<small>2026-03-23 23:09:46</small>] [**Bob**]->[**all**] **init*:
+ bob-protocol init. Sprint 12 SHIPPED: Web UI + UX fixes. 1121 Python + 74 JS + 22 E2E pass. Pending: Morpheus review → Cypher launch. Sprint 13 cycle starting now.
+
+---
+[<small>2026-03-23 23:10:33</small>] [**User**]->[**all**] **request*:
+ Sprint 13 full cycle requested. PRD ready: CLI Redesign (--via/--sans/--not). Starting now.
+
+---
+[<small>2026-03-23 23:10:48</small>] [**Cypher**]->[**all**] **pm plan sprint*:
+ Sprint 13 plan ready: CLI Relationship Redesign (5 stories, ~10pts). PRD: cypher.docs/SPRINT_13_PRD.md. Key: --via/--sans/--not replace -V<rel>/--invert. No backward compat. @Smith *user review.
+
+---
+[<small>2026-03-23 23:11:37</small>] [**Smith**]->[**all**] **user approve*:
+ *user approve Gate 1. Sprint 13 stories APPROVED WITH NOTES. Key: PRD wins (hard removal, no deprecated aliases), S13-4 must show constrained --sans example in --help. Full review: smith.docs/SPRINT_13_GATE1_REVIEW.md. @Morpheus *lead arch sprint.
+
+---
+[<small>2026-03-23 23:20:01</small>] [**Morpheus**]->[**all**] **lead arch*:
+ Morpheus activating. Reading Sprint 13 PRD + codebase: flag_groups.py, parser.py, executor.py, relationship_filter.py, store.py. Designing arch for --via/--sans/--not.
+
+---
+[<small>2026-03-23 23:21:26</small>] [**Morpheus**]->[**all**] **lead arch*:
+ Sprint 13 arch done. morpheus.docs/SPRINT_13_ARCHITECTURE.md. 8 files, 3 OQs for Neo. @Smith *user feedback Gate 2.
+
+---
+[<small>2026-03-23 23:21:30</small>] [**Smith**]->[**all**] **user approve*:
+ *user approve Gate 2. Arch is clean: is_negative replaces invert (correct), NOT EXISTS subquery right approach, --not negation clean. OQ-3 (stale+sans error) is correct behavior. Proceed to Mouse planning.
+
+---
+[<small>2026-03-23 23:22:04</small>] [**Mouse**]->[**all**] **sm plan*:
+ Sprint 13 plan: mouse.docs/SPRINT_13_TASKS.md. 3 phases, 10 tasks. P1: flag infra (S13-1), P2: --sans NOT EXISTS + --not (S13-2+S13-3), P3: help+tests (S13-4+S13-5). Baseline: 1121+74+22. @Neo start P1.
+
+---
+[<small>2026-03-23 23:22:10</small>] [**Neo**]->[**all**] **swe impl*:
+ Neo activating. Starting Sprint 13 P1: remove RELATIONSHIP_FLAGS, -Vinh etc., rewrite parser to --via/-V, --sans/-S, --not. Reading affected files.
+
+---
+[<small>2026-03-23 23:42:03</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+====== 174 failed, 812 passed, 2 skipped, 133 errors in 92.86s (0:01:32) =======
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-24 21:25:01</small>] [**Bob**]->[**all**] **init*:
+ bob-protocol init. Sprint 13 in flight. Neo's P1 impl left 174 failures + 133 errors. Resuming as Neo to diagnose.
+
+---
+[<small>2026-03-24 21:28:22</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+====== 39 failed, 1076 passed, 1 skipped, 4 warnings in 123.11s (0:02:03) ======
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-24 21:36:51</small>] [**Neo**]->[**all**] **swe fix*:
+ Neo activating. 39 failures: 5 fix areas. Starting now.
+
+---
+[<small>2026-03-24 21:41:54</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1115 passed, 1 skipped, 4 warnings in 122.07s (0:02:02) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-24 22:21:03</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1115 passed, 1 skipped, 4 warnings in 123.85s (0:02:03) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-24 22:22:02</small>] [**Neo**]->[**all**] **swe handoff*:
+ Neo state saved. Sprint 13: 1115/1121 tests pass. P3-3 (add 6 new --sans/--not tests) needed to reach baseline. Resume: neo.docs/next_steps.md. Low context — restart.
+
+---
+[<small>2026-03-24 22:47:25</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1120 passed, 1 skipped, 4 warnings in 123.02s (0:02:03) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-24 22:49:52</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1121 passed, 1 skipped, 4 warnings in 123.10s (0:02:03) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-24 22:50:01</small>] [**Neo**]->[**all**] **swe handoff*:
+ P3-3 done. 1121 tests pass (baseline met). Added 6 new tests: 2x --sans calls, 1x -S alias, 2x --not (underscore/test_ exclusion), 1x --not error. @Trin *qa uat Sprint 13.
+
+---
+[<small>2026-03-24 22:50:24</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test-js | /home/drusifer/Projects/via/build/build.out
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.12.0
+npm notice To update run: npm install -g npm@11.12.0
+npm notice
+
+---
+[<small>2026-03-24 22:50:54</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test-e2e | /home/drusifer/Projects/via/build/build.out
+
+22 passed (27.6s)
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-03-24 22:52:08</small>] [**Trin**]->[**all**] **qa done*:
+ Sprint 13 UAT PASSED. 1121 Python + 74 JS + 22 E2E. All DoD checks green: -Vinh errors, --help clean, --sans/--not work. @Morpheus *lead review Sprint 13.
+
+---
+[<small>2026-03-24 22:52:43</small>] [**Morpheus**]->[**all**] **lead review*:
+ Sprint 13 code review APPROVED. Architecture alignment confirmed. flag_groups clean, is_negative correct, NOT EXISTS query sound, --not validation solid. OQ-1/2/3 resolved. @Cypher *pm launch Sprint 13.
+
+---
+[<small>2026-03-24 22:53:48</small>] [**User**]->[**Smith**] **request*:
+ try it out and lmkwyt
+
+---
+[<small>2026-03-24 22:53:58</small>] [**Smith**]->[**all**] **user test*:
+ Activating. Running Sprint 13 --via/--sans/--not through real-use scenarios on the via codebase itself.
+
+---
+[<small>2026-03-24 22:55:38</small>] [**Smith**]->[**all**] **user bug*:
+ Sprint 13 UX: PASS on all features. BUG: 4 SKILL.md files + USE_CASES doc use dead flags (-Vinh/-Vca/-Vimp/-Vr/--invert). Breaks agent nav. Report: smith.docs/SPRINT_13_TEST_REPORT.md. @Bob fix SKILL.md via-query tables.
+
+---
+[<small>2026-03-24 22:58:40</small>] [**Bob**]->[**all**] **reprompt*:
+ SKILL.md reprompt done. neo/trin/morpheus/oracle + USE_CASES updated: old -Vinh/-Vca/-Vimp/-Vr/--invert → --via/--sans. Zero stale flags remain. Sprint 13 docs clean. @Cypher *pm launch Sprint 13.
+
+---
+[<small>2026-03-24 22:58:48</small>] [**Cypher**]->[**all**] **pm launch*:
+ Sprint 13 LAUNCHED. CLI Relationship Redesign shipped. --via/-V, --sans/-S, --not replace all old flags. No compat. 1121 Python + 74 JS + 22 E2E pass. Docs + SKILL.md updated. Gap closed: --sans has solves Q14.
+
+---
+[<small>2026-03-24 23:02:28</small>] [**User**]->[**Morpheus**] **request*:
+ is the web ui updated as well?
+
+---
+[<small>2026-03-24 23:02:51</small>] [**Morpheus**]->[**all**] **lead review*:
+ Web UI checked. Label already says 'Negative relationship (--sans)' — Sprint 13 terminology correct. Internal checkbox id='invert' is non-user-facing; maps correctly to is_negative in RelationshipFilter. No changes needed.
+
+---
+[<small>2026-03-24 23:03:20</small>] [**User**]->[**Smith**] **request*:
+ did you review the new screenshots?
+
+---
+[<small>2026-03-24 23:03:51</small>] [**User**]->[**Trin**] **request*:
+ help smith find the screenshots please
+
+---
+[<small>2026-03-24 23:04:00</small>] [**Trin**]->[**Smith**] **qa handoff*:
+ Found screenshots in tests/e2e/screenshots/. Named UX shots: ux-01 through ux-05 (.png). Plus per-test Playwright shots. Handing to Smith for review.
+
+---
+[<small>2026-03-24 23:05:26</small>] [**Smith**]->[**all**] **user feedback*:
+ Reviewed all 5 UX screenshots. All PASS. Relationship panel shows '--sans'/'--stale' labels correctly. Badges, result counts, diagram, error state all clean. No defects.
+
+---
+[<small>2026-03-24 23:05:59</small>] [**User**]->[**Cypher**] **request*:
+ ship it

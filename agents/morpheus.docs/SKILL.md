@@ -151,19 +151,19 @@ Use **via** for symbol/header lookup; use **Grep** for searching patterns inside
 
 ### Relationship Queries
 
-Syntax: `<anchor-args> -Vxxx <result-args> [-iv]`
+Syntax: `<anchor-args> --via <rel> <result-args>` or `<anchor-args> --sans <rel> <result-args>`
 
-**`-iv` rule: KNOWN anchor always goes on the LEFT (before `-Vxxx`). `*` goes on the RIGHT.**
-- No `-iv`: returns things that relate **TO** the anchor (callers, subclasses, importers)
-- With `-iv`: returns what the anchor relates **TO** (callees, base classes, imported modules)
+**Direction rule:** anchor (BEFORE `--via`) is what you know; results (AFTER `--via`) are what you find.
+- `--via <rel>`: returns symbols that have the relationship TO the anchor
+- `--sans <rel>`: returns symbols with NO relationship to anything matching the object pattern
 
 | Task | Args |
 |------|------|
-| All subclasses of `Base` | `["-mg", "Base", "-tc", "-Vinh", "-mg", "*", "-tc"]` |
-| What does `Component` inherit FROM? | `["-mg", "Component", "-tc", "-Vinh", "-iv", "-mg", "*", "-tc"]` |
-| Who imports `module`? | `["-mg", "module_name", "-Vimp", "-mg", "*"]` |
-| Who references `Symbol`? | `["-mg", "SymbolName", "-Vr", "-mg", "*"]` |
-| What does `Component` call? | `["-mg", "Component", "-tc", "-Vca", "-iv", "-mg", "*", "-tf"]` |
+| All subclasses of `Base` | `["-mg", "Base", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"]` |
+| Who imports `module`? | `["-mg", "module_name", "--via", "imports", "-mg", "*"]` |
+| Who references `Symbol`? | `["-mg", "SymbolName", "--via", "references", "-mg", "*"]` |
+| What calls `func`? | `["-mg", "func", "-tf", "--via", "calls", "-mg", "*"]` |
+| Root classes (no parent) | `["-mg", "*", "-tc", "--sans", "inherits-from", "-mg", "*", "-tc"]` |
 
 **Use for architecture review** — build a complete component dependency or inheritance map as compact metadata before writing a single line of ARCH.md.
 

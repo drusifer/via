@@ -7,9 +7,9 @@ TLDR:
     inheritance, method calls, and imports.
     Key fixture: indexed_project_with_relationships (builds a multi-class project
     tree and indexes it via IndexingService/PythonParser/ParserRegistry).
-    Key classes: TestInheritanceRelationshipCLI (-Vinh forward/inverted/glob),
-    TestCallRelationshipCLI (-Vca callers and callees), TestImportRelationshipCLI
-    (-Vimp forward/inverted), TestRelationshipEdgeCases (empty results, --limit).
+    Key classes: TestInheritanceRelationshipCLI (-V inherits-from forward/sans/glob),
+    TestCallRelationshipCLI (-V calls callers and sans), TestImportRelationshipCLI
+    (-V imports forward/sans), TestRelationshipEdgeCases (empty results, --limit).
     Consumed by: pytest integration suite; depends on DatabaseStore, DiscoveredFile,
     IndexingService, PythonParser, ParserRegistry.
 
@@ -112,10 +112,10 @@ class TestInheritanceRelationshipCLI:
 
     def test_query_classes_inheriting_from_base(self, indexed_project_with_relationships):
         """Test: Find classes that inherit from BaseClass."""
-        # Syntax: -mg RELATE_TO -tc -Vinh RESULTS_FILTER
+        # Syntax: -mg RELATE_TO -tc -V inherits-from RESULTS_FILTER
         # "Find all classes (*) that inherit from BaseClass"
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "BaseClass", "-tc", "-Vinh", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -124,24 +124,26 @@ class TestInheritanceRelationshipCLI:
         # ChildClass inherits from BaseClass
         assert "ChildClass" in result.stdout
 
-    def test_query_what_class_inherits_from_inverted(self, indexed_project_with_relationships):
-        """Test: Find what ChildClass inherits from (inverted query)."""
-        # With --invert: "Find all classes (*) that ChildClass inherits from"
+    def test_query_sans_inheritance_is_negative(self, indexed_project_with_relationships):
+        """Test: --sans inherits-from runs without error (NOT EXISTS query)."""
+        # --sans inherits-from: finds classes that do NOT inherit from BaseClass
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "ChildClass", "-tc", "-Vinh", "-mg", "*", "--invert"],
+            [sys.executable, "-m", "via", "-mg", "BaseClass", "-tc", "--sans", "inherits-from", "-mg", "*"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        # ChildClass inherits from BaseClass
-        assert "BaseClass" in result.stdout
+        # BaseClass itself does not inherit from BaseClass → it should appear
+        # ChildClass and GrandChildClass do inherit → they should NOT appear
+        assert "ChildClass" not in result.stdout
+        assert "GrandChildClass" not in result.stdout
 
     def test_query_inheritance_with_glob_pattern(self, indexed_project_with_relationships):
         """Test inheritance query with glob pattern."""
         # "Find all classes (*) that inherit from any *Class"
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "*Class", "-tc", "-Vinh", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "*Class", "-tc", "-V", "inherits-from", "-mg", "*"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -160,7 +162,7 @@ class TestCallRelationshipCLI:
         """Test: Find functions that call helper."""
         # "Find all functions (*) that call helper"
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "helper", "-tf", "-Vca", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "helper", "-tf", "-V", "calls", "-mg", "*"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -170,25 +172,26 @@ class TestCallRelationshipCLI:
         output = result.stdout
         assert "process_data" in output or "main" in output
 
-    def test_query_what_function_calls_inverted(self, indexed_project_with_relationships):
-        """Test: Find what main() calls (inverted query)."""
-        # With --invert: "Find all functions (*) that main calls"
+    def test_query_sans_calls_is_not_exists(self, indexed_project_with_relationships):
+        """Test: --sans calls finds functions that do NOT call helper."""
+        # --sans calls helper: functions that do NOT call helper
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "main", "-tf", "-Vca", "-mg", "*", "--invert"],
+            [sys.executable, "-m", "via", "-mg", "helper", "-tf", "--sans", "calls", "-mg", "*"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        # main calls process_data and helper
+        # process_data and main DO call helper → should NOT appear
         output = result.stdout
-        assert "process_data" in output or "helper" in output
+        assert "process_data" not in output
+        assert "main" not in output
 
     def test_query_method_callers(self, indexed_project_with_relationships):
         """Test: Find methods that call base_method."""
         # "Find all methods (*) that call base_method"
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "base_method", "-tm", "-Vca", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "base_method", "-tm", "-V", "calls", "-mg", "*"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -205,7 +208,7 @@ class TestImportRelationshipCLI:
         """Test: Find files/symbols that import os."""
         # "Find all imports (*) that import os"
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "os", "-ti", "-Vimp", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "os", "-ti", "-V", "imports", "-mg", "*"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -214,18 +217,16 @@ class TestImportRelationshipCLI:
         # Should find the os import symbol
         assert "os" in result.stdout or "module.py" in result.stdout
 
-    def test_query_what_file_imports_inverted(self, indexed_project_with_relationships):
-        """Test: Find what modules the os import relates to (inverted)."""
-        # With --invert: "Find all modules (*) that os imports"
+    def test_query_sans_imports_runs_without_error(self, indexed_project_with_relationships):
+        """Test: --sans imports runs without error (NOT EXISTS query)."""
+        # --sans imports os: find import symbols that do NOT import os
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "os", "-ti", "-Vimp", "-mg", "*", "--invert"],
+            [sys.executable, "-m", "via", "-mg", "os", "-ti", "--sans", "imports", "-mg", "*"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        # Should find the os module
-        assert "os" in result.stdout
 
 
 class TestRelationshipEdgeCases:
@@ -235,7 +236,7 @@ class TestRelationshipEdgeCases:
         """Test query for non-existent relationship returns empty."""
         # "Find all classes (*) that inherit from NonExistentClass"
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "NonExistentClass", "-tc", "-Vinh", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "NonExistentClass", "-tc", "-V", "inherits-from", "-mg", "*"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -248,7 +249,7 @@ class TestRelationshipEdgeCases:
         """Test relationship query respects limit."""
         # "Find up to 1 function that calls helper"
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "helper", "-tf", "-Vca", "-mg", "*", "-n", "1"],
+            [sys.executable, "-m", "via", "-mg", "helper", "-tf", "-V", "calls", "-mg", "*", "-n", "1"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,

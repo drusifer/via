@@ -106,7 +106,7 @@ class TestBuildRelationshipFilter:
         rf = _build_relationship_filter(body, "inherits-from")
         assert rf.relationship_type.value == "inherits-from"
         assert rf.object_pattern == "*"
-        assert rf.invert is False
+        assert rf.is_negative is False
         assert rf.result_stale is False
 
     def test_has_maps_to_declares(self):
@@ -131,7 +131,7 @@ class TestBuildRelationshipFilter:
             "stale": False,
         }
         rf = _build_relationship_filter(body, "calls")
-        assert rf.invert is True
+        assert rf.is_negative is True
 
     def test_stale_flag_passed(self):
         body = {

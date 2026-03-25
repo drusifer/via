@@ -133,7 +133,7 @@ class TestExecutorRelationshipQueries:
                 object_pattern='*',  # Return ALL children
                 object_match_syntax='glob',
                 object_types=['class'],
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
@@ -147,14 +147,14 @@ class TestExecutorRelationshipQueries:
         assert 'BaseClass' not in names
 
     def test_execute_inherits_from_inverted(self, db_with_relationships):
-        """Test finding parent classes (inverted inheritance query)."""
+        """Test --sans inherits-from: find classes with no parent (NOT EXISTS)."""
         executor = PipelineExecutor(db_with_relationships)
 
-        # Query: Find parent of ChildA (inverted: what does ChildA inherit from?)
-        # With invert, pattern BEFORE --via = what you query ABOUT (ChildA)
-        # Pattern AFTER --via = filter results (all parents)
+        # Query: Find classes with NO inherits-from relationship (--sans semantics)
+        # BaseClass has no parent → should appear
+        # ChildA, ChildB have parents → should NOT appear
         args = Namespace(
-            pattern='ChildA',  # Query ABOUT ChildA
+            pattern='*',  # All classes
             match_syntax='glob',
             symbol_type='class',
             symbol_types=['class'],
@@ -165,20 +165,22 @@ class TestExecutorRelationshipQueries:
             format=None,
             relationship=RelationshipFilter(
                 relationship_type=RelationshipType.INHERITS_FROM,
-                object_pattern='*',  # Return ALL parents
+                object_pattern='*',
                 object_match_syntax='glob',
                 object_types=['class'],
-                invert=True  # Inverted: find what ChildA inherits from
+                is_negative=True  # NOT EXISTS: no inherits-from relationship
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
 
         results = list(executor.execute([stage]))
 
-        # Should find BaseClass (ChildA inherits from it)
+        # BaseClass has no parent → returned
+        # ChildA, ChildB have parents → not returned
         names = [r.symbol_name for r in results]
         assert 'BaseClass' in names
         assert 'ChildA' not in names
+        assert 'ChildB' not in names
 
     def test_execute_calls_query(self, db_with_relationships):
         """Test finding functions that call another function."""
@@ -201,7 +203,7 @@ class TestExecutorRelationshipQueries:
                 object_pattern='*',  # Return ALL callers
                 object_match_syntax='glob',
                 object_types=['function'],
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
@@ -214,13 +216,14 @@ class TestExecutorRelationshipQueries:
         assert 'helper_func' not in names
 
     def test_execute_calls_inverted(self, db_with_relationships):
-        """Test finding functions called by another function (inverted)."""
+        """Test --sans calls: find functions that call nothing (NOT EXISTS)."""
         executor = PipelineExecutor(db_with_relationships)
 
-        # Query: Find what main_func calls (inverted)
-        # With invert, pattern BEFORE --via = what you query ABOUT (the caller)
+        # Query: Find functions with NO calls relationship (--sans semantics)
+        # helper_func calls nothing → should appear
+        # main_func calls helper_func → should NOT appear
         args = Namespace(
-            pattern='main_func',  # Query ABOUT main_func
+            pattern='*',  # All functions
             match_syntax='glob',
             symbol_type='function',
             symbol_types=['function'],
@@ -231,17 +234,18 @@ class TestExecutorRelationshipQueries:
             format=None,
             relationship=RelationshipFilter(
                 relationship_type=RelationshipType.CALLS,
-                object_pattern='*',  # Return ALL called functions
+                object_pattern='*',
                 object_match_syntax='glob',
                 object_types=['function'],
-                invert=True
+                is_negative=True  # NOT EXISTS: no calls relationship
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
 
         results = list(executor.execute([stage]))
 
-        # Should find helper_func (main_func calls it)
+        # helper_func has no calls → returned
+        # main_func calls helper_func → not returned
         names = [r.symbol_name for r in results]
         assert 'helper_func' in names
         assert 'main_func' not in names
@@ -267,7 +271,7 @@ class TestExecutorRelationshipQueries:
                 object_pattern='*',  # Return ALL children
                 object_match_syntax='glob',
                 object_types=['class'],
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
@@ -301,7 +305,7 @@ class TestExecutorRelationshipQueries:
                 object_pattern='Child*',  # Filter results to Child*
                 object_match_syntax='glob',
                 object_types=['class'],
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
@@ -334,7 +338,7 @@ class TestExecutorRelationshipQueries:
                 object_pattern='*',
                 object_match_syntax='glob',
                 object_types=['class'],
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
@@ -368,7 +372,7 @@ class TestExecutorRelationshipLimit:
                 object_pattern='*',  # Return all children
                 object_match_syntax='glob',
                 object_types=['class'],
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)

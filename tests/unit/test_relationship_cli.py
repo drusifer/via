@@ -1,12 +1,12 @@
-"""Unit tests for CLI relationship flag parsing (Sprint 5).
+"""Unit tests for CLI relationship flag parsing (Sprint 5, updated Sprint 13).
 
 TLDR:
-    Tests that PipelineParser correctly parses relationship query syntax introduced
-    in Sprint 5. Key test classes: TestRelationshipFlagParsing (long-form --via
-    flags), TestRelationshipShortFlags (-Vinh/-Vca/-Vimp/-Vr short forms),
-    TestInvertFlag (--invert/-iv direction reversal), TestRelationshipWithOptions
-    (combined limit/case/output options), TestRelationshipEdgeCases (unknown types,
-    missing objects), TestRelationshipFlagDefinitions (flag registration check).
+    Tests that PipelineParser correctly parses relationship query syntax.
+    Key test classes: TestRelationshipFlagParsing (long-form --via TYPE flags),
+    TestRelationshipVShortFlag (-V TYPE short form), TestSansFlag (--sans/-S
+    negative relationship flags), TestRelationshipWithOptions (combined
+    limit/case/output options), TestRelationshipEdgeCases (unknown types,
+    missing objects).
     Role: protects the CLI parsing layer in PipelineParser; consumed by the test suite.
     Dependencies: PipelineParser, PipelineParseError, RelationshipType, StageType.
 
@@ -42,7 +42,7 @@ class TestRelationshipFlagParsing:
         assert rel.relationship_type == RelationshipType.INHERITS_FROM
         assert rel.object_pattern == '*Base*'
         assert 'class' in rel.object_types
-        assert rel.invert is False
+        assert rel.is_negative is False
 
     def test_parse_via_calls_long_form(self):
         """Test --via calls relationship."""
@@ -86,15 +86,15 @@ class TestRelationshipFlagParsing:
         assert rel.relationship_type == RelationshipType.REFERENCES
 
 
-class TestRelationshipShortFlags:
-    """Test short form relationship flags."""
+class TestRelationshipVShortFlag:
+    """Test -V TYPE short form relationship flags."""
 
-    def test_parse_Vinh_short_flag(self):
-        """Test -Vinh for inherits-from."""
+    def test_parse_V_inherits_from(self):
+        """Test -V inherits-from."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', 'Child*', '-tc',
-            '-Vinh',
+            '-V', 'inherits-from',
             '-mg', '*Base*', '-tc'
         ])
 
@@ -102,12 +102,12 @@ class TestRelationshipShortFlags:
         rel = subject.args.relationship
         assert rel.relationship_type == RelationshipType.INHERITS_FROM
 
-    def test_parse_Vca_short_flag(self):
-        """Test -Vca for calls."""
+    def test_parse_V_calls(self):
+        """Test -V calls."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tf',
-            '-Vca',
+            '-V', 'calls',
             '-mg', 'helper*', '-tf'
         ])
 
@@ -115,12 +115,12 @@ class TestRelationshipShortFlags:
         rel = subject.args.relationship
         assert rel.relationship_type == RelationshipType.CALLS
 
-    def test_parse_Vimp_short_flag(self):
-        """Test -Vimp for imports."""
+    def test_parse_V_imports(self):
+        """Test -V imports."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tF',
-            '-Vimp',
+            '-V', 'imports',
             '-mg', 'json', '-ti'
         ])
 
@@ -128,12 +128,12 @@ class TestRelationshipShortFlags:
         rel = subject.args.relationship
         assert rel.relationship_type == RelationshipType.IMPORTS
 
-    def test_parse_Vr_short_flag(self):
-        """Test -Vr for references."""
+    def test_parse_V_references(self):
+        """Test -V references."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tm',
-            '-Vr',
+            '-V', 'references',
             '-mg', 'self.*', '-tg'
         ])
 
@@ -142,49 +142,47 @@ class TestRelationshipShortFlags:
         assert rel.relationship_type == RelationshipType.REFERENCES
 
 
-class TestInvertFlag:
-    """Test --invert / -iv flag for relationship direction."""
+class TestSansFlag:
+    """Test --sans / -S flag for negative relationship filtering."""
 
-    def test_invert_long_form(self):
-        """Test --invert flag reverses relationship direction."""
+    def test_sans_long_form_sets_is_negative(self):
+        """Test --sans flag sets is_negative=True."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc',
-            '--via', 'inherits-from',
+            '--sans', 'inherits-from',
             '-mg', 'MyClass', '-tc',
-            '--invert'
         ])
 
         subject = stages[0]
         rel = subject.args.relationship
-        assert rel.invert is True
+        assert rel.is_negative is True
 
-    def test_invert_short_form(self):
-        """Test -iv short form for invert."""
+    def test_S_short_form_sets_is_negative(self):
+        """Test -S short form sets is_negative=True."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc',
-            '-Vinh',
-            '-mg', 'Parser*', '-tc',
-            '-iv'
+            '-S', 'calls',
+            '-mg', 'helper*', '-tc',
         ])
 
         subject = stages[0]
         rel = subject.args.relationship
-        assert rel.invert is True
+        assert rel.is_negative is True
 
-    def test_no_invert_by_default(self):
-        """Test invert is False by default."""
+    def test_no_sans_is_negative_false_by_default(self):
+        """Test is_negative is False by default (--via / -V)."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc',
-            '-Vinh',
+            '-V', 'inherits-from',
             '-mg', 'Base', '-tc'
         ])
 
         subject = stages[0]
         rel = subject.args.relationship
-        assert rel.invert is False
+        assert rel.is_negative is False
 
 
 class TestRelationshipWithOptions:
@@ -195,7 +193,7 @@ class TestRelationshipWithOptions:
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc', '-n', '5',
-            '-Vinh',
+            '-V', 'inherits-from',
             '-mg', 'Base*', '-tc'
         ])
 
@@ -208,7 +206,7 @@ class TestRelationshipWithOptions:
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc', '-I',
-            '-Vinh',
+            '-V', 'inherits-from',
             '-mg', 'base*', '-tc'
         ])
 
@@ -220,7 +218,7 @@ class TestRelationshipWithOptions:
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc',
-            '-Vinh',
+            '-V', 'inherits-from',
             '-mg', 'Base*', '-tc',
             '-oT', '-fm'
         ])
@@ -239,7 +237,7 @@ class TestRelationshipEdgeCases:
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc', '-tf',  # class OR function
-            '-Vca',
+            '-V', 'calls',
             '-mg', 'helper*', '-tf'
         ])
 
@@ -252,7 +250,7 @@ class TestRelationshipEdgeCases:
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tf',
-            '-Vca',
+            '-V', 'calls',
             '-mg', '*util*', '-tf', '-tm'  # function OR method
         ])
 
@@ -277,45 +275,8 @@ class TestRelationshipEdgeCases:
         with pytest.raises(PipelineParseError):
             parser.parse([
                 '-mg', '*', '-tc',
-                '-Vinh'
+                '-V', 'inherits-from'
                 # Missing object query
             ])
 
 
-class TestRelationshipFlagDefinitions:
-    """Test relationship flag definitions in flag_groups."""
-
-    def test_relationship_flags_exist(self):
-        """Test RELATIONSHIP_FLAGS are defined."""
-        from via.core.flag_groups import RELATIONSHIP_FLAGS
-
-        # Should have 5 relationship flags (including -Vhas for DECLARES)
-        assert len(RELATIONSHIP_FLAGS) == 5
-
-        # Check flag names
-        flag_suffixes = [f.suffix for f in RELATIONSHIP_FLAGS]
-        assert 'inh' in flag_suffixes
-        assert 'ca' in flag_suffixes
-        assert 'imp' in flag_suffixes
-        assert 'r' in flag_suffixes
-        assert 'has' in flag_suffixes
-
-    def test_relationship_short_flags(self):
-        """Test short flag format -V<suffix>."""
-        from via.core.flag_groups import RELATIONSHIP_FLAGS
-
-        short_flags = [f.short for f in RELATIONSHIP_FLAGS]
-        assert '-Vinh' in short_flags
-        assert '-Vca' in short_flags
-        assert '-Vimp' in short_flags
-        assert '-Vr' in short_flags
-
-    def test_get_relationship_short_flags(self):
-        """Test get_relationship_short_flags helper."""
-        from via.core.flag_groups import get_relationship_short_flags
-
-        flags = get_relationship_short_flags()
-        assert '-Vinh' in flags
-        assert '-Vca' in flags
-        assert '-Vimp' in flags
-        assert '-Vr' in flags

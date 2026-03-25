@@ -151,7 +151,7 @@ def _build_relationship_filter(body: Dict[str, Any], relationship_name: str):
         relationship_type=ReferenceType(rel_value),
         object_pattern=target_pattern,
         object_types=target_types,
-        invert=invert,
+        is_negative=invert,
         result_stale=stale,
         result_newerthan_seconds=None,
         result_olderthan_seconds=None,

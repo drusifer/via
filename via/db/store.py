@@ -606,6 +606,7 @@ class DatabaseStore:
         match_qualified: bool = False,
         newerthan_seconds: Optional[float] = None,
         olderthan_seconds: Optional[float] = None,
+        negated: bool = False,
     ) -> Iterator[MatchRecord]:
         """
         Match symbols using denormalized symbols table.
@@ -632,6 +633,7 @@ class DatabaseStore:
                 symbol_type, pattern, case_sensitive, limit, match_qualified,
                 newerthan_seconds=newerthan_seconds,
                 olderthan_seconds=olderthan_seconds,
+                negated=negated,
             )
             return
 
@@ -655,7 +657,8 @@ class DatabaseStore:
         if match_op.needs_escaping:
             pattern = pattern.replace("'", "''")
 
-        where_parts.append(f"{column} {match_op.sql_op} ?")
+        not_prefix = "NOT " if negated else ""
+        where_parts.append(f"{not_prefix}{column} {match_op.sql_op} ?")
         params.append(pattern)
 
         # Temporal filters (per-stage --newerthan / --olderthan)
@@ -729,6 +732,7 @@ class DatabaseStore:
         match_qualified: bool,
         newerthan_seconds: Optional[float] = None,
         olderthan_seconds: Optional[float] = None,
+        negated: bool = False,
     ) -> Iterator[MatchRecord]:
         """Match using Python regex instead of SQL REGEXP.
 
@@ -805,8 +809,8 @@ class DatabaseStore:
             # Get the value to match against
             match_value = row[6] if match_qualified else row[0]  # qualified_name or symbol_name
 
-            # Apply regex filter
-            if regex.search(match_value):
+            # Apply regex filter (negated=True inverts the match)
+            if (regex.search(match_value) is not None) != negated:
                 row_dict = {
                     'symbol_name': row[0],
                     'symbol_type': row[1],
@@ -1185,6 +1189,140 @@ class DatabaseStore:
 
         # Execute and yield results
         cursor = self.conn.execute(query, params)
+        for row in cursor:
+            row_dict = {
+                'symbol_name': row[0],
+                'symbol_type': row[1],
+                'file_path': row[2],
+                'line_number': row[3],
+                'byte_offset': row[4],
+                'byte_length': row[5],
+                'qualified_name': row[6],
+                'parent_name': row[7],
+                'mtime': row[8],
+                'base_names': row[10],
+            }
+            record = self._record_factory.create_from_row(row_dict)
+            record.anchor_mtime = row[9]
+            yield record
+
+    @require_connection
+    def query_negative_relationships(
+        self,
+        relationship_type: str,
+        subject_pattern: Optional[str] = None,
+        object_pattern: Optional[str] = None,
+        subject_type: Optional[str] = None,
+        object_type: Optional[str] = None,
+        match_op: MatchOp = MatchOp.GLOB,
+        case_sensitive: bool = True,
+        limit: int = 100,
+        result_newerthan_seconds: Optional[float] = None,
+        result_olderthan_seconds: Optional[float] = None,
+    ) -> Iterator[MatchRecord]:
+        """Query symbols that do NOT have the specified relationship (--sans semantics).
+
+        Returns subjects that have NO relationship of relationship_type to any
+        symbol matching object_pattern.
+
+        Args:
+            relationship_type: Type of relationship (e.g., 'inherits-from')
+            subject_pattern: Pattern to filter subject symbols
+            object_pattern: Pattern to filter object symbols in the NOT EXISTS check
+            subject_type: Symbol type filter for subjects
+            object_type: Symbol type filter for objects in the NOT EXISTS check
+            match_op: Match operator for pattern matching
+            case_sensitive: Whether pattern matching is case-sensitive
+            limit: Maximum results to return
+            result_newerthan_seconds: Filter subjects to symbols newer than N seconds ago
+            result_olderthan_seconds: Filter subjects to symbols older than N seconds ago
+
+        Yields:
+            MatchRecord objects for matching symbols
+        """
+        # Outer query: select subjects matching the subject filter
+        outer_where: List[Any] = []
+        outer_params: List[Any] = []
+
+        if subject_type:
+            outer_where.append("s.symbol_type = ?")
+            outer_params.append(subject_type)
+
+        if subject_pattern and subject_pattern != '*':
+            col = "s.symbol_name"
+            pat = subject_pattern
+            if not case_sensitive:
+                col = "LOWER(s.symbol_name)"
+                pat = pat.lower()
+            outer_where.append(f"{col} {match_op.sql_op} ?")
+            outer_params.append(pat)
+
+        # Temporal filters on the returned subject
+        now = time.time()
+        if result_newerthan_seconds is not None:
+            outer_where.append("s.mtime > ?")
+            outer_params.append(now - result_newerthan_seconds)
+        if result_olderthan_seconds is not None:
+            outer_where.append("s.mtime < ?")
+            outer_params.append(now - result_olderthan_seconds)
+
+        # NOT EXISTS subquery: no relationship of this type to any matching object
+        sub_where = ["r.from_symbol_id = s.id", "r.reference_type = ?"]
+        sub_params: List[Any] = [relationship_type]
+
+        if object_type:
+            sub_where.append("t.symbol_type = ?")
+            sub_params.append(object_type)
+
+        if object_pattern and object_pattern != '*':
+            col = "t.symbol_name"
+            pat = object_pattern
+            if not case_sensitive:
+                col = "LOWER(t.symbol_name)"
+                pat = pat.lower()
+            sub_where.append(f"{col} {match_op.sql_op} ?")
+            sub_params.append(pat)
+
+        not_exists_clause = (
+            "NOT EXISTS ("
+            "SELECT 1 FROM symbol_references r "
+            "JOIN symbols t ON r.to_symbol_id = t.id "
+            f"WHERE {' AND '.join(sub_where)}"
+            ")"
+        )
+        outer_where.append(not_exists_clause)
+
+        where_clause = " AND ".join(outer_where) if outer_where else "1=1"
+        all_params = outer_params + sub_params + [limit]
+
+        query = f"""
+            SELECT
+                s.symbol_name,
+                s.symbol_type,
+                s.file_path,
+                s.line_number,
+                s.byte_offset,
+                s.byte_length,
+                s.qualified_name,
+                s.parent_name,
+                s.mtime,
+                NULL as anchor_mtime,
+                b.base_names
+            FROM symbols s
+            LEFT JOIN (
+                SELECT sr2.from_symbol_id,
+                       GROUP_CONCAT(s2.symbol_name, ',') as base_names
+                FROM symbol_references sr2
+                JOIN symbols s2 ON sr2.to_symbol_id = s2.id
+                WHERE sr2.reference_type = 'inherits-from'
+                GROUP BY sr2.from_symbol_id
+            ) b ON b.from_symbol_id = s.id
+            WHERE {where_clause}
+            ORDER BY s.file_path, s.line_number
+            LIMIT ?
+        """
+
+        cursor = self.conn.execute(query, all_params)
         for row in cursor:
             row_dict = {
                 'symbol_name': row[0],

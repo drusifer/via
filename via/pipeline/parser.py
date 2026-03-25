@@ -7,10 +7,10 @@ TLDR:
     produce per-stage argument segments, then uses argparse internally (via
     _StoreSyntax and _AppendType custom actions) to decode match-syntax flags
     (-mg/-mr/-ms), OR'd symbol-type flags (-tc/-tf/...), output flags, and
-    format flags for each segment. Relationship queries (--via <rel-type> or
-    short forms like -Vinh) are detected within a segment and assembled into a
-    RelationshipFilter attached to the resulting PipelineStage. Raises
-    PipelineParseError on any invalid input.
+    format flags for each segment. Relationship queries (--via/-V or --sans/-S)
+    are detected within a segment and assembled into a RelationshipFilter
+    attached to the resulting PipelineStage. --not negates the match pattern.
+    Raises PipelineParseError on any invalid input.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
@@ -29,7 +29,7 @@ from via.core.flag_groups import (
     get_type_short_flags,
 )
 from via.core.duration import parse_duration
-from via.core.relationship_types import RelationshipType
+from via.core.relationship_types import ReferenceType
 from via.pipeline.relationship_filter import RelationshipFilter
 from via.pipeline.types import PipelineStage, StageType
 
@@ -104,7 +104,11 @@ class PipelineParser:
         return stages
 
     def _split_on_via(self, argv: List[str]) -> List[List[str]]:
-        """Split argv into segments at each --via flag (for non-relationship pipeline).
+        """Split argv into segments at each plain --via separator.
+
+        --via followed by a valid relationship type is a relationship flag
+        (kept in the current segment). --via alone is a pipeline separator.
+        -V is always a relationship short form (never a separator).
 
         Args:
             argv: Command line arguments
@@ -112,94 +116,95 @@ class PipelineParser:
         Returns:
             List of argument segments (empty segments filtered out)
         """
+        value_map = ReferenceType.get_value_map()
         segments = [[]]
         i = 0
         while i < len(argv):
             arg = argv[i]
             if arg == '--via':
-                # Check if next arg is a relationship type
-                value_map = RelationshipType.get_value_map()
+                # Check if next arg is a relationship type → relationship flag
                 if i + 1 < len(argv) and argv[i + 1] in value_map:
-                    # This is a relationship, keep it in current segment
                     segments[-1].append(arg)
                     segments[-1].append(argv[i + 1])
                     i += 2
                     continue
-                # Plain --via separator
+                # Plain --via separator → start new segment
                 segments.append([])
                 i += 1
                 continue
             segments[-1].append(arg)
             i += 1
 
-        # Filter out empty segments
         return [s for s in segments if s]
 
-    def _extract_invert_flag(self, args: List[str]) -> Tuple[List[str], bool]:
-        """Extract --invert/-iv flag from args.
-
-        Args:
-            args: List of arguments to process
-
-        Returns:
-            Tuple of (filtered_args, invert_flag)
-        """
-        filtered = []
-        invert = False
-        for arg in args:
-            if arg in ('--invert', '-iv'):
-                invert = True
-            else:
-                filtered.append(arg)
-        return (filtered, invert)
-
-    def _find_relationship_split(self, args: List[str]) -> Optional[Tuple[List[str], RelationshipType, List[str], bool]]:
-        """Find relationship flag in args and split into subject/object parts.
+    def _find_relationship_split(
+        self, args: List[str]
+    ) -> Optional[Tuple[List[str], 'ReferenceType', List[str], bool]]:
+        """Find --via/-V or --sans/-S in args and split into subject/object parts.
 
         Args:
             args: Command line arguments for a stage
 
         Returns:
-            Tuple of (subject_args, relationship_type, object_args, invert) or None
+            Tuple of (subject_args, relationship_type, object_args, is_negative) or None
+
+        Raises:
+            PipelineParseError: If relationship type value is invalid
         """
-        flag_map = RelationshipType.get_flag_map()
-        value_map = RelationshipType.get_value_map()
+        value_map = ReferenceType.get_value_map()
+        valid_rels = ', '.join(sorted(value_map.keys()))
 
-        # Look for relationship short flags (-Vinh, -Vca, etc.)
         for i, arg in enumerate(args):
-            if arg in flag_map:
-                rel_type = flag_map[arg]
+            if arg in ('--via', '-V', '--sans', '-S'):
+                is_negative = arg in ('--sans', '-S')
+                if i + 1 >= len(args):
+                    flag_name = '--sans' if is_negative else '--via'
+                    raise PipelineParseError(
+                        f"{flag_name} requires a relationship type argument.\n"
+                        f"Valid: {valid_rels}"
+                    )
+                rel_str = args[i + 1]
+                if rel_str not in value_map:
+                    flag_name = '--sans' if is_negative else '--via'
+                    raise PipelineParseError(
+                        f"Unknown relationship type '{rel_str}'.\n"
+                        f"Valid: {valid_rels}"
+                    )
+                rel_type = value_map[rel_str]
                 subject_args = args[:i]
-                object_args, invert = self._extract_invert_flag(args[i + 1:])
-                return (subject_args, rel_type, object_args, invert)
-
-        # Look for --via <relationship-type> long form
-        for i, arg in enumerate(args):
-            if arg == '--via' and i + 1 < len(args):
-                next_arg = args[i + 1]
-                if next_arg in value_map:
-                    rel_type = value_map[next_arg]
-                    subject_args = args[:i]
-                    object_args, invert = self._extract_invert_flag(args[i + 2:])
-                    return (subject_args, rel_type, object_args, invert)
-
-        # Look for --ref-type <value> (explicit column form — Sprint 10)
-        # Note: if both --via and --ref-type appear, --via wins (scanned first).
-        for i, arg in enumerate(args):
-            if arg == '--ref-type' and i + 1 < len(args):
-                next_arg = args[i + 1]
-                if next_arg in value_map:
-                    rel_type = value_map[next_arg]
-                    subject_args = args[:i]
-                    object_args, invert = self._extract_invert_flag(args[i + 2:])
-                    return (subject_args, rel_type, object_args, invert)
-                valid = ', '.join(sorted(value_map.keys()))
-                raise PipelineParseError(
-                    f"Error: Unknown --ref-type '{next_arg}'.\n"
-                    f"Valid types: {valid}."
-                )
+                object_args = args[i + 2:]
+                return (subject_args, rel_type, object_args, is_negative)
 
         return None
+
+    def _extract_not_flag(self, args: List[str]) -> Tuple[List[str], bool]:
+        """Extract --not flag from args and validate it precedes a match flag.
+
+        Args:
+            args: Command line arguments
+
+        Returns:
+            Tuple of (filtered_args_without_not, negated)
+
+        Raises:
+            PipelineParseError: If --not is not followed by a match flag
+        """
+        match_flags = {'-mg', '--match-glob', '-mr', '--match-regex', '-ms', '--match-sql'}
+        filtered = []
+        negated = False
+        for i, arg in enumerate(args):
+            if arg == '--not':
+                # Verify next arg is a match flag
+                remaining = args[i + 1:]
+                if not any(a in match_flags for a in remaining):
+                    raise PipelineParseError(
+                        "--not must precede a match flag "
+                        "(--match-glob, --match-regex, --match-sql)"
+                    )
+                negated = True
+            else:
+                filtered.append(arg)
+        return filtered, negated
 
     def _parse_stage(self, args: List[str]) -> PipelineStage:
         """Parse single stage using appropriate argparse parser.
@@ -249,17 +254,24 @@ class PipelineParser:
             if args and args[0] == 'match':
                 args = args[1:]
 
-            # Check for relationship query
+            # Check for relationship query (--via/-V or --sans/-S)
             rel_split = self._find_relationship_split(args)
             if rel_split:
-                subject_args, rel_type, object_args, invert = rel_split
+                subject_args, rel_type, object_args, is_negative = rel_split
 
                 if not object_args:
-                    raise PipelineParseError("Relationship query requires object pattern")
+                    flag = '--sans' if is_negative else '--via'
+                    raise PipelineParseError(
+                        f"{flag} requires an object pattern after the relationship type"
+                    )
+
+                # Extract --not from subject args
+                subject_args, negated = self._extract_not_flag(subject_args)
 
                 # Parse subject args
                 parsed_args = self.match_parser.parse_args(subject_args)
                 self._finalize_symbol_types(parsed_args)
+                parsed_args.negate_pattern = negated
 
                 # Parse object args (for pattern and types)
                 object_parsed = self.match_parser.parse_args(object_args)
@@ -273,13 +285,20 @@ class PipelineParser:
                 if getattr(object_parsed, 'olderthan', None):
                     result_olderthan = parse_duration(object_parsed.olderthan)
 
+                # --stale with --sans is not meaningful — error
+                if is_negative and getattr(object_parsed, 'stale', False):
+                    raise PipelineParseError(
+                        "--stale cannot be combined with --sans: --sans already "
+                        "selects symbols with NO relationship; --stale would be meaningless."
+                    )
+
                 # Create relationship filter
                 parsed_args.relationship = RelationshipFilter(
                     relationship_type=rel_type,
                     object_pattern=object_parsed.pattern or '*',
                     object_match_syntax=getattr(object_parsed, 'match_syntax', 'glob'),
                     object_types=object_parsed.symbol_types or [],
-                    invert=invert,
+                    is_negative=is_negative,
                     result_newerthan_seconds=result_newerthan,
                     result_olderthan_seconds=result_olderthan,
                     result_stale=getattr(object_parsed, 'stale', False),
@@ -293,10 +312,12 @@ class PipelineParser:
 
                 return PipelineStage(StageType.MATCH, parsed_args)
             else:
-                # Regular match stage
+                # Regular match stage — extract --not if present
+                args, negated = self._extract_not_flag(args)
                 parsed_args = self.match_parser.parse_args(args)
                 self._finalize_symbol_types(parsed_args)
                 parsed_args.relationship = None
+                parsed_args.negate_pattern = negated
 
                 return PipelineStage(StageType.MATCH, parsed_args)
         except (SystemExit, argparse.ArgumentError) as exc:
@@ -433,20 +454,9 @@ class PipelineParser:
         parser.add_argument('--olderthan', dest='olderthan', default=None, metavar='DURATION',
                           help='Filter: symbols whose file was NOT modified within DURATION (e.g. 1h, 2d)')
         parser.add_argument('--stale', dest='stale', action='store_true', default=False,
-                          help='Filter relationship results to those older than their anchor (e.g. stale tests). '
-                               "Example: via -mg '*' -tc -Vinh -mg 'test_*' -tf --stale")
-
-        # --ref-type: relationship specifier (alternative to -Vinh, -Vca, etc.)
-        # Listed here for --help visibility; extracted pre-parse by _find_relationship_split().
-        valid_types = sorted(RelationshipType.get_value_map().keys())
-        parser.add_argument(
-            '--ref-type',
-            dest='ref_type',
-            default=None,
-            choices=valid_types,
-            metavar='{' + ','.join(valid_types) + '}',
-            help='Relationship type (alternative to -Vinh, -Vca, etc.): ' + ', '.join(valid_types),
-        )
+                          help='Filter --via results older than their anchor (e.g. stale tests). '
+                               "Example: via --match-glob '*' --type-class "
+                               "--via inherits-from --match-glob 'test_*' --type-function --stale")
 
         return parser
 

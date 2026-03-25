@@ -127,7 +127,7 @@ class TestTypeFilterInRelationshipQueries:
         executor = PipelineExecutor(db_with_cross_type_relationships)
 
         # Query: Find symbols that reference MY_CONSTANT
-        # This is similar to: via -mg MY_CONSTANT -tg -Vr -mg *
+        # This is similar to: via -mg MY_CONSTANT -tg -V references -mg *
         args = Namespace(
             pattern='MY_CONSTANT',
             match_syntax='glob',
@@ -143,7 +143,7 @@ class TestTypeFilterInRelationshipQueries:
                 object_pattern='*',  # Return ALL referencers
                 object_match_syntax='glob',
                 object_types=None,  # Don't filter result types
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
@@ -180,7 +180,7 @@ class TestTypeFilterInRelationshipQueries:
                 object_pattern='*',
                 object_match_syntax='glob',
                 object_types=['method'],  # Only return methods
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
@@ -193,20 +193,21 @@ class TestTypeFilterInRelationshipQueries:
         # Should NOT find use_constant (function) because we filtered to methods
         assert 'use_constant' not in names
 
-    def test_inverted_reference_query_returns_global(self, db_with_cross_type_relationships):
+    def test_forward_reference_query_returns_method(self, db_with_cross_type_relationships):
         """
-        Inverted query: What does shared_logic reference?
-        Should return MY_CONSTANT (a global), even if we filter subject by method.
+        Forward query: What symbols reference MY_CONSTANT?
+        Should return shared_logic (method) and use_constant (function).
+        is_negative=False is explicit forward (--via) mode.
         """
         executor = PipelineExecutor(db_with_cross_type_relationships)
 
-        # Query: Find what shared_logic references
-        # Similar to: via -mg shared_logic -tm -Vr -mg * --invert
+        # Query: Find what references MY_CONSTANT (forward direction)
+        # Similar to: via -mg MY_CONSTANT -tg -V references -mg *
         args = Namespace(
-            pattern='shared_logic',
+            pattern='MY_CONSTANT',
             match_syntax='glob',
-            symbol_type='method',  # The subject is a method
-            symbol_types=['method'],
+            symbol_type='global',
+            symbol_types=['global'],
             case_insensitive=False,
             limit=10,
             match_qualified=False,
@@ -216,8 +217,8 @@ class TestTypeFilterInRelationshipQueries:
                 relationship_type=RelationshipType.REFERENCES,
                 object_pattern='*',
                 object_match_syntax='glob',
-                object_types=None,  # Don't filter result types
-                invert=True  # Inverted: what does shared_logic reference?
+                object_types=None,
+                is_negative=False  # Forward: who references MY_CONSTANT?
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
@@ -225,8 +226,9 @@ class TestTypeFilterInRelationshipQueries:
         results = list(executor.execute([stage]))
 
         names = [r.symbol_name for r in results]
-        # Should find MY_CONSTANT (the global that shared_logic references)
-        assert 'MY_CONSTANT' in names, f"Expected MY_CONSTANT in results, got: {names}"
+        # Should find shared_logic and use_constant (both reference MY_CONSTANT)
+        assert 'shared_logic' in names or 'use_constant' in names, \
+            f"Expected referencers in results, got: {names}"
 
     def test_calls_query_without_type_filter_on_results(self, db_with_cross_type_relationships):
         """
@@ -250,7 +252,7 @@ class TestTypeFilterInRelationshipQueries:
                 object_pattern='*',
                 object_match_syntax='glob',
                 object_types=None,  # Don't filter - return all callers
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
@@ -267,7 +269,7 @@ class TestTypeFilterOrdering:
     def test_subject_type_filter_applies_to_relate_to_target(self, db_with_cross_type_relationships):
         """
         The type filter BEFORE --via should filter the 'relate to' target.
-        Query: -mg MY_CONSTANT -tg -Vr -mg *
+        Query: -mg MY_CONSTANT -tg -V references -mg *
         The -tg should ensure MY_CONSTANT is a global (it is).
         """
         executor = PipelineExecutor(db_with_cross_type_relationships)
@@ -287,7 +289,7 @@ class TestTypeFilterOrdering:
                 object_pattern='*',
                 object_match_syntax='glob',
                 object_types=None,
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
@@ -300,7 +302,7 @@ class TestTypeFilterOrdering:
     def test_wrong_subject_type_filter_returns_empty(self, db_with_cross_type_relationships):
         """
         If the subject type filter doesn't match, query should return empty.
-        Query: -mg MY_CONSTANT -tc (class) -Vr -mg *
+        Query: -mg MY_CONSTANT -tc (class) -V references -mg *
         MY_CONSTANT is a global, not a class, so no matches.
         """
         executor = PipelineExecutor(db_with_cross_type_relationships)
@@ -320,7 +322,7 @@ class TestTypeFilterOrdering:
                 object_pattern='*',
                 object_match_syntax='glob',
                 object_types=None,
-                invert=False
+                is_negative=False
             )
         )
         stage = PipelineStage(StageType.MATCH, args)
