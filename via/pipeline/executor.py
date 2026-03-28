@@ -257,13 +257,6 @@ class PipelineExecutor:
         args = stage.args
         rel: RelationshipFilter = args.relationship
 
-        # --sans declares is not yet supported (NOT EXISTS on container membership is ambiguous)
-        if rel.relationship_type.value == 'declares':
-            raise ValueError(
-                "--sans declares is not yet supported. "
-                "Use --via declares to find symbols declared by a container."
-            )
-
         # Subject = the anchor side (BEFORE --sans): symbols to test for absence of relation
         subject_pattern = args.pattern
         object_pattern = rel.object_pattern
@@ -281,6 +274,11 @@ class PipelineExecutor:
         match_syntax = getattr(args, 'match_syntax', 'g')
         match_op = get_match_op(match_syntax)
 
+        # 'declares' stores container as to_symbol_id, member as from_symbol_id.
+        # For --sans declares (containers with no matching members), the NOT EXISTS
+        # subquery must anchor on to_symbol_id rather than from_symbol_id.
+        invert_join = rel.relationship_type.value == 'declares'
+
         return self.db.query_negative_relationships(
             relationship_type=rel.relationship_type.value,
             subject_pattern=subject_pattern,
@@ -292,6 +290,7 @@ class PipelineExecutor:
             limit=limit,
             result_newerthan_seconds=rel.result_newerthan_seconds,
             result_olderthan_seconds=rel.result_olderthan_seconds,
+            invert_join=invert_join,
         )
 
     def _match_multiple_types(

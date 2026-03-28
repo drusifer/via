@@ -378,8 +378,8 @@ via -mg '*' -tc --sans inherits-from -mg '*' -tc
 # Functions that call nothing
 via -mg '*' -tf --sans calls -mg '*' -tf
 
-# Files outside tests/ with no test functions (using --not to exclude test_ prefix)
-via -mg '*' -tF --sans has -mg '*' -tf
+# Functions that reference nothing (leaf implementations)
+via -mg '*' -tf --sans references -mg '*' -tf
 ```
 
 ### `--not`: Negate a Pattern Flag
@@ -389,9 +389,6 @@ via -mg '*' -tF --sans has -mg '*' -tf
 ```bash
 # All methods NOT starting with underscore
 via -mg '*' -tm --not -mg '_*' -tm
-
-# Functions with no 'test_' prefix (out-of-directory test detection)
-via -mg '*/tests/*' -tF --sans has --not -mg 'test_*' -tf
 ```
 
 ### `--stale`: Cross-Stage Temporal Filter
@@ -458,6 +455,9 @@ via -mg 'MAX_RETRIES' -tg --via references -mg '*' -tf
 
 # Find all referencers of a symbol
 via -mg 'process_data' -tf --via references -mg '*'
+
+# Functions that reference nothing (leaf implementations — no external dependencies)
+via -mg '*' -tf --sans references -mg '*' -tf
 ```
 
 ### Combining with Output Formats
@@ -937,11 +937,12 @@ via -mg "*" -tf --newerthan 1d -oT
 # Positive: find test_ functions INSIDE tests/ directory
 via -mg "*/tests/*" -tF --via declares -mg "test_*" -tf
 
-# Exclusion: find test_ functions NOT in tests/ — use --sans declares
-via -mg "*/tests/*" -tF --sans declares -mg "test_*" -tf
+# Exclusion: find files NOT in tests/ that have test_ functions
+# Use --not to negate the path pattern
+via --not -mg "*/tests/*" -tF --via declares -mg "test_*" -tf
 ```
 
-> **Note**: `--via declares` finds files that contain the target symbol. `--sans declares` finds files that contain NO matching symbol.
+> **Note**: `--via declares` finds files that contain the target symbol.
 
 #### 15. Do any method names shadow Python built-ins?
 

@@ -1219,6 +1219,7 @@ class DatabaseStore:
         limit: int = 100,
         result_newerthan_seconds: Optional[float] = None,
         result_olderthan_seconds: Optional[float] = None,
+        invert_join: bool = False,
     ) -> Iterator[MatchRecord]:
         """Query symbols that do NOT have the specified relationship (--sans semantics).
 
@@ -1266,8 +1267,17 @@ class DatabaseStore:
             outer_where.append("s.mtime < ?")
             outer_params.append(now - result_olderthan_seconds)
 
-        # NOT EXISTS subquery: no relationship of this type to any matching object
-        sub_where = ["r.from_symbol_id = s.id", "r.reference_type = ?"]
+        # NOT EXISTS subquery: no relationship of this type to any matching object.
+        # invert_join=True flips the join direction for relationships where the subject
+        # is the TO side (e.g. 'declares': container is to_symbol_id, member is from_symbol_id).
+        if invert_join:
+            sub_anchor = "r.to_symbol_id = s.id"
+            sub_join = "JOIN symbols t ON r.from_symbol_id = t.id"
+        else:
+            sub_anchor = "r.from_symbol_id = s.id"
+            sub_join = "JOIN symbols t ON r.to_symbol_id = t.id"
+
+        sub_where = [sub_anchor, "r.reference_type = ?"]
         sub_params: List[Any] = [relationship_type]
 
         if object_type:
@@ -1286,7 +1296,7 @@ class DatabaseStore:
         not_exists_clause = (
             "NOT EXISTS ("
             "SELECT 1 FROM symbol_references r "
-            "JOIN symbols t ON r.to_symbol_id = t.id "
+            f"{sub_join} "
             f"WHERE {' AND '.join(sub_where)}"
             ")"
         )

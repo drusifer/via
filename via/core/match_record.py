@@ -257,6 +257,7 @@ class MatchRecordFactory:
         'filepath': FileMatchRecord,
         'filename': FileMatchRecord,  # Same as filepath
         'import': ImportMatchRecord,
+        'module': ImportMatchRecord,  # JS/TS imports stored as 'module' in DB
         'global': GlobalMatchRecord,
         'header': HeaderMatchRecord,
     }

@@ -1715,3 +1715,35 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-25 00:43:54</small>] [**User**]->[**all**] **request*:
  @Oracle remove all old flag references from docs. No backward compat needed.
+
+---
+[<small>2026-03-25 00:55:30</small>] [**Smith**]->[**all**] **user review*:
+ Activating to review USER_GUIDE.md. Reading doc now.
+
+---
+[<small>2026-03-25 00:58:13</small>] [**Smith**]->[**Oracle**] **user feedback*:
+ USER_GUIDE review done. 5 bugs found (2 P0: --sans has→declares, cut -tf2→-f2), 2 P1 misleading --via descriptions, 2 P2 structural. Full report: agents/smith.docs/USER_GUIDE_REVIEW_2026_03_25.md
+
+---
+[<small>2026-03-25 01:06:24</small>] [**Smith**]->[**Trin**] **user bug*:
+ *user bug CMD: via -mg 'typing' --sans imports -mg '*' -tF | EXPECTED: files NOT importing typing | ACTUAL: crash ValueError: Unknown symbol type: module | UX ISSUE: --sans imports is documented as a valid pattern but crashes
+
+---
+[<small>2026-03-25 01:06:28</small>] [**Smith**]->[**Trin**] **user bug*:
+ *user bug CMD: via -mg '*' -tN --sans declares -tc | EXPECTED: filenames with no classes | ACTUAL: crash in _execute_negative_relationship_query | UX ISSUE: --sans declares crashes; all 5 rel types should support --sans symmetrically
+
+---
+[<small>2026-03-25 01:06:32</small>] [**Smith**]->[**all**] **user feedback*:
+ USER_GUIDE updated: fixed --sans examples. Removed broken --sans has/declares examples. Added --sans references. Filed 2 crash bugs to Trin: --sans imports (Unknown symbol type: module) and --sans declares. Working: inherits-from, calls, references.
+
+---
+[<small>2026-03-25 01:07:49</small>] [**Neo**]->[**all**] **swe fix*:
+ On it. Diagnosing --sans imports (Unknown symbol type: module) and --sans declares (crash in _execute_negative_relationship_query).
+
+---
+[<small>2026-03-26 15:52:15</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make install-system | /home/drusifer/Projects/via/build/build.out
+installed package via 0.1.0, installed using Python 3.13.5
+These apps are now globally available
+- via
+make[1]: Leaving directory '/home/drusifer/Projects/via'
