@@ -1,15 +1,19 @@
 # Cypher Current Task
 
-**Task**: Sprint 12 — Web UI for via
-**Status**: BLOCKED — awaiting Smith review gate
-**Updated**: 2026-03-22
+**Task**: Sprint 14 user stories written — awaiting Smith review
+**Status**: BLOCKED — waiting for Smith *user review
+**Updated**: 2026-04-05
 
-## Done
-- Written `agents/cypher.docs/SPRINT_12_USER_STORIES.md`
-- 5 stories, ~15pts
-- All via pipeline args inventoried and mapped to UI controls
-- 5 open questions filed for Morpheus (OQ-1 to OQ-5)
-- Posted to CHAT: @Smith review requested
+## Sprint 14 — Stories Written
+| Story | Points | Priority | Status |
+|-------|--------|----------|--------|
+| S14-1: JS/TS relationship extraction | 3 | P0 | ✍️ Written |
+| S14-2: `--lang` filter flag | 2 | P0 | ✍️ Written |
+| S14-5: Fix USER_GUIDE.md bugs | 1 | P0 | ✍️ Written |
+| S14-3: `--subtype` filter flag | 2 | P1 | ✍️ Written |
+| S14-4: Web UI `--via`/`--sans` UX | 2 | P1 | ✍️ Written |
+| **Total** | **10** | | |
 
-## Next (after Smith approves)
-- Handoff to Morpheus: `*lead arch sprint` using SPRINT_12_USER_STORIES.md
+## Next
+- Smith reviews → approve/revise stories
+- After Smith approval: @Morpheus *lead arch Sprint 14

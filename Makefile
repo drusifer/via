@@ -8,10 +8,10 @@ ifdef MKF_ACTIVE
 
 # ── Real recipes (invoked by mkf, not directly by the user) ─────────────────
 
-.PHONY: tldr install_bob update_bob pull_bob clean_bob
+.PHONY: tldr install_bob update_bob pull_bob clean_bob diff_bob
 
 tldr: ## Show TL;DR summaries from all project files (quick orientation for agents)
-	@$(VENV_PYTHON) agents/tools/tldr.py
+	@rg --no-heading "TL;DR:" --glob "*.md" -N | sed 's|^\./||' | sort
 
 install_bob: ## Copy agents into a project and set up skill links (usage: make install_bob TARGET=/path/to/project)
 	@[ -n "$(TARGET)" ] || { echo "Usage: make install_bob TARGET=/path/to/project"; exit 1; }
@@ -41,22 +41,21 @@ install_bob: ## Copy agents into a project and set up skill links (usage: make i
 	@echo "Done. BobProtocol installed in $(TARGET)"
 	@echo "Run 'make tldr' inside $(TARGET) to verify."
 
-update_bob: ## Update agents and skills in a project, preserving state (usage: make update_bob TARGET=/path/to/project)
+update_bob: ## Update bob-protocol personas, skills, tools, and templates in a target project (usage: make update_bob TARGET=/path/to/project)
 	@[ -n "$(TARGET)" ] || { echo "Usage: make update_bob TARGET=/path/to/project"; exit 1; }
 	@[ -d "$(TARGET)" ] || { echo "Error: $(TARGET) does not exist"; exit 1; }
 	@echo "Updating BobProtocol in $(TARGET)..."
-	@rsync -a \
-		--exclude='*.docs/context.md' \
-		--exclude='*.docs/current_task.md' \
-		--exclude='*.docs/next_steps.md' \
-		--exclude='CHAT.md' \
-		--exclude='chat_archive/' \
-		agents/ $(TARGET)/agents/
-	@echo "Ensuring new agent state files are initialised..."
+	@rsync -a agents/skills/ $(TARGET)/agents/skills/
+	@rsync -a agents/tools/  $(TARGET)/agents/tools/
+	@rsync -a agents/templates/ $(TARGET)/agents/templates/
+	@for f in agents/*.docs/SKILL.md; do \
+		rsync -a "$$f" "$(TARGET)/$$f"; \
+	done
+	@echo "Ensuring agent state files are initialised..."
 	@for dir in $(TARGET)/agents/*.docs; do \
-		[ -f $$dir/context.md ] || cp agents/templates/_template_context.md $$dir/context.md; \
+		[ -f $$dir/context.md ]      || cp agents/templates/_template_context.md      $$dir/context.md; \
 		[ -f $$dir/current_task.md ] || cp agents/templates/_template_current_task.md $$dir/current_task.md; \
-		[ -f $$dir/next_steps.md ] || cp agents/templates/_template_next_steps.md $$dir/next_steps.md; \
+		[ -f $$dir/next_steps.md ]   || cp agents/templates/_template_next_steps.md   $$dir/next_steps.md; \
 	done
 	@[ -f $(TARGET)/agents/CHAT.md ] || cp agents/templates/_template_CHAT.md $(TARGET)/agents/CHAT.md
 	@echo "Updating Makefile in $(TARGET)..."
@@ -69,17 +68,16 @@ update_bob: ## Update agents and skills in a project, preserving state (usage: m
 	@echo ""
 	@echo "Done. BobProtocol updated in $(TARGET)"
 
-pull_bob: ## Pull updates from another project using BobProtocol, preserving local state (usage: make pull_bob SRC=/path/to/project)
+pull_bob: ## Pull bob-protocol personas, skills, tools, and templates from another project (usage: make pull_bob SRC=/path/to/project)
 	@[ -n "$(SRC)" ] || { echo "Usage: make pull_bob SRC=/path/to/project"; exit 1; }
 	@[ -d "$(SRC)" ] || { echo "Error: $(SRC) does not exist"; exit 1; }
 	@echo "Pulling BobProtocol updates from $(SRC)..."
-	@rsync -a --existing \
-		--exclude='*.docs/context.md' \
-		--exclude='*.docs/current_task.md' \
-		--exclude='*.docs/next_steps.md' \
-		--exclude='CHAT.md' \
-		--exclude='chat_archive/' \
-		$(SRC)/agents/ agents/
+	@rsync -a --existing $(SRC)/agents/skills/    agents/skills/
+	@rsync -a --existing $(SRC)/agents/tools/     agents/tools/
+	@rsync -a --existing $(SRC)/agents/templates/ agents/templates/
+	@for f in agents/*.docs/SKILL.md; do \
+		[ -f "$(SRC)/$$f" ] && rsync -a "$(SRC)/$$f" "$$f" || true; \
+	done
 	@echo ""
 	@echo "Done. BobProtocol pulled from $(SRC)"
 
@@ -96,6 +94,29 @@ clean_bob: ## Remove generated symlinks and reset agent memory/state files
 	@cp agents/templates/_template_CHAT.md agents/CHAT.md
 	@echo "Done. Environment cleaned and state reset."
 
+diff_bob: ## Compare bob-protocol personas, skills, tools, and templates with a target project (usage: make diff_bob TARGET=/path/to/project)
+	@[ -n "$(TARGET)" ] || { echo "Usage: make diff_bob TARGET=/path/to/project"; exit 1; }
+	@[ -d "$(TARGET)" ] || { echo "Error: $(TARGET) does not exist"; exit 1; }
+	@echo "Diffing BobProtocol: $(CURDIR) vs $(TARGET)"
+	@echo ""
+	@for dir in agents/skills agents/tools agents/templates; do \
+		if [ -d "$(TARGET)/$$dir" ]; then \
+			diff -rq "$$dir" "$(TARGET)/$$dir"; \
+		else \
+			echo "Only in this project: $$dir/"; \
+		fi; \
+	done || true
+	@for f in agents/*.docs/SKILL.md; do \
+		tgt="$(TARGET)/$$f"; \
+		if [ -f "$$tgt" ]; then \
+			diff -q "$$f" "$$tgt" || true; \
+		else \
+			echo "Only in this project: $$f"; \
+		fi; \
+	done
+	@echo ""
+	@echo "Done."
+
 else
 
 # ── Interception layer ───────────────────────────────────────────────────────
@@ -109,7 +130,7 @@ else
 #   make tldr V=-vv        stderr + filtered failures to terminal
 #   make tldr V=-vvv       stderr + full stdout to terminal
 
-.PHONY: help chat install_bob update_bob pull_bob clean_bob
+.PHONY: help chat install_bob update_bob pull_bob clean_bob diff_bob
 
 install_bob: ## Copy agents into a project and set up skill links (usage: make install_bob TARGET=/path/to/project)
 	@$(MAKE) MKF_ACTIVE=1 install_bob TARGET="$(TARGET)"
@@ -122,6 +143,9 @@ pull_bob: ## Pull updates from another project using BobProtocol, preserving loc
 
 clean_bob: ## Remove generated symlinks and reset agent memory/state files
 	@$(MAKE) MKF_ACTIVE=1 clean_bob
+
+diff_bob: ## Compare bob-protocol files with a target project, excluding state files (usage: make diff_bob TARGET=/path/to/project)
+	@$(MAKE) MKF_ACTIVE=1 diff_bob TARGET="$(TARGET)"
 
 help: ## Show available make targets
 	@echo ""

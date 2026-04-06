@@ -102,9 +102,9 @@ requires: ["bob-protocol"]
 
 ---
 
-## via MCP — Symbol Search
+## Via Integration
 
-The project has a live `via` MCP server. **Use `mcp__via__via_query` to find agent files and markdown sections** before editing — navigate by symbol name rather than guessing paths.
+**Check `agents/PROJECT.md` on entry.** If `via: enabled`, use `mcp__via__via_query` to find agent files and markdown sections before editing — navigate by symbol name rather than guessing paths. If via is not enabled, use Grep/Glob/Read instead.
 
 | Task | Args |
 |------|------|

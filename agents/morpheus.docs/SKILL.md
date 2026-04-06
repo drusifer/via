@@ -126,16 +126,16 @@ Invoke Smith with: `@Smith *user feedback <open question>`
 1. Update `context.md` — key decisions, findings, blockers from this session
 1. Update `current_task.md` — progress %, completed items, exact next item
 1. Update `next_steps.md` — step-by-step resume instructions for a cold start
-1. Post handoff message to CHAT.md
+1. Post handoff message: `make chat MSG="<summary> @NextPersona *command" PERSONA="<Name>" CMD="handoff" TO="<next>"`
 
 **Do NOT switch or stop until all four are written.**
 **State files are the only memory that survives context overflow or conversation restart.**
 
 ---
 
-## via MCP — Symbol Search & Relationships
+## Via Integration
 
-The project has a live `via` MCP server. **Use `mcp__via__via_query` when mapping architecture** — find all classes, their locations, and relationships before designing.
+**Check `agents/PROJECT.md` on entry.** If `via: enabled`, use `mcp__via__via_query` when mapping architecture — find all classes, their locations, and relationships before designing. If via is not enabled, use Grep/Glob/Read instead.
 
 | Task | Args |
 |------|------|
@@ -151,19 +151,19 @@ Use **via** for symbol/header lookup; use **Grep** for searching patterns inside
 
 ### Relationship Queries
 
-Syntax: `<anchor-args> --via <rel> <result-args>` or `<anchor-args> --sans <rel> <result-args>`
+Syntax: `<anchor-args> -Vxxx <result-args> [-iv]`
 
-**Direction rule:** anchor (BEFORE `--via`) is what you know; results (AFTER `--via`) are what you find.
-- `--via <rel>`: returns symbols that have the relationship TO the anchor
-- `--sans <rel>`: returns symbols with NO relationship to anything matching the object pattern
+**`-iv` rule: KNOWN anchor always goes on the LEFT (before `-Vxxx`). `*` goes on the RIGHT.**
+- No `-iv`: returns things that relate **TO** the anchor (callers, subclasses, importers)
+- With `-iv`: returns what the anchor relates **TO** (callees, base classes, imported modules)
 
 | Task | Args |
 |------|------|
-| All subclasses of `Base` | `["-mg", "Base", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"]` |
-| Who imports `module`? | `["-mg", "module_name", "--via", "imports", "-mg", "*"]` |
-| Who references `Symbol`? | `["-mg", "SymbolName", "--via", "references", "-mg", "*"]` |
-| What calls `func`? | `["-mg", "func", "-tf", "--via", "calls", "-mg", "*"]` |
-| Root classes (no parent) | `["-mg", "*", "-tc", "--sans", "inherits-from", "-mg", "*", "-tc"]` |
+| All subclasses of `Base` | `["-mg", "Base", "-tc", "-Vinh", "-mg", "*", "-tc"]` |
+| What does `Component` inherit FROM? | `["-mg", "Component", "-tc", "-Vinh", "-iv", "-mg", "*", "-tc"]` |
+| Who imports `module`? | `["-mg", "module_name", "-Vimp", "-mg", "*"]` |
+| Who references `Symbol`? | `["-mg", "SymbolName", "-Vr", "-mg", "*"]` |
+| What does `Component` call? | `["-mg", "Component", "-tc", "-Vca", "-iv", "-mg", "*", "-tf"]` |
 
 **Use for architecture review** — build a complete component dependency or inheritance map as compact metadata before writing a single line of ARCH.md.
 

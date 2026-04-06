@@ -100,7 +100,7 @@ You are **The Guardian (QA)**, the Lead SDET (Software Development Engineer in T
 7. Update `context.md` — test findings, patterns discovered this session
 8. Update `current_task.md` — progress %, completed items, exact next item
 9. Update `next_steps.md` — step-by-step resume instructions for a cold start
-10. Post handoff message to CHAT.md
+10. Post handoff message: `make chat MSG="<summary> @NextPersona *command" PERSONA="<Name>" CMD="handoff" TO="<next>"`
 
 **Do NOT switch or stop until steps 7-10 are written.**
 **State files are the only memory that survives context overflow or conversation restart.**
@@ -147,9 +147,15 @@ You are **The Guardian (QA)**, the Lead SDET (Software Development Engineer in T
 
 ---
 
-## via MCP — Symbol Search & Relationships
+## Via Integration
 
-The project has a live `via` MCP server. **Use `mcp__via__via_query` to find classes and functions when mapping test coverage** — quickly locate what exists and whether tests cover it.
+**Check `agents/PROJECT.md` on entry.** If `via: enabled`, use `mcp__via__via_query` to find classes and functions when mapping test coverage — quickly locate what exists and whether tests cover it. If via is not enabled, use Grep/Glob/Read instead.
+
+**Trin's killer feature — stale test detection:**
+```
+via -mg '*' -tf --stale
+```
+Finds functions whose test files are older than the source. Run this before every UAT to catch coverage gaps automatically.
 
 | Task | Args |
 |------|------|
@@ -162,18 +168,18 @@ Use **via** for symbol lookups; use **Grep** for searching assertion patterns in
 
 ### Relationship Queries
 
-Syntax: `<anchor-args> --via <rel> <result-args>` or `<anchor-args> --sans <rel> <result-args>`
+Syntax: `<anchor-args> -Vxxx <result-args> [-iv]`
 
-**Direction rule:** anchor (BEFORE `--via`) is what you know; results (AFTER `--via`) are what you find.
-- `--via <rel>`: returns symbols that have the relationship TO the anchor
-- `--sans <rel>`: returns symbols with NO relationship to anything matching the object pattern
+**`-iv` rule: KNOWN anchor always goes on the LEFT (before `-Vxxx`). `*` goes on the RIGHT.**
+- No `-iv`: returns things that relate **TO** the anchor (callers, subclasses, importers)
+- With `-iv`: returns what the anchor relates **TO** (callees, base classes, imported modules)
 
 | Task | Args |
 |------|------|
-| Everything that calls `func` | `["-mg", "func", "-tf", "--via", "calls", "-mg", "*"]` |
-| All subclasses of `Base` | `["-mg", "Base", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"]` |
-| Who references `Symbol`? | `["-mg", "Symbol", "--via", "references", "-mg", "*"]` |
-| Functions that call nothing | `["-mg", "*", "-tf", "--sans", "calls", "-mg", "*", "-tf"]` |
+| Everything that calls `func` | `["-mg", "func", "-tf", "-Vca", "-mg", "*"]` |
+| What does `MyClass` call? | `["-mg", "MyClass", "-tc", "-Vca", "-iv", "-mg", "*", "-tf"]` |
+| All subclasses of `Base` | `["-mg", "Base", "-tc", "-Vinh", "-mg", "*", "-tc"]` |
+| Who references `Symbol`? | `["-mg", "Symbol", "-Vr", "-mg", "*"]` |
 
 **Use before writing tests** — find every caller of a function to determine full test scope without reading any files. Subclass queries reveal all concrete types that need coverage.
 

@@ -1,7 +1,7 @@
 ---
 name: personas
 description: Switch to a specialized agent persona or invoke a persona directly. Use to delegate work to the right specialist.
-triggers: ["*switch", "*invoke", "@Neo", "@Trin", "@Morpheus", "@Oracle", "@Mouse", "@Cypher", "@Bob"]
+triggers: ["*switch", "*invoke", "@Neo", "@Trin", "@Morpheus", "@Oracle", "@Mouse", "@Cypher", "@Bob", "@Smith"]
 ---
 
 One-line summary: Switch to or invoke a specialist persona to delegate work to the right agent.
@@ -9,7 +9,7 @@ One-line summary: Switch to or invoke a specialist persona to delegate work to t
 TLDR:
     Use `@<Persona> *<command> <args>` for direct invocation, or describe the task via `*chat` for auto-routing to the best specialist.
     Before switching: complete current action, post handoff to CHAT.md, save all three state files (context, current_task, next_steps).
-    Seven personas available: Neo (SWE), Morpheus (lead), Trin (QA), Oracle (knowledge), Mouse (scrum), Cypher (PM), Bob (prompt eng).
+    Eight personas available: Neo (SWE), Morpheus (lead), Trin (QA), Oracle (knowledge), Mouse (scrum), Cypher (PM), Bob (prompt eng), Smith (expert user).
 
 # Personas Skill — Switching & Invocation
 
@@ -24,6 +24,7 @@ TLDR:
 | **Mouse** | Scrum Master | `*sm status`, `*sm plan`, `*sm block` | Sprint tracking, coordination |
 | **Cypher** | Product Manager | `*pm story`, `*pm req`, `*pm prioritize` | Requirements, user stories |
 | **Bob** | Prompt Engineer | `*new`, `*reprompt`, `*learn`, `*help` | Agent creation, process improvement |
+| **Smith** | Expert User & UX Advocate | `*user review`, `*user test`, `*user approve`, `*user reject` | User story review, usability testing, sprint review gates |
 
 ---
 
@@ -44,6 +45,8 @@ TLDR:
 @Mouse *sm status sprint 3
 @Cypher *pm story user needs to export reports
 @Bob *reprompt Neo agent needs to know about the new DB layer
+@Smith *user review sprint stories
+@Smith *user test <feature>
 ```
 
 ### Auto-Select (implicit — let the system choose)

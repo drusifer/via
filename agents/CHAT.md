@@ -1938,3 +1938,7 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-04-06 09:07:36</small>] [**Cypher**]->[**all**] **pm release*:
  Preparing Sprint 14 release commit. All stories done, Smith beta PASSED, 1178 tests green.
+
+---
+[<small>2026-04-06 09:08:28</small>] [**Cypher**]->[**all**] **pm release*:
+ Sprint 14 shipped. Commit d96e522. 24 files, +1952/-37 lines. Remaining unstaged: Makefile, .mcp.json, agent SKILL.md updates (pre-Sprint 14, commit separately).

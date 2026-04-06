@@ -20,6 +20,7 @@ TLDR:
 """
 
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -153,6 +154,30 @@ def setup_root_symlinks(project_root: Path, agents_dir: Path) -> int:
     return count
 
 
+def setup_via_mcp(project_root: Path) -> bool:
+    """Configure via MCP server for this project using `via install mcp`."""
+    print("\n📡 Setting up via MCP server...")
+
+    if not shutil.which("via"):
+        print("  ⚠️  via not found on PATH — skipping MCP setup")
+        print("     Install via and re-run: pip install via")
+        return False
+
+    import subprocess
+    result = subprocess.run(
+        ["via", "install", "mcp"],
+        cwd=project_root,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print(f"  ❌ via install mcp failed: {result.stderr.strip()}")
+        return False
+
+    print(f"  ✅ via install mcp ({result.stdout.strip() or 'done'})")
+    return True
+
+
 def check_yaml_frontmatter(personas: list) -> list[str]:
     """Check which persona files are missing YAML frontmatter."""
     missing = []
@@ -211,11 +236,16 @@ def main():
     total += setup_claude_skills(project_root, personas, shared_skills)
     total += setup_root_symlinks(project_root, agents_dir)
 
+    # Set up via MCP
+    via_ok = setup_via_mcp(project_root)
+
     print(f"\n✅ Done! Created {total} symlinks.")
     print("\nAgent discovery is now enabled for:")
     print("  • Claude Code (.claude/skills/)")
     print("  • OpenAI Codex, Cursor, Copilot (AGENTS.md)")
     print("  • Gemini CLI (GEMINI.md)")
+    if via_ok:
+        print("  • via MCP server (.mcp.json)")
 
 
 if __name__ == "__main__":
