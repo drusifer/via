@@ -1747,3 +1747,194 @@ installed package via 0.1.0, installed using Python 3.13.5
 These apps are now globally available
 - via
 make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-05 15:53:34</small>] [**Bob**]->[**all**] **init*:
+ Bob Protocol initialized. All personas online. Ready for *chat commands. Last activity: Sprint 13 complete — sans fixes shipped (2026-03-26). Awaiting next sprint or task.
+
+---
+[<small>2026-04-05 16:46:04</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make install-system | /home/drusifer/Projects/via/build/build.out
+installed package via 0.1.0, installed using Python 3.13.5
+These apps are now globally available
+- via
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-05 17:34:57</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make status | /home/drusifer/Projects/via/build/build.out
+make[1]: Entering directory '/home/drusifer/Projects/via'
+make[1]: *** No rule to make target 'status'.  Stop.
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-05 17:55:41</small>] [**User**]->[**all**] **request*:
+ *plan sprint: usability fixes + partial impls for output formats, queries, and symbol types
+
+---
+[<small>2026-04-05 17:57:06</small>] [**Cypher**]->[**all**] **pm req*:
+ Activating as PM. Planning Sprint 14: usability fixes (--sans crashes), JS/TS completions (S11-3 + S11-4), and symbol subtype filtering. Reading backlog + code state.
+
+---
+[<small>2026-04-05 18:11:39</small>] [**Cypher**]->[**Smith**] **pm handoff*:
+ Sprint 14 stories ready: SPRINT_14_USER_STORIES.md — 10pts, 5 stories (JS/TS rels, --lang, --subtype, web UX, doc fixes). @Smith *user review stories.
+
+---
+[<small>2026-04-05 18:12:01</small>] [**Smith**]->[**all**] **user review*:
+ Activating as Smith. Reading SPRINT_14_USER_STORIES.md for user review gate. Evaluating against HCI principles + 3 open UX questions from Cypher.
+
+---
+[<small>2026-04-05 18:13:02</small>] [**Smith**]->[**Morpheus**] **user approve*:
+ Sprint 14 APPROVED. Review: smith.docs/SPRINT_14_REVIEW.md. 3 notes: S14-2 error msg show py/python aliases; S14-3 document --subtype silent-empty in --help; S14-4 add conditional-visibility AC for mode selector. @Morpheus *lead arch Sprint 14.
+
+---
+[<small>2026-04-05 18:13:25</small>] [**Morpheus**]->[**all**] **lead arch*:
+ Activating as Morpheus. Reading Sprint 14 stories + Smith review. Will design SPRINT_14_ARCHITECTURE.md resolving 3 OQs before Neo begins.
+
+---
+[<small>2026-04-05 18:34:07</small>] [**Morpheus**]->[**Neo**] **lead arch*:
+ Sprint 14 arch DONE → SPRINT_14_ARCHITECTURE.md. Key: JS rels (3/4 already work, only calls missing→2pt); --lang+--subtype same pattern (1 pass, 3pt); web UI mode selector (2pt). Revised 10→8pt. @Neo *swe impl Cycle 1: S14-1 JS calls extraction.
+
+---
+[<small>2026-04-05 18:34:24</small>] [**Mouse**]->[**all**] **sm plan*:
+ Activating as Mouse. Creating Sprint 14 plan from arch doc (8pts, 3 cycles). Writing sprint task file.
+
+---
+[<small>2026-04-05 18:34:40</small>] [**Mouse**]->[**all**] **sm plan*:
+ Sprint 14 plan DONE. 8pts, 3 cycles. Cycle 1 (S14-1 JS calls, 2pt) → Neo now. Cycle 2 (--lang+--subtype+doc, 4pt). Cycle 3 (web UI rel card, 2pt). Each cycle: Neo→Trin UAT→Morpheus review→next.
+
+---
+[<small>2026-04-05 18:39:07</small>] [**User**]->[**all**] **request*:
+ *impl sprint 14: starting Cycle 1 (S14-1 JS calls extraction). Chain: Neo→Trin→Morpheus per cycle.
+
+---
+[<small>2026-04-05 18:39:15</small>] [**Neo**]->[**all**] **swe impl*:
+ Activating as Neo. Reading arch doc for Cycle 1: S14-1 JS calls extraction. Will implement _extract_calls() in JavaScriptParser + tests.
+
+---
+[<small>2026-04-05 18:43:15</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+====== 1 failed, 1143 passed, 1 skipped, 4 warnings in 122.94s (0:02:02) =======
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-05 18:45:44</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1144 passed, 1 skipped, 4 warnings in 122.94s (0:02:02) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-05 18:45:56</small>] [**Neo**]->[**Trin**] **swe handoff*:
+ Cycle 1 (S14-1) DONE. JS calls extraction + 23 tests. Fixed stale test_sans_declares_raises_error. 1144 passed, 0 failed. @Trin *qa uat Cycle 1 (S14-1).
+
+---
+[<small>2026-04-05 18:46:03</small>] [**Trin**]->[**all**] **qa uat*:
+ Activating as Trin. UAT Cycle 1: S14-1 JS calls extraction. Verifying ACs against SPRINT_14_USER_STORIES.md.
+
+---
+[<small>2026-04-05 18:46:55</small>] [**Trin**]->[**Morpheus**] **qa handoff*:
+ UAT Cycle 1 PASS. JS calls relationships work (--via calls, --sans calls verified on live index). 1144 tests pass. @Morpheus *lead review Cycle 1 (S14-1).
+
+---
+[<small>2026-04-05 18:47:01</small>] [**Morpheus**]->[**all**] **lead review*:
+ Activating as Morpheus. Reviewing S14-1 implementation: javascript_parser.py calls extraction.
+
+---
+[<small>2026-04-05 18:47:20</small>] [**Morpheus**]->[**Neo**] **lead review*:
+ Cycle 1 APPROVED. Clean impl, good tests. @Neo *swe impl Cycle 2: S14-2 --lang, S14-3 --subtype, S14-5 doc fixes.
+
+---
+[<small>2026-04-05 18:47:25</small>] [**Neo**]->[**all**] **swe impl*:
+ Activating. Implementing Cycle 2: S14-2 --lang, S14-3 --subtype (flag_groups + executor + store), S14-5 USER_GUIDE fixes.
+
+---
+[<small>2026-04-05 18:53:12</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1144 passed, 1 skipped, 4 warnings in 123.13s (0:02:03) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-06 08:23:52</small>] [**Neo**]->[**Trin**] **swe handoff*:
+ Cycle 2 complete. Implemented --lang (S14-2), --subtype (S14-3), USER_GUIDE.md fixes (S14-5). All 1144 tests pass. @Trin *qa uat cycle-2: verify --lang py/js/ts filters, --subtype interface/arrow_function, invalid lang error, and doc fixes
+
+---
+[<small>2026-04-06 08:23:59</small>] [**Trin**]->[**all**] **qa resume*:
+ Loading state, picking up Cycle 2 UAT. Verifying --lang, --subtype filters and doc fixes.
+
+---
+[<small>2026-04-06 08:44:10</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+====== 4 failed, 1169 passed, 1 skipped, 4 warnings in 128.47s (0:02:08) =======
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-06 08:47:01</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1173 passed, 1 skipped, 4 warnings in 127.41s (0:02:07) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-06 08:47:10</small>] [**Trin**]->[**Morpheus**] **qa handoff*:
+ Cycle 2 UAT PASSED. 29 new tests (S14-2 --lang: 20, S14-3 --subtype: 9). Fixed test type flag (-tc→-tf for arrow_function — arrow fns are functions, not classes). 1173 total, 0 failures. @Morpheus *lead review cycle-2
+
+---
+[<small>2026-04-06 08:48:51</small>] [**Morpheus**]->[**Neo**] **lead review*:
+ Cycle 2 APPROVED. Fixed: --lang/--subtype added to MCP schema (were missing). Code in parser/executor/store is correct. @Neo proceed to Cycle 3: S14-4 web UI.
+
+---
+[<small>2026-04-06 08:52:29</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+====== 1 failed, 1172 passed, 1 skipped, 4 warnings in 129.24s (0:02:09) =======
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-06 08:55:20</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1174 passed, 1 skipped, 4 warnings in 128.80s (0:02:08) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-06 08:55:31</small>] [**Neo**]->[**Trin**] **swe handoff*:
+ Cycle 3 complete: S14-4 web UI done. Replaced invert checkbox with --via/--sans segmented control (template.py, app.js, query.py). Updated stale test to use mode:sans. 1174 passing. @Trin *qa uat cycle-3
+
+---
+[<small>2026-04-06 08:58:22</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1178 passed, 1 skipped, 4 warnings in 129.15s (0:02:09) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-06 08:58:27</small>] [**Trin**]->[**Morpheus**] **qa handoff*:
+ Cycle 3 UAT PASSED. Added 5 template smoke tests (rel-mode control, via/sans buttons, no invert). 1178 total. @Morpheus *lead review cycle-3
+
+---
+[<small>2026-04-06 08:58:37</small>] [**Morpheus**]->[**all**] **lead review*:
+ Cycle 3 APPROVED. All 3 files match architecture. Segmented control implementation is clean. Sprint 14 COMPLETE: S14-1 JS calls, S14-2 --lang, S14-3 --subtype, S14-4 web UI, S14-5 docs. 1178 tests, 0 failures.
+
+---
+[<small>2026-04-06 09:02:08</small>] [**User**]->[**all**] **request*:
+ *chat all review sprint14
+
+---
+[<small>2026-04-06 09:03:12</small>] [**Trin**]->[**all**] **qa review*:
+ Sprint 14 review complete. All 5 stories verified in code. One gap: S14-1 has 23 parser unit tests but no integration test (via index + --via calls on .js fixture). Arch doc specified one. Recommend S14-6 debt item.
+
+---
+[<small>2026-04-06 09:04:15</small>] [**User**]->[**all**] **request*:
+ *chat TO=smith beta test
+
+---
+[<small>2026-04-06 09:04:25</small>] [**Smith**]->[**all**] **user test*:
+ Beta testing Sprint 14. Checking all 3 notes from my pre-sprint review against the shipped product.
+
+---
+[<small>2026-04-06 09:06:39</small>] [**Smith**]->[**all**] **user test*:
+ Beta PASSED. All 3 pre-sprint notes verified live. --lang/--subtype filter correctly, combined filters work, error messages correct, rel-mode conditional visibility correct. No defects filed.
+
+---
+[<small>2026-04-06 09:07:13</small>] [**User**]->[**all**] **request*:
+ *chat To=cypher ship it
+
+---
+[<small>2026-04-06 09:07:36</small>] [**Cypher**]->[**all**] **pm release*:
+ Preparing Sprint 14 release commit. All stories done, Smith beta PASSED, 1178 tests green.

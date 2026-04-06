@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Optional, Set
 
 from .base import (
+    CallEntity,
     ClassEntity,
     FunctionEntity,
     GlobalEntity,
@@ -155,6 +156,7 @@ class JavaScriptParser(ParserABC):
 
         # Walk the top-level statements
         _extract_symbols(tree.root_node, content, result, file_path)
+        result.calls = _extract_all_calls(tree.root_node, content)
         return result
 
 
@@ -431,3 +433,134 @@ def _extract_from_export(node, content: bytes, result: ParseResult) -> None:
             _extract_class(child, content, result)
         elif ntype in ('lexical_declaration', 'variable_declaration'):
             _extract_var_declaration(child, content, result)
+
+
+# ---------------------------------------------------------------------------
+# Call extraction
+# ---------------------------------------------------------------------------
+
+# Function-boundary node types — we don't recurse INTO these when already
+# collecting calls for an outer function (prevents mis-attribution).
+_FUNCTION_BOUNDARIES = frozenset({
+    'function_declaration',
+    'function',
+    'arrow_function',
+    'method_definition',
+})
+
+
+def _get_callee_name(call_node, content: bytes) -> Optional[str]:
+    """Return the callee name from a call_expression node, or None to skip."""
+    func_node = call_node.child_by_field_name('function')
+    if func_node is None:
+        return None
+    if func_node.type == 'identifier':
+        return _node_text(func_node, content)
+    if func_node.type == 'member_expression':
+        # e.g. `obj.method` or `React.createElement`
+        return _node_text(func_node, content)
+    return None
+
+
+def _collect_calls_in_body(node, content: bytes, caller_name: str,
+                            caller_type: str, caller_parent: Optional[str],
+                            out: list) -> None:
+    """Recursively collect CallEntity objects from *node*, staying within the
+    current function boundary (do not descend into nested function nodes)."""
+    for child in node.children:
+        if child.type == 'call_expression':
+            callee = _get_callee_name(child, content)
+            if callee:
+                out.append(CallEntity(
+                    caller_name=caller_name,
+                    callee_name=callee,
+                    line_number=_node_line_start(child),
+                    byte_offset=child.start_byte,
+                    byte_length=child.end_byte - child.start_byte,
+                    caller_type=caller_type,
+                    caller_parent=caller_parent,
+                ))
+            # Still recurse INTO call arguments (chained calls, callbacks)
+            args = child.child_by_field_name('arguments')
+            if args:
+                _collect_calls_in_body(args, content, caller_name,
+                                       caller_type, caller_parent, out)
+        elif child.type not in _FUNCTION_BOUNDARIES:
+            _collect_calls_in_body(child, content, caller_name,
+                                   caller_type, caller_parent, out)
+
+
+def _extract_all_calls(root_node, content: bytes) -> list:
+    """Walk top-level nodes and extract calls from every named function/method."""
+    calls: list = []
+
+    for node in root_node.children:
+        ntype = node.type
+
+        if ntype == 'function_declaration':
+            name_node = node.child_by_field_name('name')
+            if name_node:
+                caller = _node_text(name_node, content)
+                body = node.child_by_field_name('body')
+                if body:
+                    _collect_calls_in_body(body, content, caller,
+                                           'function', None, calls)
+
+        elif ntype == 'class_declaration':
+            cls_name_node = node.child_by_field_name('name')
+            cls_name = _node_text(cls_name_node, content) if cls_name_node else None
+            body = node.child_by_field_name('body')
+            if body and cls_name:
+                for child in body.children:
+                    if child.type == 'method_definition':
+                        m_name_node = child.child_by_field_name('name')
+                        if m_name_node:
+                            method_name = _node_text(m_name_node, content)
+                            m_body = child.child_by_field_name('body')
+                            if m_body:
+                                _collect_calls_in_body(m_body, content,
+                                                       method_name, 'method',
+                                                       cls_name, calls)
+
+        elif ntype in ('lexical_declaration', 'variable_declaration'):
+            for declarator in node.children:
+                if declarator.type != 'variable_declarator':
+                    continue
+                name_node = declarator.child_by_field_name('name')
+                value_node = declarator.child_by_field_name('value')
+                if name_node and value_node and value_node.type in (
+                        'arrow_function', 'function'):
+                    caller = _node_text(name_node, content)
+                    body = value_node.child_by_field_name('body')
+                    if body:
+                        _collect_calls_in_body(body, content, caller,
+                                               'function', None, calls)
+
+        elif ntype in ('export_statement', 'export_default_declaration'):
+            # Recurse into exported declarations
+            for child in node.children:
+                if child.type == 'function_declaration':
+                    name_node = child.child_by_field_name('name')
+                    if name_node:
+                        caller = _node_text(name_node, content)
+                        body = child.child_by_field_name('body')
+                        if body:
+                            _collect_calls_in_body(body, content, caller,
+                                                   'function', None, calls)
+                elif child.type == 'class_declaration':
+                    cls_name_node = child.child_by_field_name('name')
+                    cls_name = _node_text(cls_name_node, content) if cls_name_node else None
+                    body = child.child_by_field_name('body')
+                    if body and cls_name:
+                        for grandchild in body.children:
+                            if grandchild.type == 'method_definition':
+                                m_name_node = grandchild.child_by_field_name('name')
+                                if m_name_node:
+                                    method_name = _node_text(m_name_node, content)
+                                    m_body = grandchild.child_by_field_name('body')
+                                    if m_body:
+                                        _collect_calls_in_body(m_body, content,
+                                                               method_name, 'method',
+                                                               cls_name, calls)
+
+    return calls

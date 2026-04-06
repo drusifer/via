@@ -59,6 +59,18 @@ class TestHTMLTemplate:
     def test_has_relationship_select(self):
         assert 'id="relationship"' in HTML_TEMPLATE
 
+    def test_has_rel_mode_segmented_control(self):
+        assert 'id="rel-mode"' in HTML_TEMPLATE
+
+    def test_rel_mode_has_via_button(self):
+        assert 'data-mode="via"' in HTML_TEMPLATE
+
+    def test_rel_mode_has_sans_button(self):
+        assert 'data-mode="sans"' in HTML_TEMPLATE
+
+    def test_no_invert_checkbox(self):
+        assert 'id="invert"' not in HTML_TEMPLATE
+
     def test_has_target_card(self):
         assert 'id="target-card"' in HTML_TEMPLATE
 

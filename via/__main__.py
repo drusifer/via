@@ -88,6 +88,9 @@ Options:
   --not                 Negate the match pattern (return non-matching symbols)
   --newerthan DURATION  Filter: symbols from files modified within DURATION (e.g. 1h, 2d, 1w)
   --olderthan DURATION  Filter: symbols from files NOT modified within DURATION (e.g. 1h, 2d)
+  --lang LANG           Filter by language: py/python, js/javascript, ts/typescript, md/markdown
+  --subtype TYPE        Filter by symbol subtype (e.g. interface, enum, arrow_function).
+                        Case-sensitive; unknown values return no results.
 
 Relationship Flags:
   --via REL, -V REL     Positive relationship: return subjects WITH the relationship to an object

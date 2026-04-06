@@ -122,16 +122,27 @@ class TestBuildRelationshipFilter:
         assert rf.object_pattern == "foo*"
         assert rf.object_types == ["function"]
 
-    def test_invert_flag_passed(self):
+    def test_sans_mode_flag_passed(self):
         body = {
             "relationship": "calls",
             "target_pattern": "*",
             "target_symbol_types": [],
-            "invert": True,
+            "mode": "sans",
             "stale": False,
         }
         rf = _build_relationship_filter(body, "calls")
         assert rf.is_negative is True
+
+    def test_via_mode_flag_not_inverted(self):
+        body = {
+            "relationship": "calls",
+            "target_pattern": "*",
+            "target_symbol_types": [],
+            "mode": "via",
+            "stale": False,
+        }
+        rf = _build_relationship_filter(body, "calls")
+        assert rf.is_negative is False
 
     def test_stale_flag_passed(self):
         body = {

@@ -607,6 +607,8 @@ class DatabaseStore:
         newerthan_seconds: Optional[float] = None,
         olderthan_seconds: Optional[float] = None,
         negated: bool = False,
+        language: Optional[str] = None,
+        subtype: Optional[str] = None,
     ) -> Iterator[MatchRecord]:
         """
         Match symbols using denormalized symbols table.
@@ -634,6 +636,8 @@ class DatabaseStore:
                 newerthan_seconds=newerthan_seconds,
                 olderthan_seconds=olderthan_seconds,
                 negated=negated,
+                language=language,
+                subtype=subtype,
             )
             return
 
@@ -669,6 +673,14 @@ class DatabaseStore:
         if olderthan_seconds is not None:
             where_parts.append("mtime < ?")
             params.append(now - olderthan_seconds)
+
+        # Language and subtype filters
+        if language is not None:
+            where_parts.append("s.language = ?")
+            params.append(language)
+        if subtype is not None:
+            where_parts.append("s.symbol_subtype = ?")
+            params.append(subtype)
 
         where_clause = ' AND '.join(where_parts)
 
@@ -733,6 +745,8 @@ class DatabaseStore:
         newerthan_seconds: Optional[float] = None,
         olderthan_seconds: Optional[float] = None,
         negated: bool = False,
+        language: Optional[str] = None,
+        subtype: Optional[str] = None,
     ) -> Iterator[MatchRecord]:
         """Match using Python regex instead of SQL REGEXP.
 
@@ -773,6 +787,14 @@ class DatabaseStore:
         if olderthan_seconds is not None:
             where_parts.append("mtime < ?")
             params.append(now - olderthan_seconds)
+
+        # Language and subtype filters
+        if language is not None:
+            where_parts.append("s.language = ?")
+            params.append(language)
+        if subtype is not None:
+            where_parts.append("s.symbol_subtype = ?")
+            params.append(subtype)
 
         where_clause = ' AND '.join(where_parts) if where_parts else "1=1"
 

@@ -773,11 +773,10 @@ class TestStory1_Vhas:
         assert "base_method" in r.stdout
         assert "get_name" not in r.stdout
 
-    def test_sans_declares_raises_error(self, proj):
-        """via ... --sans declares → clear error: not-declares not yet supported."""
+    def test_sans_declares_works(self, proj):
+        """via ... --sans declares → succeeds (returns files with no class declarations)."""
         r = _q(proj, "-mg", "my_service.py", "-tN", "--sans", "declares", "-tc")
-        assert r.returncode != 0
-        assert "not yet supported" in r.stderr or "not yet supported" in r.stdout
+        assert r.returncode == 0
 
     def test_invalid_container_type_raises_error(self, proj):
         """via -mg 'run' -tm -V declares -tc → error: method is not a container type."""

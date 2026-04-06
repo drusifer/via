@@ -76,6 +76,12 @@ export function showError(msg) {
   $('error-state').style.display = 'block';
 }
 
+// Return 'via' or 'sans' from the segmented control
+function relMode() {
+  const active = document.querySelector('#rel-mode .seg-btn.active');
+  return active ? active.dataset.mode : 'via';
+}
+
 // -------------------------------------------------------------------------
 // Build query request body from current form state
 // -------------------------------------------------------------------------
@@ -91,7 +97,7 @@ export function buildQueryBody() {
     newerthan:        $('newerthan').value || null,
     olderthan:        $('olderthan').value || null,
     relationship:     rel,
-    invert:           $('invert').checked,
+    mode:             relMode(),
     stale:            $('stale').checked,
     output_format:    outputFormat,
   };
@@ -293,7 +299,8 @@ function initReset() {
     $('olderthan').value = '';
     $('relationship').value = '';
     $('target-card').style.display = 'none';
-    $('invert').checked = false;
+    $('rel-mode-field').style.display = 'none';
+    $$('#rel-mode .seg-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
     $('stale').checked = false;
     $$('.chip.selected').forEach(c => c.classList.remove('selected'));
     $$('#output-format-group button').forEach(b => b.classList.remove('active'));
@@ -330,7 +337,16 @@ export function initApp() {
   initReset();
 
   $('relationship').addEventListener('change', () => {
-    $('target-card').style.display = $('relationship').value ? 'block' : 'none';
+    const hasRel = Boolean($('relationship').value);
+    $('target-card').style.display = hasRel ? 'block' : 'none';
+    $('rel-mode-field').style.display = hasRel ? 'block' : 'none';
+  });
+
+  $$('#rel-mode .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('#rel-mode .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
   });
 
   $('run-btn').addEventListener('click', runQuery);

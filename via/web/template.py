@@ -193,6 +193,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .toggle input:checked + .slider { background: var(--md-sys-color-primary); }
     .toggle input:checked + .slider::before { transform: translateX(16px); }
 
+    /* Segmented control (relationship mode) */
+    .seg-control {
+      display: flex;
+      border: 1.5px solid var(--md-sys-color-outline);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .seg-btn {
+      flex: 1;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--md-sys-color-on-surface);
+      transition: background 0.15s;
+    }
+    .seg-btn + .seg-btn { border-left: 1.5px solid var(--md-sys-color-outline); }
+    .seg-btn.active {
+      background: var(--md-sys-color-primary);
+      color: var(--md-sys-color-on-primary);
+    }
+
     /* Symbol type chip group */
     .chip-group {
       display: flex;
@@ -504,9 +528,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           <option value="declares">declares</option>
         </select>
       </div>
-      <div class="toggle-row">
-        <span>Negative relationship (--sans)</span>
-        <label class="toggle"><input type="checkbox" id="invert"><span class="slider"></span></label>
+      <div class="field" id="rel-mode-field" style="display:none">
+        <label>Mode</label>
+        <div class="seg-control" id="rel-mode">
+          <button type="button" class="seg-btn active" data-mode="via">With (--via)</button>
+          <button type="button" class="seg-btn" data-mode="sans">Without (--sans)</button>
+        </div>
       </div>
       <div class="toggle-row" style="margin-top:8px">
         <span>Stale only (--stale)</span>

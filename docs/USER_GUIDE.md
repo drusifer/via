@@ -139,11 +139,11 @@ The recommended way to search uses **pipeline syntax**:
 
 ```
 via -m<X> PATTERN [-t<Y>...] [-o<Z>] [-f<W>] [OPTIONS]
-
-**Note on filtering**: The `--via` flag is used to chain additional match filters. For example, `via -mg '*' -tc --via -mr 'Test.*'` will first find all classes, and then filter those results to classes matching the regex 'Test.*'.
-
-**Note on multiple types**: You can specify multiple type flags to search for symbols of different types. For example, `via -mg '*' -tc -tf` will search for all classes and functions.
 ```
+
+You can specify multiple type flags to search for symbols of different types. For example, `via -mg '*' -tc -tf` will search for all classes and functions.
+
+Use `--via <rel>` to add a relationship stage — see [Relationship Queries](#relationship-queries).
 
 ### Pattern Flags
 
@@ -205,18 +205,7 @@ via -mg '*' -tf -n 0
 
 ## Output Formats
 
-
-### Format Flags (-f<X>)
-
-| Flag | Format |
-|------|--------|
-| `-fa` | ASCII (terminal colors) |
-| `-fm` | Markdown |
-| `-fh` | HTML |
-| `-fp` | PNG image |
-
-
-Add `--via` followed by output flags to change format:
+Output flags control how results are rendered:
 
 | Flag | Format | Description |
 |------|--------|-------------|
@@ -226,6 +215,17 @@ Add `--via` followed by output flags to change format:
 | `-oF` | Formatted | Syntax-highlighted source |
 | `-oU` | Usage | Renders the docstring of the matched symbol |
 | `-oJ` | JSON | JSON array of symbol objects (AI agents / MCP) |
+
+### Format Modifiers (-f<X>)
+
+These secondary flags control the output encoding (for use with `-oR`, `-oF`, `-oT`, etc.):
+
+| Flag | Format |
+|------|--------|
+| `-fa` | ASCII (terminal colors) |
+| `-fm` | Markdown |
+| `-fh` | HTML |
+| `-fp` | PNG image |
 
 ### List Output (Default)
 
@@ -729,7 +729,7 @@ via -mg 'test_*' -tf -n 0 | wc -l
 ### Find Unique Files with Matches
 
 ```bash
-via -mg '*save*' -tm -n 0 | cut -d: -tf2 | sort -u
+via -mg '*save*' -tm -n 0 | cut -d: -f2 | sort -u
 ```
 
 ### Search Imports

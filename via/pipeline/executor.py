@@ -32,6 +32,14 @@ from via.pipeline.relationship_filter import RelationshipFilter
 from via.pipeline.types import PipelineStage, StageType
 from via.renderers.factory import RendererFactory
 
+# Language alias normalization for --lang
+_LANG_ALIASES: Dict[str, str] = {
+    'py': 'python', 'python': 'python',
+    'js': 'javascript', 'javascript': 'javascript',
+    'ts': 'typescript', 'typescript': 'typescript',
+    'md': 'markdown', 'markdown': 'markdown',
+}
+
 # User-friendly render type names for CLI flags
 RENDER_TYPE_FLAGS: Dict[RenderType, str] = {
     RenderType.LIST: '-oL (list)',
@@ -140,13 +148,6 @@ class PipelineExecutor:
         match_syntax = getattr(args, 'match_syntax', 'g')
         match_op = get_match_op(match_syntax)
 
-        # Handle multiple symbol types (OR'd together)
-        if len(symbol_types) > 1:
-            return self._match_multiple_types(
-                symbol_types, pattern, match_op, case_sensitive, limit,
-                match_qualified, negated
-            )
-
         # Temporal filters
         newerthan_seconds = None
         olderthan_seconds = None
@@ -155,6 +156,29 @@ class PipelineExecutor:
         if getattr(args, 'olderthan', None):
             olderthan_seconds = parse_duration(args.olderthan)
 
+        # Language filter — normalize alias to canonical name; error on unknown
+        language_filter = None
+        raw_lang = getattr(args, 'language_filter', None)
+        if raw_lang:
+            language_filter = _LANG_ALIASES.get(raw_lang.lower())
+            if language_filter is None:
+                from via.pipeline.parser import PipelineParseError
+                raise PipelineParseError(
+                    f"Unknown --lang '{raw_lang}'. "
+                    f"Valid: py/python, js/javascript, ts/typescript, md/markdown."
+                )
+
+        # Subtype filter (open-ended; unknown values return empty silently)
+        subtype_filter = getattr(args, 'symbol_subtype_filter', None) or None
+
+        # Handle multiple symbol types (OR'd together)
+        if len(symbol_types) > 1:
+            return self._match_multiple_types(
+                symbol_types, pattern, match_op, case_sensitive, limit,
+                match_qualified, negated,
+                language=language_filter, subtype=subtype_filter,
+            )
+
         # Single type or all types
         st = SymbolType(symbol_type) if symbol_type else None
         results = self.db.match(
@@ -162,6 +186,8 @@ class PipelineExecutor:
             newerthan_seconds=newerthan_seconds,
             olderthan_seconds=olderthan_seconds,
             negated=negated,
+            language=language_filter,
+            subtype=subtype_filter,
         )
         return results
 
@@ -302,6 +328,8 @@ class PipelineExecutor:
         limit: int,
         match_qualified: bool,
         negated: bool = False,
+        language: Optional[str] = None,
+        subtype: Optional[str] = None,
     ) -> Iterator[MatchRecord]:
         """Query database for multiple symbol types (OR'd together).
 
@@ -313,6 +341,8 @@ class PipelineExecutor:
             limit: Max results per type
             match_qualified: Whether to match qualified names
             negated: If True, invert the pattern match (--not semantics)
+            language: Optional language filter (canonical form)
+            subtype: Optional symbol_subtype filter
 
         Yields:
             MatchRecord objects from database
@@ -322,7 +352,7 @@ class PipelineExecutor:
             st = SymbolType(type_str)
             for record in self.db.match(
                 st, match_op, pattern, case_sensitive, limit, match_qualified,
-                negated=negated,
+                negated=negated, language=language, subtype=subtype,
             ):
                 yield record
                 count += 1

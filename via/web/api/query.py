@@ -144,7 +144,7 @@ def _build_relationship_filter(body: Dict[str, Any], relationship_name: str):
     rel_value = _REL_MAP.get(relationship_name, relationship_name)
     target_types: List[str] = body.get("target_symbol_types") or []
     target_pattern: str = body.get("target_pattern") or "*"
-    invert: bool = bool(body.get("invert", False))
+    invert: bool = body.get("mode") == "sans"
     stale: bool = bool(body.get("stale", False))
 
     return RelationshipFilter(
