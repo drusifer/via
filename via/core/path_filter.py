@@ -1,15 +1,7 @@
 """
 Path inclusion/exclusion filter using gitignore spec and default excludes.
 
-TLDR:
-    PathFilter wraps pathspec to decide whether a given directory or file
-    should be included during indexing or watching. It reads the root .gitignore
-    (when respect_gitignore=True) and always applies DEFAULT_EXCLUDES
-    (__pycache__, .pyc, .git, .via, etc.). Extra caller-provided patterns (e.g.
-    WatchService exclude_patterns) are merged at construction time.
-    Key methods: should_include_dir(), should_include_file(). Used by both
-    FileDiscovery and WatchService so neither needs private method access on
-    the other.
+TLDR: Path inclusion/exclusion filtering using gitignore-style patterns and default VIA excludes for indexing and watching.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

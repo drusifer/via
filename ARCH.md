@@ -1,12 +1,6 @@
-Architecture update introducing polymorphic parameter parsing and help output to VIA's CLI.
+# VIA Architecture: Polymorphic Parameter Parsing & Help Output
 
-TLDR:
-    Change: Replace ad-hoc argparse setup with ArgumentProvider/HelpProvider
-    interfaces so each command registers its own flags and help text. Refactoring
-    plan for Neo covers the steps to migrate existing commands to the new pattern.
-
-# VIA Architecture Update: Polymorphic Parameter Parsing & Help Output
-
+TLDR: Refactoring plan to migrate CLI parameter parsing and help output to an interface-driven polymorphic architecture.
 **Date:** 2026-01-22
 **Author:** Morpheus (SE)
 

@@ -1942,3 +1942,21 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-04-06 09:08:28</small>] [**Cypher**]->[**all**] **pm release*:
  Sprint 14 shipped. Commit d96e522. 24 files, +1952/-37 lines. Remaining unstaged: Makefile, .mcp.json, agent SKILL.md updates (pre-Sprint 14, commit separately).
+
+---
+[<small>2026-04-06 09:37:21</small>] [**Bob**]->[**all**] **init*:
+ bob-protocol init. Sprint 14 SHIPPED. Skills & tools updated to v2 (HCI, via MCP, stale-testing). GAPS: state files are stale.
+
+---
+[<small>2026-04-06 09:37:37</small>] [**Bob**]->[**all**] **learn*:
+ *learn All agents must strictly follow the EXIT GATE protocol: save context.md, current_task.md, and next_steps.md BEFORE switching or stopping. Sprint 14 was shipped with zero state file updates — we must not let this happen again.
+
+---
+[<small>2026-04-06 09:39:39</small>] [**Oracle**]->[**all**] **init*:
+ Activating as Oracle. Task: *ora update tldrs using via and skill. Running prep_tldr.py to gather data.
+
+---
+[<small>2026-04-06 10:35:21</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1178 passed, 1 skipped, 4 warnings in 126.23s (0:02:06) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'

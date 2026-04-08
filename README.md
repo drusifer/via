@@ -1,19 +1,4 @@
-Fast, pattern-based symbol search for Python, JavaScript, and TypeScript codebases backed by SQLite.
-
-TLDR:
-    VIA indexes Python, JavaScript, TypeScript, and Markdown files using AST parsing,
-    stores symbols (classes, methods, functions, imports, globals, headers) in a local
-    SQLite database, and exposes them through a composable pipeline CLI with glob, regex,
-    and SQL LIKE matching. Supports multiple output formats (list, table, raw,
-    syntax-highlighted, Mermaid diagram, JSON), relationship queries (--via <rel> positive,
-    --sans <rel> not-exists, --not negate — inheritance, calls, imports, references,
-    declares; --stale cross-stage temporal filter), temporal filtering
-    (--newerthan / --olderthan with human-friendly durations), full-path file matching
-    (-Q), per-symbol timestamps, watch mode (auto re-index on change), web UI
-    (`via web`), and MCP server mode (`via mcp serve`) for AI agent integration.
-    All patterns are case-sensitive by default; use -I to ignore case.
-    Run `via index .` to build the database, then query with `via -mg PATTERN -t<type>`.
-    Consumed by developers and AI agents; depends on Python 3.9+, Pygments, watchdog, mcp, tree-sitter.
+TLDR: Fast, pattern-based symbol indexing and search for Python, JS, and TS codebases with a composable pipeline CLI and web UI.
 
 # VIA - Multi-Language Codebase Indexing and Query Tool
 

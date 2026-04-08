@@ -1,14 +1,7 @@
 """
 Reference type definitions for VIA symbol relationships.
 
-TLDR:
-    Defines ReferenceType enum covering the five reference kinds stored in
-    the database: INHERITS_FROM, CALLS, IMPORTS, REFERENCES, and DECLARES.
-    Helper constructors (from_value, get_value_map) convert between string
-    values and enum members. The string values match what is stored in the
-    symbol_references.reference_type column.
-
-    RelationshipType is an alias for ReferenceType (backward compatibility).
+TLDR: Enumerated types for symbol relationships (inheritance, calls, imports, etc.) used in the VIA database.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

@@ -1,16 +1,7 @@
 """
 Parses raw CLI argv into an ordered list of PipelineStage objects.
 
-TLDR:
-    PipelineParser is the single entry point for turning a via command line
-    into an executable pipeline. It splits argv on plain --via separators to
-    produce per-stage argument segments, then uses argparse internally (via
-    _StoreSyntax and _AppendType custom actions) to decode match-syntax flags
-    (-mg/-mr/-ms), OR'd symbol-type flags (-tc/-tf/...), output flags, and
-    format flags for each segment. Relationship queries (--via/-V or --sans/-S)
-    are detected within a segment and assembled into a RelationshipFilter
-    attached to the resulting PipelineStage. --not negates the match pattern.
-    Raises PipelineParseError on any invalid input.
+TLDR: Parses command-line arguments into a chain of PipelineStage objects, handling syntax, type filters, relationship queries (--via/--sans), and pattern negation (--not).
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

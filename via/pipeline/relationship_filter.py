@@ -1,12 +1,7 @@
 """
 Data structure carrying the parsed parameters of a relationship query.
 
-TLDR:
-    RelationshipFilter is a dataclass attached to a PipelineStage when the
-    user specifies a relationship clause (--via or --sans).
-    It records the ReferenceType, the object-side pattern and match syntax,
-    an optional list of object symbol types to filter on, and is_negative
-    which triggers NOT EXISTS execution for --sans queries.
+TLDR: Dataclass attached to a PipelineStage to store relationship query parameters for --via and --sans (NOT EXISTS) filters.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

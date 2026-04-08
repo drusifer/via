@@ -1,25 +1,15 @@
-**Task**: Web UI + 20 Questions addition to USER_GUIDE
-**Status**: COMPLETE (100%)
-**Completed**: 2026-03-24
+# Oracle Current Task
 
-## Changes Made
+**Task**: *ora update tldrs using via and skill
+**Status**: IN PROGRESS (25%)
 
-### README.md
-- TLDR: replaced `-Vhas`/`--ref-type`/`--invert` with `--via <rel>`/`--sans <rel>`/`--not`
-- Features → Relationship Queries: updated to new flag syntax
-- Relationship Queries table: replaced old flags with `--via`/`--sans`/`--not`/`--stale`
-- Sprint History: added Sprint 11-12 (Web UI) and Sprint 13 (CLI redesign, 1121 tests)
+**Completed**:
+- [x] Initialized Oracle persona
+- [x] Ran prep_tldr.py to gather fresh symbol data
+- [x] Updated TLDRs for key MD files: README.md, START_HERE.md, CHANGELOG.md, ARCH.md, USER_GUIDE.md
+- [x] Updated TLDRs for core Python files: flag_groups.py, match_record.py, path_filter.py, relationship_types.py
 
-### docs/USER_GUIDE.md
-- TLDR: updated to reflect new relationship flag syntax
-- Table of Contents: "Container Queries (-Vhas)" → "Container Queries (--via declares)"
-- Relationship Queries section: complete rewrite — new syntax, `--sans`, `--not` explained
-- `--ref-type` section: removed (flag no longer exists)
-- `--invert`/`-iv`: removed throughout
-- All examples: updated from `-Vinh`/`-Vca`/`-Vimp`/`-Vr`/`-Vhas` to `--via <rel>`
-- Container Queries section: `-Vhas` → `--via declares`
-- Quick Reference: updated relationship commands block
-
-### File Organization
-- `DESIGN_RENDER_PIPELINE.md` → moved to `docs/`
-- `DESIGN_SPRINT3_INTERNAL_PIPELINE.md` → moved to `docs/`
+**Next**:
+- [ ] Update pipeline files: parser.py, executor.py, relationship_filter.py
+- [ ] Update service files: indexing.py, watch.py
+- [ ] Update web/api files

@@ -1,3 +1,5 @@
+TLDR: Onboarding instructions for AI agents, emphasizing the BOB protocol, CLI usage, and workspace conventions.
+
 1. Read agents/bob.docs/BOB_SYSTEM_PROTOCOL.md
 
 1. Helpful hints:

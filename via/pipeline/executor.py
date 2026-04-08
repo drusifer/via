@@ -1,17 +1,7 @@
 """
 Executes a parsed pipeline by driving database queries and rendering output.
 
-TLDR:
-    PipelineExecutor walks the list of PipelineStage objects produced by
-    PipelineParser and runs each stage in order. The first MATCH stage issues a
-    database query via DatabaseStore; subsequent MATCH stages filter the
-    streaming Iterator[MatchRecord] in memory using glob, regex, or SQL-LIKE
-    pattern matching. Relationship queries (stages with a RelationshipFilter)
-    are dispatched to DatabaseStore.query_relationships. When the last MATCH
-    stage carries a render_type flag, execution falls through to
-    _execute_render_stage, which picks a renderer via RendererFactory and
-    writes formatted output to stdout. STATS stages are a placeholder for a
-    future phase.
+TLDR: Sequentially executes PipelineStage objects, handling database queries, in-memory filtering, and relationship processing (--via/--sans) with streaming MatchRecord iterators.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

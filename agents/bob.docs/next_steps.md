@@ -1,22 +1,8 @@
-# Next Steps
+# Bob Next Steps
 
-## If User Approves Updates
+## Initialization
+1. Post init: `make chat MSG="bob-protocol init. Sprint 14 SHIPPED. Skills & tools updated to v2 (HCI, via MCP, stale-testing). GAPS: state files are stale." PERSONA="Bob" CMD="init"`
+2. Ask User/Cypher for Sprint 15 kickoff or groom phase.
 
-1. **Create AGENTS.md** at repo root
-   - Summary of project for external agents
-   - Build/test commands
-   - Key conventions
-
-2. **Add YAML frontmatter** to all *_AGENT.md files
-   - `name`, `description`, `allowed-tools`
-   - Match Claude Skills format
-
-3. **Optional: Create .claude/skills/ structure**
-   - Convert personas to official Skills
-   - Enable `/persona` invocation
-
-## If User Wants More Research
-
-- Deep dive into specific convention
-- Compare with other frameworks (LangChain, CrewAI)
-- Prototype integration
+## Process Improvement
+1. `*learn All agents must strictly follow the EXIT GATE protocol: save context.md, current_task.md, and next_steps.md BEFORE switching or stopping.`

@@ -1,4 +1,6 @@
 # Changelog
+TLDR: Detailed record of project features, fixes, and sprint-based milestones.
+
 
 All notable changes to **via** are documented here.
 

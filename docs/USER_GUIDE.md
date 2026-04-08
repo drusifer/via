@@ -1,23 +1,6 @@
-Complete reference for indexing, searching, and navigating Python, JavaScript, and TypeScript codebases with VIA.
-
-TLDR:
-    Covers every aspect of VIA usage: installation, incremental indexing, the
-    pipeline query syntax (`via -m<X> PATTERN -t<Y> -o<Z>`), all output formats
-    (list, table, raw, formatted, usage/docstring, JSON via -oJ), context-line
-    flags (-A/-B/-C), relationship queries (--via <rel> positive, --sans <rel>
-    not-exists, --not negate — inheritance, calls, imports, references, declares;
-    --stale cross-stage temporal filter), temporal filtering (--newerthan /
-    --olderthan with human-friendly durations), watch mode (`via index . -w`),
-    web UI (`via web`), and MCP server mode (`via mcp serve` / `via install mcp`)
-    for AI agent integration. All pattern matching is case-sensitive by default;
-    use -I to ignore case. Includes a practical examples section and a
-    troubleshooting guide for common errors (missing database, slow indexing).
-    Intended for end-users and AI agents; complements the README and the
-    architecture document at agents/morpheus.docs/VIA_ARCHITECTURE.md.
-
 # VIA User Guide
 
-A complete guide to using VIA for indexing and searching Python, JavaScript, and TypeScript codebases.
+TLDR: Complete reference for indexing, searching, and navigating codebases using CLI, Web UI, and MCP.
 
 ## Table of Contents
 

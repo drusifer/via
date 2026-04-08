@@ -1,13 +1,7 @@
 """
 Flag group definitions for the VIA CLI.
 
-TLDR:
-    Defines the canonical set of prefix-based CLI flags used throughout VIA.
-    Flag, FlagGroup, and four flag lists (MATCH_FLAGS, TYPE_FLAGS, OUTPUT_FLAGS,
-    FORMAT_FLAGS) encode short/long names, dest attributes, and help text.
-    Helper functions (get_match_short_flags, get_type_short_flags, etc.) return
-    sets used by the pipeline parser for stage detection. Relationship flags
-    (--via/--sans/--not) are handled directly in the parser, not as Flag objects.
+TLDR: Defines canonical prefix-based CLI flags (MATCH_FLAGS, TYPE_FLAGS, etc.) and helper functions for stage detection.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

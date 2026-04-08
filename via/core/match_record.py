@@ -1,14 +1,7 @@
 """
 Polymorphic MatchRecord system for VIA.
 
-TLDR:
-    Defines the MatchRecord abstract dataclass and seven concrete subclasses
-    (ClassMatchRecord, MethodMatchRecord, FunctionMatchRecord, FileMatchRecord,
-    ImportMatchRecord, GlobalMatchRecord, HeaderMatchRecord), each declaring
-    which RenderType values (LIST, TABLE, DIAGRAM, USAGE, RAW, FORMATTED) it
-    supports. Also defines the FormatType enum (ASCII, MD, HTML, PNG) and
-    MatchRecordFactory, which maps symbol_type strings from database rows to
-    the correct subclass and instantiates it with optional rendering metadata.
+TLDR: Polymorphic MatchRecord system and factory for mapping database rows to specific symbol match types and renderers.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------
