@@ -14,7 +14,6 @@ Author: Drew Gutstein
 License: GPL-3.0
 """
 import datetime
-import socket
 import threading
 from http.server import ThreadingHTTPServer
 from typing import Optional

@@ -52,8 +52,8 @@ class TestSymbolTypeEnum:
         assert SymbolType.HEADER.value == 'header'
 
     def test_symbol_type_count(self):
-        """Test that we have exactly 8 symbol types."""
-        assert len(SymbolType) == 8
+        """Test that the enum count matches the current product surface."""
+        assert len(SymbolType) == 10
 
 
 class TestMatchOpEnum:

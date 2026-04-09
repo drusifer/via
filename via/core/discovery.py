@@ -49,7 +49,7 @@ import os
 from dataclasses import dataclass
 from typing import List, Optional, Set
 
-from via.core.path_filter import PathFilter
+from via.core.path_filter import CORE_DEFAULT_EXCLUDES, PathFilter
 
 logger = logging.getLogger(__name__)
 @dataclass
@@ -65,16 +65,7 @@ class FileDiscovery:
     """Discovers files in a directory tree with .gitignore support."""
 
     # Default exclusions (always excluded)
-    DEFAULT_EXCLUDES = [
-        '__pycache__/',
-        '*.pyc',
-        '*.pyo',
-        '*.pyd',
-        '.git/',
-        '.via/',
-        '.svn/',
-        '.hg/',
-    ]
+    DEFAULT_EXCLUDES = list(CORE_DEFAULT_EXCLUDES)
 
     # Default file size limit: 10MB
     DEFAULT_SIZE_LIMIT = 10 * 1024 * 1024

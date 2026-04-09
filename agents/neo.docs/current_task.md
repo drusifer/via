@@ -1,20 +1,21 @@
 # Neo Current Task
 
-## Sprint 19 — COMPLETE
+## Sprint 20 — COMPLETE
 **Status**: DONE
 **Date**: 2026-04-08
 
 ## Scope
-- S19-1: fluent programmatic query builder
-- S19-2: web API builder adoption
+- S20-1: shared CLI/builder construction seam
+- S20-2: Python API docs/examples
 
 ## Changes Made
-- Added `ViaQueryBuilder`, `RelationshipQueryBuilder`, `ViaQuery`, and `ViaRunner`
-- Migrated `via/web/api/query.py` to builder-backed query compilation
-- Added focused tests in `tests/unit/test_sprint19_c1.py`
+- Added `via/pipeline/stage_builder.py` for shared match-stage construction
+- Migrated `via/pipeline/parser.py` and `via/api/query_builder.py` to the shared seam
+- Added Python API docs to `README.md` and `docs/USER_GUIDE.md`
+- Added focused parity tests in `tests/unit/test_sprint20_c1.py`
 
 ## Verification
-- 30 targeted tests passed locally
+- 50 targeted tests passed locally through `make test`
 
 ## Summary Doc
-- `agents/neo.docs/SPRINT_19_Summary_2026-04-08T21:37.md`
+- `agents/neo.docs/SPRINT_20_Summary_2026-04-08T21:58.md`

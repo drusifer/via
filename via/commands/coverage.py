@@ -8,11 +8,10 @@ TLDR:
 
 from pathlib import Path
 from typing import Dict, Iterable, Set
-from xml.etree import ElementTree as ET
+from xml.etree import ElementTree as ET  # nosec B405
 
 from via.core.constants import EXIT_ERROR, EXIT_SUCCESS
 from via.db.store import DatabaseStore
-from via.parsers.base import ClassEntity, FunctionEntity
 from via.parsers.javascript_parser import JavaScriptParser
 from via.parsers.markdown_parser import MarkdownParser
 from via.parsers.python_parser import PythonParser
@@ -42,7 +41,8 @@ def import_coverage_xml(project_root: str, xml_path: str) -> int:
         print(f"Error: Database not found: {db_path}")
         return EXIT_ERROR
 
-    tree = ET.parse(xml_file)
+    # coverage.xml is a local developer artifact, not arbitrary remote input.
+    tree = ET.parse(xml_file)  # nosec B314
     report = tree.getroot()
 
     covered_lines: Dict[str, Set[int]] = {}

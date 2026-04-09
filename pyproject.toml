@@ -26,6 +26,7 @@ dev = [
     "reorder-python-imports",
     "pylint>=3.0.0",
     "bandit>=1.7.0",
+    "vulture>=2.11",
 ]
 
 [project.scripts]
@@ -101,3 +102,11 @@ ignore-imports = true
 targets = ["via"]
 exclude_dirs = ["tests", "agents"]
 skips = ["B608"]
+
+# =============================================================================
+# VULTURE - Dead code detection
+# =============================================================================
+[tool.vulture]
+paths = ["via"]
+exclude = ["tests/", "agents/"]
+min_confidence = 80

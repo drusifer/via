@@ -1,6 +1,6 @@
 # Makefile for the VIA project
 
-.PHONY: all venv test clean lint-fast lint lint-slow duplicates security analyze install-system
+.PHONY: all venv test coverage clean lint-fast lint lints lint-slow duplicates security dead-code analyze install-system
 
 # Variables
 PYTHON := python3
@@ -24,7 +24,7 @@ $(VENV_STAMP):
 venv: $(VENV_STAMP)
 
 # Install dependencies into the virtual environment
-$(INSTALL_STAMP): venv $(REQUIREMENTS)
+$(INSTALL_STAMP): $(VENV_STAMP) $(REQUIREMENTS)
 	$(VENV_PYTHON) -m pip install --upgrade pip && $(VENV_PYTHON) -m pip install -e .
 	touch $(INSTALL_STAMP)
 
@@ -32,7 +32,7 @@ install: $(INSTALL_STAMP)
 
 # Install dev dependencies. This target is self-contained and includes base dependencies.
 # It no longer depends on the 'install' target's stamp file to avoid redundant installations.
-$(INSTALL_DEV_STAMP): venv $(REQUIREMENTS)
+$(INSTALL_DEV_STAMP): $(VENV_STAMP) $(REQUIREMENTS)
 	. ${VENV_ACTIVATE} && pip install -e ".[dev]"
 	touch $(INSTALL_DEV_STAMP)
 
@@ -41,6 +41,15 @@ install-dev: $(INSTALL_DEV_STAMP)
 # Run tests using the virtual environment's python
 test: install-dev
 	. ${VENV_ACTIVATE} && pytest $(or $(FILE),tests/) $(ARGS)
+
+# Run tests with terminal coverage plus LCOV export
+coverage: install-dev
+	mkdir -p coverage
+	. ${VENV_ACTIVATE} && pytest $(or $(FILE),tests/) \
+		--cov=via \
+		--cov-report=term-missing \
+		--cov-report=lcov:coverage/lcov.info \
+		$(ARGS)
 
 # Run JavaScript unit tests
 test-js:
@@ -58,42 +67,48 @@ clean:
 	rm -rf .via/
 	rm -rf $(VENV_DIR)
 	find . -type d -name "__pycache__" -exec rm -r {} +
-	rm -rf .pytest_cache .coverage htmlcov
+	rm -rf .pytest_cache .coverage htmlcov coverage
 
 # =============================================================================
 # Static Analysis Tools
 # =============================================================================
 
-# FAST: Ruff only - complexity, unused imports/vars, dead code (~1 sec)
+# FAST: Ruff hygiene only - unused imports/vars, dead code (~1 sec)
 lint-fast: install-dev
-	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
-	. ${VENV_ACTIVATE} && ruff check via/
+	@echo "=== RUFF: Hygiene (unused imports/vars, dead code) ==="
+	. ${VENV_ACTIVATE} && ruff check via/ --select F401,F841,ERA
 
-# MEDIUM: Ruff + Bandit security (~5 sec)
-lint: install-dev
-	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
-	-. ${VENV_ACTIVATE} && ruff check via/
+# MEDIUM: Ruff hygiene + Bandit security (~5 sec)
+lint: install-dev fix
+	@echo "=== RUFF: Hygiene (unused imports/vars, dead code) ==="
+	-. ${VENV_ACTIVATE} && ruff check via/ --select F401,F841,ERA
 	@echo ""
 	@echo "=== BANDIT: Security Analysis ==="
 	. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
 
-# SLOW: Full analysis - Ruff + Pylint (duplicates) + Bandit (~30 sec)
-lint-slow: install-dev
+# Compatibility alias used by Bob chat/run commands
+lints: lint
+
+# SLOW: Full analysis - Ruff complexity + hygiene + Pylint (duplicates) + Bandit (~30 sec)
+lint-slow: install-dev duplicates security vulture
 	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
 	-. ${VENV_ACTIVATE} && ruff check via/
 	@echo ""
 	@echo "=== PYLINT: Duplicate Code & Design Rules ==="
-	-. ${VENV_ACTIVATE} && pylint via/ --enable=duplicate-code
+	-. ${VENV_ACTIVATE} && pylint via/ --disable=all --enable=duplicate-code
 	@echo ""
 	@echo "=== BANDIT: Security Analysis ==="
 	-. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
 
 # Individual tools (for targeted runs)
 duplicates: install-dev
-	. ${VENV_ACTIVATE} && pylint via/ --enable=duplicate-code
+	. ${VENV_ACTIVATE} && pylint via/ --disable=all --enable=duplicate-code
 
 security: install-dev
 	. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
+
+dead-code: install-dev ## Run Vulture dead code detection against via/
+	. ${VENV_ACTIVATE} && vulture via/ --min-confidence 80
 
 fix: install-dev
 	@echo "=== RUFF: fix ==="

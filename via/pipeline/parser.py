@@ -19,9 +19,12 @@ from via.core.flag_groups import (
     get_match_short_flags,
     get_type_short_flags,
 )
-from via.core.duration import parse_duration
 from via.core.relationship_types import ReferenceType
-from via.pipeline.relationship_filter import RelationshipFilter
+from via.pipeline.stage_builder import (
+    build_match_stage,
+    build_relationship_filter,
+    finalize_match_namespace,
+)
 from via.pipeline.types import PipelineStage, StageType
 
 
@@ -38,7 +41,7 @@ class _StoreSyntax(argparse.Action):
         self.syntax = syntax
         super().__init__(option_strings, dest, **kwargs)
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser, namespace, values, _option_string=None):
         setattr(namespace, self.dest, values)
         setattr(namespace, 'match_syntax', self.syntax)
 
@@ -50,7 +53,7 @@ class _AppendType(argparse.Action):
         self.type_value = type_value
         super().__init__(option_strings, dest, nargs=0, **kwargs)
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser, namespace, values, _option_string=None):
         current = getattr(namespace, self.dest, None) or []
         current.append(self.type_value)
         setattr(namespace, self.dest, current)
@@ -261,39 +264,11 @@ class PipelineParser:
 
                 # Parse subject args
                 parsed_args = self.match_parser.parse_args(subject_args)
-                self._finalize_symbol_types(parsed_args)
-                parsed_args.negate_pattern = negated
+                finalize_match_namespace(parsed_args)
 
                 # Parse object args (for pattern and types)
                 object_parsed = self.match_parser.parse_args(object_args)
-                self._finalize_symbol_types(object_parsed)
-
-                # Parse result-side temporal filters from object args
-                result_newerthan = None
-                result_olderthan = None
-                if getattr(object_parsed, 'newerthan', None):
-                    result_newerthan = parse_duration(object_parsed.newerthan)
-                if getattr(object_parsed, 'olderthan', None):
-                    result_olderthan = parse_duration(object_parsed.olderthan)
-
-                # --stale with --sans is not meaningful — error
-                if is_negative and getattr(object_parsed, 'stale', False):
-                    raise PipelineParseError(
-                        "--stale cannot be combined with --sans: --sans already "
-                        "selects symbols with NO relationship; --stale would be meaningless."
-                    )
-
-                # Create relationship filter
-                parsed_args.relationship = RelationshipFilter(
-                    relationship_type=rel_type,
-                    object_pattern=object_parsed.pattern or '*',
-                    object_match_syntax=getattr(object_parsed, 'match_syntax', 'glob'),
-                    object_types=object_parsed.symbol_types or [],
-                    is_negative=is_negative,
-                    result_newerthan_seconds=result_newerthan,
-                    result_olderthan_seconds=result_olderthan,
-                    result_stale=getattr(object_parsed, 'stale', False),
-                )
+                finalize_match_namespace(object_parsed)
 
                 # Merge output/format flags from object args to subject
                 if object_parsed.render_type:
@@ -301,36 +276,19 @@ class PipelineParser:
                 if object_parsed.format:
                     parsed_args.format = object_parsed.format
 
-                return PipelineStage(StageType.MATCH, parsed_args)
+                try:
+                    relationship = build_relationship_filter(rel_type, object_parsed, is_negative)
+                except ValueError as exc:
+                    raise PipelineParseError(str(exc)) from exc
+
+                return build_match_stage(parsed_args, relationship=relationship, negate_pattern=negated)
             else:
                 # Regular match stage — extract --not if present
                 args, negated = self._extract_not_flag(args)
                 parsed_args = self.match_parser.parse_args(args)
-                self._finalize_symbol_types(parsed_args)
-                parsed_args.relationship = None
-                parsed_args.negate_pattern = negated
-
-                return PipelineStage(StageType.MATCH, parsed_args)
+                return build_match_stage(parsed_args, negate_pattern=negated)
         except (SystemExit, argparse.ArgumentError) as exc:
             raise PipelineParseError(f"Invalid match stage arguments: {args}") from exc
-
-    def _finalize_symbol_types(self, parsed_args) -> None:
-        """Finalize symbol_types from parsed args.
-
-        Args:
-            parsed_args: Namespace from argparse
-        """
-        # Convert symbol_types list to single value for backward compat
-        # (executor will handle the list for OR logic)
-        if hasattr(parsed_args, 'symbol_types') and parsed_args.symbol_types:
-            # Keep as list for OR logic, but also set symbol_type for single type
-            if len(parsed_args.symbol_types) == 1:
-                parsed_args.symbol_type = parsed_args.symbol_types[0]
-            else:
-                parsed_args.symbol_type = None  # Multiple types, use symbol_types list
-        else:
-            parsed_args.symbol_type = None
-            parsed_args.symbol_types = []
 
     def _parse_stats_stage(self, args: List[str]) -> PipelineStage:
         """Parse stats stage using argparse.

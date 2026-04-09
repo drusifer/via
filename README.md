@@ -159,6 +159,44 @@ The server auto-starts watch mode so the index is always current. Claude Code ca
 {"args": ["-mg", "*Parser*", "-tc"]}
 ```
 
+## Python API
+
+`ViaQueryBuilder` and `ViaRunner` are the supported Python query-construction path. They preserve normal via semantics rather than introducing a separate query language.
+
+```python
+from via import ViaQueryBuilder, ViaRunner
+
+query = (
+    ViaQueryBuilder()
+    .glob("*Controller")
+    .classes()
+    .contains("rate_limit")
+    .limit(20)
+    .build()
+)
+
+records = list(ViaRunner(db_store).run(query))
+```
+
+Relationship example:
+
+```python
+from via import ViaQueryBuilder, ViaRunner
+
+query = (
+    ViaQueryBuilder()
+    .glob("Base")
+    .classes()
+    .via("inherits-from")
+        .glob("*")
+        .classes()
+    .done()
+    .build()
+)
+
+records = list(ViaRunner(db_store).run(query))
+```
+
 ## Documentation
 
 - **[User Guide](docs/USER_GUIDE.md)** - Complete usage reference, web UI guide, and 20 real-world queries

@@ -1,16 +1,16 @@
 # Trin Current Task
 
-## Sprint 19 UAT — PASSED
+## Sprint 20 UAT — PASSED
 **Status**: DONE
 **Date**: 2026-04-08
-**Tests**: 30 targeted tests passed
+**Tests**: 50 targeted tests passed
 
 ## Verification
 
-- Cycle 1: builder core and execution path ✓
-- Cycle 2: web API builder adoption ✓
-- Plain query behavior preserved ✓
-- Relationship web query behavior preserved ✓
+- Shared parser/builder seam parity ✓
+- Pipeline parser regressions preserved ✓
+- Existing builder behavior preserved ✓
+- Python API docs/examples aligned with exported API ✓
 
 ## Next
-Sprint 19 complete
+Sprint 20 complete

@@ -68,3 +68,13 @@ Sprint 12: Web UI fixes (UX-001 to UX-005). 1121+74+22 tests.
 
 ### Verification
 - Targeted make-based builder and web-query regression suite: 30 passed
+
+## Sprint 20 (2026-04-08)
+
+### Delivered
+- Added `via/pipeline/stage_builder.py` as a shared CLI/builder query-compilation seam
+- Migrated `PipelineParser` and `ViaQueryBuilder` to the same match-stage and relationship-filter construction path
+- Documented `ViaQueryBuilder` and `ViaRunner` as the supported Python API in `README.md` and `docs/USER_GUIDE.md`
+
+### Verification
+- Targeted make-based seam and regression baseline: 50 passed

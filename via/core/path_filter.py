@@ -18,18 +18,23 @@ import pathspec
 logger = logging.getLogger(__name__)
 
 
+CORE_DEFAULT_EXCLUDES: List[str] = [
+    '__pycache__/',
+    '*.pyc',
+    '*.pyo',
+    '*.pyd',
+    '.git/',
+    '.via/',
+    '.svn/',
+    '.hg/',
+]
+
+
 class PathFilter:
     """Path inclusion/exclusion filter using gitignore spec and default excludes."""
 
     DEFAULT_EXCLUDES: List[str] = [
-        '__pycache__/',
-        '*.pyc',
-        '*.pyo',
-        '*.pyd',
-        '.git/',
-        '.via/',
-        '.svn/',
-        '.hg/',
+        *CORE_DEFAULT_EXCLUDES,
         # JavaScript/Node.js project directories
         'node_modules/',
         'dist/',

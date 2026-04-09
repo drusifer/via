@@ -23,6 +23,7 @@ import signal
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -77,11 +78,15 @@ def _stop_and_collect(proc, timeout=8):
     return stdout, stderr, proc.returncode
 
 
+@contextmanager
 def _open_db(db_path, root_dir):
     """Open the index DB for post-run verification."""
     store = DatabaseStore(db_path, str(root_dir))
     store.connect()
-    return store
+    try:
+        yield store
+    finally:
+        store.close()
 
 
 # ---------------------------------------------------------------------------
@@ -119,9 +124,8 @@ class TestUAT61_Startup:
         _stop_and_collect(proc)
 
         # Verify symbols are in the DB
-        store = _open_db(db_path, tmp_path)
-        results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "User"))
-        store.close()
+        with _open_db(db_path, tmp_path) as store:
+            results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "User"))
         assert len(results) >= 1, "Initial index should have indexed User class"
 
 
@@ -192,10 +196,9 @@ class TestUAT62_FileModification:
         time.sleep(CHANGE_WAIT)
         _stop_and_collect(proc)
 
-        store = _open_db(db_path, tmp_path)
-        new_results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "NewClass"))
-        old_results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "OldClass"))
-        store.close()
+        with _open_db(db_path, tmp_path) as store:
+            new_results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "NewClass"))
+            old_results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "OldClass"))
 
         assert len(new_results) >= 1, "NewClass should be in DB after re-index"
         assert len(old_results) == 0, "OldClass should be gone after re-index"
@@ -223,9 +226,8 @@ class TestUAT63_FileCreation:
         combined = stdout + stderr
         assert "brand_new.py" in combined
 
-        store = _open_db(db_path, tmp_path)
-        results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "BrandNew"))
-        store.close()
+        with _open_db(db_path, tmp_path) as store:
+            results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "BrandNew"))
         assert len(results) >= 1, "BrandNew should be indexed"
 
     def test_new_md_file_indexed(self, tmp_path):
@@ -278,9 +280,8 @@ class TestUAT64_FileDeletion:
         time.sleep(CHANGE_WAIT)
         _stop_and_collect(proc)
 
-        store = _open_db(db_path, tmp_path)
-        results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "TempClass"))
-        store.close()
+        with _open_db(db_path, tmp_path) as store:
+            results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "TempClass"))
         assert len(results) == 0, "TempClass symbols should be removed after file deletion"
 
 

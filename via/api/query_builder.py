@@ -10,8 +10,8 @@ from via.core.match_record import MatchRecord, RenderType
 from via.core.relationship_types import ReferenceType
 from via.core.types import SymbolType
 from via.pipeline.executor import PipelineExecutor
-from via.pipeline.relationship_filter import RelationshipFilter
-from via.pipeline.types import PipelineStage, StageType
+from via.pipeline.stage_builder import build_match_stage, build_relationship_filter
+from via.pipeline.types import PipelineStage
 
 
 @dataclass
@@ -275,35 +275,24 @@ class ViaQueryBuilder(_QueryBuilderBase):
         relationship_filter = None
         if self._relationship is not None:
             object_query = self._relationship.object_query
-            if self._relationship.is_negative and object_query.stale:
-                raise ValueError("--stale cannot be combined with --sans")
-
-            from via.core.duration import parse_duration
-
-            relationship_filter = RelationshipFilter(
-                relationship_type=self._relationship.relationship_type,
-                object_pattern=object_query.pattern,
-                object_match_syntax=object_query.match_syntax,
-                object_types=list(object_query.symbol_types),
-                is_negative=self._relationship.is_negative,
-                result_newerthan_seconds=(
-                    parse_duration(object_query.newerthan)
-                    if object_query.newerthan else None
-                ),
-                result_olderthan_seconds=(
-                    parse_duration(object_query.olderthan)
-                    if object_query.olderthan else None
-                ),
-                result_stale=object_query.stale,
+            object_args = Namespace(
+                pattern=object_query.pattern,
+                match_syntax=object_query.match_syntax,
+                symbol_types=list(object_query.symbol_types),
+                newerthan=object_query.newerthan,
+                olderthan=object_query.olderthan,
+                stale=object_query.stale,
+            )
+            relationship_filter = build_relationship_filter(
+                self._relationship.relationship_type,
+                object_args,
+                self._relationship.is_negative,
             )
 
-        symbol_types = list(self._subject.symbol_types)
-        symbol_type = symbol_types[0] if len(symbol_types) == 1 else None
         args = Namespace(
             pattern=self._subject.pattern,
             match_syntax=self._subject.match_syntax,
-            symbol_types=symbol_types,
-            symbol_type=symbol_type,
+            symbol_types=list(self._subject.symbol_types),
             case_insensitive=self._subject.case_insensitive,
             limit=self._subject.limit,
             result_slice=self._subject.result_slice,
@@ -325,7 +314,7 @@ class ViaQueryBuilder(_QueryBuilderBase):
             nodelims=False,
             stale=self._subject.stale,
         )
-        return ViaQuery((PipelineStage(stage_type=StageType.MATCH, args=args),))
+        return ViaQuery((build_match_stage(args, relationship=relationship_filter, negate_pattern=self._subject.negate_pattern),))
 
 
 class ViaRunner:

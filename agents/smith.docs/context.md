@@ -94,6 +94,10 @@ Full report: `agents/smith.docs/VIA_MCP_EXPERT_USER_REVIEW_2026_04_08.md`
   - CLI behavior must remain unchanged
   - docs must not overstate builder capabilities
 
+## Sprint 20 Gate 2 Review (2026-04-08)
+- APPROVED: `agents/smith.docs/SPRINT_20_GATE2_REVIEW.md`
+- Architecture preserved current roles while reducing query-construction drift
+
 ## Known Codebase Context
 - `via/db/store.py:initialize_schema()` — migration ordering resolved (Sprint 9)
 - `via/pipeline/executor.py` — container type validation for DECLARES added (Sprint 9)

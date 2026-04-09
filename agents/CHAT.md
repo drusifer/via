@@ -2484,3 +2484,252 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-04-08 21:50:31</small>] [**Smith**]->[**Morpheus**] **user review*:
  Sprint 20 Gate 1 APPROVED. Scope is properly bounded to builder adoption and docs, with CLI semantics required to remain unchanged. Review: agents/smith.docs/SPRINT_20_GATE1_REVIEW.md. @Morpheus *lead arch Sprint 20
+
+---
+[<small>2026-04-08 21:51:21</small>] [**Morpheus**]->[**Smith**] **lead arch*:
+ Sprint 20 architecture written: agents/morpheus.docs/SPRINT_20_ARCHITECTURE.md. Shared CLI/builder seam; builder stays the Python API. @Smith *user review Sprint 20 architecture
+
+---
+[<small>2026-04-08 21:51:44</small>] [**Smith**]->[**Mouse**] **user review*:
+ Sprint 20 Gate 2 APPROVED. Architecture keeps a narrow shared CLI/builder seam and documents the builder as the Python API. Review: agents/smith.docs/SPRINT_20_GATE2_REVIEW.md. @Mouse *sm plan Sprint 20
+
+---
+[<small>2026-04-08 21:52:21</small>] [**Mouse**]->[**Neo**] **sm plan*:
+ Sprint 20 board opened: agents/mouse.docs/SPRINT_20_TASKS.md. Cycle 1 is the shared CLI/builder construction seam; Cycle 2 is builder docs/examples. @Neo *swe impl S20-1
+
+---
+[<small>2026-04-08 21:56:47</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 3 passed in 0.67s ===============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 21:56:47</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 44 passed in 0.83s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 21:56:47</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 44 passed in 0.83s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 21:57:07</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 3 passed in 0.56s ===============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 21:57:16</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 44 passed in 0.70s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 21:58:06</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 3 passed in 0.59s ===============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 21:59:04</small>] [**Neo**]->[**Trin**] **swe impl*:
+ Sprint 20 implemented. Shared parser/builder seam landed in `via/pipeline/stage_builder.py`, parser and builder now compile through the same path, and Python API docs were added. Summary: agents/neo.docs/SPRINT_20_Summary_2026-04-08T21:58.md. @Trin *qa verify Sprint 20
+
+---
+[<small>2026-04-08 21:59:04</small>] [**Trin**]->[**Morpheus**] **qa verify*:
+ Sprint 20 UAT PASS. Shared seam parity, parser regressions, and builder regressions are green: 50 passed. Summary: agents/trin.docs/SPRINT_20_UAT_Summary_2026-04-08T21:58.md. @Morpheus *lead review Sprint 20 ship.
+
+---
+[<small>2026-04-08 21:59:04</small>] [**Morpheus**]->[**Cypher**] **lead review*:
+ Sprint 20 review APPROVED. The shared `stage_builder` seam matches architecture, improves builder/CLI parity, and stays out of executor redesign. Review: agents/morpheus.docs/SPRINT_20_REVIEW_2026-04-08T21:58.md. @Cypher *pm close sprint.
+
+---
+[<small>2026-04-08 21:59:04</small>] [**Cypher**]->[**Mouse**] **pm close*:
+ Sprint 20 SHIPPED. Shared CLI/programmatic query construction seam and Python API docs landed with 50 targeted tests green; closeout: agents/cypher.docs/SPRINT_20_CLOSEOUT_2026-04-08T21:58.md. @Mouse *sm archive sprint.
+
+---
+[<small>2026-04-08 21:59:04</small>] [**Mouse**]->[**all**] **sm archive*:
+ Sprint 20 archived. Board complete: agents/mouse.docs/SPRINT_20_TASKS.md; scrum closeout: agents/mouse.docs/SPRINT_20_SCRUM_CLOSEOUT_Summary_2026-04-08T21:58.md. Next intake point is Sprint 21.
+
+---
+[<small>2026-04-08 22:00:00</small>] [**Bob**]->[**all**] **chat*:
+ run `make lints`
+
+---
+[<small>2026-04-08 22:05:39</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make lints | /home/drusifer/Projects/via/build/build.out
+make[1]: Entering directory '/home/drusifer/Projects/via'
+make[1]: *** No rule to make target 'lints'.  Stop.
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:06:22</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make lints | /home/drusifer/Projects/via/build/build.out
+╰─> See above for output.
+
+note: This error originates from a subprocess, and is likely not a problem with pip.
+make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
+
+---
+[<small>2026-04-08 22:07:22</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make install-dev | /home/drusifer/Projects/via/build/build.out
+Successfully uninstalled via-0.1.0
+Successfully installed via-0.1.0
+touch .venv/installed-dev.stamp
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:09:13</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make lints | /home/drusifer/Projects/via/build/build.out
+╰─> See above for output.
+
+note: This error originates from a subprocess, and is likely not a problem with pip.
+make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
+
+---
+[<small>2026-04-08 22:10:01</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make lints | /home/drusifer/Projects/via/build/build.out
+Low: 1
+Medium: 1
+High: 0
+Total issues (by confidence):
+Undefined: 0
+Low: 0
+Medium: 0
+High: 2
+Files skipped (0):
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:11:01</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make lints | /home/drusifer/Projects/via/build/build.out
+Low: 1
+Medium: 0
+High: 0
+Total issues (by confidence):
+Undefined: 0
+Low: 0
+Medium: 0
+High: 1
+Files skipped (0):
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:11:15</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make lints | /home/drusifer/Projects/via/build/build.out
+Low: 0
+Medium: 0
+High: 0
+Total issues (by confidence):
+Undefined: 0
+Low: 0
+Medium: 0
+High: 0
+Files skipped (0):
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:14:00</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make lint-slow | /home/drusifer/Projects/via/build/build.out
+Your code has been rated at 9.42/10 (previous run: 9.46/10, -0.05)
+
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:15:28</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make lint-slow | /home/drusifer/Projects/via/build/build.out
+Low: 0
+Medium: 0
+High: 0
+Total issues (by confidence):
+Undefined: 0
+Low: 0
+Medium: 0
+High: 0
+Files skipped (0):
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:17:55</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make install-dev | /home/drusifer/Projects/via/build/build.out
+Successfully uninstalled via-0.1.0
+
+Successfully installed via-0.1.0 vulture-2.16
+touch .venv/installed-dev.stamp
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:19:04</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make dead-code | /home/drusifer/Projects/via/build/build.out
+via/pipeline/parser.py:56: unused variable 'option_string' (100% confidence)
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:19:22</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make dead-code | /home/drusifer/Projects/via/build/build.out
+make[1]: Entering directory '/home/drusifer/Projects/via'
+. .venv/bin/activate && vulture via/ --min-confidence 80
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:22:51</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+===== 2 failed, 1257 passed, 1 skipped, 179 warnings in 136.52s (0:02:16) ======
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:26:08</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 56 passed in 0.85s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:29:43</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1259 passed, 1 skipped, 4 warnings in 136.36s (0:02:16) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:31:36</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 10 passed in 0.66s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:40:26</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1259 passed, 1 skipped, 4 warnings in 136.45s (0:02:16) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:43:52</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 10 passed in 0.64s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:47:47</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1259 passed, 1 skipped, 4 warnings in 136.42s (0:02:16) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:53:29</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================= 17 passed in 48.83s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:53:53</small>] [**make**]->[**all**] **build*:
+ Build FAILED exit=2 | make run | /home/drusifer/Projects/via/build/build.out
+make[1]: Entering directory '/home/drusifer/Projects/via'
+make[1]: *** No rule to make target 'run'.  Stop.
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-08 22:56:14</small>] [**make**]->[**all**] **build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1259 passed, 1 skipped, 4 warnings in 135.79s (0:02:15) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'

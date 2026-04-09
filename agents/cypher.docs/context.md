@@ -141,5 +141,13 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 - Story doc: `agents/cypher.docs/SPRINT_20_USER_STORIES.md`
 - Explicit non-scope: executor redesign and full CLI parser replacement
 
+### Sprint 20 — SHIPPED (2026-04-08)
+- Theme: builder adoption + library usability
+- Delivered scope:
+  - S20-1 shared CLI/programmatic query construction seam
+  - S20-2 documented `ViaQueryBuilder` and `ViaRunner` as the supported Python API
+- Verification baseline for ship decision: 50 passing targeted tests
+- Closeout doc: `agents/cypher.docs/SPRINT_20_CLOSEOUT_2026-04-08T21:58.md`
+
 ## Blockers
 None

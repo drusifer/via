@@ -133,3 +133,15 @@
 ### Coverage
 - Sprint 19 builder execution path
 - Existing web query and web relationship query behavior stayed green
+
+## Sprint 20 — SIGNED OFF (2026-04-08)
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 50 passing tests
+- Summary: `agents/trin.docs/SPRINT_20_UAT_Summary_2026-04-08T21:58.md`
+
+### Coverage
+- Sprint 20 parser/builder shared seam parity
+- Existing pipeline parser behavior
+- Existing Sprint 19 builder behavior

@@ -1,9 +1,9 @@
 # Morpheus Next Steps
 
-## Resume Point: Sprint 19 reviewed and approved
+## Resume Point: Sprint 20 shipped
 
 ### On Resume
 1. Read bottom 20 lines of `agents/CHAT.md`
-2. If builder follow-up work starts, preserve the additive pattern used in Sprint 19
-3. Keep executor refactors separate from the builder introduction
+2. Keep future builder follow-up work on the shared seam rather than duplicating query construction again
+3. Keep executor refactors separate from builder adoption work unless a new sprint explicitly joins them
 4. Preserve existing MatchRecord/renderer polymorphism as the design baseline

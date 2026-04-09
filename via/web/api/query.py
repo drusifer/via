@@ -15,11 +15,11 @@ Author: Drew Gutstein
 License: GPL-3.0
 """
 import time
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from via.api.query_builder import ViaQueryBuilder, ViaRunner
 from via.core.match_record import MatchRecord
-from via.pipeline.types import PipelineStage, StageType
+from via.pipeline.types import PipelineStage
 
 if TYPE_CHECKING:
     from via.db.store import DatabaseStore

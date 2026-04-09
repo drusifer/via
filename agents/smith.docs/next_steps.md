@@ -1,10 +1,10 @@
 # Smith Next Steps
 
-## Current State: Sprint 20 Gate 1 APPROVED (2026-04-08)
+## Current State: Sprint 20 Gates 1+2 APPROVED (2026-04-08)
 
 ## Pending Actions
-1. Sprint 20 Gate 2 review after Morpheus architecture
-2. Verify builder adoption preserves CLI and library behavior
+1. Verify builder adoption preserves CLI and library behavior
+2. Re-test documented builder examples during UAT where practical
 
 ## Risks To Watch
 - Builder vocabulary drifting away from via’s actual query semantics

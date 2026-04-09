@@ -111,6 +111,16 @@
 - APPROVED: `agents/morpheus.docs/SPRINT_19_REVIEW_2026-04-08T21:37.md`
 - Implementation matched the additive builder architecture and kept executor semantics intact
 
+## Sprint 20 Architecture (2026-04-08)
+- Approved Sprint 20 delivery in `agents/morpheus.docs/SPRINT_20_ARCHITECTURE.md`
+- Decision: add a narrow shared query-compilation seam for CLI and builder callers
+- Keep `PipelineParser`, `ViaQueryBuilder`, and `PipelineExecutor` in their current roles
+- Documentation should present `ViaQueryBuilder`/`ViaRunner` as the supported Python path
+
+## Sprint 20 Review (2026-04-08)
+- APPROVED: `agents/morpheus.docs/SPRINT_20_REVIEW_2026-04-08T21:58.md`
+- Implementation matched the shared-seam architecture and stayed out of executor redesign
+
 ## Architecture Audit (2026-02-11) — Known Tech Debt
 - SMELL-1: `_get_match_metadata()` computes render widths (DB/render coupling)
 - SMELL-2: `_store_call_relationships` accesses `db_store.conn` directly

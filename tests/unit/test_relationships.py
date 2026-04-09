@@ -46,8 +46,8 @@ class TestRelationshipTypeEnum:
         assert RelationshipType.REFERENCES.value == 'references'
 
     def test_relationship_count(self):
-        """Test that we have exactly 5 relationship types (including DECLARES)."""
-        assert len(RelationshipType) == 5
+        """Test that the enum count matches the current product surface."""
+        assert len(RelationshipType) == 7
 
 
 class TestDatabaseStoreRelationships:

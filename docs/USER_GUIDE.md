@@ -455,6 +455,47 @@ via -mg 'validate' -tf --via calls -mg '*' -tf -oR
 
 ---
 
+## Python API
+
+Use `ViaQueryBuilder` plus `ViaRunner` when you want to run via queries from Python code. This API keeps the same semantics as the CLI; it is a construction helper, not a new query language.
+
+### Plain Query Example
+
+```python
+from via import ViaQueryBuilder, ViaRunner
+
+query = (
+    ViaQueryBuilder()
+    .glob("*Service")
+    .classes()
+    .limit(10)
+    .build()
+)
+
+records = list(ViaRunner(db_store).run(query))
+```
+
+### Relationship Query Example
+
+```python
+from via import ViaQueryBuilder, ViaRunner
+
+query = (
+    ViaQueryBuilder()
+    .glob("Base")
+    .classes()
+    .via("inherits-from")
+        .glob("*")
+        .classes()
+    .done()
+    .build()
+)
+
+records = list(ViaRunner(db_store).run(query))
+```
+
+---
+
 ## Container Queries (`--via declares`)
 
 `--via declares` queries "what lives inside this container?" — file→symbols, class→methods, function→nested functions.

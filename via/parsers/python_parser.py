@@ -443,10 +443,6 @@ class PythonParser(ParserABC):
         """Extract literal value as string if possible."""
         if isinstance(node, ast.Constant):
             return repr(node.value)
-        if isinstance(node, ast.Num):  # Python < 3.8
-            return repr(node.n)
-        if isinstance(node, ast.Str):  # Python < 3.8
-            return repr(node.s)
         if hasattr(ast, 'unparse'):
             try:
                 return ast.unparse(node)
@@ -458,8 +454,6 @@ class PythonParser(ParserABC):
         """Extract raw text from Python string literal nodes."""
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             return node.value
-        if isinstance(node, ast.Str):
-            return node.s
         return None
 
     def _get_byte_offset(self, node: ast.AST, text: str) -> int:

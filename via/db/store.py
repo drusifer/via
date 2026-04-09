@@ -21,6 +21,8 @@ License: GPL-3.0
 import os
 import sqlite3
 import time
+import contextlib
+import weakref
 from functools import wraps
 from typing import Any, Callable, Dict, Iterator, List, Optional, TypeVar
 
@@ -30,6 +32,8 @@ from .schema import (
     ALL_TABLES,
     CREATE_INDEXES,
     CREATE_LINE_OFFSETS_TABLE,
+    CREATE_METADATA_TABLE,
+    CREATE_SCHEMA_MIGRATIONS_TABLE,
     SCHEMA_VERSION,
 )
 
@@ -64,12 +68,19 @@ class DatabaseStore:
         self.db_path = db_path
         self.index_root = os.path.abspath(index_root)
         self.conn: Optional[sqlite3.Connection] = None
+        self._conn_finalizer: Optional[weakref.finalize] = None
         self._in_transaction = False
         self._record_factory = MatchRecordFactory()
 
     def connect(self) -> None:
         """Connect to database and enable foreign keys and WAL mode."""
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self._clear_conn_finalizer()
+        self._conn_finalizer = weakref.finalize(
+            self,
+            self._close_connection_safely,
+            self.conn,
+        )
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA journal_mode=WAL;")
         self.conn.execute("PRAGMA foreign_keys = ON;")
@@ -81,13 +92,31 @@ class DatabaseStore:
         if self.conn:
             self.conn.close()
             self.conn = None
+        self._clear_conn_finalizer()
+
+    def __del__(self):
+        """Best-effort cleanup for stores not explicitly closed by callers."""
+        with contextlib.suppress(Exception):
+            self.close()
+
+    @staticmethod
+    def _close_connection_safely(conn: sqlite3.Connection) -> None:
+        """Best-effort close for leaked connections during object finalization."""
+        with contextlib.suppress(Exception):
+            conn.close()
+
+    def _clear_conn_finalizer(self) -> None:
+        """Detach any existing connection finalizer after explicit cleanup."""
+        if self._conn_finalizer is not None and self._conn_finalizer.alive:
+            self._conn_finalizer.detach()
+        self._conn_finalizer = None
 
     def __enter__(self):
         """Context manager entry."""
         self.connect()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, _exc_type, _exc_val, _exc_tb):
         """Context manager exit."""
         self.close()
 
@@ -97,19 +126,8 @@ class DatabaseStore:
         cursor = self.conn.cursor()
 
         # Create core tables (metadata must exist first to read current version)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS metadata (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-            );
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS schema_migrations (
-                version INTEGER PRIMARY KEY,
-                applied_at REAL NOT NULL,
-                description TEXT
-            );
-        """)
+        cursor.execute(CREATE_METADATA_TABLE)
+        cursor.execute(CREATE_SCHEMA_MIGRATIONS_TABLE)
         self._commit_if_needed()
 
         # Read current schema version (0 if fresh database)
@@ -1410,4 +1428,3 @@ class DatabaseStore:
             return None
         ts = float(row[0])
         return _dt.datetime.fromtimestamp(ts, tz=_dt.timezone.utc).isoformat()
-
