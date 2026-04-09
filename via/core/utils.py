@@ -16,10 +16,13 @@ $Id$
 License: GPL-3.0
 """
 
+import re
 import sys
 from typing import Any, Callable, Optional, TextIO, TypeVar
 
 from .types import MatchOp
+
+_ANSI_ESCAPE = re.compile(r'\x1b\[[0-9;]*m')
 
 F = TypeVar('F', bound=Callable[..., Any])
 
@@ -73,6 +76,42 @@ def parse_line_slice(s: str) -> tuple:
     start = int(left) if left else None
     end = int(right) if right else None
     return (start, end)
+
+
+def parse_result_slice(s: str) -> tuple:
+    """Parse a 0-based result slice string into (start, end).
+
+    Semantics: values are 0-based result indices (unlike parse_line_slice which is 1-based).
+    None means open end (start=0, end=no limit).
+
+    Examples:
+        '0:20'  → (0, 20)    first 20 results (OFFSET 0, LIMIT 20)
+        '20:40' → (20, 40)   results 20-39 (OFFSET 20, LIMIT 20)
+        '20:'   → (20, None) from result 20 to end
+        ':20'   → (None, 20) first 20 results
+
+    Args:
+        s: Slice string
+
+    Returns:
+        (start, end) tuple where each may be int or None
+
+    Raises:
+        ValueError: If the string cannot be parsed
+    """
+    return parse_line_slice(s)
+
+
+def strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from text.
+
+    Args:
+        text: Text that may contain ANSI color/style codes
+
+    Returns:
+        Text with all ANSI codes removed
+    """
+    return _ANSI_ESCAPE.sub('', text)
 
 
 def get_match_op(match_syntax: str) -> MatchOp:

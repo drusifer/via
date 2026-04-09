@@ -36,3 +36,35 @@ AFTER --via/--sans  = subject_pattern (what gets returned)
 
 ### Previous Sprint Context
 Sprint 12: Web UI fixes (UX-001 to UX-005). 1121+74+22 tests.
+
+## Sprint 17 (2026-04-08)
+
+### Delivered
+- `link` symbol type with markdown-first extraction
+- `http-calls` primitive relationship for JS/TS outbound HTTP requests
+- `--contains` as post-match symbol-body filtering
+
+### Key Implementation Decisions
+- Reused existing parser/indexer seams rather than adding a new store or query engine
+- Reused symbol byte spans plus existing source-extraction utilities for `--contains`
+- Reused existing relationship storage/query path for `http-calls`
+
+## Sprint 18 (2026-04-08)
+
+### Delivered
+- Refactored JS/TS top-level symbol extraction in `via/parsers/javascript_parser.py` into module-private handler classes plus a dispatcher registry
+- Reused the same dispatch path for exported declarations instead of maintaining separate export-specific extraction logic
+- Added focused parity coverage in `tests/unit/test_sprint18_c1.py`
+
+### Verification
+- Targeted make-based regression suite: 96 passed
+
+## Sprint 19 (2026-04-08)
+
+### Delivered
+- Added fluent programmatic query construction in `via/api/query_builder.py`
+- Added thin execution adapter `ViaRunner` over `PipelineExecutor`
+- Migrated `via/web/api/query.py` off manual `Namespace` construction
+
+### Verification
+- Targeted make-based builder and web-query regression suite: 30 passed

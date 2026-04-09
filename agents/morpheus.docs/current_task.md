@@ -1,29 +1,17 @@
 # Morpheus Current Task
 
-## Task: JS Test Review + E2E Playwright Review
+## Sprint 19 Review
 **Status**: COMPLETE
-**Date**: 2026-03-23
+**Date**: 2026-04-08
 
-## Reviews Done
+## Deliverables
+- `agents/morpheus.docs/SPRINT_19_ARCHITECTURE.md`
+- `agents/morpheus.docs/SPRINT_19_REVIEW_2026-04-08T21:37.md`
 
-### JS Unit Tests (Trin additions)
-- Reviewed dom.test.js new blocks: showToast, output format toggle, reset button, toast-on-reindex
-- Architecture: DOM fixture replacement correctly prevents listener accumulation from repeated initApp()
-- lastStatus two-call pattern correct for toast test
-- APPROVED
-
-### Playwright E2E + Handler Bug Fixes
-- Handler fixes: `_handle_status` + `_handle_query` now create fresh DatabaseStore per request (Sprint 6 pattern)
-- WebServer stores `db_path` + `index_root` for handler access
-- `__main__.py` + `mcp/server.py` updated consistently
-- E2E: 15/15 tests pass, ~20s runtime
-- APPROVED
-
-## Current State
-- Python: 1121 tests
-- JS: 74 tests
-- E2E: 15 tests
-- Smith doing UX review of screenshots
+## Core Recommendation
+- Add a fluent `ViaQueryBuilder` that compiles into the existing pipeline stage model
+- Keep builder construction separate from execution via immutable `ViaQuery` and thin `ViaRunner`
+- Adopt it first in `via/web/api/query.py`, then wider programmatic use
 
 ## Next
-- Sprint 12 JS test coverage complete — handoff to Smith for UX review
+- Hand off to Cypher for sprint closeout

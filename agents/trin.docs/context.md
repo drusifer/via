@@ -82,3 +82,54 @@
 - `tests/unit/test_watch_thread_safety.py` — 1 diagnostic unit test (Trin wrote)
 - `tests/integration/test_cli_watch.py` — 3 CLI integration tests (Neo wrote)
 - `tests/uat/test_sprint6_uat.py` — 17 UAT scenario tests (Trin wrote)
+
+## Sprint 16 — SIGNED OFF (2026-04-08)
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 176 passing tests
+- Summary: `agents/trin.docs/SPRINT_16_UAT_Summary_2026-04-08T19:00.md`
+
+### Coverage
+- S16-1 OR-query `--slice` pagination fixed and regression-covered
+- S16-2 `-ts` string constants extracted/indexed/queryable in Python and JavaScript
+- S16-3 `coverage import` creates `covered-by` relationships from `coverage.xml`
+- S16-4 `--canned` expands to normal via argv without a separate execution path
+
+### QA Notes
+- Sprint 15 slice regression coverage stayed green
+- `make test` bootstrap was not usable in the restricted environment; verification used targeted local pytest runs instead
+
+## Sprint 17 — SIGNED OFF (2026-04-08)
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 138 passing tests
+- Summary: `agents/trin.docs/SPRINT_17_UAT_Summary_2026-04-08T20:45.md`
+
+### Coverage
+- S17-1 `link` symbol extraction/querying
+- S17-2 `http-calls` relationship for JS/TS outbound HTTP sites
+- S17-3 `--contains` body filtering while preserving symbol output
+
+## Sprint 18 — SIGNED OFF (2026-04-08)
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 96 passing tests
+- Summary: `agents/trin.docs/SPRINT_18_UAT_Summary_2026-04-08T21:14.md`
+
+### Coverage
+- S18-1 polymorphic JS parser top-level handler refactor
+- Sprint 11, 14, 16, and 17 JS parser regressions stayed green
+
+## Sprint 19 — SIGNED OFF (2026-04-08)
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 30 passing tests
+- Summary: `agents/trin.docs/SPRINT_19_UAT_Summary_2026-04-08T21:37.md`
+
+### Coverage
+- Sprint 19 builder execution path
+- Existing web query and web relationship query behavior stayed green

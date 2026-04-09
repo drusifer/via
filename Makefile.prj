@@ -40,7 +40,7 @@ install-dev: $(INSTALL_DEV_STAMP)
 
 # Run tests using the virtual environment's python
 test: install-dev
-	. ${VENV_ACTIVATE} && pytest tests/
+	. ${VENV_ACTIVATE} && pytest $(or $(FILE),tests/) $(ARGS)
 
 # Run JavaScript unit tests
 test-js:

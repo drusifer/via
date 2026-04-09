@@ -24,6 +24,8 @@ class ReferenceType(Enum):
     IMPORTS = 'imports'
     REFERENCES = 'references'
     DECLARES = 'declares'        # structural containment (file/class/function declares member)
+    COVERED_BY = 'covered-by'
+    HTTP_CALLS = 'http-calls'
 
     @classmethod
     def from_value(cls, value: str) -> 'ReferenceType':

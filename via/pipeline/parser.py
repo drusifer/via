@@ -419,7 +419,11 @@ class PipelineParser:
         # Match options
         parser.add_argument('-I', '--case-insensitive', dest='case_insensitive', action='store_true', default=False,
                           help='Case-insensitive matching (patterns are case-sensitive by default)')
-        parser.add_argument('-n', '--limit', type=int, default=10)
+        parser.add_argument('-n', '--limit', type=int, default=None,
+                          help='Limit results to N matches (default: 10). Use -n 0 for all results.')
+        parser.add_argument('--slice', dest='result_slice', default=None, metavar='SLICE',
+                          help='Result window: 0:20 (first 20), 20:40 (results 20-39), 20: (from 20 to end). '
+                               'Mutually exclusive with -n.')
         parser.add_argument('-Q', '--qualified', dest='match_qualified', action='store_true', default=False,
                           help='Match against qualified_name instead of symbol_name')
 
@@ -455,6 +459,9 @@ class PipelineParser:
         parser.add_argument('--subtype', dest='symbol_subtype_filter', default=None, metavar='TYPE',
                           help='Filter by symbol subtype (e.g. interface, enum, arrow_function). '
                                'Case-sensitive; unknown values return no results.')
+        parser.add_argument('--contains', dest='contains_pattern', default=None, metavar='PATTERN',
+                          help='Filter matched symbols by whether their source body contains PATTERN. '
+                               'Returns symbols, not grep-style line snippets.')
 
         return parser
 

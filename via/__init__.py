@@ -23,6 +23,7 @@ __version__ = "0.1.0"
 # Public API exports - Core
 from .core.discovery import DiscoveredFile, FileDiscovery
 from .db.store import DatabaseStore
+from .api.query_builder import RelationshipQueryBuilder, ViaQuery, ViaQueryBuilder, ViaRunner
 
 # Public API exports - Parsers
 from .parsers.base import (
@@ -43,6 +44,10 @@ __all__ = [
     "__version__",
     # Database
     "DatabaseStore",
+    "ViaQueryBuilder",
+    "RelationshipQueryBuilder",
+    "ViaQuery",
+    "ViaRunner",
     # Parser base classes and entities
     "ParserABC",
     "ParseResult",

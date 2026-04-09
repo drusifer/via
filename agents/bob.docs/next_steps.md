@@ -1,8 +1,13 @@
 # Bob Next Steps
 
-## Initialization
-1. Post init: `make chat MSG="bob-protocol init. Sprint 14 SHIPPED. Skills & tools updated to v2 (HCI, via MCP, stale-testing). GAPS: state files are stale." PERSONA="Bob" CMD="init"`
-2. Ask User/Cypher for Sprint 15 kickoff or groom phase.
+## Current Status (2026-04-08)
+Init complete. Sprint 15 shipped in practice and appears to be awaiting formal closeout.
 
-## Process Improvement
-1. `*learn All agents must strictly follow the EXIT GATE protocol: save context.md, current_task.md, and next_steps.md BEFORE switching or stopping.`
+## On Resume
+1. Read CHAT.md bottom 20 messages for latest handoffs
+2. If closure still pending: route to `@Cypher *pm close Sprint 15`
+3. If closure is complete: audit stale state files and prompt affected personas to save EXIT state
+4. If Oracle TLDR remains incomplete: `@oracle *ora update tldrs` to resume pipeline/service/web sweep
+
+## Process Improvement (ongoing)
+- Enforce EXIT GATE: save state files before every switch/stop

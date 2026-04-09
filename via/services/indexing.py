@@ -307,6 +307,8 @@ class IndexingService:
             'classes': len(parse_result.classes),
             'imports': len(parse_result.imports),
             'globals': len(parse_result.globals),
+            'string_constants': len(getattr(parse_result, 'string_constants', [])),
+            'links': len(getattr(parse_result, 'links', [])),
             'headers': len(parse_result.markdown_headings),
         }
 
@@ -351,9 +353,15 @@ class IndexingService:
         self._store_function_symbols(file_info, parse_result)
         self._store_import_symbols(file_info, parse_result)
         self._store_global_symbols(file_info, parse_result)
-        self._store_file_path_symbols(file_info)
+        self._store_string_constant_symbols(file_info, parse_result)
+        self._store_link_symbols(file_info, parse_result)
+        self._store_file_path_symbols(file_info, parse_result.language)
         self._store_relationships(
             file_info, parse_result.calls, 'calls',
+            lambda c: (c.caller_type, c.caller_parent, c.caller_name, c.callee_name),
+        )
+        self._store_relationships(
+            file_info, getattr(parse_result, 'http_calls', []), 'http-calls',
             lambda c: (c.caller_type, c.caller_parent, c.caller_name, c.callee_name),
         )
         self._store_relationships(
@@ -467,7 +475,56 @@ class IndexingService:
                 language=parse_result.language,
             )
 
-    def _store_file_path_symbols(self, file_info: DiscoveredFile) -> None:
+    def _store_string_constant_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Insert structured string constant symbols and back-link them to owners."""
+        for idx, string_const in enumerate(getattr(parse_result, 'string_constants', []), start=1):
+            owner_name = string_const.owner_name or 'file'
+            qualified_name = _calculate_qualified_name(
+                file_info.path, f"string.{idx}.{owner_name}"
+            )
+            symbol_id = self.db_store.insert_symbol(
+                symbol_name=string_const.value,
+                symbol_type='string_constant',
+                file_path=file_info.path,
+                line_number=string_const.line_number,
+                qualified_name=qualified_name,
+                byte_offset=string_const.byte_offset,
+                byte_length=string_const.byte_length,
+                parent_name=string_const.owner_name,
+                mtime=file_info.mtime,
+                language=parse_result.language,
+            )
+
+            target_id = None
+            if string_const.owner_type and string_const.owner_name:
+                target_id = self.db_store.get_symbol_id(
+                    string_const.owner_name,
+                    string_const.owner_type,
+                    file_info.path,
+                    string_const.owner_parent,
+                )
+            if target_id:
+                self.db_store.insert_relationship(symbol_id, target_id, 'references')
+
+    def _store_link_symbols(self, file_info: DiscoveredFile, parse_result) -> None:
+        """Insert structured link symbols extracted from markdown or other sources."""
+        for idx, link in enumerate(getattr(parse_result, 'links', []), start=1):
+            qualified_name = _calculate_qualified_name(file_info.path, f"link.{idx}")
+            self.db_store.insert_symbol(
+                symbol_name=link.target,
+                symbol_type='link',
+                file_path=file_info.path,
+                line_number=link.line_number,
+                qualified_name=qualified_name,
+                byte_offset=link.byte_offset,
+                byte_length=link.byte_length,
+                parent_name=link.owner_name,
+                mtime=file_info.mtime,
+                language=parse_result.language,
+                symbol_subtype=link.label,
+            )
+
+    def _store_file_path_symbols(self, file_info: DiscoveredFile, language: str = None) -> None:
         """Insert file path symbols (for filename and filepath matching)."""
         filename = file_info.path.split('/')[-1]
         rel_path = os.path.relpath(file_info.path, self.db_store.index_root)
@@ -481,6 +538,7 @@ class IndexingService:
             byte_length=None,
             parent_name=None,
             mtime=file_info.mtime,
+            language=language,
         )
         self.db_store.insert_symbol(
             symbol_name=filename,
@@ -492,6 +550,7 @@ class IndexingService:
             byte_length=None,
             parent_name=None,
             mtime=file_info.mtime,
+            language=language,
         )
 
     def _store_declares_relationships(self, file_info: DiscoveredFile, parse_result) -> None:
@@ -545,6 +604,19 @@ class IndexingService:
             glob_id = self.db_store.get_symbol_id(glob.name, 'global', file_info.path, None)
             if glob_id:
                 _link(glob_id)
+
+        # Headers (markdown files) — recompute hierarchy stack to resolve parent_name
+        header_stack = []
+        for heading in getattr(parse_result, 'markdown_headings', []):
+            while header_stack and header_stack[-1][0] >= heading.level:
+                header_stack.pop()
+            parent_name = header_stack[-1][1] if header_stack else None
+            header_stack.append((heading.level, heading.text))
+            header_id = self.db_store.get_symbol_id(
+                heading.text, 'header', file_info.path, parent_name
+            )
+            if header_id:
+                _link(header_id)
 
     def _store_relationships(self, file_info: DiscoveredFile, items, rel_type: str, get_parts) -> None:
         """Create pending relationships for a list of call or reference items.

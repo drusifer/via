@@ -19,7 +19,7 @@ License: GPL-3.0
 import re
 from typing import List, Set, Tuple
 
-from .base import MarkdownHeadingEntity, ParserABC, ParseResult
+from .base import LinkEntity, MarkdownHeadingEntity, ParserABC, ParseResult
 
 
 class MarkdownParser(ParserABC):
@@ -32,6 +32,7 @@ class MarkdownParser(ParserABC):
 
     # Code fence pattern for detecting code blocks
     CODE_FENCE_PATTERN = re.compile(r'^```.*$', re.MULTILINE)
+    LINK_PATTERN = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
 
     @property
     def language_name(self) -> str:
@@ -94,6 +95,24 @@ class MarkdownParser(ParserABC):
                 )
 
                 result.markdown_headings.append(heading)
+
+            # Extract markdown links outside fenced code blocks.
+            for match in self.LINK_PATTERN.finditer(text):
+                if self._is_in_code_block(match.start(), code_ranges):
+                    continue
+                target = match.group(2).strip()
+                if not target:
+                    continue
+                byte_offset = match.start(2)
+                byte_length = len(match.group(2).encode('utf-8'))
+                line_number = text[:byte_offset].count('\n') + 1
+                result.links.append(LinkEntity(
+                    target=target,
+                    label=match.group(1).strip() or None,
+                    line_number=line_number,
+                    byte_offset=byte_offset,
+                    byte_length=byte_length,
+                ))
 
         except Exception as e:
             result.parse_error = f"Parse error: {type(e).__name__}: {e}"

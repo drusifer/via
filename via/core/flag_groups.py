@@ -56,6 +56,8 @@ TYPE_FLAGS: List[Flag] = [
     Flag(FlagGroup.TYPE, 'm', 'type-method', 'symbol_type', 'method', 'Methods'),
     Flag(FlagGroup.TYPE, 'i', 'type-import', 'symbol_type', 'import', 'Imports'),
     Flag(FlagGroup.TYPE, 'g', 'type-global', 'symbol_type', 'global', 'Globals'),
+    Flag(FlagGroup.TYPE, 's', 'type-string', 'symbol_type', 'string_constant', 'String constants'),
+    Flag(FlagGroup.TYPE, 'l', 'type-link', 'symbol_type', 'link', 'Links / URLs'),
     Flag(FlagGroup.TYPE, 'F', 'type-filepath', 'symbol_type', 'filepath', 'File paths'),
     Flag(FlagGroup.TYPE, 'N', 'type-filename', 'symbol_type', 'filename', 'File names'),
     Flag(FlagGroup.TYPE, 'H', 'type-header', 'symbol_type', 'header', 'Markdown headers'),

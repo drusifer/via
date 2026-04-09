@@ -337,3 +337,18 @@ class MyClass:
             "decorator reference duplicated for function"
         assert ref_pairs.count(('decorated_method', 'my_decorator')) == 1, \
             "decorator reference duplicated for method"
+
+    def test_extracts_string_constants_from_function_and_global(self, parser):
+        """Sprint 16: string constants are extracted conservatively."""
+        code = b'''MESSAGE = "User not found"
+
+def greet():
+    logger.info("hello")
+    return "done"
+'''
+        result = parser.parse("test.py", code)
+
+        values = [s.value for s in result.string_constants]
+        assert "User not found" in values
+        assert "hello" in values
+        assert "done" in values

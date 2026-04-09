@@ -1,11 +1,12 @@
 # Smith Next Steps
 
-## Current State: Sprint 12 COMPLETE
+## Current State: Sprint 20 Gate 1 APPROVED (2026-04-08)
 
-Sprint 12 shipped: Web UI (via index -w + via mcp serve), Material Design SPA, 1120 tests.
+## Pending Actions
+1. Sprint 20 Gate 2 review after Morpheus architecture
+2. Verify builder adoption preserves CLI and library behavior
 
-## Ready For
-1. Sprint 13 Gate 1: Review Cypher's user stories after `*pm plan sprint`
-2. Sprint 13 Gate 2: Review Morpheus architecture after `*lead arch sprint`
-3. Or: `*user test <feature>` on any Sprint 12 Web UI feature on request
-4. Or: `*user feedback` on open UX questions
+## Risks To Watch
+- Builder vocabulary drifting away from via’s actual query semantics
+- CLI behavior changing while construction logic is shared
+- Scope drift into parser or executor redesign

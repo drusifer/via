@@ -1,6 +1,6 @@
 # Cypher Context - VIA Project
 
-**Last Updated**: 2026-03-20
+**Last Updated**: 2026-04-08
 
 ## Current Project
 Via - Python codebase indexing and querying CLI tool
@@ -67,6 +67,79 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 - Uses existing ParserABC/ParserRegistry seams — no query/CLI/renderer changes needed
 - 5 open questions (OQ-1 to OQ-5) for Morpheus arch review
 - Pending: Smith user review gate → Morpheus arch → Neo implementation
+
+### Sprint 14 — SHIPPED (2026-04-06, commit d96e522)
+- JS/TS relationship extraction, `--lang` flag, `--subtype` flag, web UI `--via`/`--sans` UX, USER_GUIDE.md fixes
+- 1178 tests, 0 failures
+
+### Sprint 15 — SHIPPED (2026-04-08)
+- Source: Smith's MCP expert review (`agents/smith.docs/VIA_MCP_EXPERT_USER_REVIEW_2026_04_08.md`)
+- Theme: MCP ergonomics + index completeness
+- 6 stories, 9pt: --slice pagination, MCP output wrapper, --lang/-tF fix, markdown declares, -Q full-path/docs clarification, --help examples
+- Delivered across 3 cycles; QA and lead review passed for each cycle
+- Final reported test baseline: 1235 passed, 1 skipped, 4 warnings
+- Closeout doc: `agents/cypher.docs/SPRINT_15_CLOSEOUT_2026-04-08T18:24.md`
+- Deferred to Sprint 16: string constants, coverage import, link indexing, canned queries
+- Additional Sprint 16 backlog note: `--slice` ignored for OR'd type queries
+
+### Sprint 16 — SHIPPED (2026-04-08)
+- Source: Sprint 15 closeout + Smith MCP review + Oracle recorded decisions
+- Theme: string intelligence + reusable query workflows
+- Shipped scope:
+  - S16-1 fix `--slice` for OR'd type queries
+  - S16-2 `-ts` string constants
+  - S16-3 `covered-by` coverage import
+  - S16-4 canned queries
+- Implementation, QA, and lead review completed on 2026-04-08
+- Targeted verification baseline for ship decision: 176 passing tests
+- Closeout doc: `agents/cypher.docs/SPRINT_16_CLOSEOUT_2026-04-08T19:00.md`
+- Stories doc: `agents/cypher.docs/SPRINT_16_USER_STORIES.md`
+- Backlog retained: link indexing, HTTP bridge, generic `--contains` search
+
+### Sprint 17 — SHIPPED (2026-04-08)
+- Theme: link intelligence + HTTP bridge primitives
+- Delivered scope:
+  - S17-1 URL/link indexing as `link` symbols
+  - S17-2 pragmatic HTTP bridge via JS HTTP call sites
+  - S17-3 `--contains` as post-match symbol-body filtering
+- Intentional boundary preserved: no claim of automatic framework-aware cross-language tracing
+- Verification baseline for ship decision: 138 passing targeted tests
+- Stories doc: `agents/cypher.docs/SPRINT_17_USER_STORIES.md`
+- Closeout doc: `agents/cypher.docs/SPRINT_17_CLOSEOUT_2026-04-08T20:45.md`
+
+### Sprint 18 — Planned (2026-04-08)
+- Theme: polymorphic refactor, starting with JavaScript parser top-level dispatch
+- Scope is intentionally bounded to structural cleanup, not new product behavior
+- Story doc: `agents/cypher.docs/SPRINT_18_USER_STORIES.md`
+- First slice: replace the large top-level node-type conditional in `via/parsers/javascript_parser.py` with handler objects/registry
+- Deferred refactor backlog: `FunctionBodyAnalyzer` extraction and executor strategies
+
+### Sprint 18 — SHIPPED (2026-04-08)
+- Theme: polymorphic JS parser refactor
+- Delivered scope:
+  - S18-1 polymorphic top-level JS parser handlers
+- Verification baseline for ship decision: 96 passing targeted tests
+- Closeout doc: `agents/cypher.docs/SPRINT_18_CLOSEOUT_2026-04-08T21:14.md`
+
+### Sprint 19 — Planned (2026-04-08)
+- Theme: fluent builder API for programmatic via queries
+- Scope is bounded to a new `ViaQueryBuilder` plus migration of the web query layer away from manual `Namespace` construction
+- Story doc: `agents/cypher.docs/SPRINT_19_USER_STORIES.md`
+- Architecture source: `agents/morpheus.docs/VIA_QUERY_BUILDER_ARCHITECTURE_2026-04-08T21:22.md`
+
+### Sprint 19 — SHIPPED (2026-04-08)
+- Theme: ViaQueryBuilder
+- Delivered scope:
+  - S19-1 fluent programmatic query builder
+  - S19-2 web API builder adoption
+- Verification baseline for ship decision: 30 passing targeted tests
+- Closeout doc: `agents/cypher.docs/SPRINT_19_CLOSEOUT_2026-04-08T21:37.md`
+
+### Sprint 20 — Planned (2026-04-08)
+- Theme: builder adoption + library usability
+- Scope is bounded to sharing the builder seam with the CLI/query construction path and documenting `ViaQueryBuilder` as the supported Python API
+- Story doc: `agents/cypher.docs/SPRINT_20_USER_STORIES.md`
+- Explicit non-scope: executor redesign and full CLI parser replacement
 
 ## Blockers
 None

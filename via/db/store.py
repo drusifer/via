@@ -609,6 +609,7 @@ class DatabaseStore:
         negated: bool = False,
         language: Optional[str] = None,
         subtype: Optional[str] = None,
+        offset: Optional[int] = None,
     ) -> Iterator[MatchRecord]:
         """
         Match symbols using denormalized symbols table.
@@ -638,6 +639,7 @@ class DatabaseStore:
                 negated=negated,
                 language=language,
                 subtype=subtype,
+                offset=offset,
             )
             return
 
@@ -714,8 +716,12 @@ class DatabaseStore:
             ORDER BY s.file_path, s.line_number
         """
 
-        # Add limit if specified (0 means unlimited)
-        if limit is not None and limit > 0:
+        # Apply OFFSET + LIMIT for --slice, or just LIMIT for -n
+        if offset is not None:
+            # --slice mode: OFFSET is the start index; limit 0 = unlimited (-1 in SQLite)
+            sql_limit = limit if limit and limit > 0 else -1
+            query += f"\nLIMIT {sql_limit} OFFSET {offset}"
+        elif limit is not None and limit > 0:
             query += f"\nLIMIT {limit}"
 
         # Execute and yield results; total_count from window function drives limit warning
@@ -747,6 +753,7 @@ class DatabaseStore:
         negated: bool = False,
         language: Optional[str] = None,
         subtype: Optional[str] = None,
+        offset: Optional[int] = None,
     ) -> Iterator[MatchRecord]:
         """Match using Python regex instead of SQL REGEXP.
 
@@ -826,6 +833,8 @@ class DatabaseStore:
 
         cursor = self.conn.execute(query, params)
         count = 0
+        skipped = 0
+        skip_count = offset or 0
 
         for row in cursor:
             # Get the value to match against
@@ -833,6 +842,10 @@ class DatabaseStore:
 
             # Apply regex filter (negated=True inverts the match)
             if (regex.search(match_value) is not None) != negated:
+                # Apply offset (skip first N matching results)
+                if skipped < skip_count:
+                    skipped += 1
+                    continue
                 row_dict = {
                     'symbol_name': row[0],
                     'symbol_type': row[1],

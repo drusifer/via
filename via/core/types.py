@@ -32,6 +32,8 @@ class SymbolType(Enum):
     IMPORT = 'import'
     GLOBAL = 'global'
     HEADER = 'header'
+    STRING_CONSTANT = 'string_constant'
+    LINK = 'link'
 
 
 class MatchOp(Enum):

@@ -237,6 +237,36 @@ class HeaderMatchRecord(MatchRecord):
         }
 
 
+@dataclass
+class StringConstantMatchRecord(MatchRecord):
+    """Match record for indexed string constants."""
+
+    HELP = "String constant symbol: supports LIST, TABLE, RAW, FORMATTED."
+
+    def _supports_render_type(self, render_type: RenderType) -> bool:
+        return render_type in {
+            RenderType.LIST,
+            RenderType.TABLE,
+            RenderType.RAW,
+            RenderType.FORMATTED,
+        }
+
+
+@dataclass
+class LinkMatchRecord(MatchRecord):
+    """Match record for indexed links / URLs."""
+
+    HELP = "Link symbol: supports LIST, TABLE, RAW, FORMATTED."
+
+    def _supports_render_type(self, render_type: RenderType) -> bool:
+        return render_type in {
+            RenderType.LIST,
+            RenderType.TABLE,
+            RenderType.RAW,
+            RenderType.FORMATTED,
+        }
+
+
 class MatchRecordFactory:
     """Factory for creating MatchRecord instances from database rows.
 
@@ -253,6 +283,8 @@ class MatchRecordFactory:
         'module': ImportMatchRecord,  # JS/TS imports stored as 'module' in DB
         'global': GlobalMatchRecord,
         'header': HeaderMatchRecord,
+        'string_constant': StringConstantMatchRecord,
+        'link': LinkMatchRecord,
     }
 
     def create_from_row(

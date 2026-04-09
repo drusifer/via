@@ -59,7 +59,16 @@ def build_tool_schema() -> dict:
         "(e.g. via -mg 'via/core/*' -tF -Q matches by directory path, not just filename).\n\n"
         "Note: --via references tracks name usages inside function/method bodies only. Class\n"
         "inheritance declarations and module-level usages are not tracked by references.\n\n"
-        "Returns a JSON array of symbol objects when -oJ is used (default for MCP)."
+        "Result windowing: use --slice start:end to paginate (e.g. --slice 0:20 for first 20,\n"
+        "--slice 20:40 for next 20). Mutually exclusive with -n/--limit.\n\n"
+        "Response shape: {\"output_type\": \"...\", \"result\": ..., \"total\": N, \"shown\": M}.\n"
+        "  output_type: \"json\" (default) | \"diagram\" | \"raw\" | \"table\" | \"list\" | \"formatted\" | \"usage\"\n"
+        "  result: array of symbol dicts when output_type=json; plain text string otherwise.\n"
+        "  total/shown: full match count and count returned (useful for --slice pagination).\n"
+        "  When output_type=diagram and no relationships exist, falls back to output_type=json\n"
+        "  with an empty result and a 'note' field explaining the fallback.\n\n"
+        "Returns symbol objects in result array (JSON dicts with symbol_name, file_path, etc.) "
+        "when no output format flag is used."
     )
 
     examples = [

@@ -15,11 +15,10 @@ Author: Drew Gutstein
 License: GPL-3.0
 """
 import time
-from argparse import Namespace
 from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
 
+from via.api.query_builder import ViaQueryBuilder, ViaRunner
 from via.core.match_record import MatchRecord
-from via.pipeline.executor import PipelineExecutor
 from via.pipeline.types import PipelineStage, StageType
 
 if TYPE_CHECKING:
@@ -51,10 +50,10 @@ def run_query(db_store: "DatabaseStore", body: Dict[str, Any]) -> dict:
         'format', and 'elapsed_ms'.
     """
     stages = _build_stages(body)
-    executor = PipelineExecutor(db_store)
+    runner = ViaRunner(db_store)
 
     start = time.monotonic()
-    record_iter = executor.execute(stages)
+    record_iter = runner.run(_query_from_stages(stages))
     records: List[MatchRecord] = list(record_iter or [])
     elapsed_ms = int((time.monotonic() - start) * 1000)
 
@@ -89,43 +88,82 @@ def _build_stages(body: Dict[str, Any]) -> List[PipelineStage]:
     Returns:
         List of PipelineStage objects ready for PipelineExecutor.
     """
+    return _builder_from_body(body).build().to_stages()
+
+
+def _builder_from_body(body: Dict[str, Any]) -> ViaQueryBuilder:
+    """Translate a JSON body into a ViaQueryBuilder."""
+    builder = ViaQueryBuilder()
+
     match_type = body.get("match_type", "glob") or "glob"
     pattern = body.get("pattern", "*") or "*"
+    builder_method = {
+        "glob": builder.glob,
+        "regex": builder.regex,
+        "sql": builder.sql,
+    }.get(match_type, builder.glob)
+    builder_method(pattern)
+
     symbol_types: List[str] = body.get("symbol_types") or []
+    if symbol_types:
+        builder.types(*symbol_types)
+
+    if body.get("case_insensitive", False):
+        builder.case_insensitive()
+    if body.get("qualified", False):
+        builder.qualified()
+    if body.get("newerthan"):
+        builder.newerthan(body["newerthan"])
+    if body.get("olderthan"):
+        builder.olderthan(body["olderthan"])
+    if body.get("contains"):
+        builder.contains(body["contains"])
+    if body.get("contains_pattern"):
+        builder.contains(body["contains_pattern"])
+    if body.get("language_filter"):
+        builder.language(body["language_filter"])
+    if body.get("symbol_subtype_filter"):
+        builder.subtype(body["symbol_subtype_filter"])
+    if body.get("negate_pattern", False):
+        builder.negate()
+
     # limit=0 means "no limit" in the web API; PipelineExecutor treats 0 as "stop after 0"
     # Use a large sentinel value when no limit is requested
     _NO_LIMIT = 100_000
     limit: int = int(body.get("limit") or 0) or _NO_LIMIT
-    case_insensitive: bool = bool(body.get("case_insensitive", False))
-    qualified: bool = bool(body.get("qualified", False))
-    newerthan: Optional[str] = body.get("newerthan") or None
-    olderthan: Optional[str] = body.get("olderthan") or None
+    builder.limit(limit)
 
     relationship_name: Optional[str] = body.get("relationship") or None
-
-    # symbol_type: single value for DB query; symbol_types: list for multi-type OR
-    # When multiple types requested, set symbol_type=None so executor uses symbol_types list
-    single_type = symbol_types[0] if len(symbol_types) == 1 else None
-
-    args = Namespace(
-        pattern=pattern,
-        match_syntax=_MATCH_SYNTAX.get(match_type, "g"),
-        symbol_types=symbol_types,
-        symbol_type=single_type,
-        case_insensitive=case_insensitive,
-        limit=limit,
-        match_qualified=qualified,
-        newerthan=newerthan,
-        olderthan=olderthan,
-        render_type=None,
-        relationship=None,
-        line_slice=None,
-    )
-
     if relationship_name:
-        args.relationship = _build_relationship_filter(body, relationship_name)
+        rel = _build_relationship_filter(body, relationship_name)
+        rel_builder = builder.sans(rel.relationship_type) if rel.is_negative else builder.via(rel.relationship_type)
+        object_method = {
+            "glob": rel_builder.glob,
+            "regex": rel_builder.regex,
+            "sql": rel_builder.sql,
+            "g": rel_builder.glob,
+            "r": rel_builder.regex,
+            "s": rel_builder.sql,
+        }.get(rel.object_match_syntax, rel_builder.glob)
+        object_method(rel.object_pattern)
+        if rel.object_types:
+            rel_builder.types(*rel.object_types)
+        if rel.result_newerthan_seconds is not None:
+            rel_builder.newerthan(str(int(rel.result_newerthan_seconds)))
+        if rel.result_olderthan_seconds is not None:
+            rel_builder.olderthan(str(int(rel.result_olderthan_seconds)))
+        if rel.result_stale:
+            rel_builder.stale()
+        rel_builder.done()
 
-    return [PipelineStage(stage_type=StageType.MATCH, args=args)]
+    return builder
+
+
+def _query_from_stages(stages: List[PipelineStage]):
+    """Wrap builder-produced stages as a query-like object for execution."""
+    from via.api.query_builder import ViaQuery
+
+    return ViaQuery(tuple(stages))
 
 
 def _build_relationship_filter(body: Dict[str, Any], relationship_name: str):

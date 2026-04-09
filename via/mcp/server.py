@@ -13,6 +13,8 @@ Author: Drew Gutstein
 License: GPL-3.0
 """
 
+import contextlib
+import io
 import logging
 import threading
 from pathlib import Path
@@ -20,6 +22,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from via.core.constants import EXIT_SUCCESS
+from via.core.utils import strip_ansi
 from via.db.store import DatabaseStore
 from via.parsers.javascript_parser import JavaScriptParser
 from via.parsers.markdown_parser import MarkdownParser
@@ -120,25 +123,59 @@ def run_mcp_server(
 
     mcp = FastMCP("via")
 
-    # Output flags that cause the executor to render (returns None) — strip them
-    _OUTPUT_FLAGS = {'-oL', '-oT', '-oD', '-oU', '-oR', '-oF', '-oJ',
-                     '--output-list', '--output-table', '--output-diagram',
-                     '--output-usage', '--output-raw', '--output-formatted', '--output-json'}
+    # Flags that request non-JSON rendered output — map to output_type strings
+    _OUTPUT_TYPE_MAP = {
+        '-oD': 'diagram', '--output-diagram': 'diagram',
+        '-oR': 'raw', '--output-raw': 'raw',
+        '-oF': 'formatted', '--output-formatted': 'formatted',
+        '-oT': 'table', '--output-table': 'table',
+        '-oL': 'list', '--output-list': 'list',
+        '-oU': 'usage', '--output-usage': 'usage',
+    }
+    # All output flags (includes -oJ which stays as JSON)
+    _OUTPUT_FLAGS = set(_OUTPUT_TYPE_MAP) | {'-oJ', '--output-json'}
+
+    def _detect_output_type(query_args: list) -> str:
+        for arg in query_args:
+            if arg in _OUTPUT_TYPE_MAP:
+                return _OUTPUT_TYPE_MAP[arg]
+        return 'json'
 
     _schema = build_tool_schema()
 
     @mcp.tool(description=_schema["description"])
-    def via_query(args: list[str]) -> list[dict]:
+    def via_query(args: list[str]) -> dict:
         try:
-            # Strip output-format flags — MCP always returns JSON dicts
-            clean_args = [a for a in args if a not in _OUTPUT_FLAGS]
-            stages = PipelineParser().parse(clean_args)
-            executor = PipelineExecutor(mcp_store)
-            results = list(executor.execute(stages) or [])
-            return [JsonRenderer._to_dict(r) for r in results]
+            output_type = _detect_output_type(args)
+            if output_type == 'json':
+                # Default: strip output flags, return symbol dicts
+                clean_args = [a for a in args if a not in _OUTPUT_FLAGS]
+                stages = PipelineParser().parse(clean_args)
+                executor = PipelineExecutor(mcp_store)
+                results = list(executor.execute(stages) or [])
+                dicts = [JsonRenderer._to_dict(r) for r in results]
+                total = results[0].total_matches if results else 0
+                return {"output_type": "json", "result": dicts, "total": total, "shown": len(dicts)}
+            else:
+                # Rendered output: capture stdout, strip ANSI
+                stages = PipelineParser().parse(args)
+                executor = PipelineExecutor(mcp_store)
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    executor.execute(stages)
+                rendered = strip_ansi(buf.getvalue()).rstrip('\n')
+                # Fall back to JSON when diagram has no symbols to show
+                if output_type == 'diagram' and (
+                    not rendered.strip() or 'classDiagram' not in rendered
+                ):
+                    return {
+                        "output_type": "json", "result": [], "total": 0, "shown": 0,
+                        "note": "No diagram content produced; falling back to JSON.",
+                    }
+                return {"output_type": output_type, "result": rendered, "total": 0, "shown": 0}
         except Exception as exc:
             logger.error("via_query error: %s", exc)
-            return []
+            return {"result": [], "total": 0, "shown": 0}
 
     try:
         mcp.run(transport="stdio")

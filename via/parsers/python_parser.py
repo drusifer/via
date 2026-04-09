@@ -30,6 +30,7 @@ from .base import (
     ParserABC,
     ParseResult,
     ReferenceEntity,
+    StringConstantEntity,
 )
 
 # Python builtins that should not be indexed as call relationships
@@ -133,6 +134,11 @@ class PythonParser(ParserABC):
         # Extract calls from function body
         calls = self._extract_calls(node, text, caller_name=node.name, caller_type='function')
         result.calls.extend(calls)
+        result.string_constants.extend(
+            self._extract_string_constants(
+                node, text, owner_name=node.name, owner_type='function'
+            )
+        )
 
         # Extract references from function body
         refs = self._extract_references(node, text, referencer_name=node.name, referencer_type='function')
@@ -187,6 +193,14 @@ class PythonParser(ParserABC):
                     referencer_parent=node.name
                 )
                 result.references.extend(refs)
+                result.string_constants.extend(
+                    self._extract_string_constants(
+                        item, text,
+                        owner_name=item.name,
+                        owner_type='method',
+                        owner_parent=node.name,
+                    )
+                )
 
     def _handle_import(self, node, text: str, result: ParseResult) -> None:
         """Handle Import and ImportFrom nodes."""
@@ -197,12 +211,16 @@ class PythonParser(ParserABC):
         """Handle Assign nodes (globals)."""
         globals_list = self._extract_globals(node, text)
         result.globals.extend(globals_list)
+        result.string_constants.extend(self._extract_global_string_constants(node, text))
 
     def _handle_ann_assign(self, node: ast.AnnAssign, text: str, result: ParseResult) -> None:
         """Handle AnnAssign nodes (annotated globals)."""
         global_var = self._extract_annotated_global(node, text)
         if global_var:
             result.globals.append(global_var)
+            result.string_constants.extend(
+                self._extract_annotated_global_string_constants(node, text)
+            )
 
     def _is_top_level_function(self, tree: ast.AST, node: ast.FunctionDef) -> bool:
         """Check if function is at module level (not inside a class)."""
@@ -436,6 +454,14 @@ class PythonParser(ParserABC):
                 return None
         return None
 
+    def _extract_string_literal_text(self, node: ast.AST) -> str | None:
+        """Extract raw text from Python string literal nodes."""
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        if isinstance(node, ast.Str):
+            return node.s
+        return None
+
     def _get_byte_offset(self, node: ast.AST, text: str) -> int:
         """Calculate byte offset of a node."""
         if not hasattr(node, 'lineno'):
@@ -520,6 +546,99 @@ class PythonParser(ParserABC):
             ))
 
         return calls
+
+    def _extract_string_constants(
+        self,
+        func_node: ast.AST,
+        text: str,
+        owner_name: str,
+        owner_type: str,
+        owner_parent: str = None
+    ) -> list:
+        """Extract conservative string literals from a function or method body."""
+        constants = []
+        seen = set()
+        body_stmts = getattr(func_node, 'body', [func_node])
+
+        for stmt in body_stmts:
+            for node in ast.walk(stmt):
+                value = None
+                if isinstance(node, ast.Return):
+                    value = self._extract_string_literal_text(node.value)
+                elif isinstance(node, ast.Call):
+                    for arg in getattr(node, 'args', []):
+                        value = self._extract_string_literal_text(arg)
+                        if value:
+                            key = (value, getattr(arg, 'lineno', None), owner_name, owner_type, owner_parent)
+                            if key not in seen:
+                                seen.add(key)
+                                constants.append(StringConstantEntity(
+                                    value=value,
+                                    line_number=arg.lineno,
+                                    byte_offset=self._get_byte_offset(arg, text),
+                                    byte_length=max(1, self._get_byte_length(arg, text)),
+                                    owner_name=owner_name,
+                                    owner_type=owner_type,
+                                    owner_parent=owner_parent,
+                                ))
+                    continue
+                elif isinstance(node, ast.Assign):
+                    value = self._extract_string_literal_text(node.value)
+                elif isinstance(node, ast.AnnAssign):
+                    value = self._extract_string_literal_text(node.value)
+
+                if value:
+                    target_node = node.value if hasattr(node, 'value') and node.value is not None else node
+                    key = (value, getattr(target_node, 'lineno', None), owner_name, owner_type, owner_parent)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    constants.append(StringConstantEntity(
+                        value=value,
+                        line_number=target_node.lineno,
+                        byte_offset=self._get_byte_offset(target_node, text),
+                        byte_length=max(1, self._get_byte_length(target_node, text)),
+                        owner_name=owner_name,
+                        owner_type=owner_type,
+                        owner_parent=owner_parent,
+                    ))
+
+        return constants
+
+    def _extract_global_string_constants(self, node: ast.Assign, text: str) -> list:
+        """Extract module-level string constants from simple assignments."""
+        value = self._extract_string_literal_text(node.value)
+        if value is None:
+            return []
+
+        constants = []
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                constants.append(StringConstantEntity(
+                    value=value,
+                    line_number=node.value.lineno,
+                    byte_offset=self._get_byte_offset(node.value, text),
+                    byte_length=max(1, self._get_byte_length(node.value, text)),
+                    owner_name=target.id,
+                    owner_type='global',
+                    owner_parent=None,
+                ))
+        return constants
+
+    def _extract_annotated_global_string_constants(self, node: ast.AnnAssign, text: str) -> list:
+        """Extract module-level string constants from annotated assignments."""
+        value = self._extract_string_literal_text(node.value)
+        if value is None or not isinstance(node.target, ast.Name):
+            return []
+        return [StringConstantEntity(
+            value=value,
+            line_number=node.value.lineno,
+            byte_offset=self._get_byte_offset(node.value, text),
+            byte_length=max(1, self._get_byte_length(node.value, text)),
+            owner_name=node.target.id,
+            owner_type='global',
+            owner_parent=None,
+        )]
 
     def _get_callee_name(self, call_node: ast.Call) -> str:
         """

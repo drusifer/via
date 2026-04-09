@@ -23,6 +23,8 @@ import logging
 import sys
 from pathlib import Path
 
+from via.canned import expand_canned_query
+from via.commands.coverage import import_coverage_xml
 from via.commands.stats import StatsCommand
 from via.core.constants import (
     DEFAULT_DB_NAME,
@@ -84,18 +86,21 @@ Symbol Type Flags (-t<X>):
 Options:
   -n, --limit N         Limit results to N matches
   -I, --case-insensitive  Case-insensitive matching (all -m<X> patterns are case-sensitive by default)
-  -Q, --qualified       Match against qualified_name instead of symbol_name
+  -Q, --qualified       Match against qualified_name (full relative path for -tF, fully-qualified name for symbols)
   --not                 Negate the match pattern (return non-matching symbols)
   --newerthan DURATION  Filter: symbols from files modified within DURATION (e.g. 1h, 2d, 1w)
   --olderthan DURATION  Filter: symbols from files NOT modified within DURATION (e.g. 1h, 2d)
   --lang LANG           Filter by language: py/python, js/javascript, ts/typescript, md/markdown
   --subtype TYPE        Filter by symbol subtype (e.g. interface, enum, arrow_function).
                         Case-sensitive; unknown values return no results.
+  --contains PATTERN    Filter matched symbols by whether their source body contains PATTERN
+  --canned NAME         Expand and run a named canned query from built-ins or .via/canned/*.json
+  --args KEY=VAL,...    Arguments for --canned template expansion
 
 Relationship Flags:
   --via REL, -V REL     Positive relationship: return subjects WITH the relationship to an object
   --sans REL, -S REL    Negative relationship: return subjects with NO relationship to any object
-                        REL is one of: inherits-from, calls, imports, references, declares
+                        REL is one of: inherits-from, calls, imports, references, declares, covered-by, http-calls
   --stale               Filter: results older than their anchor (e.g. stale tests)
                         Example: via -mg '*' -tc --via inherits-from -mg 'test_*' -tf --stale
 
@@ -118,14 +123,21 @@ Examples:
   via -mg '*' -tc -oT                                  # All classes as table
   via -mg 'main' -tf -oR -C 3                          # Function source with context
   via --not -mg '_*' -tm                               # Methods NOT starting with underscore
+  via -mg '*Controller' -tc --contains 'rate_limit'    # Matching classes whose body contains text
   via stats                                            # Database statistics
 
 Relationship Queries:
-  via -mg 'Base' -tc --via inherits-from -mg '*' -tc   # Who inherits from Base?
-  via -mg 'Base' -tc -V inherits-from -mg '*' -tc      # Same, short form
-  via -mg 'helper' -tf --via calls -mg '*' -tf         # Who calls helper()?
-  via -mg 'typing' --via imports -mg '*' -tF           # Files importing typing
-  via -mg '*' -tf --sans calls -mg '*' -tf             # Functions that call nothing
+  Rule: KNOWN anchor LEFT  --via/--sans  wildcard RIGHT
+  Valid REL types: inherits-from, calls, imports, references, declares, covered-by, http-calls
+
+  # Subclasses of Base:
+  via -mg 'Base' -tc --via inherits-from -mg '*' -tc
+
+  # Functions never called (potentially unused):
+  via -mg '*' -tf --sans calls -mg '*' -tf
+
+  # All symbols declared in a file:
+  via -mg 'myfile.py' -tF -Q --via declares -mg '*'
 """
 
 
@@ -197,6 +209,16 @@ def _create_parser() -> argparse.ArgumentParser:
 
     status_parser = subparsers.add_parser("status", help="Show VIA integration status")
     status_parser.add_argument("target", choices=target_choices)
+
+    # --- Coverage subcommand ---
+    coverage_parser = subparsers.add_parser(
+        "coverage",
+        help="Coverage import commands",
+        description="Import coverage artifacts into VIA relationships.",
+    )
+    coverage_sub = coverage_parser.add_subparsers(dest="coverage_command")
+    coverage_import = coverage_sub.add_parser("import", help="Import coverage.xml")
+    coverage_import.add_argument("path", help="Path to coverage.xml")
 
     # --- MCP subcommand ---
     mcp_parser = subparsers.add_parser(
@@ -503,11 +525,12 @@ def _run_pipeline_command(argv: list, directory: str = ".") -> int:
                         total_matches = record.total_matches
 
                 # Warn when results were capped by the limit
-                limit = getattr(stages[-1].args, 'limit', 0) or 0
+                raw_limit = getattr(stages[-1].args, 'limit', None)
+                limit = raw_limit if raw_limit is not None else 10
                 if limit > 0 and total_matches is not None and total_matches > limit:
                     print(
                         f"results 1-{count} of {total_matches} matches returned "
-                        f"(--limit={limit}) use -n 0 for all results",
+                        f"(--limit={limit}) use --slice 0:{total_matches} or -n 0 for all results",
                         file=sys.stderr,
                     )
 
@@ -641,6 +664,28 @@ def main() -> int:
     """
     argv = sys.argv[1:]
 
+    if '--canned' in argv:
+        canned_index = argv.index('--canned')
+        if canned_index + 1 >= len(argv):
+            print("Error: --canned requires a query name", file=sys.stderr)
+            return EXIT_ERROR
+        canned_name = argv[canned_index + 1]
+        raw_args = None
+        extras = argv[:canned_index] + argv[canned_index + 2:]
+        if '--args' in extras:
+            args_index = extras.index('--args')
+            if args_index + 1 >= len(extras):
+                print("Error: --args requires key=value pairs", file=sys.stderr)
+                return EXIT_ERROR
+            raw_args = extras[args_index + 1]
+            del extras[args_index:args_index + 2]
+        try:
+            expanded = expand_canned_query(str(Path('.').resolve()), canned_name, raw_args, extras)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return EXIT_ERROR
+        return _run_pipeline_command(expanded)
+
     # Check if using pipeline syntax
     if _is_pipeline_syntax(argv):
         return _run_pipeline_command(argv)
@@ -671,6 +716,11 @@ def main() -> int:
         return _run_mcp_command(args)
     elif args.command in ("install", "uninstall", "status"):
         return _run_install_command(args)
+    elif args.command == "coverage":
+        if getattr(args, 'coverage_command', None) == 'import':
+            return import_coverage_xml(str(Path('.').resolve()), args.path)
+        print("Error: coverage requires a subcommand", file=sys.stderr)
+        return EXIT_ERROR
     elif args.command is None:
         parser.print_help()
         return EXIT_SUCCESS
@@ -681,4 +731,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

@@ -37,7 +37,10 @@ class ParseResult:
     log_statements: List["LogStatementEntity"] = field(default_factory=list)
     markdown_headings: List["MarkdownHeadingEntity"] = field(default_factory=list)
     calls: List["CallEntity"] = field(default_factory=list)
+    http_calls: List["CallEntity"] = field(default_factory=list)
     references: List["ReferenceEntity"] = field(default_factory=list)
+    string_constants: List["StringConstantEntity"] = field(default_factory=list)
+    links: List["LinkEntity"] = field(default_factory=list)
     parse_error: Optional[str] = None
 @dataclass
 class FunctionEntity:
@@ -131,6 +134,31 @@ class ReferenceEntity:
     byte_length: int
     referencer_type: str = 'function'  # 'function' or 'method'
     referencer_parent: Optional[str] = None  # Class name if method
+
+
+@dataclass
+class StringConstantEntity:
+    """Represents a structured string literal with an owning symbol."""
+
+    value: str
+    line_number: int
+    byte_offset: int
+    byte_length: int
+    owner_name: Optional[str] = None
+    owner_type: Optional[str] = None
+    owner_parent: Optional[str] = None
+
+
+@dataclass
+class LinkEntity:
+    """Represents a structured link target, primarily from markdown."""
+
+    target: str
+    line_number: int
+    byte_offset: int
+    byte_length: int
+    label: Optional[str] = None
+    owner_name: Optional[str] = None
 
 
 class ParserABC(ABC, ArgumentProvider, HelpProvider):

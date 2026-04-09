@@ -16,11 +16,12 @@ from typing import Dict, Iterator, List, Optional
 from via.core.duration import parse_duration
 from via.core.match_record import FormatType, MatchRecord, RenderType
 from via.core.types import MatchOp, SymbolType
-from via.core.utils import get_match_op, safe_print
+from via.core.utils import get_match_op, parse_result_slice, safe_print
 from via.db.store import DatabaseStore
 from via.pipeline.relationship_filter import RelationshipFilter
 from via.pipeline.types import PipelineStage, StageType
 from via.renderers.factory import RendererFactory
+from via.renderers.utils import extract_source
 
 # Language alias normalization for --lang
 _LANG_ALIASES: Dict[str, str] = {
@@ -120,8 +121,13 @@ class PipelineExecutor:
         relationship = getattr(args, 'relationship', None)
         if relationship:
             if relationship.is_negative:
-                return self._execute_negative_relationship_query(stage)
-            return self._execute_relationship_query(stage)
+                results = self._execute_negative_relationship_query(stage)
+            else:
+                results = self._execute_relationship_query(stage)
+            contains_pattern = getattr(args, 'contains_pattern', None)
+            if contains_pattern:
+                return self._filter_records_by_body(results, contains_pattern, not args.case_insensitive)
+            return results
 
         # Extract arguments - check for symbol_types list (OR'd) or symbol_type (single)
         symbol_types = getattr(args, 'symbol_types', None) or []
@@ -129,9 +135,25 @@ class PipelineExecutor:
 
         pattern = args.pattern
         case_sensitive = not args.case_insensitive
-        limit = args.limit
         match_qualified = getattr(args, 'match_qualified', False)
         negated = getattr(args, 'negate_pattern', False)
+
+        # Resolve limit and optional offset from --slice or -n
+        raw_slice = getattr(args, 'result_slice', None)
+        raw_limit = getattr(args, 'limit', None)  # None = not explicitly provided
+        if raw_slice is not None:
+            if raw_limit is not None:
+                from via.pipeline.parser import PipelineParseError
+                raise PipelineParseError(
+                    "--slice and --limit are mutually exclusive. "
+                    "Use --slice start:end for windowed results."
+                )
+            start, end = parse_result_slice(raw_slice)
+            offset: Optional[int] = start if start is not None else 0
+            limit = (end - offset) if end is not None else 0  # 0 = unlimited
+        else:
+            offset = None
+            limit = raw_limit if raw_limit is not None else 10  # default 10
 
         # Determine match operator from match_syntax attribute
         # match_syntax is the suffix from flag groups: 'g' (glob), 'r' (regex), 's' (sql)
@@ -163,11 +185,16 @@ class PipelineExecutor:
 
         # Handle multiple symbol types (OR'd together)
         if len(symbol_types) > 1:
-            return self._match_multiple_types(
+            results = self._match_multiple_types(
                 symbol_types, pattern, match_op, case_sensitive, limit,
                 match_qualified, negated,
                 language=language_filter, subtype=subtype_filter,
+                offset=offset,
             )
+            contains_pattern = getattr(args, 'contains_pattern', None)
+            if contains_pattern:
+                return self._filter_records_by_body(results, contains_pattern, case_sensitive)
+            return results
 
         # Single type or all types
         st = SymbolType(symbol_type) if symbol_type else None
@@ -178,7 +205,11 @@ class PipelineExecutor:
             negated=negated,
             language=language_filter,
             subtype=subtype_filter,
+            offset=offset,
         )
+        contains_pattern = getattr(args, 'contains_pattern', None)
+        if contains_pattern:
+            return self._filter_records_by_body(results, contains_pattern, case_sensitive)
         return results
 
     def _execute_relationship_query(self, stage: PipelineStage) -> Iterator[MatchRecord]:
@@ -219,7 +250,7 @@ class PipelineExecutor:
             )
 
         case_sensitive = not args.case_insensitive
-        limit = args.limit
+        limit = getattr(args, 'limit', None) or 10
 
         # calls stored from method symbols, not class symbols.
         # When object side is a class for calls, expand to include methods.
@@ -285,7 +316,7 @@ class PipelineExecutor:
         object_type = rel.object_types[0] if rel.object_types else None
 
         case_sensitive = not args.case_insensitive
-        limit = args.limit
+        limit = getattr(args, 'limit', None) or 10
 
         match_syntax = getattr(args, 'match_syntax', 'g')
         match_op = get_match_op(match_syntax)
@@ -315,11 +346,12 @@ class PipelineExecutor:
         pattern: str,
         match_op: MatchOp,
         case_sensitive: bool,
-        limit: int,
+        limit: Optional[int],
         match_qualified: bool,
         negated: bool = False,
         language: Optional[str] = None,
         subtype: Optional[str] = None,
+        offset: Optional[int] = None,
     ) -> Iterator[MatchRecord]:
         """Query database for multiple symbol types (OR'd together).
 
@@ -328,26 +360,40 @@ class PipelineExecutor:
             pattern: Pattern to match
             match_op: Match operator
             case_sensitive: Whether to match case-sensitively
-            limit: Max results per type
+            limit: Max combined results (0 or None means unlimited)
             match_qualified: Whether to match qualified names
             negated: If True, invert the pattern match (--not semantics)
             language: Optional language filter (canonical form)
             subtype: Optional symbol_subtype filter
+            offset: Optional start index into the combined ordered result set
 
         Yields:
             MatchRecord objects from database
         """
-        count = 0
+        combined_results: List[MatchRecord] = []
         for type_str in symbol_types:
             st = SymbolType(type_str)
-            for record in self.db.match(
-                st, match_op, pattern, case_sensitive, limit, match_qualified,
+            combined_results.extend(self.db.match(
+                st, match_op, pattern, case_sensitive, 0, match_qualified,
                 negated=negated, language=language, subtype=subtype,
-            ):
-                yield record
-                count += 1
-                if count >= limit:
-                    return
+            ))
+
+        combined_results.sort(
+            key=lambda record: (
+                record.file_path,
+                record.line_number,
+                record.symbol_name,
+                record.symbol_type,
+            )
+        )
+
+        total_matches = len(combined_results)
+        start = offset or 0
+        end = None if limit in (None, 0) else start + limit
+
+        for record in combined_results[start:end]:
+            record.total_matches = total_matches
+            yield record
 
     def _execute_filter_stage(
         self,
@@ -380,6 +426,7 @@ class PipelineExecutor:
         pattern = args.pattern
         case_sensitive = not args.case_insensitive
         negated = getattr(args, 'negate_pattern', False)
+        contains_pattern = getattr(args, 'contains_pattern', None)
 
         # Determine match operator from match_syntax attribute
         # match_syntax is the suffix from flag groups: 'g' (glob), 'r' (regex), 's' (sql)
@@ -395,6 +442,17 @@ class PipelineExecutor:
             matches = self._pattern_matches(record.symbol_name, pattern, match_op, case_sensitive)
             if negated:
                 matches = not matches
+            if matches and contains_pattern:
+                if record.byte_offset is None or record.byte_length is None or record.byte_length <= 0:
+                    continue
+                body = extract_source(
+                    record.file_path,
+                    record.byte_offset,
+                    record.byte_length,
+                    read_full_file=False,
+                )
+                if not body or not self._contains_matches(body, contains_pattern, case_sensitive):
+                    continue
             if matches:
                 yield record
 
@@ -430,6 +488,50 @@ class PipelineExecutor:
             return bool(re.match(f'^{regex_pattern}$', value))
 
         return False
+
+    def _contains_matches(self, body: str, pattern: str, case_sensitive: bool) -> bool:
+        """Apply --contains semantics to a symbol body.
+
+        If the pattern includes glob wildcards, use fnmatch against the full body.
+        Otherwise treat the value as a plain substring search.
+        """
+        haystack = body if case_sensitive else body.lower()
+        needle = pattern if case_sensitive else pattern.lower()
+        if '*' in needle or '?' in needle:
+            return fnmatch.fnmatch(haystack, f"*{needle}*")
+        return needle in haystack
+
+    def _filter_records_by_body(
+        self,
+        records: Iterator[MatchRecord],
+        pattern: str,
+        case_sensitive: bool,
+    ) -> Iterator[MatchRecord]:
+        """Filter records by source body text using stored byte spans."""
+        skipped = 0
+        yielded = 0
+        for record in records:
+            if record.byte_offset is None or record.byte_length is None or record.byte_length <= 0:
+                skipped += 1
+                continue
+            body = extract_source(
+                record.file_path,
+                record.byte_offset,
+                record.byte_length,
+                read_full_file=False,
+            )
+            if not body:
+                skipped += 1
+                continue
+            if self._contains_matches(body, pattern, case_sensitive):
+                yielded += 1
+                yield record
+
+        if skipped:
+            safe_print(
+                f"Warning: --contains skipped {skipped} record(s) without readable source spans",
+                file=sys.stderr,
+            )
 
     def _apply_line_slice(
         self, records: Iterator[MatchRecord], args
@@ -479,7 +581,8 @@ class PipelineExecutor:
             records: Iterator of MatchRecord to render
         """
         args = stage.args
-        limit = getattr(args, 'limit', 0) or 0
+        raw_limit = getattr(args, 'limit', None)
+        limit = raw_limit if raw_limit is not None else 10
 
         # Convert string render_type to RenderType enum (default: LIST)
         render_type_str = getattr(args, 'render_type', None) or 'list'
@@ -529,7 +632,7 @@ class PipelineExecutor:
         if limit > 0 and total is not None and total > limit:
             print(
                 f"results 1-{rendered_count[0]} of {total} matches returned "
-                f"(--limit={limit}) use -n 0 for all results",
+                f"(--limit={limit}) use --slice 0:{total} or -n 0 for all results",
                 file=sys.stderr,
             )
 

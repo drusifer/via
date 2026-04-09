@@ -1,8 +1,8 @@
 # Neo Next Steps
 
-## Sprint 13 — COMPLETE
+## Resume Point: Sprint 19 shipped
 
-All tasks done. 1121 tests passing.
-
-If returning: wait for Trin UAT + Morpheus review results.
-If fixes needed: read Trin's UAT report in CHAT.md for specific failures.
+### On Resume
+- Read `agents/CHAT.md` for post-sprint requests
+- If defects are found, patch against the Sprint 19 summary docs/tests
+- Backlog remains: CLI parser adoption of the builder, then broader API docs
