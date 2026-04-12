@@ -46,18 +46,6 @@ Sprints 1-7 coordination: Bob Protocol setup, VIA dogfood protocol, Sprints 1-7 
  @neo continue testing sprint 8
 
 ---
-[<small>2026-03-20 23:37:30</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-============= 1 failed, 808 passed, 1 warning in 85.24s (0:01:25) ==============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 00:55:44</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================== 818 passed in 86.10s (0:01:26) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-21 00:55:53</small>] [**Neo**]->[**Trin**] **swe handoff*:
  P1 + P2 complete. 818 tests passing (+24 new). Schema, indexing, parse_line_slice, _apply_line_slice all implemented and tested. Ready for P3 UAT. See SPRINT_8_TASKS.md P3 for test cases.
 
@@ -66,32 +54,8 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Starting P3 UAT for Sprint 8. Reading sprint tasks and existing UAT patterns.
 
 ---
-[<small>2026-03-21 01:00:34</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-=================== 3 failed, 831 passed in 91.73s (0:01:31) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 01:03:54</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-=================== 3 failed, 831 passed in 89.25s (0:01:29) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 01:08:10</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-=================== 3 failed, 831 passed in 90.26s (0:01:30) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-21 01:12:16</small>] [**Trin**]->[**all**] **qa fix*:
  3 root causes found, fixing tests now.
-
----
-[<small>2026-03-21 01:14:17</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================== 834 passed in 90.03s (0:01:30) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-21 01:14:22</small>] [**Trin**]->[**all**] **qa done*:
@@ -110,56 +74,8 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  trin address testing gap that missed this bug: resolve_pending_relationships() is never called in IndexingService.index() so all live relationship queries return empty. Tests call it directly, masking the gap.
 
 ---
-[<small>2026-03-21 01:40:31</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-=================== 3 failed, 834 passed in 91.12s (0:01:31) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 01:42:18</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-=================== 1 failed, 836 passed in 91.64s (0:01:31) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 01:44:17</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================== 837 passed in 91.69s (0:01:31) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-21 01:44:38</small>] [**Trin**]->[**all**] **qa report*:
  Regression fixed + test added. IndexingService.index() now calls resolve_pending_relationships() before commit. New: tests/integration/test_indexing_resolves_relationships.py (3 tests). 837 pass, 0 fail.
-
----
-[<small>2026-03-21 01:47:32</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================== 837 passed in 91.78s (0:01:31) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 01:55:25</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================== 837 passed in 92.20s (0:01:32) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 01:59:22</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================== 837 passed in 93.80s (0:01:33) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 02:01:31</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================== 837 passed in 91.30s (0:01:31) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 02:07:35</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================== 837 passed in 90.62s (0:01:30) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-21 02:07:46</small>] [**User**]->[**morpheus**] **request*:
@@ -190,54 +106,12 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Activating as Neo. Running lints to assess scope.
 
 ---
-[<small>2026-03-21 10:38:54</small>] [**make**]->[**all**] **build*:
- Build PASSED | make lint | /home/drusifer/Projects/via/build/build.out
-Low: 0
-Medium: 0
-High: 0
-Total issues (by confidence):
-Undefined: 0
-Low: 0
-Medium: 0
-High: 0
-Files skipped (0):
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-21 10:39:05</small>] [**Neo**]->[**User**] **swe fix*:
  Lint check complete. All checks passed — ruff: All checks passed, bandit: No issues identified. No lints to fix!
 
 ---
 [<small>2026-03-21 10:39:27</small>] [**User**]->[**neo**] **request*:
  lint full
-
----
-[<small>2026-03-21 10:40:00</small>] [**make**]->[**all**] **build*:
- Build PASSED | make lint-slow | /home/drusifer/Projects/via/build/build.out
-Low: 0
-Medium: 0
-High: 0
-Total issues (by confidence):
-Undefined: 0
-Low: 0
-Medium: 0
-High: 0
-Files skipped (0):
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 10:40:52</small>] [**make**]->[**all**] **build*:
- Build PASSED | make lint-slow | /home/drusifer/Projects/via/build/build.out
-Low: 0
-Medium: 0
-High: 0
-Total issues (by confidence):
-Undefined: 0
-Low: 0
-Medium: 0
-High: 0
-Files skipped (0):
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-21 10:42:12</small>] [**Neo**]->[**User**] **swe fix*:
@@ -252,40 +126,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Venv IS activated. E0401 is pylint/astroid's static resolver failing on mcp's transitive imports (starlette, pydantic, anyio) — not a missing venv. Fix applied: disable=import-error on that line. Cleaner alt: add ignored-modules=mcp to pyproject.toml.
 
 ---
-[<small>2026-03-21 10:45:30</small>] [**make**]->[**all**] **build*:
- Build PASSED | make lint-slow | /home/drusifer/Projects/via/build/build.out
-Low: 0
-Medium: 0
-High: 0
-Total issues (by confidence):
-Undefined: 0
-Low: 0
-Medium: 0
-High: 0
-Files skipped (0):
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 10:48:16</small>] [**make**]->[**all**] **build*:
- Build PASSED | make lint-slow | /home/drusifer/Projects/via/build/build.out
-Low: 0
-Medium: 0
-High: 0
-Total issues (by confidence):
-Undefined: 0
-Low: 0
-Medium: 0
-High: 0
-Files skipped (0):
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 10:49:55</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================== 837 passed in 89.14s (0:01:29) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-21 10:52:09</small>] [**User**]->[**morpheus**] **request*:
  Full Code Review - identify bad code smells - use arch docs - suggest refactorings for cleaner code - leverage via mcp to minimize token usage
 
@@ -296,28 +136,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-21 10:56:51</small>] [**Morpheus**]->[**User**] **lead review*:
  Code review done. 14 smells, 5 TD tickets. See agents/morpheus.docs/CODE_REVIEW_2026_03_21.md. Top: SMELL-1 (DB computes render widths), SMELL-2 (.conn access from service), SMELL-6 (3 dup file-store methods).
-
----
-[<small>2026-03-21 10:59:58</small>] [**make**]->[**all**] **build*:
- Build PASSED | make lint-fast | /home/drusifer/Projects/via/build/build.out
-=== RUFF: Complexity, Dead Code, Unused Imports ===
-. .venv/bin/activate && ruff check via/
-All checks passed!
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 11:09:42</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================== 837 passed in 88.55s (0:01:28) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 11:16:41</small>] [**make**]->[**all**] **build*:
- Build PASSED | make lint-fast | /home/drusifer/Projects/via/build/build.out
-=== RUFF: Complexity, Dead Code, Unused Imports ===
-. .venv/bin/activate && ruff check via/
-All checks passed!
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-21 11:18:01</small>] [**User**]->[**all**] **shutdown*:
@@ -334,24 +152,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-21 11:30:30</small>] [**Trin**]->[**User**] **qa verify*:
  Compiled query examples from all current SKILL.md files and schema.py. Listing before writing UAT tests.
-
----
-[<small>2026-03-21 11:36:29</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-============= 837 passed, 5 xfailed, 47 errors in 89.68s (0:01:29) =============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 11:39:53</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-============= 7 failed, 877 passed, 5 xfailed in 96.68s (0:01:36) ==============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 11:44:47</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================== 884 passed, 5 xfailed in 97.36s (0:01:37) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-21 11:44:51</small>] [**Trin**]->[**User**] **qa report*:
@@ -392,12 +192,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-21 12:34:09</small>] [**Trin**]->[**User**] **qa review*:
  Activating as Trin. Reading Drew feedback on QUERY_DOC_REVIEW_2026_03_21.md — applying doc fixes now.
-
----
-[<small>2026-03-21 12:40:16</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================== 894 passed, 2 xfailed in 97.06s (0:01:37) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-21 12:40:35</small>] [**Trin**]->[**User**] **qa report*:
@@ -456,32 +250,8 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  *swe* Taking Cycle 1. Implementing all 5 TD-REVIEW items (Phase 1 TD batch). Starting with TD-REVIEW-2 (get_symbol_id) + TD-REVIEW-5 (merge store methods) since Story 1 depends on them. Then TD-REVIEW-3, 4, 1.
 
 ---
-[<small>2026-03-21 13:59:16</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-============= 10 failed, 883 passed, 2 xfailed in 98.35s (0:01:38) =============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 14:02:41</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-============= 1 failed, 883 passed, 2 xfailed in 96.81s (0:01:36) ==============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 14:06:01</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================== 884 passed, 2 xfailed in 96.86s (0:01:36) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-21 14:06:41</small>] [**Neo**]->[**all**] **swe*:
  *swe* Cycle 1 COMPLETE. All 5 TD-REVIEW items done. 884 passed, 2 xfailed. Details in neo.docs/current_task.md. Handing off to @Trin for UAT.
-
----
-[<small>2026-03-21 14:09:54</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================== 884 passed, 2 xfailed in 97.19s (0:01:37) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-21 14:10:35</small>] [**Trin**]->[**all**] **qa*:
@@ -498,12 +268,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-21 14:39:42</small>] [**Neo**]->[**all**] **swe impl*:
  Starting Cycle 2: Story4 first (executor fix), then Story5 (Q flag), then Story3 (expanded -Vr). TDD throughout.
-
----
-[<small>2026-03-21 14:49:44</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================== 893 passed, 1 xfailed in 98.23s (0:01:38) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-21 14:49:55</small>] [**Neo**]->[**Trin**] **swe done*:
@@ -530,31 +294,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Activating for Story 1: -Vhas / DECLARES. Starting implementation — rename RelationshipType→ReferenceType, add DECLARES, -Vhas flag, _store_declares_relationships(), executor dispatch, container validation.
 
 ---
-[<small>2026-03-21 15:38:32</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test-unit | /home/drusifer/Projects/via/build/build.out
-make[1]: Entering directory '/home/drusifer/Projects/via'
-make[1]: *** No rule to make target 'test-unit'.  Stop.
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 15:40:18</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-============= 2 failed, 891 passed, 1 xfailed in 97.88s (0:01:37) ==============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 15:42:19</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================== 893 passed, 1 xfailed in 98.19s (0:01:38) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 15:44:44</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================== 901 passed, 1 xfailed in 99.72s (0:01:39) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-21 16:11:59</small>] [**Neo**]->[**Trin**] **swe impl*:
  Story 1 COMPLETE. Implemented -Vhas/-via-has (DECLARES): ReferenceType rename, DECLARES enum value, flag_groups -Vhas, _store_declares_relationships(), container validation + --invert error. 901 passed (+8), 1 xfailed. @Trin *qa Story 1 UAT
 
@@ -569,36 +308,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-21 16:13:50</small>] [**Mouse**]->[**Neo**] **sm status*:
  Cycle 3 DONE. Sprint 9 scoreboard: Phase 1 ✅ Phase 2 ✅ Phase 3 ✅. Kicking off Cycle 4: @Neo *swe impl Story 2a (temporal matcher — schema migration, --newerthan/--olderthan)
-
----
-[<small>2026-03-21 16:20:16</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-make[1]: *** [Makefile.prj:43: test] Error 1
-
----
-[<small>2026-03-21 16:22:56</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-============= 2 failed, 899 passed, 1 xfailed in 101.25s (0:01:41) =============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 16:25:27</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================== 901 passed, 1 xfailed in 100.42s (0:01:40) ==================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 16:27:31</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-============= 2 failed, 906 passed, 1 xfailed in 101.17s (0:01:41) =============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-21 16:29:52</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================== 908 passed, 1 xfailed in 100.61s (0:01:40) ==================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-21 16:33:05</small>] [**Neo**]->[**Trin**] **swe impl*:
@@ -717,26 +426,8 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Sprint 10 task board ready: agents/mouse.docs/SPRINT_10_TASKS.md. 3 cycles: C1=S10-1 --ref-type (3pts), C2=S10-2+S10-3 (4pts), C3=TD-WATCH-1 (1pt). Baseline 908 tests. @Neo: start Cycle 1, S10-1a first (parser.py _find_relationship_split).
 
 ---
-[<small>2026-03-22 13:53:40</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================= 922 passed in 103.98s (0:01:43) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-22 13:54:18</small>] [**Neo**]->[**Trin**] **swe impl*:
  S10-1 --ref-type DONE. Changes: parser.py _find_relationship_split() + _create_match_parser(). 11 new tests in TestRefTypeFlag. 922 passed (was 908). @Trin: UAT Cycle 1 please.
-
----
-[<small>2026-03-22 13:58:12</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-================== 2 failed, 929 passed in 104.18s (0:01:44) ===================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-22 14:00:59</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-======================= 931 passed in 107.19s (0:01:47) ========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-22 14:01:27</small>] [**Trin**]->[**Neo**] **qa verify*:
@@ -819,24 +510,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Neo on deck. Fixing UX-001 (schema.py:54 stale -Q text) and UX-002 (diagram.py:103 arrow suppression). TDD: tests first.
 
 ---
-[<small>2026-03-22 18:12:35</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 970 passed, 4 warnings in 107.05s (0:01:47) ==================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-22 18:20:13</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 970 passed, 4 warnings in 107.28s (0:01:47) ==================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-22 18:22:56</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 970 passed, 4 warnings in 107.83s (0:01:47) ==================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-22 18:23:11</small>] [**Neo**]->[**Trin**] **swe fix*:
  UX-001+UX-002 FIXED. 970 passed. UX-001: schema.py:54 updated to mention -Q. UX-002: diagram.py + store.py + match_record.py — base_classes now populated from symbol_references JOIN; arrows show correctly. @Trin: verify + close.
 
@@ -847,27 +520,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-22 18:24:18</small>] [**Trin**]->[**all**] **qa verify*:
  Session complete. UX-001+UX-002 fixed and verified. 970 tests passing. Awaiting user direction for next session.
-
----
-[<small>2026-03-22 18:39:48</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make install-system | /home/drusifer/Projects/via/build/build.out
-hint: See PEP 668 for the detailed specification.
-make[1]: *** [Makefile.prj:93: install-system] Error 1
-
----
-[<small>2026-03-22 18:42:03</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make install-system | /home/drusifer/Projects/via/build/build.out
-pipx install --editable . --force
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-make[1]: *** [Makefile.prj:93: install-system] Error 127
-
----
-[<small>2026-03-22 18:43:45</small>] [**make**]->[**all**] **build*:
- Build PASSED | make install-system | /home/drusifer/Projects/via/build/build.out
-installed package via 0.1.0, installed using Python 3.13.5
-These apps are now globally available
-- via
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-22 19:16:53</small>] [**User**]->[**cypher**] **request*:
@@ -962,12 +614,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  *user test Sprint 11 — activating. Testing: node_modules excludes (S11-5), JS/TS discovery (S11-1), JavaScriptParser symbols (S11-2). Reading implementation before scripting test scenarios.
 
 ---
-[<small>2026-03-22 20:06:38</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1022 passed, 4 warnings in 109.21s (0:01:49) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-22 20:18:10</small>] [**Smith**]->[**all**] **user test*:
  *user test S11 HOLD. Full report: smith.docs/SPRINT_11_USER_TEST.md. BUG-S11-01: symbol_subtype NULL (interface/enum show as class). @Neo fix base.py + parser + indexing.py. @Trin retest.
 
@@ -976,24 +622,12 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  BUG-S11-01 fix: (1) Add symbol_subtype field to ClassEntity+FunctionEntity in base.py (2) Set subtype in javascript_parser.py for interface/enum/arrow (3) Pass subtype in indexing.py _store_class_symbols
 
 ---
-[<small>2026-03-22 20:23:02</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1022 passed, 4 warnings in 106.43s (0:01:46) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-22 20:23:20</small>] [**Neo**]->[**all**] **swe fix*:
  BUG-S11-01 FIXED. Added symbol_subtype to ClassEntity/FunctionEntity, parser now sets interface/enum/arrow_function, indexing.py passes it, store queries return it, table renderer shows it. 1022 tests pass. @Trin: retest.
 
 ---
 [<small>2026-03-22 20:23:29</small>] [**Trin**]->[**all**] **qa uat*:
  Trin UAT BUG-S11-01 fix — activating. Verifying symbol_subtype fix: ClassEntity/FunctionEntity fields, parser setting, indexing passing, store querying, renderer display.
-
----
-[<small>2026-03-22 20:25:56</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1027 passed, 4 warnings in 108.70s (0:01:48) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-22 20:26:01</small>] [**Trin**]->[**all**] **qa uat*:
@@ -1108,18 +742,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Trin online. UAT Phase 1: WebServer scaffold. Running full suite + reviewing Phase 1 tests for coverage and quality.
 
 ---
-[<small>2026-03-22 21:03:16</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-TOTAL                                             3478    693    80%
-================= 1045 passed, 4 warnings in 119.93s (0:01:59) =================
-
----
-[<small>2026-03-22 21:03:20</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1045 passed, 4 warnings in 119.46s (0:01:59) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-22 21:03:27</small>] [**Trin**]->[**Morpheus**] **qa uat*:
  *qa uat Phase 1 PASSED. 1045/1045 tests pass (was 1027, +18 new). via/web/server.py 100% coverage. No regressions. All Phase 1 AC met. @Morpheus *lead review Phase 1
 
@@ -1130,12 +752,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-22 21:03:52</small>] [**Neo**]->[**all**] **swe impl*:
  Starting Phase 2: DatabaseStore.get_counts() + get_last_indexed_iso(), then /api/status endpoint. TDD.
-
----
-[<small>2026-03-22 21:07:22</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1057 passed, 4 warnings in 111.25s (0:01:51) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-22 21:07:55</small>] [**Neo**]->[**Trin**] **swe impl*:
@@ -1154,12 +770,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Starting Phase 3: POST /api/query — non-relationship queries. Building _build_stages() + _record_to_dict() + run_query(). TDD.
 
 ---
-[<small>2026-03-22 21:13:36</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1072 passed, 4 warnings in 112.50s (0:01:52) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-22 21:16:39</small>] [**Neo**]->[**Trin**] **swe impl*:
  Phase 3 DONE. 1072/1072 pass (+15). POST /api/query working: glob/regex/sql, multi-type, limit, case_insensitive, diagram format. @Trin *qa uat Phase 3
 
@@ -1174,12 +784,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-22 21:17:14</small>] [**Neo**]->[**all**] **swe impl*:
  Starting Phase 4: --port/--no-web to IndexCommand, add_reindex_listener to WatchService, wire WebServer in __main__.py + mcp/server.py. TDD.
-
----
-[<small>2026-03-22 21:22:34</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1086 passed, 4 warnings in 118.11s (0:01:58) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-22 21:22:37</small>] [**Neo**]->[**Trin**] **swe impl*:
@@ -1198,12 +802,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Starting Phase 5: extend POST /api/query to support relationship queries (inherits-from, calls, has) + invert + stale. _build_relationship_filter() already stubbed. TDD.
 
 ---
-[<small>2026-03-22 21:26:03</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1097 passed, 4 warnings in 118.04s (0:01:58) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-22 21:26:06</small>] [**Neo**]->[**Trin**] **swe impl*:
  Phase 5 DONE. 11 new tests pass. Relationship filter correctly maps all types, invert/stale flags work, diagram format returns mermaid_source. Awaiting full suite. @Trin *qa uat Phase 5
 
@@ -1218,12 +816,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-22 21:26:28</small>] [**Neo**]->[**all**] **swe impl*:
  Starting Phase 6: HTML SPA — Match Card, Symbol Type Card, Output Card, basic List results. Single embedded template.py. CDN: Material Web + Mermaid. CDN error fallback.
-
----
-[<small>2026-03-22 21:31:07</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1120 passed, 4 warnings in 120.76s (0:02:00) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-22 21:31:30</small>] [**Neo**]->[**Trin**] **swe impl*:
@@ -1294,24 +886,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Starting JS implementation. Plan: 1) Extract JS to via/web/static/app.js + utils.js 2) Add /static/ route 3) Setup Vitest 4) Write tests. Will hand to Trin when make test-js passes.
 
 ---
-[<small>2026-03-23 12:30:16</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-============ 1 failed, 1119 passed, 4 warnings in 122.73s (0:02:02) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-23 12:30:17</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test-js | /home/drusifer/Projects/via/build/build.out
-============ 1 failed, 1119 passed, 4 warnings in 122.73s (0:02:02) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-23 12:33:06</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1121 passed, 4 warnings in 122.07s (0:02:02) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-23 12:42:04</small>] [**Neo**]->[**Trin**] **swe impl*:
  Python 1121 pass, JS 63 pass (22 utils + 41 DOM). All green. Handing to Trin for UAT.
 
@@ -1326,26 +900,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-23 20:40:09</small>] [**Trin**]->[**all**] **qa uat*:
  UAT starting. Checking JS test coverage against JS_TEST_PLAN.md — running test-js and test.
-
----
-[<small>2026-03-23 20:40:18</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test-js | /home/drusifer/Projects/via/build/build.out
-Duration  1.49s (transform 154ms, setup 0ms, collect 109ms, tests 479ms, environment 1.14s, prepare 255ms)
-
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-23 20:42:29</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1121 passed, 4 warnings in 122.64s (0:02:02) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-23 20:45:33</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test-js | /home/drusifer/Projects/via/build/build.out
-Duration  1.60s (transform 167ms, setup 0ms, collect 141ms, tests 616ms, environment 1.12s, prepare 229ms)
-
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-23 20:45:42</small>] [**Trin**]->[**Morpheus**] **qa uat*:
@@ -1370,38 +924,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-03-23 21:00:11</small>] [**Trin**]->[**User**] **qa status*:
  Wait = webServer startup. Playwright config runs 'via index -w --port 18765 tests/e2e/fixture' and waits for /api/health before launching tests. Server is now up — tests running.
-
----
-[<small>2026-03-23 21:00:21</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test-e2e | /home/drusifer/Projects/via/build/build.out
-4 passed (6.6m)
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-23 21:05:36</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1121 passed, 4 warnings in 122.67s (0:02:02) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-23 21:08:32</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test-e2e | /home/drusifer/Projects/via/build/build.out
-[chromium] › tests/e2e/app.spec.js:174:3 › Reset Flow › clears result list ─────────────────────
-8 passed (2.7m)
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-23 21:11:57</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1121 passed, 4 warnings in 122.86s (0:02:02) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-23 21:12:24</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test-e2e | /home/drusifer/Projects/via/build/build.out
-
-15 passed (19.7s)
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-23 21:12:39</small>] [**Trin**]->[**Morpheus**] **qa done*:
@@ -1436,43 +958,8 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Neo resuming. Fixing UX-WEB-001 through 005: plural grammar, placeholder text, sticky Run button, relative paths, initial empty CTA.
 
 ---
-[<small>2026-03-23 21:27:07</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-================= 1121 passed, 4 warnings in 122.27s (0:02:02) =================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-23 21:27:11</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test_js | /home/drusifer/Projects/via/build/build.out
-make[1]: Entering directory '/home/drusifer/Projects/via'
-make[1]: *** No rule to make target 'test_js'.  Stop.
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-23 21:27:18</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test-js | /home/drusifer/Projects/via/build/build.out
-
-
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-make[1]: *** [Makefile.prj:47: test-js] Error 1
-
----
-[<small>2026-03-23 21:27:50</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test-js | /home/drusifer/Projects/via/build/build.out
-Duration  1.58s (transform 179ms, setup 0ms, collect 147ms, tests 585ms, environment 1.11s, prepare 283ms)
-
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-23 21:28:04</small>] [**Neo**]->[**Trin**] **handoff*:
  UX-WEB-001 through 005 DONE. 1121 Python + 74 JS all pass. @Trin: user requests E2E tests updated to cover Smith's 5 findings (UX-WEB-001 to 005).
-
----
-[<small>2026-03-23 21:29:49</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test-e2e | /home/drusifer/Projects/via/build/build.out
-
-22 passed (27.6s)
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-23 21:30:47</small>] [**Trin**]->[**all**] **qa done*:
@@ -1575,70 +1062,20 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Neo activating. Starting Sprint 13 P1: remove RELATIONSHIP_FLAGS, -Vinh etc., rewrite parser to --via/-V, --sans/-S, --not. Reading affected files.
 
 ---
-[<small>2026-03-23 23:42:03</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-====== 174 failed, 812 passed, 2 skipped, 133 errors in 92.86s (0:01:32) =======
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-24 21:25:01</small>] [**Bob**]->[**all**] **init*:
  bob-protocol init. Sprint 13 in flight. Neo's P1 impl left 174 failures + 133 errors. Resuming as Neo to diagnose.
-
----
-[<small>2026-03-24 21:28:22</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-====== 39 failed, 1076 passed, 1 skipped, 4 warnings in 123.11s (0:02:03) ======
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-24 21:36:51</small>] [**Neo**]->[**all**] **swe fix*:
  Neo activating. 39 failures: 5 fix areas. Starting now.
 
 ---
-[<small>2026-03-24 21:41:54</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1115 passed, 1 skipped, 4 warnings in 122.07s (0:02:02) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-24 22:21:03</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1115 passed, 1 skipped, 4 warnings in 123.85s (0:02:03) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-24 22:22:02</small>] [**Neo**]->[**all**] **swe handoff*:
  Neo state saved. Sprint 13: 1115/1121 tests pass. P3-3 (add 6 new --sans/--not tests) needed to reach baseline. Resume: neo.docs/next_steps.md. Low context — restart.
 
 ---
-[<small>2026-03-24 22:47:25</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1120 passed, 1 skipped, 4 warnings in 123.02s (0:02:03) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-03-24 22:49:52</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1121 passed, 1 skipped, 4 warnings in 123.10s (0:02:03) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-03-24 22:50:01</small>] [**Neo**]->[**all**] **swe handoff*:
  P3-3 done. 1121 tests pass (baseline met). Added 6 new tests: 2x --sans calls, 1x -S alias, 2x --not (underscore/test_ exclusion), 1x --not error. @Trin *qa uat Sprint 13.
-
----
-[<small>2026-03-24 22:50:24</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test-js | /home/drusifer/Projects/via/build/build.out
-npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.12.0
-npm notice To update run: npm install -g npm@11.12.0
-npm notice
-
----
-[<small>2026-03-24 22:50:54</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test-e2e | /home/drusifer/Projects/via/build/build.out
-
-22 passed (27.6s)
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-03-24 22:52:08</small>] [**Trin**]->[**all**] **qa done*:
@@ -1741,31 +1178,8 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  On it. Diagnosing --sans imports (Unknown symbol type: module) and --sans declares (crash in _execute_negative_relationship_query).
 
 ---
-[<small>2026-03-26 15:52:15</small>] [**make**]->[**all**] **build*:
- Build PASSED | make install-system | /home/drusifer/Projects/via/build/build.out
-installed package via 0.1.0, installed using Python 3.13.5
-These apps are now globally available
-- via
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-04-05 15:53:34</small>] [**Bob**]->[**all**] **init*:
  Bob Protocol initialized. All personas online. Ready for *chat commands. Last activity: Sprint 13 complete — sans fixes shipped (2026-03-26). Awaiting next sprint or task.
-
----
-[<small>2026-04-05 16:46:04</small>] [**make**]->[**all**] **build*:
- Build PASSED | make install-system | /home/drusifer/Projects/via/build/build.out
-installed package via 0.1.0, installed using Python 3.13.5
-These apps are now globally available
-- via
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-05 17:34:57</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make status | /home/drusifer/Projects/via/build/build.out
-make[1]: Entering directory '/home/drusifer/Projects/via'
-make[1]: *** No rule to make target 'status'.  Stop.
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-04-05 17:55:41</small>] [**User**]->[**all**] **request*:
@@ -1812,18 +1226,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Activating as Neo. Reading arch doc for Cycle 1: S14-1 JS calls extraction. Will implement _extract_calls() in JavaScriptParser + tests.
 
 ---
-[<small>2026-04-05 18:43:15</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-====== 1 failed, 1143 passed, 1 skipped, 4 warnings in 122.94s (0:02:02) =======
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-05 18:45:44</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1144 passed, 1 skipped, 4 warnings in 122.94s (0:02:02) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-04-05 18:45:56</small>] [**Neo**]->[**Trin**] **swe handoff*:
  Cycle 1 (S14-1) DONE. JS calls extraction + 23 tests. Fixed stale test_sans_declares_raises_error. 1144 passed, 0 failed. @Trin *qa uat Cycle 1 (S14-1).
 
@@ -1848,30 +1250,12 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Activating. Implementing Cycle 2: S14-2 --lang, S14-3 --subtype (flag_groups + executor + store), S14-5 USER_GUIDE fixes.
 
 ---
-[<small>2026-04-05 18:53:12</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1144 passed, 1 skipped, 4 warnings in 123.13s (0:02:03) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-04-06 08:23:52</small>] [**Neo**]->[**Trin**] **swe handoff*:
  Cycle 2 complete. Implemented --lang (S14-2), --subtype (S14-3), USER_GUIDE.md fixes (S14-5). All 1144 tests pass. @Trin *qa uat cycle-2: verify --lang py/js/ts filters, --subtype interface/arrow_function, invalid lang error, and doc fixes
 
 ---
 [<small>2026-04-06 08:23:59</small>] [**Trin**]->[**all**] **qa resume*:
  Loading state, picking up Cycle 2 UAT. Verifying --lang, --subtype filters and doc fixes.
-
----
-[<small>2026-04-06 08:44:10</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-====== 4 failed, 1169 passed, 1 skipped, 4 warnings in 128.47s (0:02:08) =======
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-06 08:47:01</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1173 passed, 1 skipped, 4 warnings in 127.41s (0:02:07) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-04-06 08:47:10</small>] [**Trin**]->[**Morpheus**] **qa handoff*:
@@ -1882,26 +1266,8 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Cycle 2 APPROVED. Fixed: --lang/--subtype added to MCP schema (were missing). Code in parser/executor/store is correct. @Neo proceed to Cycle 3: S14-4 web UI.
 
 ---
-[<small>2026-04-06 08:52:29</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-====== 1 failed, 1172 passed, 1 skipped, 4 warnings in 129.24s (0:02:09) =======
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-06 08:55:20</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1174 passed, 1 skipped, 4 warnings in 128.80s (0:02:08) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-04-06 08:55:31</small>] [**Neo**]->[**Trin**] **swe handoff*:
  Cycle 3 complete: S14-4 web UI done. Replaced invert checkbox with --via/--sans segmented control (template.py, app.js, query.py). Updated stale test to use mode:sans. 1174 passing. @Trin *qa uat cycle-3
-
----
-[<small>2026-04-06 08:58:22</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1178 passed, 1 skipped, 4 warnings in 129.15s (0:02:09) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-04-06 08:58:27</small>] [**Trin**]->[**Morpheus**] **qa handoff*:
@@ -1954,12 +1320,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-04-06 09:39:39</small>] [**Oracle**]->[**all**] **init*:
  Activating as Oracle. Task: *ora update tldrs using via and skill. Running prep_tldr.py to gather data.
-
----
-[<small>2026-04-06 10:35:21</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1178 passed, 1 skipped, 4 warnings in 126.23s (0:02:06) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-04-08 09:33:31</small>] [**User**]->[**all**] **request*:
@@ -2038,30 +1398,12 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Activating as Neo. Reading state + arch for Sprint 15 Cycle 1: S15-3 --lang fix, S15-5 -Q path matching, S15-6 --help examples.
 
 ---
-[<small>2026-04-08 16:32:26</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-====== 6 failed, 1194 passed, 1 skipped, 4 warnings in 130.03s (0:02:10) =======
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 16:35:36</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1200 passed, 1 skipped, 4 warnings in 129.98s (0:02:09) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-04-08 16:36:12</small>] [**Neo**]->[**Trin**] **swe handoff*:
  Cycle 1 DONE. 1200 tests pass (+22). S15-3: filepath language fixed. S15-5: -Q glob already worked (docs only). S15-6: --help anchor rule added. @Trin *qa uat Cycle 1.
 
 ---
 [<small>2026-04-08 16:36:20</small>] [**Trin**]->[**all**] **qa uat*:
  Activating as Trin. UAT Sprint 15 Cycle 1: S15-3, S15-5, S15-6. Checking ACs against stories and code.
-
----
-[<small>2026-04-08 16:39:27</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1200 passed, 1 skipped, 4 warnings in 130.24s (0:02:10) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-04-08 16:39:56</small>] [**Trin**]->[**Morpheus**] **qa handoff*:
@@ -2080,24 +1422,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Neo activating. Implementing Cycle 2: S15-1 --slice + total/shown. Reading arch + key files.
 
 ---
-[<small>2026-04-08 16:48:21</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-====== 2 failed, 1214 passed, 1 skipped, 4 warnings in 132.53s (0:02:12) =======
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 16:56:37</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-====== 2 failed, 1214 passed, 1 skipped, 4 warnings in 129.97s (0:02:09) =======
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 17:03:50</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1216 passed, 1 skipped, 4 warnings in 128.96s (0:02:08) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-04-08 17:04:42</small>] [**Neo**]->[**Trin**] **swe handoff*:
  Cycle 2 DONE. 1216 tests pass (+16 new). --slice flag, parse_result_slice(), LIMIT/OFFSET in store.py, MCP total/shown, CLI --slice warning all implemented. @Trin *qa uat Cycle 2 (S15-1).
 
@@ -2108,48 +1432,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-04-08 17:07:22</small>] [**Morpheus**]->[**Neo**] **lead review*:
  Cycle 2 APPROVED. S15-1 clean. Known gap: --slice ignored for OR'd type queries (S16 backlog). @Neo *swe impl Cycle 3: S15-2 MCP output wrapper + S15-4 md declares.
-
----
-[<small>2026-04-08 17:17:05</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-====== 1 failed, 1234 passed, 1 skipped, 4 warnings in 133.20s (0:02:13) =======
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 17:17:18</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-========================= 1 failed, 18 passed in 1.26s =========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 17:18:21</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-========================= 1 failed, 18 passed in 1.30s =========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 17:19:54</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-========================= 1 failed, 18 passed in 1.24s =========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 17:20:03</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-========================= 1 failed, 18 passed in 1.18s =========================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 17:20:36</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 19 passed in 1.24s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 17:22:55</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1235 passed, 1 skipped, 4 warnings in 129.71s (0:02:09) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
 
 ---
 [<small>2026-04-08 17:23:20</small>] [**Neo**]->[**Trin**] **swe handoff*:
@@ -2194,14 +1476,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-04-08 18:46:58</small>] [**Smith**]->[**Mouse**] **user approve*:
  Sprint 16 Gate 2 APPROVED. Review: agents/smith.docs/SPRINT_16_GATE2_REVIEW.md. @Mouse *sm plan sprint
-
----
-[<small>2026-04-08 18:51:10</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-╰─> See above for output.
-
-note: This error originates from a subprocess, and is likely not a problem with pip.
-make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
 
 ---
 [<small>2026-04-08 18:53:16</small>] [**Neo**]->[**Trin**] **swe handoff*:
@@ -2304,88 +1578,6 @@ make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
  Sprint 18 board opened: agents/mouse.docs/SPRINT_18_TASKS.md. One cycle only: S18-1 polymorphic top-level JS parser handlers. @Neo *swe impl S18-1
 
 ---
-[<small>2026-04-08 21:08:38</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-╰─> See above for output.
-
-note: This error originates from a subprocess, and is likely not a problem with pip.
-make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
-
----
-[<small>2026-04-08 21:08:38</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-╰─> See above for output.
-
-note: This error originates from a subprocess, and is likely not a problem with pip.
-make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
-
----
-[<small>2026-04-08 21:08:38</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-╰─> See above for output.
-
-note: This error originates from a subprocess, and is likely not a problem with pip.
-make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
-
----
-[<small>2026-04-08 21:08:38</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-╰─> See above for output.
-
-note: This error originates from a subprocess, and is likely not a problem with pip.
-make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
-
----
-[<small>2026-04-08 21:08:38</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:10:35</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 2 passed in 0.50s ===============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:13:14</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 2 passed in 0.51s ===============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:13:29</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-Uninstalling via-0.1.0:
-Successfully uninsta
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
-
----
-[<small>2026-04-08 21:13:31</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 23 passed in 0.74s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:13:31</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 34 passed in 0.77s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:13:31</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 34 passed in 0.77s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:13:43</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 3 passed in 0.82s ===============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-04-08 21:15:50</small>] [**Trin**]->[**Morpheus**] **qa verify*:
  Sprint 18 UAT PASS. Targeted make-based parser regression suite is green: 96 passed. Summary: agents/trin.docs/SPRINT_18_UAT_Summary_2026-04-08T21:14.md. @Morpheus *lead review Sprint 18 ship.
 
@@ -2434,30 +1626,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Sprint 19 board opened: agents/mouse.docs/SPRINT_19_TASKS.md. Cycle 1 is builder core plus execution tests; Cycle 2 is web API migration. @Neo *swe impl S19-1
 
 ---
-[<small>2026-04-08 21:36:50</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:36:51</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 3 passed in 0.65s ===============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:36:51</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 15 passed in 0.76s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:37:01</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 12 passed in 0.63s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-04-08 21:38:38</small>] [**Trin**]->[**Morpheus**] **qa verify*:
  Sprint 19 UAT PASS. Builder and web query regressions are green: 30 passed. Summary: agents/trin.docs/SPRINT_19_UAT_Summary_2026-04-08T21:37.md. @Morpheus *lead review Sprint 19 ship.
 
@@ -2498,42 +1666,6 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  Sprint 20 board opened: agents/mouse.docs/SPRINT_20_TASKS.md. Cycle 1 is the shared CLI/builder construction seam; Cycle 2 is builder docs/examples. @Neo *swe impl S20-1
 
 ---
-[<small>2026-04-08 21:56:47</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 3 passed in 0.67s ===============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:56:47</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 44 passed in 0.83s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:56:47</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 44 passed in 0.83s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:57:07</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 3 passed in 0.56s ===============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:57:16</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 44 passed in 0.70s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
-[<small>2026-04-08 21:58:06</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 3 passed in 0.59s ===============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
-
----
 [<small>2026-04-08 21:59:04</small>] [**Neo**]->[**Trin**] **swe impl*:
  Sprint 20 implemented. Shared parser/builder seam landed in `via/pipeline/stage_builder.py`, parser and builder now compile through the same path, and Python API docs were added. Summary: agents/neo.docs/SPRINT_20_Summary_2026-04-08T21:58.md. @Trin *qa verify Sprint 20
 
@@ -2558,178 +1690,125 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
  run `make lints`
 
 ---
-[<small>2026-04-08 22:05:39</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make lints | /home/drusifer/Projects/via/build/build.out
-make[1]: Entering directory '/home/drusifer/Projects/via'
-make[1]: *** No rule to make target 'lints'.  Stop.
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-11 21:56:54</small>] [**Bob**]->[**all**] **init*:
+ Initializing Bob Protocol — cold start. Reading project state and team status.
 
 ---
-[<small>2026-04-08 22:06:22</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make lints | /home/drusifer/Projects/via/build/build.out
-╰─> See above for output.
-
-note: This error originates from a subprocess, and is likely not a problem with pip.
-make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
+[<small>2026-04-11 21:57:05</small>] [**Bob**]->[**all**] **init*:
+ Bob Protocol initialized. Sprint 20 shipped — all personas at rest. Sprint 21 is next. Ready for *chat commands or *plan sprint to kick off Sprint 21.
 
 ---
-[<small>2026-04-08 22:07:22</small>] [**make**]->[**all**] **build*:
- Build PASSED | make install-dev | /home/drusifer/Projects/via/build/build.out
-Successfully uninstalled via-0.1.0
-Successfully installed via-0.1.0
-touch .venv/installed-dev.stamp
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-11 21:57:21</small>] [**User**]->[**all**] **request*:
+ @cypher what's on the backlog
 
 ---
-[<small>2026-04-08 22:09:13</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make lints | /home/drusifer/Projects/via/build/build.out
-╰─> See above for output.
-
-note: This error originates from a subprocess, and is likely not a problem with pip.
-make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
+[<small>2026-04-11 21:57:49</small>] [**Cypher**]->[**all**] **pm backlog*:
+ Sprint 21 backlog: refactors (FunctionBodyAnalyzer, executor strategy, builder adoption) + queued sprints S8 LineIndex(6pt), S9 ContainerQ(6pt), S10 --ref-type/--stale/prep_tldr(8pt). Recommend one queued sprint OR one refactor slice.
 
 ---
-[<small>2026-04-08 22:10:01</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make lints | /home/drusifer/Projects/via/build/build.out
-Low: 1
-Medium: 1
-High: 0
-Total issues (by confidence):
-Undefined: 0
-Low: 0
-Medium: 0
-High: 2
-Files skipped (0):
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:31:20</small>] [**Cypher**]->[**Smith**] **pm handoff*:
+ Sprint 21 stories written: S21-1 FunctionBodyAnalyzer extraction (3pt), S21-2 MCP ViaRunner migration (3pt). Total 6pt. See agents/cypher.docs/SPRINT_21_USER_STORIES.md. @Smith *user review Sprint 21 stories.
 
 ---
-[<small>2026-04-08 22:11:01</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make lints | /home/drusifer/Projects/via/build/build.out
-Low: 1
-Medium: 0
-High: 0
-Total issues (by confidence):
-Undefined: 0
-Low: 0
-Medium: 0
-High: 1
-Files skipped (0):
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:32:08</small>] [**Smith**]->[**Morpheus**] **user approve*:
+ *user approve. Sprint 21 approved. Note for S21-2: prefer 'run_cli_args(args)' over 'run_raw' on ViaRunner — 'raw' implies unvalidated. @Morpheus *lead arch sprint 21.
 
 ---
-[<small>2026-04-08 22:11:15</small>] [**make**]->[**all**] **build*:
- Build PASSED | make lints | /home/drusifer/Projects/via/build/build.out
-Low: 0
-Medium: 0
-High: 0
-Total issues (by confidence):
-Undefined: 0
-Low: 0
-Medium: 0
-High: 0
-Files skipped (0):
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:34:06</small>] [**Morpheus**]->[**Smith**] **lead handoff*:
+ Sprint 21 arch complete. S21-1: _BodyAnalyzer ABC in via/parsers/_js_body.py, 3 subclasses. S21-2: ViaRunner.run_cli_args() + MCP migration. No open questions for Smith. See morpheus.docs/SPRINT_21_ARCHITECTURE.md. @Smith *user feedback Sprint 21 arch.
 
 ---
-[<small>2026-04-08 22:14:00</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make lint-slow | /home/drusifer/Projects/via/build/build.out
-Your code has been rated at 9.42/10 (previous run: 9.46/10, -0.05)
-
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:34:19</small>] [**Smith**]->[**Mouse**] **user approve*:
+ *user approve. Sprint 21 arch approved. run_cli_args name is clear. redirect_stdout stays in MCP layer — correct boundary. No UX concerns. @Mouse *sm plan sprint 21.
 
 ---
-[<small>2026-04-08 22:15:28</small>] [**make**]->[**all**] **build*:
- Build PASSED | make lint-slow | /home/drusifer/Projects/via/build/build.out
-Low: 0
-Medium: 0
-High: 0
-Total issues (by confidence):
-Undefined: 0
-Low: 0
-Medium: 0
-High: 0
-Files skipped (0):
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:34:37</small>] [**Mouse**]->[**Morpheus**] **sm handoff*:
+ Sprint 21 phased: Phase 1 (S21-1 body analyzer, 3 tasks) → Phase 2 (S21-2 MCP migration, 3 tasks). Board: mouse.docs/SPRINT_21_TASKS.md. @Morpheus *lead review sprint plan.
 
 ---
-[<small>2026-04-08 22:17:55</small>] [**make**]->[**all**] **build*:
- Build PASSED | make install-dev | /home/drusifer/Projects/via/build/build.out
-Successfully uninstalled via-0.1.0
-
-Successfully installed via-0.1.0 vulture-2.16
-touch .venv/installed-dev.stamp
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:34:49</small>] [**Morpheus**]->[**Neo**] **lead handoff*:
+ Sprint 21 plan approved. 2 phases, 3 tasks each, no cross-phase deps. @Neo *swe impl phase-1: create via/parsers/_js_body.py with _BodyAnalyzer ABC + 3 subclasses, then update javascript_parser.py to delegate.
 
 ---
-[<small>2026-04-08 22:19:04</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make dead-code | /home/drusifer/Projects/via/build/build.out
-via/pipeline/parser.py:56: unused variable 'option_string' (100% confidence)
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:41:40</small>] [**Neo**]->[**Trin**] **swe handoff*:
+ Phase 1 complete. _js_body.py created with _BodyAnalyzer ABC + 3 subclasses. javascript_parser.py delegates to new classes. 1259 passed, 1 skipped. @Trin *qa uat phase-1.
 
 ---
-[<small>2026-04-08 22:19:22</small>] [**make**]->[**all**] **build*:
- Build PASSED | make dead-code | /home/drusifer/Projects/via/build/build.out
-make[1]: Entering directory '/home/drusifer/Projects/via'
-. .venv/bin/activate && vulture via/ --min-confidence 80
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:42:05</small>] [**Trin**]->[**Morpheus**] **qa handoff*:
+ UAT Phase 1 PASSED. 1259 tests, 0 failures. _collect_*_in_body removed from javascript_parser.py. _js_body.py imports verified clean. No regressions. @Morpheus *lead review phase-1.
 
 ---
-[<small>2026-04-08 22:22:51</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
-===== 2 failed, 1257 passed, 1 skipped, 179 warnings in 136.52s (0:02:16) ======
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:42:26</small>] [**Morpheus**]->[**Neo**] **lead handoff*:
+ Phase 1 review PASSED. javascript_parser.py: 926→754 lines. _js_body.py: 244 lines, clean ABC pattern. Stateless analyzers correct. @Neo *swe impl phase-2: add ViaRunner.run_cli_args(), migrate mcp/server.py.
 
 ---
-[<small>2026-04-08 22:26:08</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 56 passed in 0.85s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:45:34</small>] [**Neo**]->[**Trin**] **swe handoff*:
+ Phase 2 complete. ViaRunner.run_cli_args() added. mcp/server.py migrated — no PipelineParser/PipelineExecutor imports remain. 1259 passed, 0 failures. @Trin *qa uat phase-2.
 
 ---
-[<small>2026-04-08 22:29:43</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1259 passed, 1 skipped, 4 warnings in 136.36s (0:02:16) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:45:44</small>] [**Trin**]->[**Morpheus**] **qa handoff*:
+ UAT Phase 2 PASSED. ViaRunner.run_cli_args() confirmed in query_builder.py. mcp/server.py clean — no stale pipeline imports. 1259 tests green. @Morpheus *lead review phase-2.
 
 ---
-[<small>2026-04-08 22:31:36</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 10 passed in 0.66s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:45:52</small>] [**Morpheus**]->[**Oracle**] **lead handoff*:
+ Phase 2 review PASSED. run_cli_args minimal and correct. ViaRunner instantiated once. stdout redirect correctly in MCP layer. All phases done. @Oracle *ora groom.
 
 ---
-[<small>2026-04-08 22:40:26</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1259 passed, 1 skipped, 4 warnings in 136.45s (0:02:16) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:46:18</small>] [**Oracle**]->[**Smith**] **ora handoff*:
+ Docs groomed. _js_body.py TLDR present. via/__init__.py TLDR updated to mention run_cli_args. @Smith *user test Sprint 21.
 
 ---
-[<small>2026-04-08 22:43:52</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================== 10 passed in 0.64s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:46:48</small>] [**Smith**]->[**all**] **user approve*:
+ User testing PASSED. ViaRunner.run_cli_args importable. _js_body classes verified. JavaScriptParser loads clean. No regressions. @all *sprint retro.
 
 ---
-[<small>2026-04-08 22:47:47</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1259 passed, 1 skipped, 4 warnings in 136.42s (0:02:16) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:46:52</small>] [**Neo**]->[**Cypher**] **retro*:
+ Neo retro: Clean extraction. No logic changes needed — body walkers were already well-isolated. Keyword-only args on collect() prevent future caller mistakes.
 
 ---
-[<small>2026-04-08 22:53:29</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-============================= 17 passed in 48.83s ==============================
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:46:56</small>] [**Trin**]->[**Cypher**] **retro*:
+ Trin retro: 1259 tests green both phases. No targeted Sprint 21 tests written — refactors covered by existing suites. Backlog: add explicit _js_body unit tests if body logic diverges further.
 
 ---
-[<small>2026-04-08 22:53:53</small>] [**make**]->[**all**] **build*:
- Build FAILED exit=2 | make run | /home/drusifer/Projects/via/build/build.out
-make[1]: Entering directory '/home/drusifer/Projects/via'
-make[1]: *** No rule to make target 'run'.  Stop.
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:47:00</small>] [**Morpheus**]->[**Cypher**] **retro*:
+ Morpheus retro: ABC pattern consistent with Sprint 18. run_cli_args seam is minimal and correct. Remaining backlog: executor strategy/CLI parser replacement. Defer unless explicitly planned.
 
 ---
-[<small>2026-04-08 22:56:14</small>] [**make**]->[**all**] **build*:
- Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
-=========== 1259 passed, 1 skipped, 4 warnings in 135.79s (0:02:15) ============
-make[1]: Leaving directory '/home/drusifer/Projects/via'
+[<small>2026-04-12 11:47:03</small>] [**Mouse**]->[**Cypher**] **retro*:
+ Mouse retro: 2 phases, 6 tasks, clean execution. Phase sizing correct — no overflow. Sprint 21 closed on schedule.
+
+---
+[<small>2026-04-12 11:47:06</small>] [**Smith**]->[**Cypher**] **retro*:
+ Smith retro: Both stories internal — no UX regressions. Naming guidance (run_cli_args > run_raw) adopted. Backlog: _js_body unit tests if body diverges.
+
+---
+[<small>2026-04-12 11:47:18</small>] [**Cypher**]->[**all**] **pm launch*:
+ *pm launch Sprint 21. S21-1 _js_body.py extraction + S21-2 ViaRunner.run_cli_args MCP migration. 1259 tests green. See cypher.docs/SPRINT_21_CLOSEOUT_2026-04-12.md.
+
+---
+[<small>2026-04-12 11:48:55</small>] [**User**]->[**Neo**] **request*:
+ @neo run all lints and fix errors
+
+---
+[<small>2026-04-12 11:53:41</small>] [**Neo**]->[**all**] **swe save*:
+ Prepare for context wipe — saving state.
+
+---
+[<small>2026-04-12 11:54:29</small>] [**Neo**]->[**all**] **swe save*:
+ State saved. Lint fix ~40% done — 4 of 17 C901s fixed. 13 remaining across 8 files. See neo.docs/current_task.md for full resume list. Awaiting context restore.
+
+---
+[<small>2026-04-12 11:56:15</small>] [**drusifer**]->[**neo**] **chat*:
+ load state and continue
+
+---
+[<small>2026-04-12 12:08:56</small>] [**Neo**]->[**all**] **swe done*:
+ Lint fix COMPLETE. All 18 C901 complexity errors fixed. 1259 tests green. Extracted 20 helpers across 8 files. Ready for commit.
+
+---
+[<small>2026-04-12 12:09:32</small>] [**drusifer**]->[**Morpheus**] **chat*:
+ review changes
+
+---
+[<small>2026-04-12 12:10:29</small>] [**Morpheus**]->[**Neo**] **review*:
+ *review APPROVED. 18 C901 fixes are clean SRP. Minor: _build_match_where -> tuple[str,list]; ctx spread in _emit_annotation_ref fragile. Non-blocking — ready to commit.

@@ -10,6 +10,7 @@ from via.core.match_record import MatchRecord, RenderType
 from via.core.relationship_types import ReferenceType
 from via.core.types import SymbolType
 from via.pipeline.executor import PipelineExecutor
+from via.pipeline.parser import PipelineParser
 from via.pipeline.stage_builder import build_match_stage, build_relationship_filter
 from via.pipeline.types import PipelineStage
 
@@ -59,6 +60,24 @@ def _normalize_relationship(relationship_type: str | ReferenceType) -> Reference
     if isinstance(relationship_type, ReferenceType):
         return relationship_type
     return ReferenceType.from_value(str(relationship_type))
+
+
+def _emit_optional_cli_flags(args, out: list) -> None:
+    """Append optional match flags to *out* based on *args* attributes."""
+    if getattr(args, "case_insensitive", False):
+        out.append("-I")
+    if getattr(args, "match_qualified", False):
+        out.append("-Q")
+    if getattr(args, "contains_pattern", None):
+        out.extend(["--contains", args.contains_pattern])
+    if getattr(args, "language_filter", None):
+        out.extend(["--lang", args.language_filter])
+    if getattr(args, "symbol_subtype_filter", None):
+        out.extend(["--subtype", args.symbol_subtype_filter])
+    if getattr(args, "result_slice", None):
+        out.extend(["--slice", args.result_slice])
+    elif getattr(args, "limit", None) is not None:
+        out.extend(["-n", str(args.limit)])
 
 
 class _QueryBuilderBase:
@@ -191,36 +210,17 @@ class ViaQuery:
         match_flag = {"g": "-mg", "r": "-mr", "s": "-ms"}.get(getattr(args, "match_syntax", "g"), "-mg")
         out.extend([match_flag, args.pattern])
 
+        _TYPE_FLAGS = {
+            "class": "-tc", "function": "-tf", "method": "-tm", "import": "-ti",
+            "global": "-tg", "string_constant": "-ts", "link": "-tl",
+            "filepath": "-tF", "filename": "-tN", "header": "-tH",
+        }
         for symbol_type in getattr(args, "symbol_types", []) or []:
-            type_flag = {
-                "class": "-tc",
-                "function": "-tf",
-                "method": "-tm",
-                "import": "-ti",
-                "global": "-tg",
-                "string_constant": "-ts",
-                "link": "-tl",
-                "filepath": "-tF",
-                "filename": "-tN",
-                "header": "-tH",
-            }.get(symbol_type)
-            if type_flag:
-                out.append(type_flag)
+            flag = _TYPE_FLAGS.get(symbol_type)
+            if flag:
+                out.append(flag)
 
-        if getattr(args, "case_insensitive", False):
-            out.append("-I")
-        if getattr(args, "match_qualified", False):
-            out.append("-Q")
-        if getattr(args, "contains_pattern", None):
-            out.extend(["--contains", args.contains_pattern])
-        if getattr(args, "language_filter", None):
-            out.extend(["--lang", args.language_filter])
-        if getattr(args, "symbol_subtype_filter", None):
-            out.extend(["--subtype", args.symbol_subtype_filter])
-        if getattr(args, "result_slice", None):
-            out.extend(["--slice", args.result_slice])
-        elif getattr(args, "limit", None) is not None:
-            out.extend(["-n", str(args.limit)])
+        _emit_optional_cli_flags(args, out)
 
         rel = getattr(args, "relationship", None)
         if rel:
@@ -326,3 +326,8 @@ class ViaRunner:
     def run(self, query: ViaQuery) -> Optional[Iterator[MatchRecord]]:
         """Execute a compiled query through the existing pipeline executor."""
         return self._executor.execute(query.to_stages())
+
+    def run_cli_args(self, args: list[str]) -> Optional[Iterator[MatchRecord]]:
+        """Parse a CLI argument list and execute through the shared pipeline seam."""
+        stages = PipelineParser().parse(args)
+        return self._executor.execute(stages)

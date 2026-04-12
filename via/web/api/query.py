@@ -91,23 +91,8 @@ def _build_stages(body: Dict[str, Any]) -> List[PipelineStage]:
     return _builder_from_body(body).build().to_stages()
 
 
-def _builder_from_body(body: Dict[str, Any]) -> ViaQueryBuilder:
-    """Translate a JSON body into a ViaQueryBuilder."""
-    builder = ViaQueryBuilder()
-
-    match_type = body.get("match_type", "glob") or "glob"
-    pattern = body.get("pattern", "*") or "*"
-    builder_method = {
-        "glob": builder.glob,
-        "regex": builder.regex,
-        "sql": builder.sql,
-    }.get(match_type, builder.glob)
-    builder_method(pattern)
-
-    symbol_types: List[str] = body.get("symbol_types") or []
-    if symbol_types:
-        builder.types(*symbol_types)
-
+def _apply_subject_options(builder: ViaQueryBuilder, body: Dict[str, Any]) -> None:
+    """Apply optional subject-side filters from *body* to *builder* in place."""
     if body.get("case_insensitive", False):
         builder.case_insensitive()
     if body.get("qualified", False):
@@ -126,6 +111,38 @@ def _builder_from_body(body: Dict[str, Any]) -> ViaQueryBuilder:
         builder.subtype(body["symbol_subtype_filter"])
     if body.get("negate_pattern", False):
         builder.negate()
+
+
+def _apply_relationship_options(rel_builder, rel) -> None:
+    """Apply optional relationship-side filters from *rel* to *rel_builder* in place."""
+    if rel.object_types:
+        rel_builder.types(*rel.object_types)
+    if rel.result_newerthan_seconds is not None:
+        rel_builder.newerthan(str(int(rel.result_newerthan_seconds)))
+    if rel.result_olderthan_seconds is not None:
+        rel_builder.olderthan(str(int(rel.result_olderthan_seconds)))
+    if rel.result_stale:
+        rel_builder.stale()
+
+
+def _builder_from_body(body: Dict[str, Any]) -> ViaQueryBuilder:
+    """Translate a JSON body into a ViaQueryBuilder."""
+    builder = ViaQueryBuilder()
+
+    match_type = body.get("match_type", "glob") or "glob"
+    pattern = body.get("pattern", "*") or "*"
+    builder_method = {
+        "glob": builder.glob,
+        "regex": builder.regex,
+        "sql": builder.sql,
+    }.get(match_type, builder.glob)
+    builder_method(pattern)
+
+    symbol_types: List[str] = body.get("symbol_types") or []
+    if symbol_types:
+        builder.types(*symbol_types)
+
+    _apply_subject_options(builder, body)
 
     # limit=0 means "no limit" in the web API; PipelineExecutor treats 0 as "stop after 0"
     # Use a large sentinel value when no limit is requested
@@ -146,14 +163,7 @@ def _builder_from_body(body: Dict[str, Any]) -> ViaQueryBuilder:
             "s": rel_builder.sql,
         }.get(rel.object_match_syntax, rel_builder.glob)
         object_method(rel.object_pattern)
-        if rel.object_types:
-            rel_builder.types(*rel.object_types)
-        if rel.result_newerthan_seconds is not None:
-            rel_builder.newerthan(str(int(rel.result_newerthan_seconds)))
-        if rel.result_olderthan_seconds is not None:
-            rel_builder.olderthan(str(int(rel.result_olderthan_seconds)))
-        if rel.result_stale:
-            rel_builder.stale()
+        _apply_relationship_options(rel_builder, rel)
         rel_builder.done()
 
     return builder

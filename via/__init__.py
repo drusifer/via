@@ -7,8 +7,10 @@ TLDR:
     FileDiscovery and DiscoveredFile (filesystem crawling), ParserABC and
     ParseResult (parser contracts), entity dataclasses (FunctionEntity,
     ClassEntity, ImportEntity, GlobalEntity, LogStatementEntity,
-    MarkdownHeadingEntity), and ParserRegistry / get_global_registry / PythonParser
-    for language-specific parsing. Import from here rather than internal modules.
+    MarkdownHeadingEntity), ParserRegistry / get_global_registry / PythonParser
+    for language-specific parsing, and ViaQueryBuilder / ViaRunner for programmatic
+    queries (ViaRunner.run() for builder queries, ViaRunner.run_cli_args() for
+    CLI arg lists). Import from here rather than internal modules.
 
 Author: Drew Gutstein
 ------------------------------------------------------------------------------

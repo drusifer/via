@@ -613,6 +613,55 @@ class DatabaseStore:
         if not self._in_transaction and self.conn:
             self.conn.commit()
 
+    @staticmethod
+    def _build_match_where(
+        symbol_type: Optional[SymbolType],
+        match_op: MatchOp,
+        pattern: str,
+        case_sensitive: bool,
+        negated: bool,
+        match_qualified: bool,
+        newerthan_seconds: Optional[float],
+        olderthan_seconds: Optional[float],
+        language: Optional[str],
+        subtype: Optional[str],
+    ) -> tuple:
+        """Build WHERE clause and params for SQL-based match query."""
+        where_parts: List[str] = []
+        params: List[Any] = []
+
+        if symbol_type is not None:
+            where_parts.append("symbol_type = ?")
+            params.append(symbol_type.value)
+
+        base_column = "qualified_name" if match_qualified else "symbol_name"
+        column = base_column
+        if not case_sensitive:
+            column = f"LOWER({base_column})"
+            pattern = pattern.lower()
+        if match_op.needs_escaping:
+            pattern = pattern.replace("'", "''")
+        not_prefix = "NOT " if negated else ""
+        where_parts.append(f"{not_prefix}{column} {match_op.sql_op} ?")
+        params.append(pattern)
+
+        now = time.time()
+        if newerthan_seconds is not None:
+            where_parts.append("mtime > ?")
+            params.append(now - newerthan_seconds)
+        if olderthan_seconds is not None:
+            where_parts.append("mtime < ?")
+            params.append(now - olderthan_seconds)
+
+        if language is not None:
+            where_parts.append("s.language = ?")
+            params.append(language)
+        if subtype is not None:
+            where_parts.append("s.symbol_subtype = ?")
+            params.append(subtype)
+
+        return ' AND '.join(where_parts), params
+
     @require_connection
     def match(
         self,
@@ -661,48 +710,10 @@ class DatabaseStore:
             )
             return
 
-        # Build WHERE clause for SQL-based matching (GLOB, LIKE, EXACT)
-        where_parts: List[str] = []
-        params: List[Any] = []
-
-        # Add symbol type filter only if specified
-        if symbol_type is not None:
-            where_parts.append("symbol_type = ?")
-            params.append(symbol_type.value)
-
-        # Add name match clause
-        base_column = "qualified_name" if match_qualified else "symbol_name"
-        column = base_column
-        if not case_sensitive:
-            column = f"LOWER({base_column})"
-            pattern = pattern.lower()
-
-        # Escape pattern if needed
-        if match_op.needs_escaping:
-            pattern = pattern.replace("'", "''")
-
-        not_prefix = "NOT " if negated else ""
-        where_parts.append(f"{not_prefix}{column} {match_op.sql_op} ?")
-        params.append(pattern)
-
-        # Temporal filters (per-stage --newerthan / --olderthan)
-        now = time.time()
-        if newerthan_seconds is not None:
-            where_parts.append("mtime > ?")
-            params.append(now - newerthan_seconds)
-        if olderthan_seconds is not None:
-            where_parts.append("mtime < ?")
-            params.append(now - olderthan_seconds)
-
-        # Language and subtype filters
-        if language is not None:
-            where_parts.append("s.language = ?")
-            params.append(language)
-        if subtype is not None:
-            where_parts.append("s.symbol_subtype = ?")
-            params.append(subtype)
-
-        where_clause = ' AND '.join(where_parts)
+        where_clause, params = self._build_match_where(
+            symbol_type, match_op, pattern, case_sensitive, negated,
+            match_qualified, newerthan_seconds, olderthan_seconds, language, subtype,
+        )
 
         # COUNT(*) OVER () is a window function: gives total matching rows before LIMIT.
         # This replaces the old pre-query aggregation in _get_match_metadata().
@@ -1098,6 +1109,26 @@ class DatabaseStore:
         )
         return cursor.lastrowid
 
+    @staticmethod
+    def _add_pattern_clause(
+        where_parts: List[str],
+        params: List[Any],
+        column: str,
+        raw_pattern: Optional[str],
+        match_op: MatchOp,
+        case_sensitive: bool,
+    ) -> None:
+        """Append a pattern-matching WHERE clause if *raw_pattern* is non-trivial."""
+        if not raw_pattern or raw_pattern == '*':
+            return
+        col = column
+        pat = raw_pattern
+        if not case_sensitive:
+            col = f"LOWER({column})"
+            pat = pat.lower()
+        where_parts.append(f"{col} {match_op.sql_op} ?")
+        params.append(pat)
+
     @require_connection
     def query_relationships(
         self,
@@ -1141,17 +1172,11 @@ class DatabaseStore:
         """
         # Build the query
         if not invert:
-            # Normal: find subjects that relate TO objects
-            # Return the subjects (sources)
             select_from = "s"  # source symbol
-            join_source = "from_symbol_id"
-            join_target = "to_symbol_id"
         else:
-            # Inverted: find targets that relate FROM subjects
-            # Return the targets
             select_from = "t"  # target symbol
-            join_source = "from_symbol_id"
-            join_target = "to_symbol_id"
+        join_source = "from_symbol_id"
+        join_target = "to_symbol_id"
 
         # Build WHERE clauses
         where_parts = ["r.reference_type = ?"]
@@ -1160,37 +1185,14 @@ class DatabaseStore:
         # Pattern filtering: subject_pattern always filters source (s),
         # object_pattern always filters target (t). The caller (executor)
         # handles any swapping needed for inverted queries.
-        if subject_pattern and subject_pattern != '*':
-            column = "s.symbol_name"
-            pat = subject_pattern
-            if not case_sensitive:
-                column = "LOWER(s.symbol_name)"
-                pat = pat.lower()
-            where_parts.append(f"{column} {match_op.sql_op} ?")
-            params.append(pat)
+        self._add_pattern_clause(where_parts, params, "s.symbol_name", subject_pattern, match_op, case_sensitive)
+        self._add_pattern_clause(where_parts, params, "t.symbol_name", object_pattern, match_op, case_sensitive)
 
-        if object_pattern and object_pattern != '*':
-            column = "t.symbol_name"
-            pat = object_pattern
-            if not case_sensitive:
-                column = "LOWER(t.symbol_name)"
-                pat = pat.lower()
-            where_parts.append(f"{column} {match_op.sql_op} ?")
-            params.append(pat)
-
-        # Type filtering: subject_type filters source, object_type filters target
         if subject_type:
             where_parts.append("s.symbol_type = ?")
             params.append(subject_type)
 
-        if subject_parent_pattern and subject_parent_pattern != '*':
-            column = "s.parent_name"
-            pat = subject_parent_pattern
-            if not case_sensitive:
-                column = "LOWER(s.parent_name)"
-                pat = pat.lower()
-            where_parts.append(f"{column} {match_op.sql_op} ?")
-            params.append(pat)
+        self._add_pattern_clause(where_parts, params, "s.parent_name", subject_parent_pattern, match_op, case_sensitive)
 
         if object_type:
             where_parts.append("t.symbol_type = ?")
@@ -1302,14 +1304,7 @@ class DatabaseStore:
             outer_where.append("s.symbol_type = ?")
             outer_params.append(subject_type)
 
-        if subject_pattern and subject_pattern != '*':
-            col = "s.symbol_name"
-            pat = subject_pattern
-            if not case_sensitive:
-                col = "LOWER(s.symbol_name)"
-                pat = pat.lower()
-            outer_where.append(f"{col} {match_op.sql_op} ?")
-            outer_params.append(pat)
+        self._add_pattern_clause(outer_where, outer_params, "s.symbol_name", subject_pattern, match_op, case_sensitive)
 
         # Temporal filters on the returned subject
         now = time.time()
@@ -1337,14 +1332,7 @@ class DatabaseStore:
             sub_where.append("t.symbol_type = ?")
             sub_params.append(object_type)
 
-        if object_pattern and object_pattern != '*':
-            col = "t.symbol_name"
-            pat = object_pattern
-            if not case_sensitive:
-                col = "LOWER(t.symbol_name)"
-                pat = pat.lower()
-            sub_where.append(f"{col} {match_op.sql_op} ?")
-            sub_params.append(pat)
+        self._add_pattern_clause(sub_where, sub_params, "t.symbol_name", object_pattern, match_op, case_sensitive)
 
         not_exists_clause = (
             "NOT EXISTS ("

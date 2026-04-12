@@ -106,6 +106,38 @@ class PipelineExecutor:
         # No render type specified - return iterator for caller to consume
         return result_iter
 
+    @staticmethod
+    def _resolve_limit_and_offset(args) -> tuple:
+        """Return (limit, offset) from --slice or -n args, or defaults."""
+        raw_slice = getattr(args, 'result_slice', None)
+        raw_limit = getattr(args, 'limit', None)
+        if raw_slice is not None:
+            if raw_limit is not None:
+                from via.pipeline.parser import PipelineParseError
+                raise PipelineParseError(
+                    "--slice and --limit are mutually exclusive. "
+                    "Use --slice start:end for windowed results."
+                )
+            start, end = parse_result_slice(raw_slice)
+            offset: Optional[int] = start if start is not None else 0
+            limit = (end - offset) if end is not None else 0  # 0 = unlimited
+            return limit, offset
+        return raw_limit if raw_limit is not None else 10, None  # default 10
+
+    @staticmethod
+    def _resolve_language_filter(raw_lang: Optional[str]) -> Optional[str]:
+        """Normalize language alias; raise PipelineParseError if unknown."""
+        if not raw_lang:
+            return None
+        language_filter = _LANG_ALIASES.get(raw_lang.lower())
+        if language_filter is None:
+            from via.pipeline.parser import PipelineParseError
+            raise PipelineParseError(
+                f"Unknown --lang '{raw_lang}'. "
+                f"Valid: py/python, js/javascript, ts/typescript, md/markdown."
+            )
+        return language_filter
+
     def _execute_match_stage(self, stage: PipelineStage) -> Iterator[MatchRecord]:
         """Execute match stage against database.
 
@@ -138,49 +170,15 @@ class PipelineExecutor:
         match_qualified = getattr(args, 'match_qualified', False)
         negated = getattr(args, 'negate_pattern', False)
 
-        # Resolve limit and optional offset from --slice or -n
-        raw_slice = getattr(args, 'result_slice', None)
-        raw_limit = getattr(args, 'limit', None)  # None = not explicitly provided
-        if raw_slice is not None:
-            if raw_limit is not None:
-                from via.pipeline.parser import PipelineParseError
-                raise PipelineParseError(
-                    "--slice and --limit are mutually exclusive. "
-                    "Use --slice start:end for windowed results."
-                )
-            start, end = parse_result_slice(raw_slice)
-            offset: Optional[int] = start if start is not None else 0
-            limit = (end - offset) if end is not None else 0  # 0 = unlimited
-        else:
-            offset = None
-            limit = raw_limit if raw_limit is not None else 10  # default 10
+        limit, offset = self._resolve_limit_and_offset(args)
 
-        # Determine match operator from match_syntax attribute
-        # match_syntax is the suffix from flag groups: 'g' (glob), 'r' (regex), 's' (sql)
         match_syntax = getattr(args, 'match_syntax', 'g')
         match_op = get_match_op(match_syntax)
 
-        # Temporal filters
-        newerthan_seconds = None
-        olderthan_seconds = None
-        if getattr(args, 'newerthan', None):
-            newerthan_seconds = parse_duration(args.newerthan)
-        if getattr(args, 'olderthan', None):
-            olderthan_seconds = parse_duration(args.olderthan)
+        newerthan_seconds = parse_duration(args.newerthan) if getattr(args, 'newerthan', None) else None
+        olderthan_seconds = parse_duration(args.olderthan) if getattr(args, 'olderthan', None) else None
 
-        # Language filter — normalize alias to canonical name; error on unknown
-        language_filter = None
-        raw_lang = getattr(args, 'language_filter', None)
-        if raw_lang:
-            language_filter = _LANG_ALIASES.get(raw_lang.lower())
-            if language_filter is None:
-                from via.pipeline.parser import PipelineParseError
-                raise PipelineParseError(
-                    f"Unknown --lang '{raw_lang}'. "
-                    f"Valid: py/python, js/javascript, ts/typescript, md/markdown."
-                )
-
-        # Subtype filter (open-ended; unknown values return empty silently)
+        language_filter = self._resolve_language_filter(getattr(args, 'language_filter', None))
         subtype_filter = getattr(args, 'symbol_subtype_filter', None) or None
 
         # Handle multiple symbol types (OR'd together)

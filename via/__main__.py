@@ -655,59 +655,32 @@ def _run_mcp_serve(directory: str, port: int = 7891, no_web: bool = False) -> in
     return run_mcp_server(str(target_dir), str(db_path), port=port, no_web=no_web)
 
 
-def main() -> int:
-    """
-    Main entry point for VIA command-line interface.
-
-    Returns:
-        Exit code (0 for success, non-zero for error)
-    """
-    argv = sys.argv[1:]
-
-    if '--canned' in argv:
-        canned_index = argv.index('--canned')
-        if canned_index + 1 >= len(argv):
-            print("Error: --canned requires a query name", file=sys.stderr)
+def _run_canned_command(argv: list) -> int:
+    """Expand and execute a --canned query."""
+    canned_index = argv.index('--canned')
+    if canned_index + 1 >= len(argv):
+        print("Error: --canned requires a query name", file=sys.stderr)
+        return EXIT_ERROR
+    canned_name = argv[canned_index + 1]
+    raw_args = None
+    extras = argv[:canned_index] + argv[canned_index + 2:]
+    if '--args' in extras:
+        args_index = extras.index('--args')
+        if args_index + 1 >= len(extras):
+            print("Error: --args requires key=value pairs", file=sys.stderr)
             return EXIT_ERROR
-        canned_name = argv[canned_index + 1]
-        raw_args = None
-        extras = argv[:canned_index] + argv[canned_index + 2:]
-        if '--args' in extras:
-            args_index = extras.index('--args')
-            if args_index + 1 >= len(extras):
-                print("Error: --args requires key=value pairs", file=sys.stderr)
-                return EXIT_ERROR
-            raw_args = extras[args_index + 1]
-            del extras[args_index:args_index + 2]
-        try:
-            expanded = expand_canned_query(str(Path('.').resolve()), canned_name, raw_args, extras)
-        except ValueError as e:
-            print(f"Error: {e}", file=sys.stderr)
-            return EXIT_ERROR
-        return _run_pipeline_command(expanded)
+        raw_args = extras[args_index + 1]
+        del extras[args_index:args_index + 2]
+    try:
+        expanded = expand_canned_query(str(Path('.').resolve()), canned_name, raw_args, extras)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_ERROR
+    return _run_pipeline_command(expanded)
 
-    # Check if using pipeline syntax
-    if _is_pipeline_syntax(argv):
-        return _run_pipeline_command(argv)
 
-    # Otherwise use subcommand syntax
-    parser = _create_parser()
-    args = parser.parse_args()
-
-    # Map verbosity count to levels
-    verbosity_map = {
-        0: VERBOSITY_QUIET,
-        1: VERBOSITY_NORMAL,
-        2: VERBOSITY_VERBOSE,
-        3: VERBOSITY_DEBUG,
-        4: VERBOSITY_TRACE,
-    }
-    verbosity = verbosity_map.get(args.verbosity, VERBOSITY_TRACE)
-
-    # Setup logging
-    setup_logging(verbosity)
-
-    # Dispatch to subcommand
+def _dispatch_subcommand(args, parser) -> int:
+    """Dispatch parsed args to the appropriate subcommand handler."""
     if args.command in ("index", "i"):
         return _run_index_command(args)
     elif args.command in ("stats", "s"):
@@ -727,6 +700,31 @@ def main() -> int:
     else:
         print(f"Error: Unknown command: {args.command}", file=sys.stderr)
         return EXIT_ERROR
+
+
+def main() -> int:
+    """
+    Main entry point for VIA command-line interface.
+
+    Returns:
+        Exit code (0 for success, non-zero for error)
+    """
+    argv = sys.argv[1:]
+
+    if '--canned' in argv:
+        return _run_canned_command(argv)
+
+    if _is_pipeline_syntax(argv):
+        return _run_pipeline_command(argv)
+
+    parser = _create_parser()
+    args = parser.parse_args()
+    verbosity = {
+        0: VERBOSITY_QUIET, 1: VERBOSITY_NORMAL, 2: VERBOSITY_VERBOSE,
+        3: VERBOSITY_DEBUG, 4: VERBOSITY_TRACE,
+    }.get(args.verbosity, VERBOSITY_TRACE)
+    setup_logging(verbosity)
+    return _dispatch_subcommand(args, parser)
 
 
 if __name__ == "__main__":

@@ -1,20 +1,17 @@
 # Cypher Current Task
 
-**Task**: Close Sprint 20
-**Status**: COMPLETE (100%)
-**Updated**: 2026-04-08
+**Task**: Sprint 21 Planning — stories written, awaiting Smith Gate 1
+**Status**: IN PROGRESS (40%)
+**Updated**: 2026-04-12
 
-## Sprint 20 — Shipped
+## Sprint 21 Stories
 | Story | Points | Priority | Status |
 |-------|--------|----------|--------|
-| S20-1: CLI/programmatic query construction shares the builder seam | 3 | P0 | Shipped |
-| S20-2: Document `ViaQueryBuilder` as the supported Python API | 2 | P0 | Shipped |
-| **Total** | **5** | | |
-
-## Completed
-- Sprint 20 shipped: `agents/cypher.docs/SPRINT_20_CLOSEOUT_2026-04-08T21:58.md`
-- Scope stayed bounded to builder adoption + docs, not executor redesign
-- Ship decision based on 50 targeted make-based tests
+| S21-1: Extract `_FunctionBodyAnalyzer` from JS parser | 3 | P0 | Written — awaiting Smith review |
+| S21-2: Migrate MCP server to `ViaRunner` | 3 | P0 | Written — awaiting Smith review |
+| **Total** | **6** | | |
 
 ## Next
-- Hand off archive to Mouse
+- Smith reviews stories (Gate 1)
+- If approved → Morpheus arch
+- If rejected → revise stories per Smith feedback

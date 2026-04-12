@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Optional, Set
 
 from .base import (
-    CallEntity,
     ClassEntity,
     FunctionEntity,
     GlobalEntity,
@@ -28,6 +27,14 @@ from .base import (
     ParserABC,
     ParseResult,
     StringConstantEntity,
+)
+from ._js_body import (
+    _node_text,
+    _node_line_start,
+    _normalize_js_string,
+    _CallBodyAnalyzer,
+    _HttpCallBodyAnalyzer,
+    _StringConstantBodyAnalyzer,
 )
 
 # JS/TS extensions
@@ -172,16 +179,6 @@ def _tree_has_error(node) -> bool:
     if node.type in ('ERROR', 'MISSING'):
         return True
     return any(_tree_has_error(child) for child in node.children)
-
-
-def _node_text(node, content: bytes) -> str:
-    """Extract UTF-8 text for a node from the raw content bytes."""
-    return content[node.start_byte:node.end_byte].decode('utf-8', errors='replace')
-
-
-def _node_line_start(node) -> int:
-    """Return 1-indexed start line."""
-    return node.start_point[0] + 1
 
 
 def _node_line_end(node) -> int:
@@ -330,17 +327,60 @@ def _extract_symbols(root_node, content: bytes, result: ParseResult, file_path: 
         _TOP_LEVEL_SYMBOL_EXTRACTOR.extract(node, content, result)
 
 
+def _collect_named_imports(module: str, named_node, stmt_node, content: bytes, imports: list) -> None:
+    """Append ImportEntity for each specifier in a named_imports node."""
+    for spec in named_node.children:
+        if spec.type == 'import_specifier':
+            spec_name = spec.child_by_field_name('name')
+            if spec_name:
+                imports.append(ImportEntity(
+                    module=module,
+                    name=_node_text(spec_name, content),
+                    line_number=_node_line_start(stmt_node),
+                    byte_offset=stmt_node.start_byte,
+                    byte_length=stmt_node.end_byte - stmt_node.start_byte,
+                ))
+
+
+def _collect_clause_imports(module: str, import_clause, stmt_node, content: bytes, result: ParseResult) -> None:
+    """Dispatch each child of an import_clause to the appropriate collector."""
+    has_named = False
+    for child in import_clause.children:
+        if child.type == 'identifier':
+            result.imports.append(ImportEntity(
+                module=module,
+                name=_node_text(child, content),
+                line_number=_node_line_start(stmt_node),
+                byte_offset=stmt_node.start_byte,
+                byte_length=stmt_node.end_byte - stmt_node.start_byte,
+            ))
+        elif child.type == 'named_imports':
+            has_named = True
+            _collect_named_imports(module, child, stmt_node, content, result.imports)
+        elif child.type == 'namespace_import' and child.named_children:
+            result.imports.append(ImportEntity(
+                module=module,
+                alias=_node_text(child.named_children[0], content),
+                line_number=_node_line_start(stmt_node),
+                byte_offset=stmt_node.start_byte,
+                byte_length=stmt_node.end_byte - stmt_node.start_byte,
+            ))
+    if not has_named and not any(c.type in ('identifier', 'namespace_import') for c in import_clause.children):
+        result.imports.append(ImportEntity(
+            module=module,
+            line_number=_node_line_start(stmt_node),
+            byte_offset=stmt_node.start_byte,
+            byte_length=stmt_node.end_byte - stmt_node.start_byte,
+        ))
+
+
 def _extract_import(node, content: bytes, result: ParseResult) -> None:
     """Extract ImportEntity records from an import_statement node."""
-
-    # Find the module string: `import X from 'module'`
     source_node = node.child_by_field_name('source')
     if not source_node:
         return
-    # source text is quoted: 'react' or "react"
     module = _node_text(source_node, content).strip('"\'')
 
-    # Find import clause (not a named field — search by node type)
     import_clause = next((c for c in node.children if c.type == 'import_clause'), None)
     if not import_clause:
         # `import 'module'` — side-effect only import
@@ -352,54 +392,7 @@ def _extract_import(node, content: bytes, result: ParseResult) -> None:
         ))
         return
 
-    # Default import: `import X from 'mod'`
-    # Named imports: `import { X, Y } from 'mod'`
-    # Namespace: `import * as X from 'mod'`
-    has_named = False
-    for child in import_clause.children:
-        if child.type == 'identifier':
-            # Default import name
-            result.imports.append(ImportEntity(
-                module=module,
-                name=_node_text(child, content),
-                line_number=_node_line_start(node),
-                byte_offset=node.start_byte,
-                byte_length=node.end_byte - node.start_byte,
-            ))
-        elif child.type == 'named_imports':
-            has_named = True
-            for spec in child.children:
-                if spec.type == 'import_specifier':
-                    # name field = local alias; 'name' may be absent (use 'alias')
-                    spec_name = spec.child_by_field_name('name')
-                    if spec_name:
-                        result.imports.append(ImportEntity(
-                            module=module,
-                            name=_node_text(spec_name, content),
-                            line_number=_node_line_start(node),
-                            byte_offset=node.start_byte,
-                            byte_length=node.end_byte - node.start_byte,
-                        ))
-        elif child.type == 'namespace_import':
-            # `* as X` — alias is the first named child (no named field)
-            if child.named_children:
-                result.imports.append(ImportEntity(
-                    module=module,
-                    alias=_node_text(child.named_children[0], content),
-                    line_number=_node_line_start(node),
-                    byte_offset=node.start_byte,
-                    byte_length=node.end_byte - node.start_byte,
-                ))
-
-    if not has_named and not any(c.type in ('identifier', 'namespace_import')
-                                 for c in import_clause.children):
-        # Fallback: bare import
-        result.imports.append(ImportEntity(
-            module=module,
-            line_number=_node_line_start(node),
-            byte_offset=node.start_byte,
-            byte_length=node.end_byte - node.start_byte,
-        ))
+    _collect_clause_imports(module, import_clause, node, content, result)
 
 
 def _extract_class(node, content: bytes, result: ParseResult) -> None:
@@ -502,407 +495,112 @@ def _extract_from_export(node, content: bytes, result: ParseResult) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Call extraction
+# Call extraction — body analysis delegated to _js_body analyzers
 # ---------------------------------------------------------------------------
 
-# Function-boundary node types — we don't recurse INTO these when already
-# collecting calls for an outer function (prevents mis-attribution).
-_FUNCTION_BOUNDARIES = frozenset({
-    'function_declaration',
-    'function',
-    'arrow_function',
-    'method_definition',
-})
+_call_analyzer = _CallBodyAnalyzer()
+_http_call_analyzer = _HttpCallBodyAnalyzer()
+_string_constant_analyzer = _StringConstantBodyAnalyzer()
 
 
-def _get_callee_name(call_node, content: bytes) -> Optional[str]:
-    """Return the callee name from a call_expression node, or None to skip."""
-    func_node = call_node.child_by_field_name('function')
-    if func_node is None:
-        return None
-    if func_node.type == 'identifier':
-        return _node_text(func_node, content)
-    if func_node.type == 'member_expression':
-        # e.g. `obj.method` or `React.createElement`
-        return _node_text(func_node, content)
-    return None
+# ---------------------------------------------------------------------------
+# Shared top-level body-collection helpers (used by all three extractors)
+# ---------------------------------------------------------------------------
+
+def _collect_function_bodies(fn_node, content: bytes, analyzer, out: list) -> None:
+    """Run analyzer on the body of a function_declaration node."""
+    name_node = fn_node.child_by_field_name('name')
+    if name_node:
+        body = _get_body_node(fn_node)
+        if body:
+            out.extend(analyzer.collect(body, content,
+                caller_name=_node_text(name_node, content),
+                caller_type='function', caller_parent=None))
 
 
-def _collect_calls_in_body(node, content: bytes, caller_name: str,
-                            caller_type: str, caller_parent: Optional[str],
-                            out: list) -> None:
-    """Recursively collect CallEntity objects from *node*, staying within the
-    current function boundary (do not descend into nested function nodes)."""
-    if node.type == 'call_expression':
-        callee = _get_callee_name(node, content)
-        if callee:
-            out.append(CallEntity(
-                caller_name=caller_name,
-                callee_name=callee,
-                line_number=_node_line_start(node),
-                byte_offset=node.start_byte,
-                byte_length=node.end_byte - node.start_byte,
-                caller_type=caller_type,
-                caller_parent=caller_parent,
-            ))
-        args = node.child_by_field_name('arguments')
-        if args:
-            _collect_calls_in_body(args, content, caller_name,
-                                   caller_type, caller_parent, out)
-        return
-
-    for child in node.children:
-        if child.type == 'call_expression':
-            callee = _get_callee_name(child, content)
-            if callee:
-                out.append(CallEntity(
-                    caller_name=caller_name,
-                    callee_name=callee,
-                    line_number=_node_line_start(child),
-                    byte_offset=child.start_byte,
-                    byte_length=child.end_byte - child.start_byte,
-                    caller_type=caller_type,
-                    caller_parent=caller_parent,
-                ))
-            # Still recurse INTO call arguments (chained calls, callbacks)
-            args = child.child_by_field_name('arguments')
-            if args:
-                _collect_calls_in_body(args, content, caller_name,
-                                       caller_type, caller_parent, out)
-        elif child.type not in _FUNCTION_BOUNDARIES:
-            _collect_calls_in_body(child, content, caller_name,
-                                   caller_type, caller_parent, out)
+def _collect_class_bodies(cls_node, content: bytes, analyzer, out: list) -> None:
+    """Run analyzer on each method body of a class_declaration node."""
+    cls_name_node = cls_node.child_by_field_name('name')
+    cls_name = _node_text(cls_name_node, content) if cls_name_node else None
+    body = cls_node.child_by_field_name('body')
+    if body and cls_name:
+        for child in body.children:
+            if child.type == 'method_definition':
+                m_name_node = child.child_by_field_name('name')
+                if m_name_node:
+                    m_body = _get_body_node(child)
+                    if m_body:
+                        out.extend(analyzer.collect(m_body, content,
+                            caller_name=_node_text(m_name_node, content),
+                            caller_type='method', caller_parent=cls_name))
 
 
-def _get_http_target(call_node, content: bytes) -> Optional[str]:
-    """Return a static HTTP target URL/path for supported JS HTTP patterns."""
-    func_node = call_node.child_by_field_name('function')
-    args_node = call_node.child_by_field_name('arguments')
-    if func_node is None or args_node is None:
-        return None
-
-    func_text = _node_text(func_node, content)
-    named_args = [child for child in args_node.named_children]
-
-    if func_text in ('fetch', 'axios', 'axios.get', 'axios.post', 'axios.put', 'axios.delete'):
-        if not named_args:
-            return None
-        first = named_args[0]
-        if first.type in ('string', 'template_string'):
-            return _normalize_js_string(_node_text(first, content)) or None
-    return None
+def _collect_var_bodies(decl_node, content: bytes, analyzer, out: list) -> None:
+    """Run analyzer on arrow/function values in a variable/lexical declaration."""
+    for declarator in decl_node.children:
+        if declarator.type != 'variable_declarator':
+            continue
+        name_node = declarator.child_by_field_name('name')
+        value_node = declarator.child_by_field_name('value')
+        if name_node and value_node and value_node.type in ('arrow_function', 'function'):
+            body = _get_body_node(value_node)
+            if body:
+                out.extend(analyzer.collect(body, content,
+                    caller_name=_node_text(name_node, content),
+                    caller_type='function', caller_parent=None))
 
 
-def _collect_http_calls_in_body(node, content: bytes, caller_name: str,
-                                caller_type: str, caller_parent: Optional[str],
-                                out: list) -> None:
-    """Collect http-calls as CallEntity rows using URL/path as callee_name."""
-    if node.type == 'call_expression':
-        target = _get_http_target(node, content)
-        if target:
-            out.append(CallEntity(
-                caller_name=caller_name,
-                callee_name=target,
-                line_number=_node_line_start(node),
-                byte_offset=node.start_byte,
-                byte_length=node.end_byte - node.start_byte,
-                caller_type=caller_type,
-                caller_parent=caller_parent,
-            ))
-        args = node.child_by_field_name('arguments')
-        if args:
-            _collect_http_calls_in_body(args, content, caller_name,
-                                        caller_type, caller_parent, out)
-        return
-
-    for child in node.children:
-        if child.type == 'call_expression':
-            target = _get_http_target(child, content)
-            if target:
-                out.append(CallEntity(
-                    caller_name=caller_name,
-                    callee_name=target,
-                    line_number=_node_line_start(child),
-                    byte_offset=child.start_byte,
-                    byte_length=child.end_byte - child.start_byte,
-                    caller_type=caller_type,
-                    caller_parent=caller_parent,
-                ))
-            args = child.child_by_field_name('arguments')
-            if args:
-                _collect_http_calls_in_body(args, content, caller_name,
-                                            caller_type, caller_parent, out)
-        elif child.type == 'new_expression':
-            ctor = child.child_by_field_name('constructor')
-            if ctor and _node_text(ctor, content) == 'XMLHttpRequest':
-                _collect_http_calls_in_body(child, content, caller_name,
-                                            caller_type, caller_parent, out)
-        elif child.type not in _FUNCTION_BOUNDARIES:
-            _collect_http_calls_in_body(child, content, caller_name,
-                                        caller_type, caller_parent, out)
+def _collect_export_bodies(export_node, content: bytes, analyzer, out: list) -> None:
+    """Run analyzer on exported function and class declarations."""
+    for child in export_node.children:
+        if child.type == 'function_declaration':
+            _collect_function_bodies(child, content, analyzer, out)
+        elif child.type == 'class_declaration':
+            _collect_class_bodies(child, content, analyzer, out)
 
 
-def _extract_all_calls(root_node, content: bytes) -> list:
-    """Walk top-level nodes and extract calls from every named function/method."""
-    calls: list = []
+def _collect_string_var_bodies(decl_node, content: bytes, out: list) -> None:
+    """Collect string constants from a variable/lexical declaration node.
 
-    for node in root_node.children:
-        ntype = node.type
-
-        if ntype == 'function_declaration':
-            name_node = node.child_by_field_name('name')
-            if name_node:
-                caller = _node_text(name_node, content)
-                body = _get_body_node(node)
-                if body:
-                    _collect_calls_in_body(body, content, caller,
-                                           'function', None, calls)
-
-        elif ntype == 'class_declaration':
-            cls_name_node = node.child_by_field_name('name')
-            cls_name = _node_text(cls_name_node, content) if cls_name_node else None
-            body = node.child_by_field_name('body')
-            if body and cls_name:
-                for child in body.children:
-                    if child.type == 'method_definition':
-                        m_name_node = child.child_by_field_name('name')
-                        if m_name_node:
-                            method_name = _node_text(m_name_node, content)
-                            m_body = _get_body_node(child)
-                            if m_body:
-                                _collect_calls_in_body(m_body, content,
-                                                       method_name, 'method',
-                                                       cls_name, calls)
-
-        elif ntype in ('lexical_declaration', 'variable_declaration'):
-            for declarator in node.children:
-                if declarator.type != 'variable_declarator':
-                    continue
-                name_node = declarator.child_by_field_name('name')
-                value_node = declarator.child_by_field_name('value')
-                if name_node and value_node and value_node.type in (
-                        'arrow_function', 'function'):
-                    caller = _node_text(name_node, content)
-                    body = _get_body_node(value_node)
-                    if body:
-                        _collect_calls_in_body(body, content, caller,
-                                               'function', None, calls)
-
-        elif ntype in ('export_statement', 'export_default_declaration'):
-            # Recurse into exported declarations
-            for child in node.children:
-                if child.type == 'function_declaration':
-                    name_node = child.child_by_field_name('name')
-                    if name_node:
-                        caller = _node_text(name_node, content)
-                        body = _get_body_node(child)
-                        if body:
-                            _collect_calls_in_body(body, content, caller,
-                                                   'function', None, calls)
-                elif child.type == 'class_declaration':
-                    cls_name_node = child.child_by_field_name('name')
-                    cls_name = _node_text(cls_name_node, content) if cls_name_node else None
-                    body = child.child_by_field_name('body')
-                    if body and cls_name:
-                        for grandchild in body.children:
-                            if grandchild.type == 'method_definition':
-                                m_name_node = grandchild.child_by_field_name('name')
-                                if m_name_node:
-                                    method_name = _node_text(m_name_node, content)
-                                    m_body = _get_body_node(grandchild)
-                                    if m_body:
-                                        _collect_calls_in_body(m_body, content,
-                                                               method_name, 'method',
-                                                               cls_name, calls)
-
-    return calls
-
-
-def _extract_all_http_calls(root_node, content: bytes) -> list:
-    """Walk top-level nodes and extract supported outbound JS HTTP calls."""
-    calls: list = []
-
-    for node in root_node.children:
-        ntype = node.type
-
-        if ntype == 'function_declaration':
-            name_node = node.child_by_field_name('name')
-            if name_node:
-                caller = _node_text(name_node, content)
-                body = _get_body_node(node)
-                if body:
-                    _collect_http_calls_in_body(body, content, caller, 'function', None, calls)
-
-        elif ntype == 'class_declaration':
-            cls_name_node = node.child_by_field_name('name')
-            cls_name = _node_text(cls_name_node, content) if cls_name_node else None
-            body = node.child_by_field_name('body')
-            if body and cls_name:
-                for child in body.children:
-                    if child.type == 'method_definition':
-                        m_name_node = child.child_by_field_name('name')
-                        m_body = _get_body_node(child)
-                        if m_name_node and m_body:
-                            _collect_http_calls_in_body(
-                                m_body, content, _node_text(m_name_node, content),
-                                'method', cls_name, calls
-                            )
-
-        elif ntype in ('lexical_declaration', 'variable_declaration'):
-            for declarator in node.children:
-                if declarator.type != 'variable_declarator':
-                    continue
-                name_node = declarator.child_by_field_name('name')
-                value_node = declarator.child_by_field_name('value')
-                if name_node and value_node and value_node.type in ('arrow_function', 'function'):
-                    caller = _node_text(name_node, content)
-                    body = _get_body_node(value_node)
-                    if body:
-                        _collect_http_calls_in_body(body, content, caller, 'function', None, calls)
-
-        elif ntype in ('export_statement', 'export_default_declaration'):
-            for child in node.children:
-                if child.type == 'function_declaration':
-                    name_node = child.child_by_field_name('name')
-                    body = _get_body_node(child)
-                    if name_node and body:
-                        _collect_http_calls_in_body(
-                            body, content, _node_text(name_node, content),
-                            'function', None, calls
-                        )
-                elif child.type == 'class_declaration':
-                    cls_name_node = child.child_by_field_name('name')
-                    cls_name = _node_text(cls_name_node, content) if cls_name_node else None
-                    body = child.child_by_field_name('body')
-                    if body and cls_name:
-                        for grandchild in body.children:
-                            if grandchild.type == 'method_definition':
-                                m_name_node = grandchild.child_by_field_name('name')
-                                m_body = _get_body_node(grandchild)
-                                if m_name_node and m_body:
-                                    _collect_http_calls_in_body(
-                                        m_body, content, _node_text(m_name_node, content),
-                                        'method', cls_name, calls
-                                    )
-
-    deduped = []
-    seen = set()
-    for item in calls:
-        key = (item.caller_name, item.caller_type, item.caller_parent, item.callee_name, item.line_number)
-        if key not in seen:
-            seen.add(key)
-            deduped.append(item)
-    return deduped
-
-
-def _normalize_js_string(text: str) -> str:
-    """Strip common JS string delimiters for matching/display."""
-    if len(text) >= 2 and text[0] == text[-1] and text[0] in ("'", '"', '`'):
-        return text[1:-1]
-    return text
-
-
-def _collect_string_constants_in_body(node, content: bytes, owner_name: str,
-                                      owner_type: str, owner_parent: Optional[str],
-                                      out: list) -> None:
-    """Recursively collect string literals within a function or method body."""
-    if node.type in ('string', 'template_string'):
-        value = _normalize_js_string(_node_text(node, content))
-        if value:
-            out.append(StringConstantEntity(
-                value=value,
-                line_number=_node_line_start(node),
-                byte_offset=node.start_byte,
-                byte_length=node.end_byte - node.start_byte,
-                owner_name=owner_name,
-                owner_type=owner_type,
-                owner_parent=owner_parent,
-            ))
-        return
-
-    for child in node.children:
-        if child.type in ('string', 'template_string'):
-            value = _normalize_js_string(_node_text(child, content))
+    Handles both direct string literal assignments (``const X = 'value'``) and
+    arrow-/function-body analysis so callers need not branch on value type.
+    """
+    for declarator in decl_node.children:
+        if declarator.type != 'variable_declarator':
+            continue
+        name_node = declarator.child_by_field_name('name')
+        value_node = declarator.child_by_field_name('value')
+        if not name_node or not value_node:
+            continue
+        owner_name = _node_text(name_node, content)
+        if value_node.type in ('string', 'template_string'):
+            value = _normalize_js_string(_node_text(value_node, content))
             if value:
                 out.append(StringConstantEntity(
                     value=value,
-                    line_number=_node_line_start(child),
-                    byte_offset=child.start_byte,
-                    byte_length=child.end_byte - child.start_byte,
+                    line_number=_node_line_start(value_node),
+                    byte_offset=value_node.start_byte,
+                    byte_length=value_node.end_byte - value_node.start_byte,
                     owner_name=owner_name,
-                    owner_type=owner_type,
-                    owner_parent=owner_parent,
+                    owner_type='global',
+                    owner_parent=None,
                 ))
-        elif child.type not in _FUNCTION_BOUNDARIES:
-            _collect_string_constants_in_body(
-                child, content, owner_name, owner_type, owner_parent, out
-            )
+        elif value_node.type in ('arrow_function', 'function'):
+            body = _get_body_node(value_node)
+            if body:
+                out.extend(_string_constant_analyzer.collect(body, content,
+                    caller_name=owner_name, caller_type='function', caller_parent=None))
 
 
-def _extract_all_string_constants(root_node, content: bytes) -> list:
-    """Extract conservative string constants from JS/TS code."""
-    constants: list = []
-
-    for node in root_node.children:
-        ntype = node.type
-
-        if ntype in ('lexical_declaration', 'variable_declaration'):
-            for declarator in node.children:
-                if declarator.type != 'variable_declarator':
-                    continue
-                name_node = declarator.child_by_field_name('name')
-                value_node = declarator.child_by_field_name('value')
-                if not name_node or not value_node:
-                    continue
-                owner_name = _node_text(name_node, content)
-                if value_node.type in ('string', 'template_string'):
-                    constants.append(StringConstantEntity(
-                        value=_normalize_js_string(_node_text(value_node, content)),
-                        line_number=_node_line_start(value_node),
-                        byte_offset=value_node.start_byte,
-                        byte_length=value_node.end_byte - value_node.start_byte,
-                        owner_name=owner_name,
-                        owner_type='global',
-                        owner_parent=None,
-                    ))
-                elif value_node.type in ('arrow_function', 'function'):
-                    body = _get_body_node(value_node)
-                    if body:
-                        _collect_string_constants_in_body(
-                            body, content, owner_name, 'function', None, constants
-                        )
-
-        elif ntype == 'function_declaration':
-            name_node = node.child_by_field_name('name')
-            body = _get_body_node(node)
-            if name_node and body:
-                _collect_string_constants_in_body(
-                    body, content, _node_text(name_node, content), 'function', None, constants
-                )
-
-        elif ntype == 'class_declaration':
-            cls_name_node = node.child_by_field_name('name')
-            cls_name = _node_text(cls_name_node, content) if cls_name_node else None
-            body = node.child_by_field_name('body')
-            if body and cls_name:
-                for child in body.children:
-                    if child.type == 'method_definition':
-                        m_name_node = child.child_by_field_name('name')
-                        m_body = _get_body_node(child)
-                        if m_name_node and m_body:
-                            _collect_string_constants_in_body(
-                                m_body, content, _node_text(m_name_node, content),
-                                'method', cls_name, constants
-                            )
-
-    deduped = []
-    seen = set()
+def _dedup_and_merge_string_constants(constants: list, root_node, content: bytes) -> list:
+    """Dedup string constants and merge in HTTP call targets as string entries."""
+    deduped: list = []
+    seen: set = set()
     for item in constants:
         key = (item.value, item.line_number, item.owner_name, item.owner_type, item.owner_parent)
         if key not in seen and item.value:
             seen.add(key)
             deduped.append(item)
-
     for http_call in _extract_all_http_calls(root_node, content):
         key = (
             http_call.callee_name,
@@ -924,3 +622,58 @@ def _extract_all_string_constants(root_node, content: bytes) -> list:
             owner_parent=http_call.caller_parent,
         ))
     return deduped
+
+
+def _extract_all_calls(root_node, content: bytes) -> list:
+    """Walk top-level nodes and extract calls from every named function/method."""
+    calls: list = []
+    for node in root_node.children:
+        ntype = node.type
+        if ntype == 'function_declaration':
+            _collect_function_bodies(node, content, _call_analyzer, calls)
+        elif ntype == 'class_declaration':
+            _collect_class_bodies(node, content, _call_analyzer, calls)
+        elif ntype in ('lexical_declaration', 'variable_declaration'):
+            _collect_var_bodies(node, content, _call_analyzer, calls)
+        elif ntype in ('export_statement', 'export_default_declaration'):
+            _collect_export_bodies(node, content, _call_analyzer, calls)
+    return calls
+
+
+def _extract_all_http_calls(root_node, content: bytes) -> list:
+    """Walk top-level nodes and extract supported outbound JS HTTP calls."""
+    calls: list = []
+    for node in root_node.children:
+        ntype = node.type
+        if ntype == 'function_declaration':
+            _collect_function_bodies(node, content, _http_call_analyzer, calls)
+        elif ntype == 'class_declaration':
+            _collect_class_bodies(node, content, _http_call_analyzer, calls)
+        elif ntype in ('lexical_declaration', 'variable_declaration'):
+            _collect_var_bodies(node, content, _http_call_analyzer, calls)
+        elif ntype in ('export_statement', 'export_default_declaration'):
+            _collect_export_bodies(node, content, _http_call_analyzer, calls)
+    deduped = []
+    seen = set()
+    for item in calls:
+        key = (item.caller_name, item.caller_type, item.caller_parent, item.callee_name, item.line_number)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(item)
+    return deduped
+
+
+def _extract_all_string_constants(root_node, content: bytes) -> list:
+    """Extract conservative string constants from JS/TS code."""
+    constants: list = []
+    for node in root_node.children:
+        ntype = node.type
+        if ntype == 'function_declaration':
+            _collect_function_bodies(node, content, _string_constant_analyzer, constants)
+        elif ntype == 'class_declaration':
+            _collect_class_bodies(node, content, _string_constant_analyzer, constants)
+        elif ntype in ('lexical_declaration', 'variable_declaration'):
+            _collect_string_var_bodies(node, content, constants)
+        elif ntype in ('export_statement', 'export_default_declaration'):
+            _collect_export_bodies(node, content, _string_constant_analyzer, constants)
+    return _dedup_and_merge_string_constants(constants, root_node, content)

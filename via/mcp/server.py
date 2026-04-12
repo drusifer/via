@@ -28,8 +28,7 @@ from via.parsers.javascript_parser import JavaScriptParser
 from via.parsers.markdown_parser import MarkdownParser
 from via.parsers.python_parser import PythonParser
 from via.parsers.registry import ParserRegistry
-from via.pipeline.executor import PipelineExecutor
-from via.pipeline.parser import PipelineParser
+from via.api import ViaRunner
 from via.mcp.schema import build_tool_schema
 from via.renderers.json_renderer import JsonRenderer
 from via.services.indexing import IndexingService
@@ -99,6 +98,7 @@ def run_mcp_server(
     # MCP read-only connection — schema already initialized by watch_store
     mcp_store = DatabaseStore(db_path, root_dir)
     mcp_store.connect()
+    runner = ViaRunner(mcp_store)
 
     indexing_svc = IndexingService(watch_store, registry)
     watch_svc = WatchService(
@@ -150,19 +150,15 @@ def run_mcp_server(
             if output_type == 'json':
                 # Default: strip output flags, return symbol dicts
                 clean_args = [a for a in args if a not in _OUTPUT_FLAGS]
-                stages = PipelineParser().parse(clean_args)
-                executor = PipelineExecutor(mcp_store)
-                results = list(executor.execute(stages) or [])
+                results = list(runner.run_cli_args(clean_args) or [])
                 dicts = [JsonRenderer._to_dict(r) for r in results]
                 total = results[0].total_matches if results else 0
                 return {"output_type": "json", "result": dicts, "total": total, "shown": len(dicts)}
             else:
                 # Rendered output: capture stdout, strip ANSI
-                stages = PipelineParser().parse(args)
-                executor = PipelineExecutor(mcp_store)
                 buf = io.StringIO()
                 with contextlib.redirect_stdout(buf):
-                    executor.execute(stages)
+                    runner.run_cli_args(args)
                 rendered = strip_ansi(buf.getvalue()).rstrip('\n')
                 # Fall back to JSON when diagram has no symbols to show
                 if output_type == 'diagram' and (

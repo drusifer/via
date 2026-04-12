@@ -553,6 +553,34 @@ class IndexingService:
             language=language,
         )
 
+    def _link_class_declares(self, classes, file_path: str, filepath_id: int, filename_id: int) -> None:
+        """Link class and method symbols to their file containers."""
+        for cls in classes:
+            class_id = self.db_store.get_symbol_id(cls.name, 'class', file_path, None)
+            if not class_id:
+                continue
+            self.db_store.insert_relationship(class_id, filepath_id, 'declares')
+            self.db_store.insert_relationship(class_id, filename_id, 'declares')
+            for method in cls.methods:
+                method_id = self.db_store.get_symbol_id(method.name, 'method', file_path, cls.name)
+                if method_id:
+                    self.db_store.insert_relationship(method_id, filepath_id, 'declares')
+                    self.db_store.insert_relationship(method_id, filename_id, 'declares')
+                    self.db_store.insert_relationship(method_id, class_id, 'declares')
+
+    def _link_heading_declares(self, headings, file_path: str, filepath_id: int, filename_id: int) -> None:
+        """Link heading symbols to their file containers, respecting hierarchy."""
+        header_stack: list = []
+        for heading in headings:
+            while header_stack and header_stack[-1][0] >= heading.level:
+                header_stack.pop()
+            parent_name = header_stack[-1][1] if header_stack else None
+            header_stack.append((heading.level, heading.text))
+            header_id = self.db_store.get_symbol_id(heading.text, 'header', file_path, parent_name)
+            if header_id:
+                self.db_store.insert_relationship(header_id, filepath_id, 'declares')
+                self.db_store.insert_relationship(header_id, filename_id, 'declares')
+
     def _store_declares_relationships(self, file_info: DiscoveredFile, parse_result) -> None:
         """Store DECLARES relationships: each symbol is declared in its container.
 
@@ -566,57 +594,36 @@ class IndexingService:
           via -mg 'MyClass' -tc --via declares -tm     # all methods of MyClass
         """
         filename = os.path.basename(file_info.path)
-
         filepath_id = self.db_store.get_symbol_id(filename, 'filepath', file_info.path, None)
         filename_id = self.db_store.get_symbol_id(filename, 'filename', file_info.path, None)
-
         if not filepath_id or not filename_id:
             return
 
-        def _link(symbol_id: int) -> None:
-            self.db_store.insert_relationship(symbol_id, filepath_id, 'declares')
-            self.db_store.insert_relationship(symbol_id, filename_id, 'declares')
-
-        for cls in parse_result.classes:
-            class_id = self.db_store.get_symbol_id(cls.name, 'class', file_info.path, None)
-            if class_id:
-                _link(class_id)
-                for method in cls.methods:
-                    method_id = self.db_store.get_symbol_id(
-                        method.name, 'method', file_info.path, cls.name
-                    )
-                    if method_id:
-                        _link(method_id)
-                        self.db_store.insert_relationship(method_id, class_id, 'declares')
+        self._link_class_declares(parse_result.classes, file_info.path, filepath_id, filename_id)
 
         for func in parse_result.functions:
             func_id = self.db_store.get_symbol_id(func.name, 'function', file_info.path, None)
             if func_id:
-                _link(func_id)
+                self.db_store.insert_relationship(func_id, filepath_id, 'declares')
+                self.db_store.insert_relationship(func_id, filename_id, 'declares')
 
         for imp in parse_result.imports:
             symbol_name = imp.name if imp.name else imp.module
             imp_id = self.db_store.get_symbol_id(symbol_name, 'import', file_info.path, None)
             if imp_id:
-                _link(imp_id)
+                self.db_store.insert_relationship(imp_id, filepath_id, 'declares')
+                self.db_store.insert_relationship(imp_id, filename_id, 'declares')
 
         for glob in parse_result.globals:
             glob_id = self.db_store.get_symbol_id(glob.name, 'global', file_info.path, None)
             if glob_id:
-                _link(glob_id)
+                self.db_store.insert_relationship(glob_id, filepath_id, 'declares')
+                self.db_store.insert_relationship(glob_id, filename_id, 'declares')
 
-        # Headers (markdown files) — recompute hierarchy stack to resolve parent_name
-        header_stack = []
-        for heading in getattr(parse_result, 'markdown_headings', []):
-            while header_stack and header_stack[-1][0] >= heading.level:
-                header_stack.pop()
-            parent_name = header_stack[-1][1] if header_stack else None
-            header_stack.append((heading.level, heading.text))
-            header_id = self.db_store.get_symbol_id(
-                heading.text, 'header', file_info.path, parent_name
-            )
-            if header_id:
-                _link(header_id)
+        self._link_heading_declares(
+            getattr(parse_result, 'markdown_headings', []),
+            file_info.path, filepath_id, filename_id,
+        )
 
     def _store_relationships(self, file_info: DiscoveredFile, items, rel_type: str, get_parts) -> None:
         """Create pending relationships for a list of call or reference items.

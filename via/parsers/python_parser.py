@@ -19,7 +19,7 @@ License: GPL-3.0
 
 import ast
 import os
-from typing import Set
+from typing import Optional, Set
 
 from .base import (
     CallEntity,
@@ -541,6 +541,33 @@ class PythonParser(ParserABC):
 
         return calls
 
+    def _collect_call_string_args(
+        self,
+        call_node: ast.Call,
+        text: str,
+        owner_name: str,
+        owner_type: str,
+        owner_parent: str,
+        constants: list,
+        seen: set,
+    ) -> None:
+        """Collect string literals from positional call arguments into *constants*."""
+        for arg in getattr(call_node, 'args', []):
+            value = self._extract_string_literal_text(arg)
+            if value:
+                key = (value, getattr(arg, 'lineno', None), owner_name, owner_type, owner_parent)
+                if key not in seen:
+                    seen.add(key)
+                    constants.append(StringConstantEntity(
+                        value=value,
+                        line_number=arg.lineno,
+                        byte_offset=self._get_byte_offset(arg, text),
+                        byte_length=max(1, self._get_byte_length(arg, text)),
+                        owner_name=owner_name,
+                        owner_type=owner_type,
+                        owner_parent=owner_parent,
+                    ))
+
     def _extract_string_constants(
         self,
         func_node: ast.AST,
@@ -556,31 +583,16 @@ class PythonParser(ParserABC):
 
         for stmt in body_stmts:
             for node in ast.walk(stmt):
+                if isinstance(node, ast.Call):
+                    self._collect_call_string_args(node, text, owner_name, owner_type, owner_parent, constants, seen)
+                    continue
                 value = None
                 if isinstance(node, ast.Return):
                     value = self._extract_string_literal_text(node.value)
-                elif isinstance(node, ast.Call):
-                    for arg in getattr(node, 'args', []):
-                        value = self._extract_string_literal_text(arg)
-                        if value:
-                            key = (value, getattr(arg, 'lineno', None), owner_name, owner_type, owner_parent)
-                            if key not in seen:
-                                seen.add(key)
-                                constants.append(StringConstantEntity(
-                                    value=value,
-                                    line_number=arg.lineno,
-                                    byte_offset=self._get_byte_offset(arg, text),
-                                    byte_length=max(1, self._get_byte_length(arg, text)),
-                                    owner_name=owner_name,
-                                    owner_type=owner_type,
-                                    owner_parent=owner_parent,
-                                ))
-                    continue
                 elif isinstance(node, ast.Assign):
                     value = self._extract_string_literal_text(node.value)
                 elif isinstance(node, ast.AnnAssign):
                     value = self._extract_string_literal_text(node.value)
-
                 if value:
                     target_node = node.value if hasattr(node, 'value') and node.value is not None else node
                     key = (value, getattr(target_node, 'lineno', None), owner_name, owner_type, owner_parent)
@@ -662,6 +674,40 @@ class PythonParser(ParserABC):
 
         return None
 
+    @staticmethod
+    def _name_from_node(node: ast.AST) -> Optional[tuple]:
+        """Return (name, lineno) for ast.Name or ast.Attribute nodes, else None."""
+        if isinstance(node, ast.Name):
+            return node.id, node.lineno
+        if isinstance(node, ast.Attribute):
+            return node.attr, node.lineno
+        return None
+
+    def _emit_class_ref(
+        self,
+        name: str,
+        lineno: int,
+        class_name: str,
+        text: str,
+        references: list,
+        seen_names: Set[str],
+    ) -> None:
+        """Append a class-level ReferenceEntity to *references* if not seen/builtin."""
+        if name in seen_names or name in PYTHON_BUILTINS or name in PYTHON_CONSTANTS:
+            return
+        if name in ('self', 'cls'):
+            return
+        seen_names.add(name)
+        references.append(ReferenceEntity(
+            referencer_name=class_name,
+            referenced_name=name,
+            line_number=lineno,
+            byte_offset=self._get_byte_offset_for_line(lineno, text),
+            byte_length=len(name),
+            referencer_type='class',
+            referencer_parent=None,
+        ))
+
     def _extract_class_structural_references(
         self,
         class_node: ast.ClassDef,
@@ -672,50 +718,27 @@ class PythonParser(ParserABC):
         Covers: base classes, class-level decorators, class-body annotations.
         All references are attributed to the class symbol (referencer_type='class').
         """
-        references = []
+        references: list = []
         seen_names: Set[str] = set()
         class_name = class_node.name
 
-        def _emit(name: str, lineno: int) -> None:
-            if name in seen_names or name in PYTHON_BUILTINS or name in PYTHON_CONSTANTS:
-                return
-            if name in ('self', 'cls'):
-                return
-            seen_names.add(name)
-            references.append(ReferenceEntity(
-                referencer_name=class_name,
-                referenced_name=name,
-                line_number=lineno,
-                byte_offset=self._get_byte_offset_for_line(lineno, text),
-                byte_length=len(name),
-                referencer_type='class',
-                referencer_parent=None,
-            ))
-
-        # Base classes
         for base in class_node.bases:
-            if isinstance(base, ast.Name):
-                _emit(base.id, base.lineno)
-            elif isinstance(base, ast.Attribute):
-                _emit(base.attr, base.lineno)
+            pair = self._name_from_node(base)
+            if pair:
+                self._emit_class_ref(*pair, class_name, text, references, seen_names)
 
-        # Class decorators
         for dec in class_node.decorator_list:
-            if isinstance(dec, ast.Name):
-                _emit(dec.id, dec.lineno)
-            elif isinstance(dec, ast.Attribute):
-                _emit(dec.attr, dec.lineno)
-            elif isinstance(dec, ast.Call) and isinstance(dec.func, ast.Name):
-                _emit(dec.func.id, dec.func.lineno)
+            pair = self._name_from_node(dec)
+            if pair is None and isinstance(dec, ast.Call) and isinstance(dec.func, ast.Name):
+                pair = (dec.func.id, dec.func.lineno)
+            if pair:
+                self._emit_class_ref(*pair, class_name, text, references, seen_names)
 
-        # Class-body annotations (ast.AnnAssign at class level)
         for item in class_node.body:
             if isinstance(item, ast.AnnAssign):
-                ann = item.annotation
-                if isinstance(ann, ast.Name):
-                    _emit(ann.id, ann.lineno)
-                elif isinstance(ann, ast.Attribute):
-                    _emit(ann.attr, ann.lineno)
+                pair = self._name_from_node(item.annotation)
+                if pair:
+                    self._emit_class_ref(*pair, class_name, text, references, seen_names)
 
         return references
 
@@ -769,6 +792,46 @@ class PythonParser(ParserABC):
 
         return references
 
+    def _emit_annotation_ref(
+        self,
+        ann,
+        text: str,
+        referencer_name: str,
+        referencer_type: str,
+        referencer_parent: Optional[str],
+        references: list,
+        seen_names: Set[str],
+    ) -> None:
+        """Recursively emit ReferenceEntity entries for a type annotation node."""
+        if ann is None or isinstance(ann, ast.Constant):
+            return
+        if isinstance(ann, ast.Subscript):
+            self._emit_annotation_ref(ann.value, text, referencer_name, referencer_type, referencer_parent, references, seen_names)
+            self._emit_annotation_ref(ann.slice, text, referencer_name, referencer_type, referencer_parent, references, seen_names)
+            return
+        if isinstance(ann, ast.Tuple):
+            for elt in ann.elts:
+                self._emit_annotation_ref(elt, text, referencer_name, referencer_type, referencer_parent, references, seen_names)
+            return
+        pair = self._name_from_node(ann)
+        if not pair:
+            return
+        name, lineno = pair
+        if name in seen_names or name in PYTHON_BUILTINS or name in PYTHON_CONSTANTS:
+            return
+        if name in ('self', 'cls'):
+            return
+        seen_names.add(name)
+        references.append(ReferenceEntity(
+            referencer_name=referencer_name,
+            referenced_name=name,
+            line_number=lineno,
+            byte_offset=self._get_byte_offset(ann, text),
+            byte_length=len(name),
+            referencer_type=referencer_type,
+            referencer_parent=referencer_parent,
+        ))
+
     def _extract_annotation_references(
         self,
         func_node: ast.AST,
@@ -782,58 +845,20 @@ class PythonParser(ParserABC):
         Covers: parameter annotations and return type annotation.
         Skips builtins (str, int, bool, etc.) and None.
         """
-        references = []
+        references: list = []
         seen_names: Set[str] = set()
 
-        def _emit_annotation(ann) -> None:
-            if ann is None:
-                return
-            if isinstance(ann, ast.Name):
-                name = ann.id
-                lineno = ann.lineno
-            elif isinstance(ann, ast.Attribute):
-                name = ann.attr
-                lineno = ann.lineno
-            elif isinstance(ann, ast.Constant):
-                return  # string annotations / literals — skip
-            elif isinstance(ann, ast.Subscript):
-                # e.g. Optional[X], List[X] — recurse into slice
-                _emit_annotation(ann.value)
-                _emit_annotation(ann.slice)
-                return
-            elif isinstance(ann, ast.Tuple):
-                for elt in ann.elts:
-                    _emit_annotation(elt)
-                return
-            else:
-                return
+        if not isinstance(func_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return references
 
-            if name in seen_names or name in PYTHON_BUILTINS or name in PYTHON_CONSTANTS:
-                return
-            if name in ('self', 'cls'):
-                return
-            seen_names.add(name)
-            references.append(ReferenceEntity(
-                referencer_name=referencer_name,
-                referenced_name=name,
-                line_number=lineno,
-                byte_offset=self._get_byte_offset(ann, text),
-                byte_length=len(name),
-                referencer_type=referencer_type,
-                referencer_parent=referencer_parent,
-            ))
-
-        if isinstance(func_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            # Parameter annotations
-            for arg in (func_node.args.args + func_node.args.posonlyargs +
-                        func_node.args.kwonlyargs):
-                _emit_annotation(arg.annotation)
-            if func_node.args.vararg:
-                _emit_annotation(func_node.args.vararg.annotation)
-            if func_node.args.kwarg:
-                _emit_annotation(func_node.args.kwarg.annotation)
-            # Return annotation
-            _emit_annotation(func_node.returns)
+        ctx = (text, referencer_name, referencer_type, referencer_parent, references, seen_names)
+        for arg in (func_node.args.args + func_node.args.posonlyargs + func_node.args.kwonlyargs):
+            self._emit_annotation_ref(arg.annotation, *ctx)
+        if func_node.args.vararg:
+            self._emit_annotation_ref(func_node.args.vararg.annotation, *ctx)
+        if func_node.args.kwarg:
+            self._emit_annotation_ref(func_node.args.kwarg.annotation, *ctx)
+        self._emit_annotation_ref(func_node.returns, *ctx)
 
         return references
 
