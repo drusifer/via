@@ -115,8 +115,8 @@ def _apply_subject_options(builder: ViaQueryBuilder, body: Dict[str, Any]) -> No
 
 def _apply_relationship_options(rel_builder, rel) -> None:
     """Apply optional relationship-side filters from *rel* to *rel_builder* in place."""
-    if rel.object_types:
-        rel_builder.types(*rel.object_types)
+    if rel.filter_types:
+        rel_builder.types(*rel.filter_types)
     if rel.result_newerthan_seconds is not None:
         rel_builder.newerthan(str(int(rel.result_newerthan_seconds)))
     if rel.result_olderthan_seconds is not None:
@@ -154,15 +154,15 @@ def _builder_from_body(body: Dict[str, Any]) -> ViaQueryBuilder:
     if relationship_name:
         rel = _build_relationship_filter(body, relationship_name)
         rel_builder = builder.sans(rel.relationship_type) if rel.is_negative else builder.via(rel.relationship_type)
-        object_method = {
+        filter_method = {
             "glob": rel_builder.glob,
             "regex": rel_builder.regex,
             "sql": rel_builder.sql,
             "g": rel_builder.glob,
             "r": rel_builder.regex,
             "s": rel_builder.sql,
-        }.get(rel.object_match_syntax, rel_builder.glob)
-        object_method(rel.object_pattern)
+        }.get(rel.filter_match_syntax, rel_builder.glob)
+        filter_method(rel.filter_pattern)
         _apply_relationship_options(rel_builder, rel)
         rel_builder.done()
 
@@ -197,8 +197,8 @@ def _build_relationship_filter(body: Dict[str, Any], relationship_name: str):
 
     return RelationshipFilter(
         relationship_type=ReferenceType(rel_value),
-        object_pattern=target_pattern,
-        object_types=target_types,
+        filter_pattern=target_pattern,
+        filter_types=target_types,
         is_negative=invert,
         result_stale=stale,
         result_newerthan_seconds=None,

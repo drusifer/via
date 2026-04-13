@@ -1,6 +1,91 @@
 # Smith Context
 
-**Last updated**: 2026-04-08
+**Last updated**: 2026-04-12
+
+## VIA MCP Usability Evaluation (2026-04-12)
+
+Full report: `agents/smith.docs/VIA_MCP_Usability_Summary_2026-04-12T13:25.md`
+
+### Verdict
+- APPROVED WITH USABILITY CONCERNS.
+- VIA MCP is highly useful for token-efficient agent work when the user knows the query vocabulary.
+- Strongest pattern: narrow JSON/list query → fetch one symbol with `-oR` → use relationship queries for impact analysis → page with `--slice`.
+
+### Findings
+- Invalid flags currently return empty results instead of structured errors.
+- The documented file `declares` quick-reference pattern returned empty results for `via/mcp/server.py`.
+- Relationship direction is useful but cognitively heavy; canned `--callers` / `--callees` style affordances would reduce recall burden.
+- Diagram output fallback can discard useful relationship results.
+- `-oL`, `-oT`, `-oU`, and `-oR` worked and are useful token-control surfaces.
+- Regex search (`-mr`) needs explicit UX/test coverage as a power-user token-saving path.
+- Multi-type queries work and are useful; multi-match semantics are ambiguous and should be rejected or documented.
+
+## Sprint 22-24 HCI/UX Gate 1 Review (2026-04-12)
+
+Full review: `agents/smith.docs/SPRINT_22_24_GATE1_REVIEW.md`
+
+### Verdict
+- APPROVED WITH NOTES.
+- Sprint 22 should focus on query confidence and error recovery before any recognition shortcuts or docs recipes.
+- S22-4 file `declares` must be decided by Morpheus as implementation vs documentation correction before Neo starts.
+- S23 shortcuts must use task-language names and expand into existing `--via` / `--sans` semantics.
+
+## Sprint 22 Gate 2 Architecture Review (2026-04-12)
+
+Full review: `agents/smith.docs/SPRINT_22_GATE2_REVIEW.md`
+
+### Verdict
+- APPROVED.
+- `output_type: "error"` is approved for MCP.
+- "Result stage" / "filter stage" is approved user-facing vocabulary.
+- S22-4 documentation correction is approved; true "symbols declared in file" belongs in Sprint 23 shortcut design.
+
+## Sprint 22 Final HCI Review (2026-04-12)
+
+Full review: `agents/smith.docs/SPRINT_22_FINAL_HCI_REVIEW.md`
+
+### Verdict
+- APPROVED.
+- CLI help and MCP schema now teach result-stage/filter-stage consistently.
+- Error paths for invalid regex and repeated match flags provide recovery hints.
+- Multi-type query remains valid.
+- Misleading inverse `declares` wording is removed from the project quick reference and user-facing docs.
+- Live checks used `.venv/bin/python` because system `python` lacks project dependencies in this shell.
+
+## Sprint 23 Gate 1 Review (2026-04-12)
+
+Full review: `agents/smith.docs/SPRINT_23_GATE1_REVIEW.md`
+
+### Verdict
+- APPROVED WITH NOTES.
+- Recognition-over-recall is the correct next HCI focus after Sprint 22.
+- Shortcut vocabulary must remain task-language.
+- Architecture should pick one coherent shortcut surface, not multiple competing systems.
+- Do not ship fake support for `callees` or `declared-in-file`; support cleanly or defer visibly.
+- Every supported shortcut should show the expanded ordinary VIA query.
+
+## Sprint 23 Gate 2 Architecture Review (2026-04-12)
+
+Full review: `agents/smith.docs/SPRINT_23_GATE2_REVIEW.md`
+
+### Verdict
+- APPROVED.
+- `--canned` is approved as the single Sprint 23 shortcut surface.
+- `--show-expanded` is approved for expansion visibility.
+- `declared-in-file` and `callees` should be deferred unless implemented cleanly and tested.
+- Full recipes remain Sprint 24; Sprint 23 schema/help examples should stay compact.
+
+## Sprint 23 Cycle 2 HCI Review (2026-04-12)
+
+Full review: `agents/smith.docs/SPRINT_23_CYCLE_2_HCI_REVIEW.md`
+
+### Verdict
+- APPROVED WITH NOTES.
+- `Common Tasks` improves recognition over recall.
+- Help and schema use progressive disclosure: task examples first, advanced relationships later.
+- Uppercase `-tH` guidance helps prevent a known user error.
+- Help remains compact at 121 lines.
+- Future relationship-orientation work should replace "current runtime" language with a simpler stable model.
 
 ## Sprint 9 Beta Test
 

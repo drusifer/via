@@ -1,15 +1,7 @@
-"""Unit tests for CLI relationship flag parsing (Sprint 5, updated Sprint 13).
+"""Unit tests for CLI relationship flag parsing (result-first semantics).
 
-TLDR:
-    Tests that PipelineParser correctly parses relationship query syntax.
-    Key test classes: TestRelationshipFlagParsing (long-form --via TYPE flags),
-    TestRelationshipVShortFlag (-V TYPE short form), TestSansFlag (--sans/-S
-    negative relationship flags), TestRelationshipWithOptions (combined
-    limit/case/output options), TestRelationshipEdgeCases (unknown types,
-    missing objects).
-    Role: protects the CLI parsing layer in PipelineParser; consumed by the test suite.
-    Dependencies: PipelineParser, PipelineParseError, RelationshipType, StageType.
-
+Tests that PipelineParser correctly parses relationship query syntax with
+both forward and inverse relationship types.
 """
 import pytest
 from via.core.relationship_types import RelationshipType
@@ -24,39 +16,38 @@ class TestRelationshipFlagParsing:
         """Test --via inherits-from creates relationship stage."""
         parser = PipelineParser()
         stages = parser.parse([
-            '-mg', 'Child*', '-tc',
+            '-mg', '*', '-tc',
             '--via', 'inherits-from',
-            '-mg', '*Base*', '-tc'
+            '-mg', 'BaseClass', '-tc'
         ])
 
-        # Should have subject stage with relationship
         assert len(stages) >= 1
-        subject = stages[0]
-        assert subject.stage_type == StageType.MATCH
-        assert subject.args.pattern == 'Child*'
+        result = stages[0]
+        assert result.stage_type == StageType.MATCH
+        assert result.args.pattern == '*'
 
-        # Relationship should be attached
-        assert hasattr(subject.args, 'relationship')
-        rel = subject.args.relationship
+        rel = result.args.relationship
         assert rel is not None
         assert rel.relationship_type == RelationshipType.INHERITS_FROM
-        assert rel.object_pattern == '*Base*'
-        assert 'class' in rel.object_types
+        assert rel.filter_pattern == 'BaseClass'
+        assert 'class' in rel.filter_types
         assert rel.is_negative is False
+        assert rel.inverted is False
 
     def test_parse_via_calls_long_form(self):
         """Test --via calls relationship."""
         parser = PipelineParser()
         stages = parser.parse([
-            '-mg', 'main*', '-tf',
+            '-mg', '*', '-tf',
             '--via', 'calls',
-            '-mg', '*util*', '-tf'
+            '-mg', 'connect', '-tf'
         ])
 
-        subject = stages[0]
-        rel = subject.args.relationship
+        result = stages[0]
+        rel = result.args.relationship
         assert rel.relationship_type == RelationshipType.CALLS
-        assert rel.object_pattern == '*util*'
+        assert rel.filter_pattern == 'connect'
+        assert rel.inverted is False
 
     def test_parse_via_imports_long_form(self):
         """Test --via imports relationship."""
@@ -67,10 +58,10 @@ class TestRelationshipFlagParsing:
             '-mg', 'os', '-ti'
         ])
 
-        subject = stages[0]
-        rel = subject.args.relationship
+        result = stages[0]
+        rel = result.args.relationship
         assert rel.relationship_type == RelationshipType.IMPORTS
-        assert rel.object_pattern == 'os'
+        assert rel.filter_pattern == 'os'
 
     def test_parse_via_references_long_form(self):
         """Test --via references relationship."""
@@ -81,98 +72,71 @@ class TestRelationshipFlagParsing:
             '-mg', 'CONFIG*', '-tg'
         ])
 
-        subject = stages[0]
-        rel = subject.args.relationship
+        result = stages[0]
+        rel = result.args.relationship
         assert rel.relationship_type == RelationshipType.REFERENCES
+
+    def test_parse_via_called_by_inverse(self):
+        """Test --via called-by sets inverted=True."""
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tf',
+            '--via', 'called-by',
+            '-mg', 'main_func', '-tf'
+        ])
+
+        result = stages[0]
+        rel = result.args.relationship
+        assert rel.relationship_type == RelationshipType.CALLS
+        assert rel.filter_pattern == 'main_func'
+        assert rel.inverted is True
+        assert rel.is_negative is False
+
+    def test_parse_via_inherited_by_inverse(self):
+        """Test --via inherited-by sets inverted=True."""
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tc',
+            '--via', 'inherited-by',
+            '-mg', 'ChildClass', '-tc'
+        ])
+
+        rel = stages[0].args.relationship
+        assert rel.relationship_type == RelationshipType.INHERITS_FROM
+        assert rel.inverted is True
+
+    def test_parse_via_declared_in_inverse(self):
+        """Test --via declared-in sets inverted=True."""
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tF',
+            '--via', 'declared-in',
+            '-mg', 'MyClass', '-tc'
+        ])
+
+        rel = stages[0].args.relationship
+        assert rel.relationship_type == RelationshipType.DECLARES
+        assert rel.inverted is True
+
+    def test_parse_sans_called_by_inverse(self):
+        """Test --sans called-by (unused functions) sets inverted=True + is_negative=True."""
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tf',
+            '--sans', 'called-by',
+            '-mg', '*', '-tf'
+        ])
+
+        rel = stages[0].args.relationship
+        assert rel.relationship_type == RelationshipType.CALLS
+        assert rel.is_negative is True
+        assert rel.inverted is True
 
 
 class TestRelationshipVShortFlag:
     """Test -V TYPE short form relationship flags."""
 
     def test_parse_V_inherits_from(self):
-        """Test -V inherits-from."""
-        parser = PipelineParser()
-        stages = parser.parse([
-            '-mg', 'Child*', '-tc',
-            '-V', 'inherits-from',
-            '-mg', '*Base*', '-tc'
-        ])
-
-        subject = stages[0]
-        rel = subject.args.relationship
-        assert rel.relationship_type == RelationshipType.INHERITS_FROM
-
-    def test_parse_V_calls(self):
-        """Test -V calls."""
-        parser = PipelineParser()
-        stages = parser.parse([
-            '-mg', '*', '-tf',
-            '-V', 'calls',
-            '-mg', 'helper*', '-tf'
-        ])
-
-        subject = stages[0]
-        rel = subject.args.relationship
-        assert rel.relationship_type == RelationshipType.CALLS
-
-    def test_parse_V_imports(self):
-        """Test -V imports."""
-        parser = PipelineParser()
-        stages = parser.parse([
-            '-mg', '*', '-tF',
-            '-V', 'imports',
-            '-mg', 'json', '-ti'
-        ])
-
-        subject = stages[0]
-        rel = subject.args.relationship
-        assert rel.relationship_type == RelationshipType.IMPORTS
-
-    def test_parse_V_references(self):
-        """Test -V references."""
-        parser = PipelineParser()
-        stages = parser.parse([
-            '-mg', '*', '-tm',
-            '-V', 'references',
-            '-mg', 'self.*', '-tg'
-        ])
-
-        subject = stages[0]
-        rel = subject.args.relationship
-        assert rel.relationship_type == RelationshipType.REFERENCES
-
-
-class TestSansFlag:
-    """Test --sans / -S flag for negative relationship filtering."""
-
-    def test_sans_long_form_sets_is_negative(self):
-        """Test --sans flag sets is_negative=True."""
-        parser = PipelineParser()
-        stages = parser.parse([
-            '-mg', '*', '-tc',
-            '--sans', 'inherits-from',
-            '-mg', 'MyClass', '-tc',
-        ])
-
-        subject = stages[0]
-        rel = subject.args.relationship
-        assert rel.is_negative is True
-
-    def test_S_short_form_sets_is_negative(self):
-        """Test -S short form sets is_negative=True."""
-        parser = PipelineParser()
-        stages = parser.parse([
-            '-mg', '*', '-tc',
-            '-S', 'calls',
-            '-mg', 'helper*', '-tc',
-        ])
-
-        subject = stages[0]
-        rel = subject.args.relationship
-        assert rel.is_negative is True
-
-    def test_no_sans_is_negative_false_by_default(self):
-        """Test is_negative is False by default (--via / -V)."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc',
@@ -180,8 +144,92 @@ class TestSansFlag:
             '-mg', 'Base', '-tc'
         ])
 
-        subject = stages[0]
-        rel = subject.args.relationship
+        rel = stages[0].args.relationship
+        assert rel.relationship_type == RelationshipType.INHERITS_FROM
+        assert rel.filter_pattern == 'Base'
+
+    def test_parse_V_calls(self):
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tf',
+            '-V', 'calls',
+            '-mg', 'helper*', '-tf'
+        ])
+
+        rel = stages[0].args.relationship
+        assert rel.relationship_type == RelationshipType.CALLS
+
+    def test_parse_V_imports(self):
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tF',
+            '-V', 'imports',
+            '-mg', 'json', '-ti'
+        ])
+
+        rel = stages[0].args.relationship
+        assert rel.relationship_type == RelationshipType.IMPORTS
+
+    def test_parse_V_references(self):
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tm',
+            '-V', 'references',
+            '-mg', 'self.*', '-tg'
+        ])
+
+        rel = stages[0].args.relationship
+        assert rel.relationship_type == RelationshipType.REFERENCES
+
+    def test_parse_V_called_by_inverse(self):
+        """Inverse types work with -V short form."""
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tf',
+            '-V', 'called-by',
+            '-mg', 'main', '-tf'
+        ])
+
+        rel = stages[0].args.relationship
+        assert rel.relationship_type == RelationshipType.CALLS
+        assert rel.inverted is True
+
+
+class TestSansFlag:
+    """Test --sans / -S flag for negative relationship filtering."""
+
+    def test_sans_long_form_sets_is_negative(self):
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tc',
+            '--sans', 'inherits-from',
+            '-mg', '*', '-tc',
+        ])
+
+        rel = stages[0].args.relationship
+        assert rel.is_negative is True
+        assert rel.inverted is False
+
+    def test_S_short_form_sets_is_negative(self):
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tc',
+            '-S', 'calls',
+            '-mg', '*', '-tc',
+        ])
+
+        rel = stages[0].args.relationship
+        assert rel.is_negative is True
+
+    def test_no_sans_is_negative_false_by_default(self):
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tc',
+            '-V', 'inherits-from',
+            '-mg', 'Base', '-tc'
+        ])
+
+        rel = stages[0].args.relationship
         assert rel.is_negative is False
 
 
@@ -189,7 +237,6 @@ class TestRelationshipWithOptions:
     """Test relationship queries with additional options."""
 
     def test_relationship_with_limit(self):
-        """Test limit option with relationship query."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc', '-n', '5',
@@ -197,12 +244,11 @@ class TestRelationshipWithOptions:
             '-mg', 'Base*', '-tc'
         ])
 
-        subject = stages[0]
-        assert subject.args.limit == 5
-        assert subject.args.relationship is not None
+        result = stages[0]
+        assert result.args.limit == 5
+        assert result.args.relationship is not None
 
     def test_relationship_with_case_insensitive(self):
-        """Test case insensitive flag with relationship."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc', '-I',
@@ -210,11 +256,10 @@ class TestRelationshipWithOptions:
             '-mg', 'base*', '-tc'
         ])
 
-        subject = stages[0]
-        assert subject.args.case_insensitive is True
+        result = stages[0]
+        assert result.args.case_insensitive is True
 
     def test_relationship_with_output_format(self):
-        """Test output format with relationship query."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tc',
@@ -223,44 +268,63 @@ class TestRelationshipWithOptions:
             '-oT', '-fm'
         ])
 
-        subject = stages[0]
-        # Output format should be on the query
-        assert subject.args.render_type == 'table'
-        assert subject.args.format == 'md'
+        result = stages[0]
+        assert result.args.render_type == 'table'
+        assert result.args.format == 'md'
 
 
 class TestRelationshipEdgeCases:
     """Test edge cases for relationship parsing."""
 
-    def test_subject_multiple_types(self):
-        """Test subject with multiple symbol types (OR)."""
+    def test_result_multiple_types(self):
+        """Result stage with multiple symbol types (OR)."""
         parser = PipelineParser()
         stages = parser.parse([
-            '-mg', '*', '-tc', '-tf',  # class OR function
+            '-mg', '*', '-tc', '-tf',
             '-V', 'calls',
             '-mg', 'helper*', '-tf'
         ])
 
-        subject = stages[0]
-        assert 'class' in subject.args.symbol_types
-        assert 'function' in subject.args.symbol_types
+        result = stages[0]
+        assert 'class' in result.args.symbol_types
+        assert 'function' in result.args.symbol_types
 
-    def test_object_multiple_types(self):
-        """Test object with multiple symbol types."""
+    def test_filter_multiple_types(self):
+        """Filter stage with multiple symbol types."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tf',
             '-V', 'calls',
-            '-mg', '*util*', '-tf', '-tm'  # function OR method
+            '-mg', '*util*', '-tf', '-tm'
         ])
 
-        subject = stages[0]
-        rel = subject.args.relationship
-        assert 'function' in rel.object_types
-        assert 'method' in rel.object_types
+        rel = stages[0].args.relationship
+        assert 'function' in rel.filter_types
+        assert 'method' in rel.filter_types
+
+    def test_multiple_relationship_filters_are_preserved_in_order(self):
+        """A result stage can be narrowed by multiple relationship filters."""
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tf',
+            '--via', 'calls',
+            '-mg', 'connect', '-tf',
+            '--sans', 'declared-in',
+            '-mg', '*test*', '-tF',
+        ])
+
+        relationships = stages[0].args.relationships
+        assert len(relationships) == 2
+        assert stages[0].args.relationship is relationships[0]
+        assert relationships[0].relationship_type == RelationshipType.CALLS
+        assert relationships[0].filter_pattern == 'connect'
+        assert relationships[0].is_negative is False
+        assert relationships[1].relationship_type == RelationshipType.DECLARES
+        assert relationships[1].filter_pattern == '*test*'
+        assert relationships[1].is_negative is True
+        assert relationships[1].inverted is True
 
     def test_unknown_relationship_type_raises(self):
-        """Test unknown relationship type raises error."""
         parser = PipelineParser()
         with pytest.raises(PipelineParseError):
             parser.parse([
@@ -269,14 +333,125 @@ class TestRelationshipEdgeCases:
                 '-mg', '*', '-tc'
             ])
 
-    def test_relationship_without_object_raises(self):
-        """Test relationship without object query raises error."""
+    def test_relationship_without_filter_raises(self):
         parser = PipelineParser()
         with pytest.raises(PipelineParseError):
             parser.parse([
                 '-mg', '*', '-tc',
                 '-V', 'inherits-from'
-                # Missing object query
             ])
 
 
+class TestViaFlag:
+    """Tests for --via / -V relationship type flags."""
+
+    def test_via_inherits_from(self):
+        parser = PipelineParser()
+        argv_V = ['-mg', '*', '-tc', '-V', 'inherits-from', '-mg', 'Base', '-tc']
+        argv_via = ['-mg', '*', '-tc', '--via', 'inherits-from', '-mg', 'Base', '-tc']
+
+        stage_V = parser._parse_stage(argv_V)
+        stage_via = parser._parse_stage(argv_via)
+
+        assert stage_V.args.relationship.relationship_type == stage_via.args.relationship.relationship_type
+        assert stage_via.args.relationship.relationship_type.value == 'inherits-from'
+
+    def test_V_calls(self):
+        parser = PipelineParser()
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'calls', '-mg', 'func', '-tm'])
+        assert stage.args.relationship.relationship_type.value == 'calls'
+
+    def test_V_imports(self):
+        parser = PipelineParser()
+        stage = parser._parse_stage(['-mg', '*', '-V', 'imports', '-mg', 'os'])
+        assert stage.args.relationship.relationship_type.value == 'imports'
+
+    def test_V_references(self):
+        parser = PipelineParser()
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'references', '-mg', 'X', '-tm'])
+        assert stage.args.relationship.relationship_type.value == 'references'
+
+    def test_V_declares(self):
+        parser = PipelineParser()
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'declares', '-mg', 'utils.py', '-tF'])
+        assert stage.args.relationship.relationship_type.value == 'declares'
+
+    def test_V_all_forward_types(self):
+        parser = PipelineParser()
+        valid_types = ['inherits-from', 'calls', 'imports', 'references', 'declares']
+        for rt in valid_types:
+            stage = parser._parse_stage(['-mg', '*', '-tc', '-V', rt, '-mg', 'Anchor'])
+            assert stage.args.relationship.relationship_type.value == rt
+            assert stage.args.relationship.inverted is False
+
+    def test_V_all_inverse_types(self):
+        parser = PipelineParser()
+        inverse_types = {
+            'called-by': 'calls',
+            'inherited-by': 'inherits-from',
+            'imported-by': 'imports',
+            'referenced-by': 'references',
+            'declared-in': 'declares',
+        }
+        for inv_name, forward_value in inverse_types.items():
+            stage = parser._parse_stage(['-mg', '*', '-tc', '-V', inv_name, '-mg', 'X'])
+            assert stage.args.relationship.relationship_type.value == forward_value
+            assert stage.args.relationship.inverted is True
+
+    def test_V_invalid_value_raises(self):
+        parser = PipelineParser()
+        with pytest.raises(PipelineParseError):
+            parser._parse_stage(['-mg', '*', '-tc', '--via', 'bad-type', '-mg', '*'])
+
+    def test_V_error_message_lists_valid_types(self):
+        parser = PipelineParser()
+        with pytest.raises(PipelineParseError, match="Valid:"):
+            parser._parse_stage(['-mg', '*', '-V', 'bad-type', '-mg', '*'])
+
+    def test_V_with_newerthan_on_result(self):
+        parser = PipelineParser()
+        stage = parser._parse_stage([
+            '-mg', '*', '-tc', '--newerthan', '1h',
+            '-V', 'declares',
+            '-mg', 'utils.py', '-tF', '-n', '0',
+        ])
+        assert stage.args.relationship is not None
+        assert stage.args.relationship.relationship_type.value == 'declares'
+        assert stage.args.newerthan == '1h'
+
+    def test_V_filter_pattern_and_type(self):
+        parser = PipelineParser()
+        stage = parser._parse_stage(['-mg', '*', '-V', 'imports', '-mg', 'test_*', '-tm'])
+        rel = stage.args.relationship
+        assert rel.filter_pattern == 'test_*'
+        assert 'method' in rel.filter_types
+
+
+class TestStaleFlag:
+    """--stale flag on the filter side of a relationship query."""
+
+    def test_stale_sets_result_stale_true(self):
+        parser = PipelineParser()
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'inherits-from', '-mg', 'Base', '-tc', '--stale'])
+        assert stage.args.relationship.result_stale is True
+
+    def test_stale_default_is_false(self):
+        parser = PipelineParser()
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'inherits-from', '-mg', 'Base', '-tc'])
+        assert stage.args.relationship.result_stale is False
+
+    def test_stale_with_via_flag(self):
+        parser = PipelineParser()
+        stage = parser._parse_stage([
+            '-mg', '*', '-tc', '--via', 'inherits-from', '-mg', 'Base', '-tc', '--stale'
+        ])
+        assert stage.args.relationship.result_stale is True
+        assert stage.args.relationship.relationship_type.value == 'inherits-from'
+
+    def test_stale_with_newerthan_on_result(self):
+        parser = PipelineParser()
+        stage = parser._parse_stage([
+            '-mg', '*', '-tc', '--newerthan', '1h', '-V', 'inherits-from', '-mg', 'Base', '-tc', '--stale'
+        ])
+        assert stage.args.relationship.result_stale is True
+        assert stage.args.newerthan == '1h'

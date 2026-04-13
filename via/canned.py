@@ -5,11 +5,15 @@ from pathlib import Path
 
 
 _BUILTINS = {
-    "unused": ["-mg", "*", "-tf", "--sans", "calls", "-mg", "*", "-tf"],
-    "potentially-unused": ["-mg", "*", "-tf", "--sans", "calls", "-mg", "*", "-tf"],
-    "callers": ["-mg", "{symbol}", "-tf", "--via", "calls", "-mg", "*", "-tf"],
-    "inheritors": ["-mg", "{symbol}", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"],
-    "dead-docs": ["-mg", "*.md", "-tF", "--sans", "declares", "-mg", "*", "-tH"],
+    "unused": ["-mg", "*", "-tf", "--sans", "called-by", "-mg", "*", "-tf"],
+    "potentially-unused": ["-mg", "*", "-tf", "--sans", "called-by", "-mg", "*", "-tf"],
+    "callers": ["-mg", "*", "-tf", "--via", "calls", "-mg", "{symbol}", "-tf"],
+    "methods-calling": ["-mg", "*", "-tm", "--via", "calls", "-mg", "{symbol}"],
+    "inheritors": ["-mg", "*", "-tc", "--via", "inherits-from", "-mg", "{symbol}", "-tc"],
+    "docs-headers": ["-mg", "{pattern}", "-tH"],
+    "symbol-body": ["-mg", "{symbol}", "-tf", "-tm", "-tc", "-oR"],
+    "paged-scan": ["-mg", "{pattern}", "--slice", "{slice}"],
+    "dead-docs": ["-mg", "*.md", "-tF", "--sans", "declared-in", "-mg", "*", "-tH"],
 }
 
 

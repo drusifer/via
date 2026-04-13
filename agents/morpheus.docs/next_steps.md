@@ -1,14 +1,19 @@
 # Morpheus Next Steps
 
-## Resume Point: Sprint 21 shipped
+## Resume Point: Sprint 24 Cycle 2 approved
 
 ### On Resume
-1. Read bottom 20 lines of `agents/CHAT.md`
-2. Keep executor refactors/CLI parser replacement separate unless a new sprint explicitly plans them
-3. If _js_body unit tests are requested, confirm they test collect() entry point only — not internal _walk()
-4. ViaRunner.run_cli_args() is now the canonical CLI-args seam; any future callers should use it
+1. Read bottom 20 lines of `agents/CHAT.md`.
+2. Check whether Mouse closed Sprint 24 or assigned another cycle.
+3. If another cycle is assigned, review it against `agents/morpheus.docs/SPRINT_24_ARCHITECTURE.md`.
 
-### Key Decisions (Sprint 21)
-- S21-1: ABC in `via/parsers/_js_body.py`, 3 concrete subclasses, keyword-only `collect()` args
-- S21-2: `ViaRunner.run_cli_args(args: list[str])`, MCP creates ViaRunner once at startup
-- `redirect_stdout` stays in MCP server — ViaRunner does not own stdout
+### Key Decisions (Sprint 24)
+- Result-stage-first: first stage = returned results, --via/--sans = filters.
+- Inverse relationship types: `called-by`, `inherited-by`, `imported-by`, `referenced-by`, `declared-in`, `covers`, `http-called-by`.
+- Rename RelationshipFilter fields: object_* → filter_*, add `inverted: bool`.
+- Swap subject/object in executor; pass `invert=True`/`invert_join=True` for inverse types.
+- Canned queries are transparent argv — no hidden behavior.
+- Multi-filter chaining: parser preserves ordered filters; executor applies first as primary and later filters as sequential post-filters.
+- No DB schema changes.
+- No backward compatibility.
+- 3 cycles: inverse types + executor swap + tests → canned/MCP/help → integration/UAT/docs.

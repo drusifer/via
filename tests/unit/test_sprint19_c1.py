@@ -55,10 +55,10 @@ def test_builder_runs_plain_match_query(builder_db):
 def test_builder_runs_relationship_query(builder_db):
     query = (
         ViaQueryBuilder()
-        .glob("Animal")
+        .glob("*")
         .classes()
         .via("inherits-from")
-            .glob("*")
+            .glob("Animal")
             .classes()
         .done()
         .build()
@@ -73,17 +73,17 @@ def test_builder_runs_relationship_query(builder_db):
 def test_web_stage_builder_uses_via_query_builder_for_relationship_body():
     stages = _build_stages({
         "match_type": "glob",
-        "pattern": "Animal",
+        "pattern": "*",
         "symbol_types": ["class"],
         "relationship": "inherits-from",
-        "target_pattern": "*",
+        "target_pattern": "Animal",
         "target_symbol_types": ["class"],
     })
 
     assert len(stages) == 1
-    assert stages[0].args.pattern == "Animal"
+    assert stages[0].args.pattern == "*"
     assert stages[0].args.symbol_types == ["class"]
     assert stages[0].args.relationship is not None
     assert stages[0].args.relationship.relationship_type.value == "inherits-from"
-    assert stages[0].args.relationship.object_pattern == "*"
-    assert stages[0].args.relationship.object_types == ["class"]
+    assert stages[0].args.relationship.filter_pattern == "Animal"
+    assert stages[0].args.relationship.filter_types == ["class"]

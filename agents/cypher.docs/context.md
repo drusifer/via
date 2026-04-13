@@ -1,6 +1,6 @@
 # Cypher Context - VIA Project
 
-**Last Updated**: 2026-04-08
+**Last Updated**: 2026-04-12
 
 ## Current Project
 Via - Python codebase indexing and querying CLI tool
@@ -151,3 +151,31 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 
 ## Blockers
 None
+
+## Runtime Request Intake (2026-04-12)
+- User requested via Bob Protocol: make Via MCP serve, run index/watch, and serve the web interface.
+- This is an operational execution request, not a product requirement change.
+- Cypher accepted intake and handed execution to Neo.
+- Acceptance criteria for the handoff:
+  - Via index is refreshed.
+  - Watch mode is running.
+  - MCP server process is running.
+  - Web interface server is running and URL is reported to the user.
+
+## Sprint 22-24 HCI/UX Product Direction (2026-04-12)
+- User requested the next few sprints focus on HCI and UX.
+- Source: Smith's updated VIA MCP usability report, including regex, multi-type, and ambiguous multi-match findings.
+- Story batch written: `agents/cypher.docs/SPRINT_22_24_HCI_UX_USER_STORIES.md`
+- Product direction: prioritize query confidence and error recovery before adding new query power.
+- Sprint 22 focus: structured errors, multi-match validation, regex UX, documented `declares` pattern.
+- Sprint 23 focus: recognition-over-recall via shortcuts, MCP examples, diagram fallback, CLI help.
+- Sprint 24 focus: UAT, docs recipes, error style guide, closeout review.
+- User clarified command mental model for docs: first stage determines candidate result set; later `--via` / `--sans` stages filter those results by relationship to another matched set.
+
+## Sprint 23 Planning (2026-04-12)
+- Sprint 22 shipped query confidence and error recovery.
+- Sprint 23 story doc written: `agents/cypher.docs/SPRINT_23_USER_STORIES.md`.
+- Theme: recognition over recall for common VIA workflows.
+- Product constraint: shortcuts must be task-language and transparent; no new relationship model.
+- High-risk story: `declared-in-file` must not recreate the Sprint 22 inverse `declares` docs bug.
+- Gate handoff goes to Smith for HCI story review.

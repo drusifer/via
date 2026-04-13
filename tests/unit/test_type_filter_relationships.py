@@ -1,20 +1,8 @@
-"""Unit tests for type-filter correctness in relationship queries (Sprint 5).
+"""Unit tests for type-filter correctness in relationship queries.
 
-TLDR:
-    TDD regression tests for a bug where subject-side type filters incorrectly
-    filtered returned results instead of only constraining the lookup target.
-    Key fixture: db_with_cross_type_relationships (in-memory DB seeded with calls
-    and references across methods, globals, functions, and classes).
-    Key test classes: TestTypeFilterInRelationshipQueries (verifies -tg applied to
-    subject only; object_types narrows results independently; covers forward,
-    inverted, and wrong-type queries for calls and references),
-    TestTypeFilterOrdering (result ordering stability under type filter combinations).
-    Role: regression guard for type-filter logic in RelationshipFilter and
-    PipelineExecutor; depends on DatabaseStore, RelationshipFilter, PipelineExecutor,
-    PipelineStage, StageType, RelationshipType.
-
+Result-first semantics: result stage types filter what gets returned,
+filter stage types narrow the relationship anchor.
 """
-
 from argparse import Namespace
 
 import pytest
@@ -41,293 +29,206 @@ def db_with_cross_type_relationships(tmp_path):
     store.connect()
     store.initialize_schema()
 
-    # Insert global constant
     constant_id = store.insert_symbol(
-        symbol_name='MY_CONSTANT',
-        symbol_type='global',
-        file_path='/test/constants.py',
-        line_number=1,
-        byte_offset=0,
-        byte_length=20,
-        qualified_name='constants.MY_CONSTANT',
-        parent_name=None
-    )
+        symbol_name='MY_CONSTANT', symbol_type='global',
+        file_path='/test/constants.py', line_number=1,
+        byte_offset=0, byte_length=20,
+        qualified_name='constants.MY_CONSTANT', parent_name=None)
 
-    # Insert method that references the constant
     method_id = store.insert_symbol(
-        symbol_name='shared_logic',
-        symbol_type='method',
-        file_path='/test/base.py',
-        line_number=10,
-        byte_offset=100,
-        byte_length=50,
-        qualified_name='base.BaseClass.shared_logic',
-        parent_name='BaseClass'
-    )
+        symbol_name='shared_logic', symbol_type='method',
+        file_path='/test/base.py', line_number=10,
+        byte_offset=100, byte_length=50,
+        qualified_name='base.BaseClass.shared_logic', parent_name='BaseClass')
 
-    # Insert function that references the constant
     func_ref_id = store.insert_symbol(
-        symbol_name='use_constant',
-        symbol_type='function',
-        file_path='/test/utils.py',
-        line_number=5,
-        byte_offset=50,
-        byte_length=30,
-        qualified_name='utils.use_constant',
-        parent_name=None
-    )
+        symbol_name='use_constant', symbol_type='function',
+        file_path='/test/utils.py', line_number=5,
+        byte_offset=50, byte_length=30,
+        qualified_name='utils.use_constant', parent_name=None)
 
-    # Insert helper function (for calls relationship)
     helper_id = store.insert_symbol(
-        symbol_name='helper_func',
-        symbol_type='function',
-        file_path='/test/helpers.py',
-        line_number=1,
-        byte_offset=0,
-        byte_length=40,
-        qualified_name='helpers.helper_func',
-        parent_name=None
-    )
+        symbol_name='helper_func', symbol_type='function',
+        file_path='/test/helpers.py', line_number=1,
+        byte_offset=0, byte_length=40,
+        qualified_name='helpers.helper_func', parent_name=None)
 
-    # Insert main function that calls helper
     main_id = store.insert_symbol(
-        symbol_name='main_func',
-        symbol_type='function',
-        file_path='/test/main.py',
-        line_number=1,
-        byte_offset=0,
-        byte_length=100,
-        qualified_name='main.main_func',
-        parent_name=None
-    )
+        symbol_name='main_func', symbol_type='function',
+        file_path='/test/main.py', line_number=1,
+        byte_offset=0, byte_length=100,
+        qualified_name='main.main_func', parent_name=None)
 
-    # Create relationships:
+    other_caller_id = store.insert_symbol(
+        symbol_name='other_caller', symbol_type='function',
+        file_path='/test/other.py', line_number=1,
+        byte_offset=0, byte_length=100,
+        qualified_name='other.other_caller', parent_name=None)
+
     # shared_logic (method) references MY_CONSTANT (global)
     store.insert_relationship(method_id, constant_id, 'references')
     # use_constant (function) references MY_CONSTANT (global)
     store.insert_relationship(func_ref_id, constant_id, 'references')
     # main_func calls helper_func
     store.insert_relationship(main_id, helper_id, 'calls')
+    # main_func also references MY_CONSTANT; other_caller only calls helper_func
+    store.insert_relationship(main_id, constant_id, 'references')
+    store.insert_relationship(other_caller_id, helper_id, 'calls')
 
     yield store
     store.close()
 
 
 class TestTypeFilterInRelationshipQueries:
-    """Test that type filters work correctly with relationship queries."""
+    """Test that type filters work correctly with result-first semantics."""
 
-    def test_reference_query_returns_method_not_global(self, db_with_cross_type_relationships):
-        """
-        When querying 'what references MY_CONSTANT', should return the method,
-        not filter it out because we specified -tg (global type).
-
-        The type filter should apply to the OBJECT (MY_CONSTANT is a global),
-        not filter the RESULTS (which are methods/functions).
-        """
+    def test_via_references_returns_referencers(self, db_with_cross_type_relationships):
+        """via -mg '*' --via references -mg 'MY_CONSTANT' -tg → shared_logic, use_constant."""
         executor = PipelineExecutor(db_with_cross_type_relationships)
 
-        # Query: Find symbols that reference MY_CONSTANT
-        # This is similar to: via -mg MY_CONSTANT -tg -V references -mg *
         args = Namespace(
-            pattern='MY_CONSTANT',
-            match_syntax='glob',
-            symbol_type='global',  # The thing we're relating TO is a global
-            symbol_types=['global'],
-            case_insensitive=False,
-            limit=10,
-            match_qualified=False,
-            render_type=None,
-            format=None,
+            pattern='*',  # RESULT: all symbols
+            match_syntax='glob', symbol_type=None, symbol_types=[],
+            case_insensitive=False, limit=10, match_qualified=False,
+            render_type=None, format=None,
             relationship=RelationshipFilter(
                 relationship_type=RelationshipType.REFERENCES,
-                object_pattern='*',  # Return ALL referencers
-                object_match_syntax='glob',
-                object_types=None,  # Don't filter result types
-                is_negative=False
-            )
-        )
+                filter_pattern='MY_CONSTANT',  # FILTER: things that reference MY_CONSTANT
+                filter_match_syntax='glob', filter_types=['global'],
+                is_negative=False, inverted=False,
+            ))
         stage = PipelineStage(StageType.MATCH, args)
-
         results = list(executor.execute([stage]))
 
-        # Should find shared_logic (method) and use_constant (function)
         names = [r.symbol_name for r in results]
-        assert 'shared_logic' in names, f"Expected shared_logic in results, got: {names}"
-        assert 'use_constant' in names, f"Expected use_constant in results, got: {names}"
-        # Should NOT return MY_CONSTANT itself
+        assert 'shared_logic' in names
+        assert 'use_constant' in names
         assert 'MY_CONSTANT' not in names
 
-    def test_reference_query_with_result_type_filter(self, db_with_cross_type_relationships):
-        """
-        When we explicitly filter results by type, it should work.
-        Query: Find only METHODS that reference MY_CONSTANT
-        """
+    def test_result_type_filter_narrows_returned_symbols(self, db_with_cross_type_relationships):
+        """via -mg '*' -tm --via references -mg 'MY_CONSTANT' -tg → only methods."""
         executor = PipelineExecutor(db_with_cross_type_relationships)
 
-        # Query: Find methods that reference MY_CONSTANT
         args = Namespace(
-            pattern='MY_CONSTANT',
-            match_syntax='glob',
-            symbol_type='global',
-            symbol_types=['global'],
-            case_insensitive=False,
-            limit=10,
-            match_qualified=False,
-            render_type=None,
-            format=None,
+            pattern='*',
+            match_syntax='glob', symbol_type='method', symbol_types=['method'],
+            case_insensitive=False, limit=10, match_qualified=False,
+            render_type=None, format=None,
             relationship=RelationshipFilter(
                 relationship_type=RelationshipType.REFERENCES,
-                object_pattern='*',
-                object_match_syntax='glob',
-                object_types=['method'],  # Only return methods
-                is_negative=False
-            )
-        )
+                filter_pattern='MY_CONSTANT',
+                filter_match_syntax='glob', filter_types=['global'],
+                is_negative=False, inverted=False,
+            ))
         stage = PipelineStage(StageType.MATCH, args)
-
         results = list(executor.execute([stage]))
 
         names = [r.symbol_name for r in results]
-        # Should find shared_logic (method)
-        assert 'shared_logic' in names, f"Expected shared_logic in results, got: {names}"
-        # Should NOT find use_constant (function) because we filtered to methods
+        assert 'shared_logic' in names
         assert 'use_constant' not in names
 
-    def test_forward_reference_query_returns_method(self, db_with_cross_type_relationships):
-        """
-        Forward query: What symbols reference MY_CONSTANT?
-        Should return shared_logic (method) and use_constant (function).
-        is_negative=False is explicit forward (--via) mode.
-        """
+    def test_filter_type_narrows_anchor(self, db_with_cross_type_relationships):
+        """Filter type must match the anchor symbol type."""
         executor = PipelineExecutor(db_with_cross_type_relationships)
 
-        # Query: Find what references MY_CONSTANT (forward direction)
-        # Similar to: via -mg MY_CONSTANT -tg -V references -mg *
+        # MY_CONSTANT is a global, but we specify -tc (class) on filter → no match
         args = Namespace(
-            pattern='MY_CONSTANT',
-            match_syntax='glob',
-            symbol_type='global',
-            symbol_types=['global'],
-            case_insensitive=False,
-            limit=10,
-            match_qualified=False,
-            render_type=None,
-            format=None,
+            pattern='*',
+            match_syntax='glob', symbol_type=None, symbol_types=[],
+            case_insensitive=False, limit=10, match_qualified=False,
+            render_type=None, format=None,
             relationship=RelationshipFilter(
                 relationship_type=RelationshipType.REFERENCES,
-                object_pattern='*',
-                object_match_syntax='glob',
-                object_types=None,
-                is_negative=False  # Forward: who references MY_CONSTANT?
-            )
-        )
+                filter_pattern='MY_CONSTANT',
+                filter_match_syntax='glob', filter_types=['class'],  # Wrong type
+                is_negative=False, inverted=False,
+            ))
         stage = PipelineStage(StageType.MATCH, args)
-
         results = list(executor.execute([stage]))
 
-        names = [r.symbol_name for r in results]
-        # Should find shared_logic and use_constant (both reference MY_CONSTANT)
-        assert 'shared_logic' in names or 'use_constant' in names, \
-            f"Expected referencers in results, got: {names}"
+        assert len(results) == 0
 
-    def test_calls_query_without_type_filter_on_results(self, db_with_cross_type_relationships):
-        """
-        Query: Find functions that call helper_func
-        Should return main_func without type filtering issues.
-        """
+    def test_calls_without_type_filter(self, db_with_cross_type_relationships):
+        """via -mg '*' --via calls -mg 'helper_func' → main_func."""
         executor = PipelineExecutor(db_with_cross_type_relationships)
 
         args = Namespace(
-            pattern='helper_func',
-            match_syntax='glob',
-            symbol_type='function',
-            symbol_types=['function'],
-            case_insensitive=False,
-            limit=10,
-            match_qualified=False,
-            render_type=None,
-            format=None,
+            pattern='*',
+            match_syntax='glob', symbol_type=None, symbol_types=[],
+            case_insensitive=False, limit=10, match_qualified=False,
+            render_type=None, format=None,
             relationship=RelationshipFilter(
                 relationship_type=RelationshipType.CALLS,
-                object_pattern='*',
-                object_match_syntax='glob',
-                object_types=None,  # Don't filter - return all callers
-                is_negative=False
-            )
-        )
+                filter_pattern='helper_func',
+                filter_match_syntax='glob', filter_types=[],
+                is_negative=False, inverted=False,
+            ))
         stage = PipelineStage(StageType.MATCH, args)
-
         results = list(executor.execute([stage]))
 
         names = [r.symbol_name for r in results]
-        assert 'main_func' in names, f"Expected main_func in results, got: {names}"
+        assert 'main_func' in names
 
-
-class TestTypeFilterOrdering:
-    """Test that type filters are applied at the correct pipeline stage."""
-
-    def test_subject_type_filter_applies_to_relate_to_target(self, db_with_cross_type_relationships):
-        """
-        The type filter BEFORE --via should filter the 'relate to' target.
-        Query: -mg MY_CONSTANT -tg -V references -mg *
-        The -tg should ensure MY_CONSTANT is a global (it is).
-        """
+    def test_multiple_positive_relationship_filters_are_applied_sequentially(
+        self, db_with_cross_type_relationships
+    ):
+        """calls helper_func + references MY_CONSTANT returns only main_func."""
         executor = PipelineExecutor(db_with_cross_type_relationships)
 
         args = Namespace(
-            pattern='MY_CONSTANT',
-            match_syntax='glob',
-            symbol_type='global',
-            symbol_types=['global'],
-            case_insensitive=False,
-            limit=10,
-            match_qualified=False,
-            render_type=None,
-            format=None,
-            relationship=RelationshipFilter(
-                relationship_type=RelationshipType.REFERENCES,
-                object_pattern='*',
-                object_match_syntax='glob',
-                object_types=None,
-                is_negative=False
-            )
-        )
+            pattern='*',
+            match_syntax='glob', symbol_type='function', symbol_types=['function'],
+            case_insensitive=False, limit=10, match_qualified=False,
+            render_type=None, format=None,
+            relationship=None,
+            relationships=[
+                RelationshipFilter(
+                    relationship_type=RelationshipType.CALLS,
+                    filter_pattern='helper_func',
+                    filter_match_syntax='glob', filter_types=['function'],
+                    is_negative=False, inverted=False,
+                ),
+                RelationshipFilter(
+                    relationship_type=RelationshipType.REFERENCES,
+                    filter_pattern='MY_CONSTANT',
+                    filter_match_syntax='glob', filter_types=['global'],
+                    is_negative=False, inverted=False,
+                ),
+            ])
+        args.relationship = args.relationships[0]
         stage = PipelineStage(StageType.MATCH, args)
-
         results = list(executor.execute([stage]))
 
-        # Should find referencers because MY_CONSTANT IS a global
-        assert len(results) > 0, "Should find referencers of MY_CONSTANT"
+        assert [r.symbol_name for r in results] == ['main_func']
 
-    def test_wrong_subject_type_filter_returns_empty(self, db_with_cross_type_relationships):
-        """
-        If the subject type filter doesn't match, query should return empty.
-        Query: -mg MY_CONSTANT -tc (class) -V references -mg *
-        MY_CONSTANT is a global, not a class, so no matches.
-        """
+    def test_later_negative_relationship_filter_excludes_existing_results(
+        self, db_with_cross_type_relationships
+    ):
+        """calls helper_func + sans references MY_CONSTANT excludes main_func."""
         executor = PipelineExecutor(db_with_cross_type_relationships)
 
         args = Namespace(
-            pattern='MY_CONSTANT',
-            match_syntax='glob',
-            symbol_type='class',  # Wrong type - MY_CONSTANT is a global
-            symbol_types=['class'],
-            case_insensitive=False,
-            limit=10,
-            match_qualified=False,
-            render_type=None,
-            format=None,
-            relationship=RelationshipFilter(
-                relationship_type=RelationshipType.REFERENCES,
-                object_pattern='*',
-                object_match_syntax='glob',
-                object_types=None,
-                is_negative=False
-            )
-        )
+            pattern='*',
+            match_syntax='glob', symbol_type='function', symbol_types=['function'],
+            case_insensitive=False, limit=10, match_qualified=False,
+            render_type=None, format=None,
+            relationship=None,
+            relationships=[
+                RelationshipFilter(
+                    relationship_type=RelationshipType.CALLS,
+                    filter_pattern='helper_func',
+                    filter_match_syntax='glob', filter_types=['function'],
+                    is_negative=False, inverted=False,
+                ),
+                RelationshipFilter(
+                    relationship_type=RelationshipType.REFERENCES,
+                    filter_pattern='MY_CONSTANT',
+                    filter_match_syntax='glob', filter_types=['global'],
+                    is_negative=True, inverted=False,
+                ),
+            ])
+        args.relationship = args.relationships[0]
         stage = PipelineStage(StageType.MATCH, args)
-
         results = list(executor.execute([stage]))
 
-        # Should find NO results because MY_CONSTANT is not a class
-        assert len(results) == 0, f"Should find no results, got: {[r.symbol_name for r in results]}"
+        assert [r.symbol_name for r in results] == ['other_caller']

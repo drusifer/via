@@ -20,19 +20,21 @@ class RelationshipFilter:
 
     Attributes:
         relationship_type: Type of relationship (inherits-from, calls, etc.)
-        object_pattern: Pattern to match against object symbols (AFTER --via/--sans)
-        object_match_syntax: Match syntax for object pattern (glob, regex, sql)
-        object_types: Symbol types to filter object matches
+        filter_pattern: Pattern to match against filter-stage symbols (AFTER --via/--sans)
+        filter_match_syntax: Match syntax for filter pattern (glob, regex, sql)
+        filter_types: Symbol types to filter matches in the filter stage
         is_negative: If True, execute NOT EXISTS query (--sans semantics)
+        inverted: If True, return from the target (to) side of the relationship
         result_newerthan_seconds: Filter results to symbols newer than N seconds ago
         result_olderthan_seconds: Filter results to symbols older than N seconds ago
         result_stale: If True, filter to stale results (not meaningful with --sans)
     """
     relationship_type: ReferenceType
-    object_pattern: str
-    object_match_syntax: str = 'glob'
-    object_types: List[str] = field(default_factory=list)
+    filter_pattern: str
+    filter_match_syntax: str = 'glob'
+    filter_types: List[str] = field(default_factory=list)
     is_negative: bool = False
+    inverted: bool = False
     result_newerthan_seconds: Optional[float] = None
     result_olderthan_seconds: Optional[float] = None
     result_stale: bool = False

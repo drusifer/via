@@ -1,12 +1,17 @@
 {
   "mcpServers": {
     "via": {
-      "command": "/home/drusifer/.local/bin/via",
+      "command": "/home/drusifer/.local/share/pipx/venvs/via/bin/python",
       "args": [
+        "-m",
+        "via",
         "mcp",
         "serve",
         "/home/drusifer/Projects/via"
-      ]
+      ],
+      "env": {
+        "HOME": "/home/drusifer/Projects/via"
+      }
     }
   }
 }

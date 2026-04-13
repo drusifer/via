@@ -1,12 +1,16 @@
 # Smith Next Steps
 
-## Current State: Sprint 21 Gate 1 APPROVED (2026-04-12)
+## Current State: Sprint 23 Cycle 2 HCI approved (2026-04-12)
 
 ## Pending Actions
-1. Wait for Morpheus arch review (Gate 2) — then re-engage for architecture review
-2. After implementation: end-to-end user testing of MCP runner migration (S21-2 is the only behavior-adjacent change)
+1. Wait for Cycle 3 implementation/review or final sprint HCI review handoff.
+2. During final review, verify:
+   - diagram fallback keeps useful data visible
+   - no-edge/unsupported-shape notes are understandable
+   - shortcut/help wording still avoids unsupported promises
 
 ## Risks To Watch
-- S21-2 `ViaRunner.run_cli_args` naming — ensure it's clear in docs/API surface
-- MCP server behavior regression — run `via mcp` smoke test in UAT
-- No new user-visible surface expected; flag any surprises in UAT
+- Silent empty results are the top VIA MCP usability risk because they hide syntax and capability errors.
+- Relationship queries are powerful but still require too much recall for first-time users.
+- Shortcut syntax in Sprint 23 must remain task-language, not parser-language.
+- The phrase "current runtime" is acceptable short term but should disappear after relationship-orientation reconciliation.

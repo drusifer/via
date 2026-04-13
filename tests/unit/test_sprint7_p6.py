@@ -66,6 +66,15 @@ class TestMcpInstall:
         via_entry = data["mcpServers"]["via"]
         assert "command" in via_entry
 
+    def test_install_mcp_json_invokes_combined_runtime(self, tmp_project):
+        from via.commands.install import McpInstallTarget
+        target = McpInstallTarget(project_root=str(tmp_project))
+        target.install()
+        data = json.loads((tmp_project / ".mcp.json").read_text())
+        via_entry = data["mcpServers"]["via"]
+        assert via_entry["args"] == ["-m", "via", "mcp", "serve", str(tmp_project)]
+        assert "--no-web" not in via_entry["args"]
+
     def test_install_idempotent(self, tmp_project):
         from via.commands.install import McpInstallTarget
         target = McpInstallTarget(project_root=str(tmp_project))

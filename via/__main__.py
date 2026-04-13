@@ -20,6 +20,7 @@ License: GPL-3.0
 
 import argparse
 import logging
+import shlex
 import sys
 from pathlib import Path
 
@@ -75,7 +76,9 @@ def _build_pipeline_help() -> str:
 
     return f"""\
 Pipeline Syntax (alternative to subcommands):
-  via -m<X> PATTERN -t<Y> [OPTIONS] [-o<Z>] [-f<W>]
+  via <match stage> [--via|--sans REL <relationship stage>] [OPTIONS]
+  For common relationship tasks, prefer --canned shortcuts such as callers and inheritors.
+  Use one match flag (-mg, -mr, or -ms) per stage; combine type flags when needed.
 
 Match Syntax Flags (-m<X>):
 {match_help}
@@ -96,12 +99,13 @@ Options:
   --contains PATTERN    Filter matched symbols by whether their source body contains PATTERN
   --canned NAME         Expand and run a named canned query from built-ins or .via/canned/*.json
   --args KEY=VAL,...    Arguments for --canned template expansion
+  --show-expanded       With --canned, print the expanded via command without running it
 
 Relationship Flags:
-  --via REL, -V REL     Positive relationship: return subjects WITH the relationship to an object
-  --sans REL, -S REL    Negative relationship: return subjects with NO relationship to any object
+  --via REL, -V REL     Advanced relationship filter; prefer --canned for common tasks
+  --sans REL, -S REL    Advanced negative relationship filter
                         REL is one of: inherits-from, calls, imports, references, declares, covered-by, http-calls
-  --stale               Filter: results older than their anchor (e.g. stale tests)
+  --stale               Filter: results older than their related filter-stage record
                         Example: via -mg '*' -tc --via inherits-from -mg 'test_*' -tf --stale
 
 Output Flags (-o<X>):
@@ -126,18 +130,30 @@ Examples:
   via -mg '*Controller' -tc --contains 'rate_limit'    # Matching classes whose body contains text
   via stats                                            # Database statistics
 
-Relationship Queries:
-  Rule: KNOWN anchor LEFT  --via/--sans  wildcard RIGHT
+Common Tasks:
+  via --canned callers --args symbol=parse_args         # Find functions that call parse_args
+  via --canned symbol-body --args symbol=parse_args     # Read a function/method/class body
+  via --canned docs-headers --args pattern='*Install*'  # Find markdown headers; use uppercase -tH
+  via -mr '^get_' -tm                                   # Regex method-name search
+  via -mg 'parse*' -tf -tm                              # Multi-type search (function OR method)
+  via --canned paged-scan --args pattern='*',slice=0:20 -tc  # Paged broad scan
+
+Advanced Relationship Queries:
+  Prefer canned shortcuts for callers/subclasses unless you need raw relationship filters.
+  Current runtime positive relationship lookups use the known anchor before --via.
   Valid REL types: inherits-from, calls, imports, references, declares, covered-by, http-calls
 
   # Subclasses of Base:
   via -mg 'Base' -tc --via inherits-from -mg '*' -tc
 
+  # Functions that call parse_args:
+  via -mg 'parse_args' -tf --via calls -mg '*' -tf
+
   # Functions never called (potentially unused):
   via -mg '*' -tf --sans calls -mg '*' -tf
 
-  # All symbols declared in a file:
-  via -mg 'myfile.py' -tF -Q --via declares -mg '*'
+  # Files that declare a matching class:
+  via -mg 'Controller' -tc --via declares -mg '*' -tF
 """
 
 
@@ -538,6 +554,8 @@ def _run_pipeline_command(argv: list, directory: str = ".") -> int:
 
     except PipelineParseError as e:
         print(f"Error: {e}", file=sys.stderr)
+        if e.hint:
+            print(f"Hint: {e.hint}", file=sys.stderr)
         return EXIT_ERROR
 
     except KeyboardInterrupt:
@@ -645,11 +663,8 @@ def _run_mcp_serve(directory: str, port: int = 7891, no_web: bool = False) -> in
     """Start the FastMCP stdio server."""
     target_dir = Path(directory).resolve()
     index_dir = target_dir / DEFAULT_INDEX_DIR
+    index_dir.mkdir(exist_ok=True)
     db_path = index_dir / DEFAULT_DB_NAME
-
-    if not db_path.exists():
-        print(f"Error: Index not found — run 'via index {directory}' first", file=sys.stderr)
-        return EXIT_ERROR
 
     from via.mcp.server import run_mcp_server
     return run_mcp_server(str(target_dir), str(db_path), port=port, no_web=no_web)
@@ -664,6 +679,10 @@ def _run_canned_command(argv: list) -> int:
     canned_name = argv[canned_index + 1]
     raw_args = None
     extras = argv[:canned_index] + argv[canned_index + 2:]
+    show_expanded = False
+    if '--show-expanded' in extras:
+        extras.remove('--show-expanded')
+        show_expanded = True
     if '--args' in extras:
         args_index = extras.index('--args')
         if args_index + 1 >= len(extras):
@@ -676,6 +695,10 @@ def _run_canned_command(argv: list) -> int:
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         return EXIT_ERROR
+    if show_expanded:
+        command = " ".join(["via", *(shlex.quote(token) for token in expanded)])
+        print(command)
+        return EXIT_SUCCESS
     return _run_pipeline_command(expanded)
 
 

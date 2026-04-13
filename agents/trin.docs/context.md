@@ -145,3 +145,115 @@
 - Sprint 20 parser/builder shared seam parity
 - Existing pipeline parser behavior
 - Existing Sprint 19 builder behavior
+
+## Sprint 22 Cycle 1 UAT — PASSED (2026-04-12)
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 85 passing tests
+- Summary: `agents/trin.docs/SPRINT_22_CYCLE_1_UAT_Summary_2026-04-12T17:18.md`
+
+### Coverage
+- Structured `PipelineParseError` fields.
+- MCP `output_type: "error"` shape for expected parser errors.
+- MCP internal error shape preserves `output_type: "error"` and logs details.
+- Valid empty MCP result remains normal `output_type: "json"` with empty result.
+- CLI parse errors print a recovery `Hint:` when available.
+- Parser and existing MCP output/schema regressions stayed green.
+
+## Sprint 22 Cycle 2 UAT — PASSED (2026-04-12)
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 70 passing tests
+- Summary: `agents/trin.docs/SPRINT_22_CYCLE_2_UAT_Summary_2026-04-12T17:22.md`
+
+### Coverage
+- Repeated match flags rejected in result stage.
+- Mixed match flags rejected in result stage.
+- Repeated matchers rejected in relationship filter stage.
+- One matcher on result stage plus one matcher on filter stage remains valid.
+- Invalid regex rejected in result and filter stages.
+- Valid regex with no matches remains a valid parsed query.
+- Multi-type OR (`-tf -tm -tc`) remains valid.
+- Existing relationship CLI regressions stayed green.
+
+## Sprint 22 Cycle 3 UAT — PASSED (2026-04-12)
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 42 passing tests
+- Forbidden old-wording scan: no matches
+- Summary: `agents/trin.docs/SPRINT_22_CYCLE_3_UAT_Summary_2026-04-12T17:30.md`
+
+### Coverage
+- CLI help teaches result-stage-first syntax.
+- MCP schema teaches result-stage/filter-stage syntax and regex example.
+- One-matcher-per-stage docs are present.
+- `agents/PROJECT.md` removed "Find all symbols in a file."
+- User guide uses container filters and avoids inverse `declares` wording.
+
+## Sprint 23 Cycle 1 UAT — PASSED (2026-04-12)
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 9 passing tests
+- Summary: `agents/trin.docs/SPRINT_23_CYCLE_1_UAT_Summary_2026-04-12T18:21.md`
+
+### Coverage
+- Supported Sprint 23 canned shortcuts are registered.
+- Deferred `callees` and `declared-in-file` shortcuts are not runnable built-ins.
+- `callers`, `methods-calling`, and `inheritors` match explicit expanded queries.
+- `--show-expanded` prints a copyable command and does not execute.
+- Missing canned args remain actionable.
+- Sprint 16 canned-query regression stayed green.
+
+### QA Note
+- Shortcut tests verify current runtime behavior. The docs/runtime relationship-orientation mismatch remains a Morpheus follow-up risk, not a Cycle 1 QA failure.
+
+## Sprint 23 Cycle 2 UAT — PASSED (2026-04-12)
+
+## Sprint 24 Cycle 2 UAT — PASSED (2026-04-13)
+
+### Verification Result
+- Status: PASS
+- Full suite baseline: 1313 passed, 1 skipped, 4 warnings.
+- Summary: `agents/trin.docs/SPRINT_24_CYCLE_2_UAT_Summary_2026-04-13T10:28.md`
+
+### Coverage
+- Parser preserves multiple relationship filters in order.
+- Executor applies later positive relationship filters to the prior result set.
+- Executor applies later negative relationship filters to exclude prior results.
+- Existing single-filter relationship behavior remains covered by the full suite.
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 30 passing tests
+- Summary: `agents/trin.docs/SPRINT_23_CYCLE_2_UAT_Summary_2026-04-12T18:27.md`
+
+### Coverage
+- CLI help common-task examples.
+- MCP schema common-task examples.
+- `--show-expanded` help discoverability.
+- Uppercase `-tH` guidance and invalid lowercase `-th` schema guidance.
+- Unsupported shortcut names absent from help/schema.
+- Help length budget preserved: 121 lines vs 137-line maximum.
+
+### QA Note
+- Examples are runtime-correct and task-first. Smith should review final wording for HCI density and clarity.
+
+## Sprint 23 Cycle 3 UAT — PASSED (2026-04-12)
+
+### Verification Result
+- Status: PASS
+- Targeted verification baseline: 28 passing tests
+- Summary: `agents/trin.docs/SPRINT_23_CYCLE_3_UAT_Summary_2026-04-12T18:32.md`
+
+### Coverage
+- Unsupported diagram fallback preserves matching JSON result rows.
+- Empty diagram fallback returns empty JSON with a note.
+- Valid class diagram output remains `output_type: "diagram"`.
+- Existing MCP output wrapper and structured error behavior stayed green.
+
+### QA Note
+- A parallel Makefile test run hit coverage SQLite combine state after tests passed. Rerunning `tests/unit/test_sprint23_c3.py` alone passed cleanly.

@@ -1,19 +1,8 @@
-"""Unit tests for end-to-end relationship query pipeline execution (Sprint 5).
+"""Unit tests for end-to-end relationship query pipeline execution.
 
-TLDR:
-    Integration-style unit tests verifying that PipelineParser + PipelineExecutor
-    produce correct results for inheritance, calls, and imports queries regardless
-    of file indexing order. Key fixture: relationship_project (tmp_path project
-    indexed via IndexingService with multi-file inheritance and call chains).
-    Key test classes: TestRelationshipPipelineExecution (forward queries and
-    --sans negative queries), TestRelationshipResolutionOrder (regression for
-    resolve_pending_relationships bug where import symbols were preferred over
-    definition symbols when indexing order varied).
-    Role: end-to-end regression guard for the pipeline query path; depends on
-    IndexingService, PipelineParser, PipelineExecutor, PythonParser, DatabaseStore.
-
+Integration-style unit tests verifying that PipelineParser + PipelineExecutor
+produce correct results with result-first semantics.
 """
-
 import subprocess
 import sys
 from pathlib import Path
@@ -77,12 +66,8 @@ def func_b():
         svc = IndexingService(db, registry)
         for f in sorted(project_dir.glob("*.py")):
             fi = DiscoveredFile(
-                path=str(f),
-                size_bytes=f.stat().st_size,
-                mtime=f.stat().st_mtime,
-                is_parseable=True,
-                is_oversized=False,
-            )
+                path=str(f), size_bytes=f.stat().st_size,
+                mtime=f.stat().st_mtime, is_parseable=True, is_oversized=False)
             svc._index_file(fi)
         db.resolve_pending_relationships()
 
@@ -90,10 +75,9 @@ def func_b():
 
 
 class TestRelationshipPipelineExecution:
-    """Test PipelineParser + PipelineExecutor for relationship queries."""
+    """Test PipelineParser + PipelineExecutor with result-first semantics."""
 
     def _execute_pipeline(self, db_path, project_dir, argv):
-        """Parse and execute a pipeline, return list of MatchRecords."""
         parser = PipelineParser()
         stages = parser.parse(argv)
         with DatabaseStore(str(db_path), str(project_dir)) as db:
@@ -104,63 +88,65 @@ class TestRelationshipPipelineExecution:
             return []
 
     def test_forward_inheritance(self, relationship_project):
-        """Forward inheritance query returns children."""
+        """Result-first: via -mg '*' -tc -V inherits-from -mg 'BaseClass' -tc → children."""
         project_dir, db_path = relationship_project
         records = self._execute_pipeline(
             db_path, project_dir,
-            ["-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"],
+            ["-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc"],
         )
         names = [r.symbol_name for r in records]
         assert "ChildClass" in names, f"Expected ChildClass in {names}"
 
     def test_forward_inheritance_is_not_negative(self, relationship_project):
-        """Forward --via query has is_negative=False on the RelationshipFilter."""
         parser = PipelineParser()
-        stages = parser.parse(["-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"])
+        stages = parser.parse(["-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc"])
         rel = stages[0].args.relationship
         assert rel.is_negative is False
 
     def test_forward_calls(self, relationship_project):
-        """Forward calls query returns callers."""
+        """Result-first: via -mg '*' -tf -V calls -mg 'func_a' -tf → callers."""
         project_dir, db_path = relationship_project
         records = self._execute_pipeline(
             db_path, project_dir,
-            ["-mg", "func_a", "-tf", "-V", "calls", "-mg", "*", "-tf"],
+            ["-mg", "*", "-tf", "-V", "calls", "-mg", "func_a", "-tf"],
         )
         names = [r.symbol_name for r in records]
         assert "func_b" in names, f"Expected func_b in {names}"
 
     def test_sans_calls_is_negative(self, relationship_project):
-        """--sans calls sets is_negative=True on the RelationshipFilter."""
         parser = PipelineParser()
-        stages = parser.parse(["-mg", "func_b", "-tf", "--sans", "calls", "-mg", "*"])
+        stages = parser.parse(["-mg", "*", "-tf", "--sans", "calls", "-mg", "*"])
         rel = stages[0].args.relationship
         assert rel.is_negative is True
 
     def test_pipeline_stage_parsing(self, relationship_project):
-        """Verify pipeline parser correctly parses relationship args."""
+        """Verify parser correctly parses result-first relationship args."""
         parser = PipelineParser()
-        stages = parser.parse(["-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"])
+        stages = parser.parse(["-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc"])
         assert len(stages) == 1
         stage = stages[0]
         args = stage.args
-        assert args.pattern == "BaseClass"
+        assert args.pattern == "*"
         assert args.relationship is not None
-        assert args.relationship.object_pattern == "*"
+        assert args.relationship.filter_pattern == "BaseClass"
         assert args.relationship.is_negative is False
+
+    def test_inverse_inherited_by(self, relationship_project):
+        """via -mg '*' -tc -V inherited-by -mg 'ChildClass' -tc → returns parents."""
+        project_dir, db_path = relationship_project
+        records = self._execute_pipeline(
+            db_path, project_dir,
+            ["-mg", "*", "-tc", "-V", "inherited-by", "-mg", "ChildClass", "-tc"],
+        )
+        names = [r.symbol_name for r in records]
+        assert "BaseClass" in names, f"Expected BaseClass in {names}"
 
 
 class TestRelationshipResolutionOrder:
-    """Regression tests: relationship resolution must prefer definitions over imports.
-
-    When files are indexed in non-alphabetical order, import symbols may be
-    created before definition symbols. resolve_pending_relationships must
-    resolve to the definition (class/function/method) rather than the import.
-    """
+    """Regression tests: relationship resolution must prefer definitions over imports."""
 
     @pytest.fixture
     def reverse_indexed_project(self, tmp_path):
-        """Create project indexed in REVERSE order (fileB before fileA)."""
         project_dir = tmp_path / "reverse"
         project_dir.mkdir()
 
@@ -191,23 +177,17 @@ def func_b():
         with DatabaseStore(str(db_path), str(project_dir)) as db:
             db.initialize_schema()
             svc = IndexingService(db, registry)
-            # Index in REVERSE order to trigger the bug
             files = sorted(project_dir.glob("*.py"), reverse=True)
             for f in files:
                 fi = DiscoveredFile(
-                    path=str(f),
-                    size_bytes=f.stat().st_size,
-                    mtime=f.stat().st_mtime,
-                    is_parseable=True,
-                    is_oversized=False,
-                )
+                    path=str(f), size_bytes=f.stat().st_size,
+                    mtime=f.stat().st_mtime, is_parseable=True, is_oversized=False)
                 svc._index_file(fi)
             db.resolve_pending_relationships()
 
         return project_dir, db_path
 
     def test_relationships_resolve_to_definitions(self, reverse_indexed_project):
-        """Relationships should target definition symbols, not import symbols."""
         project_dir, db_path = reverse_indexed_project
         import sqlite3
         conn = sqlite3.connect(str(db_path))
@@ -221,16 +201,16 @@ def func_b():
         rows = cursor.fetchall()
         conn.close()
 
-        assert len(rows) > 0, "Should have inheritance relationships"
+        assert len(rows) > 0
         for source_name, source_type, target_name, target_type in rows:
             assert target_type == 'class', \
                 f"Inheritance target {target_name} should be type 'class', got '{target_type}'"
 
     def test_forward_inheritance_works_with_reverse_order(self, reverse_indexed_project):
-        """Forward inheritance query works regardless of indexing order."""
+        """Result-first query works regardless of indexing order."""
         project_dir, db_path = reverse_indexed_project
         parser = PipelineParser()
-        stages = parser.parse(["-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"])
+        stages = parser.parse(["-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc"])
         with DatabaseStore(str(db_path), str(project_dir)) as db:
             executor = PipelineExecutor(db)
             result = executor.execute(stages)
@@ -239,20 +219,15 @@ def func_b():
         assert "ChildClass" in names, f"Expected ChildClass in {names}"
 
     def test_subprocess_works_with_reverse_order(self, reverse_indexed_project):
-        """CLI subprocess works regardless of indexing order."""
         project_dir, db_path = reverse_indexed_project
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"],
-            cwd=str(project_dir),
-            capture_output=True,
-            text=True,
-        )
+            [sys.executable, "-m", "via", "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc"],
+            cwd=str(project_dir), capture_output=True, text=True)
         assert result.returncode == 0, f"stderr: {result.stderr}"
         assert "ChildClass" in result.stdout, \
             f"Expected ChildClass in stdout=[{result.stdout}] stderr=[{result.stderr}]"
 
     def test_object_type_filter_works_with_reverse_order(self, reverse_indexed_project):
-        """DB query with object_type='class' filter works after resolution fix."""
         project_dir, db_path = reverse_indexed_project
         with DatabaseStore(str(db_path), str(project_dir)) as db:
             results = list(db.query_relationships(
@@ -262,4 +237,4 @@ def func_b():
                 invert=False,
             ))
             names = [r.symbol_name for r in results]
-            assert "ChildClass" in names, f"Expected ChildClass with object_type=class: {names}"
+            assert "ChildClass" in names

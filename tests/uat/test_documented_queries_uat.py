@@ -363,31 +363,31 @@ class TestSchemaEx05_FileBasenamGlobFilepaths:
 # ── Schema Ex06: Subclasses of a base class ───────────────────────────────────
 
 class TestSchemaEx06_SubclassesOf:
-    """["-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc"]
-       → 'Find all subclasses of a base class (anchor=base, result=subclasses)'
+    """["-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc"]
+       → 'Find all classes that inherit from BaseClass (result-first)'
 
     Expected: returns MyClass, AnotherService (same file) and ChildModel (cross-file).
     BaseClass itself must not appear in results.
     """
 
     def test_exit_0(self, proj):
-        assert _q(proj, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc").returncode == 0
+        assert _q(proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc").returncode == 0
 
     def test_direct_subclass_same_file(self, proj):
-        r = _q(proj, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
+        r = _q(proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc")
         assert "MyClass" in r.stdout
         assert "AnotherService" in r.stdout
 
     def test_cross_file_subclass_present(self, proj):
-        r = _q(proj, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
+        r = _q(proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc")
         assert "ChildModel" in r.stdout
 
     def test_base_class_not_in_results(self, proj):
-        r = _q(proj, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
+        r = _q(proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc")
         assert "BaseClass" not in r.stdout
 
     def test_only_classes_returned(self, proj):
-        data = _json(proj, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc", "-oJ")
+        data = _json(proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc", "-oJ")
         assert data
         for item in data:
             assert item["symbol_type"] == "class"
@@ -426,14 +426,14 @@ class TestSchemaEx08_CallersOf:
     """
 
     def test_exit_0(self, proj):
-        assert _q(proj, "-mg", "connect", "-tf", "-V", "calls", "-mg", "*").returncode == 0
+        assert _q(proj, "-mg", "*", "-tf", "-V", "calls", "-mg", "connect", "-tf").returncode == 0
 
     def test_caller_present(self, proj):
-        r = _q(proj, "-mg", "connect", "-tf", "-V", "calls", "-mg", "*")
+        r = _q(proj, "-mg", "*", "-tf", "-V", "calls", "-mg", "connect", "-tf")
         assert "run_connection" in r.stdout
 
     def test_callee_not_its_own_caller(self, proj):
-        data = _json(proj, "-mg", "connect", "-tf", "-V", "calls", "-mg", "*", "-oJ")
+        data = _json(proj, "-mg", "*", "-tf", "-V", "calls", "-mg", "connect", "-tf", "-oJ")
         names = {item["symbol_name"] for item in data}
         assert "connect" not in names
 
@@ -451,16 +451,16 @@ class TestSchemaEx09_WhatMethodCalls:
     """
 
     def test_exit_0(self, proj):
-        assert _q(proj, "-mg", "helper_func", "-tf", "--via", "calls", "-mg", "*").returncode == 0
+        assert _q(proj, "-mg", "*", "-tf", "--via", "calls", "-mg", "helper_func", "-tf").returncode == 0
 
     def test_callee_present(self, proj):
         """run() calls helper_func() → run must appear as a caller."""
-        r = _q(proj, "-mg", "helper_func", "-tf", "--via", "calls", "-mg", "*")
+        r = _q(proj, "-mg", "*", "--via", "calls", "-mg", "helper_func", "-tf")
         assert "run" in r.stdout
 
     def test_class_anchor_returns_callees(self, proj):
-        """Class-level --via calls: executor expands class anchor to include its methods."""
-        r = _q(proj, "-mg", "helper_func", "-tf", "--via", "calls", "-mg", "MyClass", "-tc")
+        """Class-level result with --via calls: executor expands class to include its methods."""
+        r = _q(proj, "-mg", "MyClass", "-tc", "--via", "calls", "-mg", "helper_func", "-tf")
         assert r.returncode == 0
         assert "run" in r.stdout
 
@@ -533,14 +533,14 @@ class TestSchemaEx12_ImportersOf:
     """
 
     def test_exit_0(self, proj):
-        assert _q(proj, "-mg", "logging", "-V", "imports", "-mg", "*").returncode == 0
+        assert _q(proj, "-mg", "*", "-V", "imports", "-mg", "logging").returncode == 0
 
     def test_importer_file_present(self, proj):
-        r = _q(proj, "-mg", "logging", "-V", "imports", "-mg", "*")
+        r = _q(proj, "-mg", "*", "-V", "imports", "-mg", "logging")
         assert "my_service" in r.stdout
 
     def test_non_importer_absent(self, proj):
-        r = _q(proj, "-mg", "logging", "-V", "imports", "-mg", "*")
+        r = _q(proj, "-mg", "*", "-V", "imports", "-mg", "logging")
         assert "child_model" not in r.stdout
 
 
@@ -583,11 +583,11 @@ class TestSkillMorpheus_WhoReferences:
     """
 
     def test_exit_0(self, proj):
-        assert _q(proj, "-mg", "connect", "-V", "references", "-mg", "*").returncode == 0
+        assert _q(proj, "-mg", "*", "-V", "references", "-mg", "connect").returncode == 0
 
     def test_reference_source_present(self, proj):
         """run_connection() uses 'connect' in its body → must appear as a referencer."""
-        r = _q(proj, "-mg", "connect", "-V", "references", "-mg", "*")
+        r = _q(proj, "-mg", "*", "-V", "references", "-mg", "connect")
         assert "run_connection" in r.stdout
 
 
@@ -624,16 +624,16 @@ class TestSkillTrin_SubclassQuery:
     """
 
     def test_exit_0(self, proj):
-        assert _q(proj, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc").returncode == 0
+        assert _q(proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc").returncode == 0
 
     def test_returns_subclasses(self, proj):
-        r = _q(proj, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
+        r = _q(proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc")
         assert "MyClass" in r.stdout
         assert "AnotherService" in r.stdout
         assert "ChildModel" in r.stdout
 
     def test_base_class_not_in_results(self, proj):
-        r = _q(proj, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
+        r = _q(proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc")
         assert "BaseClass" not in r.stdout
 
 
@@ -647,10 +647,10 @@ class TestSkillNeoMorpheus_WhoImports:
     """
 
     def test_exit_0(self, proj):
-        assert _q(proj, "-mg", "os", "-V", "imports", "-mg", "*").returncode == 0
+        assert _q(proj, "-mg", "*", "-V", "imports", "-mg", "os").returncode == 0
 
     def test_importer_present(self, proj):
-        r = _q(proj, "-mg", "os", "-V", "imports", "-mg", "*")
+        r = _q(proj, "-mg", "*", "-V", "imports", "-mg", "os")
         assert "my_service" in r.stdout
 
 
@@ -698,31 +698,31 @@ class TestStory3_ExpandedVrTracking:
 
     def test_class_base_is_reference(self, proj):
         """class AnnotatedClass(BaseClass) → AnnotatedClass references BaseClass."""
-        r = _q(proj, "-mg", "BaseClass", "--via", "references", "-mg", "AnnotatedClass", "-tc")
+        r = _q(proj, "-mg", "AnnotatedClass", "-tc", "--via", "references", "-mg", "BaseClass")
         assert r.returncode == 0
         assert "AnnotatedClass" in r.stdout
 
     def test_decorator_is_reference(self, proj):
         """@my_decorator on decorated_func → decorated_func references my_decorator."""
-        r = _q(proj, "-mg", "my_decorator", "--via", "references", "-mg", "decorated_func", "-tf")
+        r = _q(proj, "-mg", "decorated_func", "-tf", "--via", "references", "-mg", "my_decorator")
         assert r.returncode == 0
         assert "decorated_func" in r.stdout
 
     def test_function_return_annotation_is_reference(self, proj):
         """decorated_func() -> BaseClass → decorated_func references BaseClass."""
-        r = _q(proj, "-mg", "BaseClass", "--via", "references", "-mg", "decorated_func", "-tf")
+        r = _q(proj, "-mg", "decorated_func", "-tf", "--via", "references", "-mg", "BaseClass")
         assert r.returncode == 0
         assert "decorated_func" in r.stdout
 
     def test_method_param_annotation_is_reference(self, proj):
         """process(self, svc: BaseClass) → process method references BaseClass."""
-        r = _q(proj, "-mg", "BaseClass", "--via", "references", "-mg", "process", "-tm")
+        r = _q(proj, "-mg", "process", "-tm", "--via", "references", "-mg", "BaseClass")
         assert r.returncode == 0
         assert "process" in r.stdout
 
     def test_class_body_annotation_is_reference(self, proj):
         """data: MyClass in AnnotatedClass body → AnnotatedClass references MyClass."""
-        r = _q(proj, "-mg", "MyClass", "--via", "references", "-mg", "AnnotatedClass", "-tc")
+        r = _q(proj, "-mg", "AnnotatedClass", "-tc", "--via", "references", "-mg", "MyClass")
         assert r.returncode == 0
         assert "AnnotatedClass" in r.stdout
 
@@ -737,50 +737,50 @@ class TestStory1_Vhas:
     """
 
     def test_file_has_classes_by_filename(self, proj):
-        """via -mg 'my_service.py' -tN -V declares -tc → BaseClass, MyClass, AnotherService."""
-        r = _q(proj, "-mg", "my_service.py", "-tN", "-V", "declares", "-tc")
+        """via -mg '*' -tc -V declares -mg 'my_service.py' -tN → BaseClass, MyClass, AnotherService."""
+        r = _q(proj, "-mg", "*", "-tc", "-V", "declares", "-mg", "my_service.py", "-tN")
         assert r.returncode == 0
         assert "BaseClass" in r.stdout
         assert "MyClass" in r.stdout
         assert "AnotherService" in r.stdout
 
     def test_file_has_functions_by_filename(self, proj):
-        """via -mg 'my_service.py' -tN -V declares -tf → connect, helper_func."""
-        r = _q(proj, "-mg", "my_service.py", "-tN", "-V", "declares", "-tf")
+        """via -mg '*' -tf -V declares -mg 'my_service.py' -tN → connect, helper_func."""
+        r = _q(proj, "-mg", "*", "-tf", "-V", "declares", "-mg", "my_service.py", "-tN")
         assert r.returncode == 0
         assert "connect" in r.stdout
         assert "helper_func" in r.stdout
 
     def test_file_has_classes_by_filepath(self, proj):
-        """via -mg '*my_service*' -tF -V declares -tc → classes in my_service.py."""
-        r = _q(proj, "-mg", "*my_service*", "-tF", "-V", "declares", "-tc")
+        """via -mg '*' -tc -V declares -mg '*my_service*' -tF → classes in my_service.py."""
+        r = _q(proj, "-mg", "*", "-tc", "-V", "declares", "-mg", "*my_service*", "-tF")
         assert r.returncode == 0
         assert "BaseClass" in r.stdout
         assert "MyClass" in r.stdout
 
     def test_class_has_methods(self, proj):
-        """via -mg 'MyClass' -tc -V declares -tm → get_name, get_value, run."""
-        r = _q(proj, "-mg", "MyClass", "-tc", "-V", "declares", "-tm")
+        """via -mg '*' -tm -V declares -mg 'MyClass' -tc → get_name, get_value, run."""
+        r = _q(proj, "-mg", "*", "-tm", "-V", "declares", "-mg", "MyClass", "-tc")
         assert r.returncode == 0
         assert "get_name" in r.stdout
         assert "get_value" in r.stdout
         assert "run" in r.stdout
 
     def test_class_has_methods_does_not_include_other_class(self, proj):
-        """via -mg 'BaseClass' -tc -V declares -tm → only base_method, not get_name."""
-        r = _q(proj, "-mg", "BaseClass", "-tc", "-V", "declares", "-tm")
+        """via -mg '*' -tm -V declares -mg 'BaseClass' -tc → only base_method, not get_name."""
+        r = _q(proj, "-mg", "*", "-tm", "-V", "declares", "-mg", "BaseClass", "-tc")
         assert r.returncode == 0
         assert "base_method" in r.stdout
         assert "get_name" not in r.stdout
 
     def test_sans_declares_works(self, proj):
-        """via ... --sans declares → succeeds (returns files with no class declarations)."""
-        r = _q(proj, "-mg", "my_service.py", "-tN", "--sans", "declares", "-tc")
+        """via ... --sans declared-in → succeeds (returns filenames with no class declarations)."""
+        r = _q(proj, "-mg", "my_service.py", "-tN", "--sans", "declared-in", "-mg", "*", "-tc")
         assert r.returncode == 0
 
     def test_invalid_container_type_raises_error(self, proj):
-        """via -mg 'run' -tm -V declares -tc → error: method is not a container type."""
-        r = _q(proj, "-mg", "run", "-tm", "-V", "declares", "-tc")
+        """via -mg '*' -tc -V declares -mg 'run' -tm → error: method is not a container type."""
+        r = _q(proj, "-mg", "*", "-tc", "-V", "declares", "-mg", "run", "-tm")
         assert r.returncode != 0
         err = r.stderr + r.stdout
         assert "not a valid container" in err or "container" in err.lower()
@@ -872,8 +872,8 @@ class TestViaFlagUnification:
 
     def test_V_inherits_from_returns_subclasses(self, proj):
         """-V inherits-from returns subclasses of BaseClass."""
-        r_V = _q(proj, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
-        r_via = _q(proj, "-mg", "BaseClass", "-tc", "--via", "inherits-from", "-mg", "*", "-tc")
+        r_V = _q(proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc")
+        r_via = _q(proj, "-mg", "*", "-tc", "--via", "inherits-from", "-mg", "BaseClass", "-tc")
         assert r_V.returncode == 0
         assert r_via.returncode == 0
         # Both should contain the same subclasses
@@ -884,26 +884,26 @@ class TestViaFlagUnification:
 
     def test_V_inherits_from_json_matches_via_json(self, proj):
         """-V inherits-from JSON output equals --via inherits-from JSON output."""
-        V_data = _json(proj, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc", "-oJ")
-        via_data = _json(proj, "-mg", "BaseClass", "-tc", "--via", "inherits-from", "-mg", "*", "-tc", "-oJ")
+        V_data = _json(proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc", "-oJ")
+        via_data = _json(proj, "-mg", "*", "-tc", "--via", "inherits-from", "-mg", "BaseClass", "-tc", "-oJ")
         V_names = sorted(item["symbol_name"] for item in V_data)
         via_names = sorted(item["symbol_name"] for item in via_data)
         assert V_names == via_names, f"Mismatch: -V={V_names} vs --via={via_names}"
 
     def test_V_calls_finds_callers(self, proj):
         """-V calls finds callers of connect."""
-        r = _q(proj, "-mg", "connect", "-tf", "-V", "calls", "-mg", "*", "-tf")
+        r = _q(proj, "-mg", "*", "-tf", "-V", "calls", "-mg", "connect", "-tf")
         assert r.returncode == 0
         assert "run_connection" in r.stdout
 
     def test_V_imports_finds_importers(self, proj):
         """-V imports finds importers of my_service."""
-        r = _q(proj, "-mg", "my_service", "-V", "imports", "-mg", "*")
+        r = _q(proj, "-mg", "*", "-V", "imports", "-mg", "my_service")
         assert r.returncode == 0
 
     def test_V_declares_finds_members(self, proj):
         """-V declares finds declared members."""
-        r = _q(proj, "-mg", "BaseClass", "-tc", "-V", "declares", "-mg", "*", "-tm")
+        r = _q(proj, "-mg", "*", "-tm", "-V", "declares", "-mg", "BaseClass", "-tc")
         assert r.returncode == 0
         assert "base_method" in r.stdout
 
@@ -1057,14 +1057,14 @@ class TestS10_2_StaleFlag:
 
     def test_stale_filter_returns_only_stale_results(self, stale_proj):
         """--stale returns StaleChild (old) but not FreshChild (new)."""
-        r = _q(stale_proj, "-mg", "StaleBase", "-tc", "-V", "inherits-from", "-mg", "*", "-tc", "--stale")
+        r = _q(stale_proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "StaleBase", "-tc", "--stale")
         assert r.returncode == 0
         assert "StaleChild" in r.stdout
         assert "FreshChild" not in r.stdout
 
     def test_without_stale_returns_all_results(self, stale_proj):
         """Without --stale, both StaleChild and FreshChild are returned."""
-        r = _q(stale_proj, "-mg", "StaleBase", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
+        r = _q(stale_proj, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "StaleBase", "-tc")
         assert r.returncode == 0
         assert "StaleChild" in r.stdout
         assert "FreshChild" in r.stdout
@@ -1072,7 +1072,7 @@ class TestS10_2_StaleFlag:
     def test_stale_with_no_stale_results_excludes_fresh(self, stale_proj):
         """FreshChild (T+200) is newer than StaleBase anchor (T+100): --stale excludes it."""
         # Filter result side to FreshChild only — it's newer than anchor so not stale
-        r = _q(stale_proj, "-mg", "StaleBase", "-tc", "-V", "inherits-from", "-mg", "FreshChild", "-tc", "--stale")
+        r = _q(stale_proj, "-mg", "FreshChild", "-tc", "-V", "inherits-from", "-mg", "StaleBase", "-tc", "--stale")
         assert r.returncode == 0
         # FreshChild mtime (T+200) > StaleBase mtime (T+100) → not stale → excluded
         assert "FreshChild" not in r.stdout

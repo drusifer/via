@@ -285,17 +285,13 @@ class TestStatsStage:
 
 
 class TestViaFlag:
-    """Tests for --via / -V relationship type flags (Sprint 13).
-
-    --via TYPE and -V TYPE are the canonical ways to specify relationship type.
-    Detected pre-parse in _find_relationship_split().
-    """
+    """Tests for --via / -V relationship type flags (result-first semantics)."""
 
     def test_via_inherits_from(self):
         """--via inherits-from produces the correct relationship type."""
         parser = PipelineParser()
-        argv_V = ['-mg', 'Base', '-tc', '-V', 'inherits-from', '-mg', '*', '-tc']
-        argv_via = ['-mg', 'Base', '-tc', '--via', 'inherits-from', '-mg', '*', '-tc']
+        argv_V = ['-mg', '*', '-tc', '-V', 'inherits-from', '-mg', 'Base', '-tc']
+        argv_via = ['-mg', '*', '-tc', '--via', 'inherits-from', '-mg', 'Base', '-tc']
 
         stage_V = parser._parse_stage(argv_V)
         stage_via = parser._parse_stage(argv_via)
@@ -304,100 +300,89 @@ class TestViaFlag:
         assert stage_via.args.relationship.relationship_type.value == 'inherits-from'
 
     def test_V_calls(self):
-        """-V calls works correctly."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'MyClass', '-tc', '-V', 'calls', '-mg', '*', '-tm'])
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'calls', '-mg', 'func', '-tm'])
         assert stage.args.relationship is not None
         assert stage.args.relationship.relationship_type.value == 'calls'
 
     def test_V_imports(self):
-        """-V imports works correctly."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'my_module', '-V', 'imports', '-mg', '*'])
+        stage = parser._parse_stage(['-mg', '*', '-V', 'imports', '-mg', 'os'])
         assert stage.args.relationship.relationship_type.value == 'imports'
 
     def test_V_references(self):
-        """-V references works correctly."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'MyClass', '-tc', '-V', 'references', '-mg', '*', '-tm'])
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'references', '-mg', 'X', '-tm'])
         assert stage.args.relationship.relationship_type.value == 'references'
 
     def test_V_declares(self):
-        """-V declares works correctly."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'MyClass', '-tc', '-V', 'declares', '-mg', '*', '-tm'])
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'declares', '-mg', 'utils.py', '-tF'])
         assert stage.args.relationship.relationship_type.value == 'declares'
 
     def test_V_all_five_types(self):
-        """All five valid relationship types parse without error via -V."""
+        """All five valid forward relationship types parse without error via -V."""
         parser = PipelineParser()
         valid_types = ['inherits-from', 'calls', 'imports', 'references', 'declares']
         for rt in valid_types:
-            stage = parser._parse_stage(['-mg', 'Anchor', '-tc', '-V', rt, '-mg', '*'])
+            stage = parser._parse_stage(['-mg', '*', '-tc', '-V', rt, '-mg', 'Anchor'])
             assert stage.args.relationship.relationship_type.value == rt
 
     def test_V_invalid_value_raises(self):
-        """--via with unknown value raises PipelineParseError."""
         parser = PipelineParser()
         with pytest.raises(PipelineParseError):
-            parser._parse_stage(['-mg', 'X', '-tc', '--via', 'bad-type', '-mg', '*'])
+            parser._parse_stage(['-mg', '*', '-tc', '--via', 'bad-type', '-mg', '*'])
 
     def test_V_error_message_lists_valid_types(self):
-        """Error message for bad -V type includes 'Valid:'."""
         parser = PipelineParser()
         with pytest.raises(PipelineParseError, match="Valid:"):
-            parser._parse_stage(['-mg', 'X', '-V', 'bad-type', '-mg', '*'])
+            parser._parse_stage(['-mg', '*', '-V', 'bad-type', '-mg', '*'])
 
-    def test_V_with_newerthan_on_subject(self):
-        """-V combined with --newerthan on subject side."""
+    def test_V_with_newerthan_on_result(self):
         parser = PipelineParser()
         stage = parser._parse_stage([
             '-mg', '*', '-tc', '--newerthan', '1h',
             '-V', 'declares',
-            '-mg', '*', '-tm', '-n', '0',
+            '-mg', 'utils.py', '-tF', '-n', '0',
         ])
         assert stage.args.relationship is not None
         assert stage.args.relationship.relationship_type.value == 'declares'
         assert stage.args.newerthan == '1h'
 
-    def test_V_object_pattern_and_type(self):
-        """-V preserves object pattern and type filters."""
+    def test_V_filter_pattern_and_type(self):
+        """-V preserves filter pattern and type filters."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'MyMod', '-V', 'imports', '-mg', 'test_*', '-tm'])
+        stage = parser._parse_stage(['-mg', '*', '-V', 'imports', '-mg', 'test_*', '-tm'])
         rel = stage.args.relationship
-        assert rel.object_pattern == 'test_*'
-        assert 'method' in rel.object_types
+        assert rel.filter_pattern == 'test_*'
+        assert 'method' in rel.filter_types
 
 
 class TestStaleFlag:
-    """S10-2d: --stale flag on the object/result side of a relationship query."""
+    """--stale flag on the filter side of a relationship query."""
 
     def test_stale_sets_result_stale_true(self):
-        """--stale on result stage sets result_stale=True on RelationshipFilter."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'Base', '-tc', '-V', 'inherits-from', '-mg', '*', '-tc', '--stale'])
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'inherits-from', '-mg', 'Base', '-tc', '--stale'])
         assert stage.args.relationship.result_stale is True
 
     def test_stale_default_is_false(self):
-        """Without --stale, result_stale defaults to False."""
         parser = PipelineParser()
-        stage = parser._parse_stage(['-mg', 'Base', '-tc', '-V', 'inherits-from', '-mg', '*', '-tc'])
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'inherits-from', '-mg', 'Base', '-tc'])
         assert stage.args.relationship.result_stale is False
 
     def test_stale_with_via_flag(self):
-        """--stale works with --via specifier."""
         parser = PipelineParser()
         stage = parser._parse_stage([
-            '-mg', 'Base', '-tc', '--via', 'inherits-from', '-mg', '*', '-tc', '--stale'
+            '-mg', '*', '-tc', '--via', 'inherits-from', '-mg', 'Base', '-tc', '--stale'
         ])
         assert stage.args.relationship.result_stale is True
         assert stage.args.relationship.relationship_type.value == 'inherits-from'
 
-    def test_stale_with_newerthan_on_anchor(self):
-        """--stale can combine with --newerthan on the anchor side."""
+    def test_stale_with_newerthan_on_result(self):
         parser = PipelineParser()
         stage = parser._parse_stage([
-            '-mg', '*', '-tc', '--newerthan', '1h', '-V', 'inherits-from', '-mg', '*', '-tc', '--stale'
+            '-mg', '*', '-tc', '--newerthan', '1h', '-V', 'inherits-from', '-mg', 'Base', '-tc', '--stale'
         ])
         assert stage.args.relationship.result_stale is True
         assert stage.args.newerthan == '1h'

@@ -39,17 +39,30 @@ def build_tool_schema() -> dict:
         f"Type filters: {type_help}\n"
         f"Output formats: {output_help}\n"
         f"Format modifiers: {format_help}\n\n"
-        "Relationship query syntax:\n"
-        "  --via/-V REL  Positive: return subjects WITH the relationship to the object.\n"
-        "  --sans/-S REL Negative: return subjects with NO such relationship.\n"
+        "Command structure:\n"
+        "  via <match stage> [--via|--sans REL <relationship stage>] [options]\n"
+        "  Use only one match flag (-mg, -mr, or -ms) per stage; type flags may be combined.\n"
+        "  Use uppercase -tH for markdown headers; lowercase -th is not a valid flag.\n\n"
+        "Common tasks:\n"
+        "  Find symbol: [\"-mg\", \"*Service*\", \"-tc\"]\n"
+        "  Read symbol body: [\"--canned\", \"symbol-body\", \"--args\", \"symbol=parse_args\"]\n"
+        "  Find callers: [\"--canned\", \"callers\", \"--args\", \"symbol=parse_args\"]\n"
+        "  Docs headers: [\"--canned\", \"docs-headers\", \"--args\", \"pattern=*API*\"]\n"
+        "  Regex naming search: [\"-mr\", \"^get_\", \"-tm\"]\n"
+        "  Multi-type search: [\"-mg\", \"parse*\", \"-tf\", \"-tm\"]\n"
+        "  Paged broad scan: [\"--canned\", \"paged-scan\", \"--args\", \"pattern=*,slice=0:20\", \"-tc\"]\n\n"
+        "Advanced relationship query syntax:\n"
+        "  Prefer --canned for common caller/subclass tasks.\n"
+        "  Current runtime positive lookups use the known anchor before --via and wildcard result filter after it.\n"
         "  REL is one of: inherits-from, calls, imports, references, declares\n\n"
-        "  KNOWN anchor goes on the LEFT (before --via/--sans). Wildcard * goes on the RIGHT.\n"
-        "  --via: returns things that relate TO the anchor (callers, subclasses, importers).\n"
-        "    Example: find all subclasses of Renderer\n"
+        "  Example: find all subclasses of Renderer\n"
         "      [\"-mg\", \"Renderer\", \"-tc\", \"--via\", \"inherits-from\", \"-mg\", \"*\", \"-tc\"]\n"
-        "  --sans: returns subjects with no matching relationship.\n"
-        "    Example: find functions that call nothing\n"
+        "  Example: find functions that call connect\n"
+        "      [\"-mg\", \"connect\", \"-tf\", \"--via\", \"calls\", \"-mg\", \"*\", \"-tf\"]\n"
+        "  Example: find functions that call nothing\n"
         "      [\"-mg\", \"*\", \"-tf\", \"--sans\", \"calls\", \"-mg\", \"*\", \"-tf\"]\n\n"
+        "  Note: --via declares filters containers that declare matching symbols. It does not provide\n"
+        "  a supported inverse shortcut for returning all symbols declared in a file.\n\n"
         "Match-stage filters (add to any match stage):\n"
         "  --lang LANG    Filter by language: py/python, js/javascript, ts/typescript, md/markdown\n"
         "  --subtype TYPE Filter by symbol subtype (case-sensitive; e.g. interface, enum, arrow_function).\n"
@@ -73,55 +86,43 @@ def build_tool_schema() -> dict:
 
     examples = [
         {
-            "description": "Find all classes matching a glob pattern",
+            "description": "Find a class by glob pattern",
             "args": ["-mg", "*Service*", "-tc"],
         },
         {
-            "description": "Find functions matching a name glob pattern",
-            "args": ["-mg", "*parse*", "-tf"],
+            "description": "Read a function, method, or class body",
+            "args": ["--canned", "symbol-body", "--args", "symbol=parse_args"],
         },
         {
-            "description": "Find methods by regex, JSON output",
-            "args": ["-mr", "^get_", "-tm", "-oJ"],
+            "description": "Find callers of a function",
+            "args": ["--canned", "callers", "--args", "symbol=connect"],
         },
         {
-            "description": "Show all imports in the codebase",
-            "args": ["-mg", "*", "-ti"],
+            "description": "Find markdown headers matching a pattern (uppercase -tH)",
+            "args": ["--canned", "docs-headers", "--args", "pattern=*API*"],
         },
         {
-            "description": "Find files by basename pattern (-mg matches filename, not full path)",
-            "args": ["-mg", "*service*", "-tF"],
+            "description": "Find methods by regex name search",
+            "args": ["-mr", "^get_", "-tm"],
         },
         {
-            "description": "Find all subclasses of a base class (anchor=base, result=subclasses)",
+            "description": "Find functions or methods matching a glob pattern",
+            "args": ["-mg", "parse*", "-tf", "-tm"],
+        },
+        {
+            "description": "Page through a broad class scan",
+            "args": ["--canned", "paged-scan", "--args", "pattern=*,slice=0:20", "-tc"],
+        },
+        {
+            "description": "Find all subclasses of a base class (advanced relationship)",
             "args": ["-mg", "BaseClass", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"],
         },
         {
-            "description": "Find what a class inherits FROM (swap anchor and result sides)",
-            "args": ["-mg", "MyClass", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"],
+            "description": "Find methods that call a function (advanced relationship)",
+            "args": ["-mg", "connect", "--via", "calls", "-mg", "*", "-tm"],
         },
         {
-            "description": "Find callers of a function (anchor=func, result=callers)",
-            "args": ["-mg", "connect", "-tf", "--via", "calls", "-mg", "*"],
-        },
-        {
-            "description": "Find what a method calls (anchor on method, result=callees)",
-            "args": ["-mg", "my_method", "-tm", "--via", "calls", "-mg", "*"],
-        },
-        {
-            "description": "Find all global variables as JSON",
-            "args": ["-mg", "*", "-tg", "-oJ"],
-        },
-        {
-            "description": "Find markdown headers matching a pattern",
-            "args": ["-mg", "*API*", "-tH"],
-        },
-        {
-            "description": "Find what imports a module (anchor=module, result=importers)",
-            "args": ["-mg", "logging", "--via", "imports", "-mg", "*"],
-        },
-        {
-            "description": "Find classes that inherit from nothing (--sans negation)",
+            "description": "Find classes that inherit from nothing (advanced --sans negation)",
             "args": ["-mg", "*", "-tc", "--sans", "inherits-from", "-mg", "*", "-tc"],
         },
     ]

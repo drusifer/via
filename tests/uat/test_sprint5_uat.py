@@ -268,7 +268,7 @@ class TestUATInheritance:
 
     def test_uat_1_1_find_children_of_base_class(self, uat_project):
         """UAT-1.1: Find all children of a known base class."""
-        result = run_via(uat_project, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
+        result = run_via(uat_project, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         output = result.stdout
@@ -279,13 +279,13 @@ class TestUATInheritance:
 
     def test_uat_1_2_find_parent_of_class_inverted(self, uat_project):
         """UAT-1.2: Find the parent of a specific class (--sans query)."""
-        result = run_via(uat_project, "-mg", "ChildClass", "-tc", "--sans", "inherits-from", "-mg", "*", "-tc")
+        result = run_via(uat_project, "-mg", "ChildClass", "-tc", "--sans", "inherits-from", "-mg", "*")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
 
     def test_uat_1_3_short_form_flags(self, uat_project):
         """UAT-1.3: Find children using short-form flags (-V inherits-from)."""
-        result = run_via(uat_project, "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
+        result = run_via(uat_project, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         # Same expectation as UAT-1.1
@@ -310,7 +310,7 @@ class TestUATInheritance:
             all_classes = [row[0] for row in cursor.fetchall()]
 
         # Test CLI - use simpler command matching integration tests
-        result = run_via(uat_project, "-mg", "ChildClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc", "-oL")
+        result = run_via(uat_project, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "ChildClass", "-tc", "-oL")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         output = result.stdout + result.stderr  # Check both
@@ -321,7 +321,7 @@ class TestUATInheritance:
 
     def test_uat_1_5_no_results_for_final_class(self, uat_project):
         """UAT-1.5: No results for class with no children."""
-        result = run_via(uat_project, "-mg", "FinalClass", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
+        result = run_via(uat_project, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "FinalClass", "-tc")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         output = result.stdout
@@ -332,7 +332,7 @@ class TestUATInheritance:
 
     def test_uat_1_6_inheritance_with_glob_pattern(self, uat_project):
         """UAT-1.6: Find children of classes matching glob pattern."""
-        result = run_via(uat_project, "-mg", "Base*", "-tc", "-V", "inherits-from", "-mg", "*", "-tc")
+        result = run_via(uat_project, "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "Base*", "-tc")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         output = result.stdout
@@ -367,7 +367,7 @@ class TestUATImports:
         # Test CLI - subject side is "typing" (the module being imported from),
         # object side is "*" (the import symbols). No type filter on subject since
         # "typing" is stored as a module, not an import.
-        result = run_via(uat_project, "-mg", "typing", "-V", "imports", "-mg", "*", "-ti", "-oL")
+        result = run_via(uat_project, "-mg", "*", "-ti", "-V", "imports", "-mg", "typing", "-oL")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         output = result.stdout + result.stderr
@@ -377,19 +377,19 @@ class TestUATImports:
 
     def test_uat_2_2_find_what_file_imports_sans(self, uat_project):
         """UAT-2.2: Find what modules are imported (--sans query)."""
-        result = run_via(uat_project, "-mg", "os", "-ti", "--sans", "imports", "-mg", "*")
+        result = run_via(uat_project, "-mg", "*", "-ti", "--sans", "imports", "-mg", "os")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
 
     def test_uat_2_3_short_form_import_flags(self, uat_project):
         """UAT-2.3: Find importers with short-form flags (-V imports)."""
-        result = run_via(uat_project, "-mg", "os", "-ti", "-V", "imports", "-mg", "*", "-ti")
+        result = run_via(uat_project, "-mg", "*", "-ti", "-V", "imports", "-mg", "os")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
 
     def test_uat_2_4_import_with_dataclasses(self, uat_project):
         """UAT-2.4: Find files importing dataclasses."""
-        result = run_via(uat_project, "-mg", "dataclasses", "-ti", "-V", "imports", "-mg", "*", "-ti")
+        result = run_via(uat_project, "-mg", "*", "-ti", "-V", "imports", "-mg", "dataclasses")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
 
@@ -403,7 +403,7 @@ class TestUATCalls:
 
     def test_uat_3_1_find_callers_of_function(self, uat_project):
         """UAT-3.1: Find all callers of deprecated_func."""
-        result = run_via(uat_project, "-mg", "deprecated_func", "-tf", "-V", "calls", "-mg", "*", "-tf")
+        result = run_via(uat_project, "-mg", "*", "-tf", "-V", "calls", "-mg", "deprecated_func", "-tf")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         output = result.stdout
@@ -414,13 +414,13 @@ class TestUATCalls:
 
     def test_uat_3_2_find_what_function_calls_sans(self, uat_project):
         """UAT-3.2: Find what main_entrypoint calls (--sans query)."""
-        result = run_via(uat_project, "-mg", "main_entrypoint", "-tf", "--sans", "calls", "-mg", "*")
+        result = run_via(uat_project, "-mg", "*", "-tf", "--sans", "calls", "-mg", "main_entrypoint")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
 
     def test_uat_3_3_find_callers_of_method(self, uat_project):
         """UAT-3.3: Find callers of base_method."""
-        result = run_via(uat_project, "-mg", "base_method", "-tm", "-V", "calls", "-mg", "*", "-tm")
+        result = run_via(uat_project, "-mg", "*", "-tm", "-V", "calls", "-mg", "base_method", "-tm")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         output = result.stdout
@@ -444,7 +444,7 @@ class TestUATCalls:
             assert len(results) >= 1, f"Database missing callers of helper_util: {names}"
 
         # Test CLI
-        result = run_via(uat_project, "-mg", "helper_util", "-tf", "-V", "calls", "-mg", "*", "-tf", "-oL")
+        result = run_via(uat_project, "-mg", "*", "-tf", "-V", "calls", "-mg", "helper_util", "-tf", "-oL")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         output = result.stdout + result.stderr
@@ -454,7 +454,7 @@ class TestUATCalls:
 
     def test_uat_3_5_cross_file_calls(self, uat_project):
         """UAT-3.5: Cross-file calls (func_b calls func_a across files)."""
-        result = run_via(uat_project, "-mg", "func_a", "-tf", "-V", "calls", "-mg", "*", "-tf")
+        result = run_via(uat_project, "-mg", "*", "-tf", "-V", "calls", "-mg", "func_a", "-tf")
 
         assert result.returncode == 0, f"Command failed: {result.stderr}"
         output = result.stdout
@@ -499,7 +499,7 @@ class TestUATReferences:
             f"shared_logic or uses_constant should reference MY_CONSTANT, got: {db_names}"
 
         # Try CLI query
-        result = run_via(uat_project, "-mg", "MY_CONSTANT", "-tg", "-V", "references", "-mg", "*")
+        result = run_via(uat_project, "-mg", "*", "-V", "references", "-mg", "MY_CONSTANT", "-tg")
 
         if result.returncode == 0 and result.stdout.strip():
             output = result.stdout
@@ -529,7 +529,7 @@ class TestUATReferences:
             db_names = [r[0] for r in db_results]
 
         # Run CLI query
-        result = run_via(uat_project, "-mg", "CONFIG_KEY", "-tg", "-V", "references", "-mg", "*")
+        result = run_via(uat_project, "-mg", "*", "-V", "references", "-mg", "CONFIG_KEY", "-tg")
 
         if result.returncode == 0 and result.stdout.strip():
             # CLI works - validate results
@@ -605,7 +605,7 @@ class TestUATEdgeCases:
 
     def test_uat_5_3_ambiguous_resolution_multiple_functions(self, uat_project):
         """UAT-5.3: Ambiguous resolution (two functions named do_work)."""
-        result = run_via(uat_project, "-mg", "do_work", "-tf", "-V", "calls", "-mg", "*", "-tf")
+        result = run_via(uat_project, "-mg", "*", "-tf", "-V", "calls", "-mg", "do_work", "-tf")
 
         # Should handle gracefully - either return both or have defined behavior
         assert result.returncode == 0, f"Command failed: {result.stderr}"
@@ -613,7 +613,7 @@ class TestUATEdgeCases:
 
     def test_uat_5_4_no_results_graceful(self, uat_project):
         """UAT-5.4: No results should return gracefully."""
-        result = run_via(uat_project, "-mg", "NonExistentFunc", "-tf", "-V", "calls", "-mg", "*", "-tf")
+        result = run_via(uat_project, "-mg", "*", "-tf", "-V", "calls", "-mg", "NonExistentFunc", "-tf")
 
         assert result.returncode == 0, f"Expected graceful handling, got: {result.stderr}"
         # Output should be empty or minimal

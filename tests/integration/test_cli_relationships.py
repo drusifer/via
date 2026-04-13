@@ -112,10 +112,9 @@ class TestInheritanceRelationshipCLI:
 
     def test_query_classes_inheriting_from_base(self, indexed_project_with_relationships):
         """Test: Find classes that inherit from BaseClass."""
-        # Syntax: -mg RELATE_TO -tc -V inherits-from RESULTS_FILTER
-        # "Find all classes (*) that inherit from BaseClass"
+        # Result-first: result stage (*) --via inherits-from filter (BaseClass)
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "BaseClass", "-tc", "-V", "inherits-from", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "BaseClass", "-tc"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -126,32 +125,32 @@ class TestInheritanceRelationshipCLI:
 
     def test_query_sans_inheritance_is_negative(self, indexed_project_with_relationships):
         """Test: --sans inherits-from runs without error (NOT EXISTS query)."""
-        # --sans inherits-from: finds classes that do NOT inherit from BaseClass
+        # Result-first: find all classes, excluding those that inherit from anything
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "BaseClass", "-tc", "--sans", "inherits-from", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc", "--sans", "inherits-from", "-mg", "*", "-tc"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        # BaseClass itself does not inherit from BaseClass → it should appear
+        # BaseClass does not inherit from anything → it should appear
+        assert "BaseClass" in result.stdout
         # ChildClass and GrandChildClass do inherit → they should NOT appear
         assert "ChildClass" not in result.stdout
         assert "GrandChildClass" not in result.stdout
 
     def test_query_inheritance_with_glob_pattern(self, indexed_project_with_relationships):
-        """Test inheritance query with glob pattern."""
-        # "Find all classes (*) that inherit from any *Class"
+        """Test inheritance query with glob pattern on filter."""
+        # Result-first: find all classes, filtered to those inheriting from *Class
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "*Class", "-tc", "-V", "inherits-from", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "*Class", "-tc"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        # Should find classes inheriting from any *Class
         output = result.stdout
-        # Either ChildClass or GrandChildClass should appear
+        # ChildClass or GrandChildClass should appear (they inherit from *Class)
         assert "ChildClass" in output or "GrandChildClass" in output
 
 
@@ -160,9 +159,9 @@ class TestCallRelationshipCLI:
 
     def test_query_callers_of_function(self, indexed_project_with_relationships):
         """Test: Find functions that call helper."""
-        # "Find all functions (*) that call helper"
+        # Result-first: find all functions, filtered to those that call helper
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "helper", "-tf", "-V", "calls", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tf", "-V", "calls", "-mg", "helper", "-tf"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -173,25 +172,26 @@ class TestCallRelationshipCLI:
         assert "process_data" in output or "main" in output
 
     def test_query_sans_calls_is_not_exists(self, indexed_project_with_relationships):
-        """Test: --sans calls finds functions that do NOT call helper."""
-        # --sans calls helper: functions that do NOT call helper
+        """Test: --sans calls finds functions that do NOT call anything."""
+        # Result-first: find all functions, excluding those that call anything
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "helper", "-tf", "--sans", "calls", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tf", "--sans", "calls", "-mg", "*", "-tf"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        # process_data and main DO call helper → should NOT appear
+        # helper calls nothing → should appear
+        # process_data and main DO call something → should NOT appear
         output = result.stdout
         assert "process_data" not in output
         assert "main" not in output
 
     def test_query_method_callers(self, indexed_project_with_relationships):
         """Test: Find methods that call base_method."""
-        # "Find all methods (*) that call base_method"
+        # Result-first: find all methods, filtered to those that call base_method
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "base_method", "-tm", "-V", "calls", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tm", "-V", "calls", "-mg", "base_method", "-tm"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -205,10 +205,10 @@ class TestImportRelationshipCLI:
     """Test import relationship queries via CLI."""
 
     def test_query_files_importing_module(self, indexed_project_with_relationships):
-        """Test: Find files/symbols that import os."""
-        # "Find all imports (*) that import os"
+        """Test: Find imports that import os."""
+        # Result-first: find all imports, filtered to those that import os
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "os", "-ti", "-V", "imports", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "*", "-ti", "-V", "imports", "-mg", "os"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -219,9 +219,9 @@ class TestImportRelationshipCLI:
 
     def test_query_sans_imports_runs_without_error(self, indexed_project_with_relationships):
         """Test: --sans imports runs without error (NOT EXISTS query)."""
-        # --sans imports os: find import symbols that do NOT import os
+        # Result-first: find all imports, excluding those that import anything
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "os", "-ti", "--sans", "imports", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "*", "-ti", "--sans", "imports", "-mg", "*"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -234,9 +234,9 @@ class TestRelationshipEdgeCases:
 
     def test_no_relationships_returns_empty(self, indexed_project_with_relationships):
         """Test query for non-existent relationship returns empty."""
-        # "Find all classes (*) that inherit from NonExistentClass"
+        # Result-first: find all classes, filtered to those inheriting from NonExistentClass
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "NonExistentClass", "-tc", "-V", "inherits-from", "-mg", "*"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tc", "-V", "inherits-from", "-mg", "NonExistentClass", "-tc"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,
@@ -247,9 +247,9 @@ class TestRelationshipEdgeCases:
 
     def test_relationship_with_limit(self, indexed_project_with_relationships):
         """Test relationship query respects limit."""
-        # "Find up to 1 function that calls helper"
+        # Result-first: find up to 1 function that calls helper
         result = subprocess.run(
-            [sys.executable, "-m", "via", "-mg", "helper", "-tf", "-V", "calls", "-mg", "*", "-n", "1"],
+            [sys.executable, "-m", "via", "-mg", "*", "-tf", "-n", "1", "-V", "calls", "-mg", "helper", "-tf"],
             cwd=str(indexed_project_with_relationships),
             capture_output=True,
             text=True,

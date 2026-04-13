@@ -209,9 +209,9 @@ class TestHelpRelationshipSection:
         assert "Relationship Queries" in help_text, \
             "Expected 'Relationship Queries' section in --help"
 
-    def test_help_contains_anchor_left_rule(self, help_text):
-        assert "anchor LEFT" in help_text or "KNOWN anchor LEFT" in help_text, \
-            "Expected anchor direction rule in --help Relationship Queries section"
+    def test_help_contains_relationship_guidance(self, help_text):
+        assert "Prefer canned shortcuts" in help_text, \
+            "Expected task-first relationship guidance in --help Relationship Queries section"
 
     def test_help_contains_inherits_from(self, help_text):
         assert "inherits-from" in help_text, \

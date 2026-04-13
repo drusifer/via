@@ -14,39 +14,37 @@
 - Sprint 12: SHIPPED (2026-03-23) — Web UI SPA, E2E Playwright tests
 - Sprint 13: SHIPPED (2026-03-24) — CLI redesign: --via/--sans/--not
 - Sprint 14: SHIPPED (2026-04-06) — JS calls, --lang, --subtype, web UI rel card
-- Test baseline: 1178 Python + 74 JS + 22 E2E
+- Sprint 15: SHIPPED — MCP Ergonomics + Index Completeness
+- Sprint 16: SHIPPED — String Intelligence + Reusable Query Workflows
+- Sprint 17: SHIPPED — Link Intelligence + HTTP Bridge Primitives
+- Sprint 18: SHIPPED — JS parser refactor (handler dispatcher)
+- Sprint 19: SHIPPED — ViaQueryBuilder fluent API
+- Sprint 20: SHIPPED — Shared query compilation seam
+- Sprint 21: SHIPPED
+- Sprint 22: SHIPPED — Query confidence and error recovery
+- Sprint 23: SHIPPED — Recognition over recall (canned shortcuts, MCP task examples, diagram fallback)
+- Test baseline: ~67 passing tests (Sprint 23 closeout)
 
-## Sprint 15 — MCP Ergonomics + Index Completeness
-**Status**: Shipped
-**Architecture**: `morpheus.docs/SPRINT_15_ARCHITECTURE.md`
-
-## Sprint 16 — String Intelligence + Reusable Query Workflows
-**Status**: Shipped
-**Stories**: `cypher.docs/SPRINT_16_USER_STORIES.md` (8pt, 4 stories)
-**Architecture**: `morpheus.docs/SPRINT_16_ARCHITECTURE.md`
-**Review**: `agents/morpheus.docs/SPRINT_16_REVIEW_2026-04-08T19:00.md`
-
-### Key Decisions
-1. S16-1: propagate `--slice` offset/limit through OR'd multi-type query path
-2. S16-2: `-ts` is a structured `string_constant` symbol type, not generic text search
-3. S16-2: store `references` relationship from string constants to enclosing symbol/file anchor
-4. S16-3: support `coverage.xml` only in Sprint 16; import as `covered-by`
-5. S16-4: `--canned` expands into ordinary via argv; no second query engine
-6. Sprint 16 delivered as architected; no redesign needed during implementation
-
-## Sprint 17 — Link Intelligence + HTTP Bridge Primitives
-**Status**: Shipped
-**Stories**: `cypher.docs/SPRINT_17_USER_STORIES.md` (7pt, 3 stories)
-**Architecture**: `agents/morpheus.docs/SPRINT_17_ARCHITECTURE.md`
-**Review**: `agents/morpheus.docs/SPRINT_17_REVIEW_2026-04-08T20:45.md`
+## Sprint 24 — Result-Stage-First Query Model
+**Status**: Architecture written
+**Architecture**: `agents/morpheus.docs/SPRINT_24_ARCHITECTURE.md`
+**Theme**: Formalize result-stage-first query model. First stage = returned results, --via/--sans = filters.
 
 ### Key Decisions
-1. S17-1: add `link` as a first-class symbol type, starting with markdown link extraction
-2. S17-2: expose JS/TS outbound HTTP calls via a primitive `http-calls` relationship
-3. S17-2: do not promise automatic backend route resolution in Sprint 17
-4. S17-3: implement `--contains` as a post-match body filter over symbol byte spans
-5. S17-3: return symbols, not grep-style line snippets
-6. Reuse existing parser/index/executor seams; no full-text index or second query engine
+1. Swap subject/object mapping in executor (result before --via, filter after)
+2. Rename RelationshipFilter fields: object_pattern → filter_pattern, object_types → filter_types
+3. Support --via + --sans chain (minimum: one of each per query)
+4. Rewrite all canned queries to result-first arg order
+5. Handle `unused` canned query with invert_join=True for calls
+6. No DB schema changes — swap is purely in how executor maps CLI args to DB args
+7. No backward compatibility required
+
+### Cycle 2 Review (2026-04-13)
+- Multi-filter relationship chaining is approved.
+- Parser now collects `--via`/`--sans` clauses into ordered `args.relationships` while retaining `args.relationship` for single-filter compatibility.
+- Executor implements the approved architecture: first relationship clause executes as the primary DB query; subsequent clauses are applied as post-filters over the current result set.
+- Tests cover parser ordering plus sequential positive and negative filters.
+- Full suite passed: 1313 passed, 1 skipped, 4 warnings.
 
 ## Refactor Guidance (2026-04-08)
 
@@ -58,68 +56,13 @@
 - Best targets are:
   1. `via/parsers/javascript_parser.py` — repeated node-type dispatch across multiple passes
   2. `via/pipeline/executor.py` — query-mode branching accumulating in one orchestrator
-- Lower priority:
-  - `via/renderers/factory.py` if the renderer matrix keeps growing
 - Explicit non-target:
   - `via/core/match_record.py` because it already embodies the correct polymorphic design
 
-### Proposed Class Architecture
-- JS parser:
-  - `JavaScriptTopLevelHandler`
-  - `ImportNodeHandler`
-  - `FunctionNodeHandler`
-  - `ClassNodeHandler`
-  - `VariableDeclarationHandler`
-  - `TypeDeclarationHandler`
-  - `ExportWrapperHandler`
-  - `JavaScriptParseSinks`
-  - `FunctionBodyAnalyzer`
-- Pipeline executor:
-  - `MatchExecutionStrategy`
-  - `PlainMatchStrategy`
-  - `RelationshipMatchStrategy`
-  - `NegativeRelationshipStrategy`
-  - `RecordFilter`
-  - `ContainsBodyFilter`
-  - `LineSliceFilter`
-
-## Sprint 18 Architecture (2026-04-08)
-- Approved a bounded first slice in `agents/morpheus.docs/SPRINT_18_ARCHITECTURE.md`
-- Decision: keep the refactor local to `via/parsers/javascript_parser.py`
-- Use module-private handler objects plus a dispatcher registry for top-level symbol extraction
-- Export wrappers must delegate back into the same dispatcher path
-- Deferred: `FunctionBodyAnalyzer` and executor strategies
-
-## Sprint 18 Review (2026-04-08)
-- APPROVED: `agents/morpheus.docs/SPRINT_18_REVIEW_2026-04-08T21:14.md`
-- Implementation matched the local refactor architecture and did not expand scope into executor work
-
 ## ViaQueryBuilder Architecture (2026-04-08)
-- Trigger: Bob requested a fluent code-level API because the current via API is too CLI-shaped for programmatic use
-- Decision: add `ViaQueryBuilder` as a fluent construction layer that compiles into existing `PipelineStage` objects
-- Keep `PipelineExecutor` as the execution engine; do not create a second query engine
-- Recommended shape: `ViaQueryBuilder`, `RelationshipQueryBuilder`, immutable `ViaQuery`, thin `ViaRunner`
-- Best first adopter: `via/web/api/query.py`, which currently hand-builds `argparse.Namespace`
-
-## Sprint 19 Architecture (2026-04-08)
-- Approved Sprint 19 delivery in `agents/morpheus.docs/SPRINT_19_ARCHITECTURE.md`
-- New API package: `via/api/`
-- Builder compiles to existing `PipelineStage` compatibility seam rather than changing executor internals
-- Web API is the first real adopter and should stop hand-building `Namespace`
-
-## Sprint 19 Review (2026-04-08)
-- APPROVED: `agents/morpheus.docs/SPRINT_19_REVIEW_2026-04-08T21:37.md`
-- Implementation matched the additive builder architecture and kept executor semantics intact
-
-## Sprint 20 Architecture (2026-04-08)
-- Approved Sprint 20 delivery in `agents/morpheus.docs/SPRINT_20_ARCHITECTURE.md`
-- Decision: add a narrow shared query-compilation seam for CLI and builder callers
-- Keep `PipelineParser`, `ViaQueryBuilder`, and `PipelineExecutor` in their current roles
-- Documentation should present `ViaQueryBuilder`/`ViaRunner` as the supported Python path
-
-## Sprint 20 Review (2026-04-08)
-- APPROVED: `agents/morpheus.docs/SPRINT_20_REVIEW_2026-04-08T21:58.md`
-- Implementation matched the shared-seam architecture and stayed out of executor redesign
+- `ViaQueryBuilder` is a fluent construction layer that compiles into existing `PipelineStage` objects
+- `PipelineExecutor` remains the execution engine
+- Web API is the first real adopter
 
 ## Architecture Audit (2026-02-11) — Known Tech Debt
 - SMELL-1: `_get_match_metadata()` computes render widths (DB/render coupling)
@@ -128,4 +71,4 @@
 - Full report: `agents/morpheus.docs/CODE_REVIEW_2026_03_21.md`
 
 ## Current Blockers
-None. Sprint 17 shipped; awaiting next sprint intake.
+None.

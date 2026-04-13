@@ -52,7 +52,7 @@ mkf exists specifically to keep build output out of the context window. Piping o
 
 - Captures all build output to `build/build.out`
 - Prints the last 10 lines of output on exit
-- Posts build status + tail to `agents/CHAT.md` as persona `make`
+- Posts build status + tail to `agents/CHAT.md` as persona `make`; consecutive make build messages replace the previous make build entry
 - Returns the make exit code — callers can rely on it for pass/fail
 
 ## Verbosity

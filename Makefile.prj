@@ -1,6 +1,6 @@
 # Makefile for the VIA project
 
-.PHONY: all venv test coverage clean lint-fast lint lints lint-slow duplicates security dead-code analyze install-system
+.PHONY: all venv test coverage clean lint-fast lint lints lint-slow duplicates security dead-code analyze install-system via-watch via-mcp-serve
 
 # Variables
 PYTHON := python3
@@ -113,6 +113,16 @@ dead-code: install-dev ## Run Vulture dead code detection against via/
 fix: install-dev
 	@echo "=== RUFF: fix ==="
 	. ${VENV_ACTIVATE} && ruff check --fix via/
+
+# Run Via watch mode with the web UI enabled. Override DIR/PORT as needed:
+# make via-watch DIR=. PORT=7891
+via-watch: install-dev
+	. ${VENV_ACTIVATE} && via index -w $(or $(DIR),.) --port $(or $(PORT),7891)
+
+# Run the Via MCP stdio server. This also starts watch mode and serves the web UI.
+# Override DIR/PORT as needed: make via-mcp-serve DIR=. PORT=7891
+via-mcp-serve: install-dev
+	. ${VENV_ACTIVATE} && via mcp serve $(or $(DIR),.) --port $(or $(PORT),7891)
 
 # Install via as a package available globally via pipx
 install-system: ## Install via globally using pipx (makes 'via' command available system-wide)

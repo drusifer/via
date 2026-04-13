@@ -61,11 +61,11 @@ class TestRelationshipQuery:
     def test_inherits_from_returns_results(self, rel_db):
         result = run_query(rel_db, {
             "match_type": "glob",
-            "pattern": "Animal",
+            "pattern": "*",
             "symbol_types": ["class"],
             "relationship": "inherits-from",
-            "target_pattern": "*",
-            "target_symbol_types": [],
+            "target_pattern": "Animal",
+            "target_symbol_types": ["class"],
         })
         assert result["count"] > 0
         names = [r["symbol_name"] for r in result["results"]]
@@ -105,7 +105,7 @@ class TestBuildRelationshipFilter:
         }
         rf = _build_relationship_filter(body, "inherits-from")
         assert rf.relationship_type.value == "inherits-from"
-        assert rf.object_pattern == "*"
+        assert rf.filter_pattern == "*"
         assert rf.is_negative is False
         assert rf.result_stale is False
 
@@ -119,8 +119,8 @@ class TestBuildRelationshipFilter:
         }
         rf = _build_relationship_filter(body, "has")
         assert rf.relationship_type.value == "declares"
-        assert rf.object_pattern == "foo*"
-        assert rf.object_types == ["function"]
+        assert rf.filter_pattern == "foo*"
+        assert rf.filter_types == ["function"]
 
     def test_sans_mode_flag_passed(self):
         body = {
@@ -158,7 +158,7 @@ class TestBuildRelationshipFilter:
     def test_target_pattern_defaults_to_glob_all(self):
         body = {"relationship": "imports", "invert": False, "stale": False}
         rf = _build_relationship_filter(body, "imports")
-        assert rf.object_pattern == "*"
+        assert rf.filter_pattern == "*"
 
     def test_all_relationship_types_map(self):
         from via.web.api.query import _REL_MAP

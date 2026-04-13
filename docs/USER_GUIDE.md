@@ -11,7 +11,7 @@ TLDR: Complete reference for indexing, searching, and navigating codebases using
 5. [Output Formats](#output-formats)
 6. [Context Lines](#context-lines)
 7. [Relationship Queries](#relationship-queries)
-8. [Container Queries (--via declares)](#container-queries---via-declares)
+8. [Container Filters (--via declares)](#container-filters---via-declares)
 9. [Temporal Queries](#temporal-queries)
 10. [Watch Mode](#watch-mode)
 11. [MCP Mode (AI Agent Integration)](#mcp-mode-ai-agent-integration)
@@ -329,30 +329,32 @@ VIA can trace relationships between symbols: inheritance, function calls, import
 ### Syntax
 
 ```
-via <anchor-args> --via <rel> <result-args>
-via <anchor-args> --sans <rel> <result-args>
+via <result-stage> --via <rel> <filter-stage>
+via <result-stage> --sans <rel> <filter-stage>
 ```
 
-- **anchor** (before `--via`/`--sans`): The known symbol — what you're querying about
-- **result** (after `--via`/`--sans`): What you want to find (filter with pattern + type flags)
-- **`--via <rel>`**: Return subjects that **have** the relationship to the anchor
-- **`--sans <rel>`**: Return subjects with **no** such relationship (NOT EXISTS)
+- **result stage** (before `--via`/`--sans`): What VIA returns.
+- **filter stage** (after `--via`/`--sans`): The related symbols/files that constrain the result stage.
+- **`--via <rel>`**: Keep result-stage records that **have** the relationship to the filter stage.
+- **`--sans <rel>`**: Keep result-stage records with **no** such relationship to the filter stage (NOT EXISTS).
 - **`--not`**: Negate the immediately following pattern flag (`-mg`/`-mr`/`-ms`)
 - **`-V <rel>`** / **`-S <rel>`**: Short forms of `--via` / `--sans`
+
+Use only one match flag (`-mg`, `-mr`, or `-ms`) per stage. Type flags may be combined, so `-tf -tm -tc` remains a valid multi-type query.
 
 ### Relationship Types
 
 | Relationship | `--via` / `-V` value | Description |
 |---|---|---|
-| Inheritance | `inherits-from` | Classes that inherit from (subclasses of) the anchor |
-| Calls | `calls` | Functions/methods that call the anchor |
-| Imports | `imports` | Files/modules that import the anchor |
-| References | `references` | Symbols that reference the anchor in their body |
-| Container membership | `declares` | Members declared inside the anchor (file/class/function) |
+| Inheritance | `inherits-from` | Result classes filtered by the base classes they inherit from |
+| Calls | `calls` | Result functions/methods filtered by what they call |
+| Imports | `imports` | Result files/modules filtered by what they import |
+| References | `references` | Result symbols filtered by what they reference in their body |
+| Container membership | `declares` | Result containers filtered by the symbols they declare |
 
 ### `--sans`: Negative Relationship (NOT EXISTS)
 
-`--sans <rel>` returns subjects that have **no** relationship edge to anything matching the object pattern. Uses a SQL NOT EXISTS subquery.
+`--sans <rel>` keeps result-stage records that have **no** relationship edge to anything matching the filter stage. Uses a SQL NOT EXISTS subquery.
 
 ```bash
 # Root classes — no parent class at all
@@ -376,17 +378,17 @@ via -mg '*' -tm --not -mg '_*' -tm
 
 ### `--stale`: Cross-Stage Temporal Filter
 
-`--stale` filters relationship results to those where the **result symbol's file is older than the anchor's file**. Use it to find stale dependencies — code that was last touched *before* the thing it depends on.
+`--stale` filters relationship results to those where the **result-stage symbol's file is older than the filter-stage symbol's file**. Use it to find stale dependencies — code that was last touched *before* the thing it depends on.
 
 ```bash
 # Find test files that haven't been updated since the classes they test changed
-via -mg '*' -tc --via inherits-from -mg 'test_*' -tf --stale
+via -mg 'test_*' -tf --via inherits-from -mg '*' -tc --stale
 
 # Find subclasses older than their base class
-via -mg 'Base*' -tc --via inherits-from -mg '*' -tc --stale
+via -mg '*' -tc --via inherits-from -mg 'Base*' -tc --stale
 
 # Find callers that pre-date the function they call
-via -mg 'my_func' -tf --via calls -mg '*' -tf --stale
+via -mg '*' -tf --via calls -mg 'my_func' -tf --stale
 ```
 
 > **Note**: `--stale` only applies to relationship queries. On a plain match query it is a no-op. If mtime data is missing, rebuild the index with `via index --force`.
@@ -395,13 +397,13 @@ via -mg 'my_func' -tf --via calls -mg '*' -tf --stale
 
 ```bash
 # Find all classes that inherit from BaseClass
-via -mg 'BaseClass' -tc --via inherits-from -mg '*' -tc
+via -mg '*' -tc --via inherits-from -mg 'BaseClass' -tc
 
 # Find children of any class matching *Base*
-via -mg '*Base*' -tc --via inherits-from -mg '*' -tc
+via -mg '*' -tc --via inherits-from -mg '*Base*' -tc
 
 # Filter: only show children matching "Child*"
-via -mg 'BaseClass' -tc --via inherits-from -mg 'Child*' -tc
+via -mg 'Child*' -tc --via inherits-from -mg 'BaseClass' -tc
 
 # Root classes (no parent)
 via -mg '*' -tc --sans inherits-from -mg '*' -tc
@@ -411,20 +413,20 @@ via -mg '*' -tc --sans inherits-from -mg '*' -tc
 
 ```bash
 # Find all files that import typing
-via -mg 'typing' --via imports -mg '*' -tF
+via -mg '*' -tF --via imports -mg 'typing'
 
 # Find all files importing dataclasses, show as table
-via -mg 'dataclasses' --via imports -mg '*' -tF -oT
+via -mg '*' -tF --via imports -mg 'dataclasses' -oT
 ```
 
 ### Call Examples
 
 ```bash
 # Find all functions that call helper_func
-via -mg 'helper_func' -tf --via calls -mg '*' -tf
+via -mg '*' -tf --via calls -mg 'helper_func' -tf
 
 # Find all callers of a method
-via -mg 'save' -tm --via calls -mg '*' -tm
+via -mg '*' -tm --via calls -mg 'save' -tm
 
 # Functions that call nothing
 via -mg '*' -tf --sans calls -mg '*' -tf
@@ -434,10 +436,10 @@ via -mg '*' -tf --sans calls -mg '*' -tf
 
 ```bash
 # Find all functions that reference a constant
-via -mg 'MAX_RETRIES' -tg --via references -mg '*' -tf
+via -mg '*' -tf --via references -mg 'MAX_RETRIES' -tg
 
 # Find all referencers of a symbol
-via -mg 'process_data' -tf --via references -mg '*'
+via -mg '*' --via references -mg 'process_data' -tf
 
 # Functions that reference nothing (leaf implementations — no external dependencies)
 via -mg '*' -tf --sans references -mg '*' -tf
@@ -447,10 +449,10 @@ via -mg '*' -tf --sans references -mg '*' -tf
 
 ```bash
 # Inheritance tree as table
-via -mg 'BaseClass' -tc --via inherits-from -mg '*' -tc -oT
+via -mg '*' -tc --via inherits-from -mg 'BaseClass' -tc -oT
 
 # Show source of all callers
-via -mg 'validate' -tf --via calls -mg '*' -tf -oR
+via -mg '*' -tf --via calls -mg 'validate' -tf -oR
 ```
 
 ---
@@ -482,10 +484,10 @@ from via import ViaQueryBuilder, ViaRunner
 
 query = (
     ViaQueryBuilder()
-    .glob("Base")
+    .glob("*")
     .classes()
     .via("inherits-from")
-        .glob("*")
+        .glob("Base")
         .classes()
     .done()
     .build()
@@ -496,14 +498,16 @@ records = list(ViaRunner(db_store).run(query))
 
 ---
 
-## Container Queries (`--via declares`)
+## Container Filters (`--via declares`)
 
-`--via declares` queries "what lives inside this container?" — file→symbols, class→methods, function→nested functions.
+`--via declares` filters containers by what they declare. The result stage still determines what VIA returns.
+
+For example, a file result stage returns files. Adding `--via declares -mg 'DatabaseStore' -tc` filters those files to ones that declare a matching class; it does not invert the query and return every symbol inside the file.
 
 ### Syntax
 
 ```
-via -m<X> CONTAINER_PATTERN -t<container> --via declares -t<member>
+via -m<X> CONTAINER_PATTERN -t<container> --via declares -m<Y> MEMBER_PATTERN -t<member>
 ```
 
 Valid container types: `-tF` (filepath), `-tN` (filename), `-tc` (class), `-tf` (function)
@@ -511,20 +515,20 @@ Valid container types: `-tF` (filepath), `-tN` (filename), `-tc` (class), `-tf` 
 ### Examples
 
 ```bash
-# All classes defined in store.py
-via -mg 'store.py' -tN --via declares -tc
+# Files named store.py that declare any class
+via -mg 'store.py' -tN --via declares -mg '*' -tc
 
-# All methods of DatabaseStore
-via -mg 'DatabaseStore' -tc --via declares -tm
+# DatabaseStore classes that declare any method
+via -mg 'DatabaseStore' -tc --via declares -mg '*' -tm
 
-# All functions in service files
-via -mg '*service*' -tF --via declares -tf -n 0
+# Service files that declare any function
+via -mg '*service*' -tF --via declares -mg '*' -tf -n 0
 
-# All methods in executor.py, as table
-via -mg 'executor.py' -tN --via declares -tm -oT -n 0
+# executor.py files that declare any method, as table
+via -mg 'executor.py' -tN --via declares -mg '*' -tm -oT -n 0
 
-# All test functions across all test files
-via -mg 'test_*.py' -tN --via declares -tf -n 0
+# Test files that declare test functions
+via -mg 'test_*.py' -tN --via declares -mg 'test_*' -tf -n 0
 ```
 
 > **Note**: All patterns are case-sensitive. Use `-I` for case-insensitive matching.
@@ -588,7 +592,7 @@ VIA detects file changes using watchdog with a 1-second debounce. Changed files 
 
 ## MCP Mode (AI Agent Integration)
 
-VIA can run as an MCP (Model Context Protocol) server, exposing a `via_query` tool to Claude Code and other MCP clients over JSON-RPC 2.0 via stdio. The index is always current — watch mode starts automatically when the server starts.
+VIA can run as an MCP (Model Context Protocol) server, exposing a `via_query` tool to Claude Code and other MCP clients over JSON-RPC 2.0 via stdio. The MCP process performs the initial index, starts watch mode, and serves the web UI, so one `via mcp serve` instance keeps everything current.
 
 ### Setup
 
@@ -612,7 +616,7 @@ via mcp serve              # Serve from current directory
 via mcp serve /path/to/project   # Serve a specific project
 ```
 
-The server starts WatchService in a background thread (index stays current) and listens for JSON-RPC 2.0 on stdin/stdout. Exit by closing stdin (Claude Code does this automatically on session end).
+The server starts WatchService in a background thread, serves the web UI on `http://localhost:7891` by default, and listens for JSON-RPC 2.0 on stdin/stdout. Exit by closing stdin (Claude Code does this automatically on session end).
 
 ### Calling via_query
 
@@ -829,7 +833,7 @@ via -mg "__main__*" -tN
 via -mg "*" -tf --via declares -mg "__main__*" -tN
 
 # See what calls main()
-via -mg "main" -tf --via calls -mg "*"
+via -mg "*" -tf --via calls -mg "main" -tf
 ```
 
 #### 3. What does this module export — what's its public surface?
@@ -867,13 +871,13 @@ for cls, n in sorted(counts.items(), key=lambda x: -x[1]):
 
 ```bash
 # Who inherits from DatabaseStore?
-via -mg "DatabaseStore" -tc --via inherits-from -mg "*" -tc
+via -mg "*" -tc --via inherits-from -mg "DatabaseStore" -tc
 
 # What imports it?
-via -mg "DatabaseStore" --via imports -mg "*"
+via -mg "*" --via imports -mg "DatabaseStore"
 
 # What references it?
-via -mg "DatabaseStore" --via references -mg "*"
+via -mg "*" --via references -mg "DatabaseStore"
 ```
 
 #### 6. Which functions have changed in the last 2 days?
@@ -887,19 +891,19 @@ via -mg "*" -tf --newerthan 2d -oT    # table: easier to compare
 
 ```bash
 # Stale tests: test functions that haven't been updated since their source class changed
-via -mg "*" -tc --via inherits-from -mg "test_*" -tf --stale
+via -mg "test_*" -tf --via inherits-from -mg "*" -tc --stale
 
 # Stale references: symbols referencing something that was recently updated
 via -mg "*" --via references -mg "*" --newerthan 1d --stale
 ```
 
-> **Note**: `--stale` means "the result is older than its relationship anchor". Best for stale test detection and stale-reference detection, not raw unused-symbol detection.
+> **Note**: `--stale` means "the result-stage record is older than the related filter-stage record". Best for stale test detection and stale-reference detection, not raw unused-symbol detection.
 
 #### 8. I'm about to delete this utility function. Is anything still calling it?
 
 ```bash
-via -mg "my_util_function" -tf --via calls -mg "*"
-via -mg "my_util_function" -tf --via calls -mg "*" -oT   # table: shows file paths clearly
+via -mg "*" -tf --via calls -mg "my_util_function" -tf
+via -mg "*" -tf --via calls -mg "my_util_function" -tf -oT   # table: shows file paths clearly
 ```
 
 ---
@@ -910,17 +914,17 @@ via -mg "my_util_function" -tf --via calls -mg "*" -oT   # table: shows file pat
 
 ```bash
 # Direct subclasses
-via -mg "BaseHandler" -tc --via inherits-from -mg "*" -tc
+via -mg "*" -tc --via inherits-from -mg "BaseHandler" -tc
 
 # Diagram: the full inheritance tree
-via -mg "BaseHandler" -tc --via inherits-from -mg "*" -tc -oD
+via -mg "*" -tc --via inherits-from -mg "BaseHandler" -tc -oD
 ```
 
 #### 10. Which modules import from `via.db`? I need to know the blast radius of a schema change.
 
 ```bash
-via -mg "via.db*" --via imports -mg "*" -Q
-via -mg "via.db*" --via imports -mg "*" -Q -oT    # table shows file paths
+via -mg "*" --via imports -mg "via.db*" -Q
+via -mg "*" --via imports -mg "via.db*" -Q -oT    # table shows file paths
 ```
 
 #### 11. Does anything import from both `via.web` and `via.mcp`? (Layering violation check)
@@ -981,8 +985,8 @@ via -mr "^(list|type|id|dict|set|str|int|float|len|open|print|next|iter|map|filt
 #### 16. Something is calling `get_counts()` — but where? Show me every call site.
 
 ```bash
-via -mg "get_counts" --via calls -mg "*"
-via -mg "get_counts" --via calls -mg "*" -oT    # table: file + line number
+via -mg "*" --via calls -mg "get_counts"
+via -mg "*" --via calls -mg "get_counts" -oT    # table: file + line number
 ```
 
 #### 17. There's a `MAX_VALUE` global — how many are there, and are they consistent?
@@ -1008,10 +1012,10 @@ via -mg "via.web.api.*" -Q -oR -A 2 -B 2           # with source context
 
 ```bash
 # Who outside via.web references via.web symbols?
-via -mg "via.web.*" -Q --via references -mg "*" -oT
+via -mg "*" --via references -mg "via.web.*" -Q -oT
 
 # Narrow to a specific module
-via -mg "via.web.handler.*" -Q --via references -mg "*" -oT
+via -mg "*" --via references -mg "via.web.handler.*" -Q -oT
 ```
 
 > **Tip**: Results whose referencing file path is outside `via/web/` are external callers — those symbols must stay in the public interface when splitting.
@@ -1128,12 +1132,12 @@ via ... -oR -C 3       # With context lines
 ### Relationship Commands
 
 ```bash
-via <anchor> --via inherits-from <result>   # Inheritance (subclasses of anchor)
-via <anchor> --via calls <result>           # Callers of anchor
-via <anchor> --via imports <result>         # Importers of anchor
-via <anchor> --via references <result>      # Referencers of anchor
-via <anchor> --via declares <result>        # Members inside container anchor
-via <anchor> --sans <rel> <result>          # NOT EXISTS — subjects with no relationship
+via <result> --via inherits-from <filter>   # Result classes inheriting from filter classes
+via <result> --via calls <filter>           # Result functions/methods calling filter symbols
+via <result> --via imports <filter>         # Result files/modules importing filter modules
+via <result> --via references <filter>      # Result symbols referencing filter symbols
+via <result> --via declares <filter>        # Result containers declaring filter symbols
+via <result> --sans <rel> <filter>          # NOT EXISTS — results with no relationship
 via ... --not -mg 'pattern'                 # Negate a pattern flag
 ```
 

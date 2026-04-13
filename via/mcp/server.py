@@ -30,9 +30,21 @@ from via.parsers.python_parser import PythonParser
 from via.parsers.registry import ParserRegistry
 from via.api import ViaRunner
 from via.mcp.schema import build_tool_schema
+from via.pipeline.errors import PipelineParseError, QueryError
 from via.renderers.json_renderer import JsonRenderer
 from via.services.indexing import IndexingService
 from via.services.watch import WatchService
+
+
+_OUTPUT_TYPE_MAP = {
+    '-oD': 'diagram', '--output-diagram': 'diagram',
+    '-oR': 'raw', '--output-raw': 'raw',
+    '-oF': 'formatted', '--output-formatted': 'formatted',
+    '-oT': 'table', '--output-table': 'table',
+    '-oL': 'list', '--output-list': 'list',
+    '-oU': 'usage', '--output-usage': 'usage',
+}
+_OUTPUT_FLAGS = set(_OUTPUT_TYPE_MAP) | {'-oJ', '--output-json'}
 
 
 def _build_registry() -> ParserRegistry:
@@ -65,6 +77,76 @@ def _configure_mcp_logging() -> None:
     # regardless of whether our handler acts on it. Not useful in MCP logs.
     logging.getLogger("watchdog.observers.inotify_buffer").setLevel(logging.WARNING)
     logging.getLogger("watchdog").setLevel(logging.WARNING)
+
+
+def _mcp_error_response(error: QueryError) -> dict:
+    """Return the structured MCP error response shape."""
+    return {
+        "output_type": "error",
+        "result": [],
+        "total": 0,
+        "shown": 0,
+        "error": error.to_dict(),
+    }
+
+
+def _detect_output_type(query_args: list) -> str:
+    """Return MCP output_type requested by query args."""
+    for arg in query_args:
+        if arg in _OUTPUT_TYPE_MAP:
+            return _OUTPUT_TYPE_MAP[arg]
+    return 'json'
+
+
+def _json_query_payload(runner: ViaRunner, args: list[str]) -> dict:
+    """Run args as a JSON MCP query, ignoring requested output flags."""
+    clean_args = [a for a in args if a not in _OUTPUT_FLAGS]
+    results = list(runner.run_cli_args(clean_args) or [])
+    dicts = [JsonRenderer._to_dict(r) for r in results]
+    total = results[0].total_matches if results else 0
+    return {"output_type": "json", "result": dicts, "total": total, "shown": len(dicts)}
+
+
+def _diagram_fallback_payload(runner: ViaRunner, args: list[str]) -> dict:
+    """Return JSON data when a requested diagram has no useful diagram content."""
+    payload = _json_query_payload(runner, args)
+    if payload["shown"]:
+        payload["note"] = (
+            "Diagram output was unavailable for these results; returning matching "
+            "records as JSON."
+        )
+    else:
+        payload["note"] = "No diagram content produced; returning empty JSON results."
+    return payload
+
+
+def _mcp_query_response(runner: ViaRunner, args: list[str], logger: logging.Logger) -> dict:
+    """Run a VIA MCP query and return the MCP response wrapper."""
+    try:
+        output_type = _detect_output_type(args)
+        if output_type == 'json':
+            return _json_query_payload(runner, args)
+
+        # Rendered output: capture stdout, strip ANSI
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            runner.run_cli_args(args)
+        rendered = strip_ansi(buf.getvalue()).rstrip('\n')
+        # Fall back to JSON while preserving results when a diagram cannot render.
+        if output_type == 'diagram' and (
+            not rendered.strip() or 'classDiagram' not in rendered
+        ):
+            return _diagram_fallback_payload(runner, args)
+        return {"output_type": output_type, "result": rendered, "total": 0, "shown": 0}
+    except PipelineParseError as exc:
+        return _mcp_error_response(exc.to_query_error())
+    except Exception as exc:
+        logger.exception("via_query internal error: %s", exc)
+        return _mcp_error_response(QueryError(
+            code="internal_error",
+            message="VIA query failed unexpectedly.",
+            hint="Check the MCP server log for details.",
+        ))
 
 
 def run_mcp_server(
@@ -123,55 +205,11 @@ def run_mcp_server(
 
     mcp = FastMCP("via")
 
-    # Flags that request non-JSON rendered output — map to output_type strings
-    _OUTPUT_TYPE_MAP = {
-        '-oD': 'diagram', '--output-diagram': 'diagram',
-        '-oR': 'raw', '--output-raw': 'raw',
-        '-oF': 'formatted', '--output-formatted': 'formatted',
-        '-oT': 'table', '--output-table': 'table',
-        '-oL': 'list', '--output-list': 'list',
-        '-oU': 'usage', '--output-usage': 'usage',
-    }
-    # All output flags (includes -oJ which stays as JSON)
-    _OUTPUT_FLAGS = set(_OUTPUT_TYPE_MAP) | {'-oJ', '--output-json'}
-
-    def _detect_output_type(query_args: list) -> str:
-        for arg in query_args:
-            if arg in _OUTPUT_TYPE_MAP:
-                return _OUTPUT_TYPE_MAP[arg]
-        return 'json'
-
     _schema = build_tool_schema()
 
     @mcp.tool(description=_schema["description"])
     def via_query(args: list[str]) -> dict:
-        try:
-            output_type = _detect_output_type(args)
-            if output_type == 'json':
-                # Default: strip output flags, return symbol dicts
-                clean_args = [a for a in args if a not in _OUTPUT_FLAGS]
-                results = list(runner.run_cli_args(clean_args) or [])
-                dicts = [JsonRenderer._to_dict(r) for r in results]
-                total = results[0].total_matches if results else 0
-                return {"output_type": "json", "result": dicts, "total": total, "shown": len(dicts)}
-            else:
-                # Rendered output: capture stdout, strip ANSI
-                buf = io.StringIO()
-                with contextlib.redirect_stdout(buf):
-                    runner.run_cli_args(args)
-                rendered = strip_ansi(buf.getvalue()).rstrip('\n')
-                # Fall back to JSON when diagram has no symbols to show
-                if output_type == 'diagram' and (
-                    not rendered.strip() or 'classDiagram' not in rendered
-                ):
-                    return {
-                        "output_type": "json", "result": [], "total": 0, "shown": 0,
-                        "note": "No diagram content produced; falling back to JSON.",
-                    }
-                return {"output_type": output_type, "result": rendered, "total": 0, "shown": 0}
-        except Exception as exc:
-            logger.error("via_query error: %s", exc)
-            return {"result": [], "total": 0, "shown": 0}
+        return _mcp_query_response(runner, args, logger)
 
     try:
         mcp.run(transport="stdio")

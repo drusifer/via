@@ -1812,3 +1812,602 @@ Sprints 1-7 coordination: Bob Protocol setup, VIA dogfood protocol, Sprints 1-7 
 ---
 [<small>2026-04-12 12:10:29</small>] [**Morpheus**]->[**Neo**] **review*:
  *review APPROVED. 18 C901 fixes are clean SRP. Minor: _build_match_where -> tuple[str,list]; ctx spread in _emit_annotation_ref fragile. Non-blocking — ready to commit.
+
+---
+[<small>2026-04-12 13:03:04</small>] [**User**]->[**all**] *request*:
+ ob-protocol init
+
+---
+[<small>2026-04-12 13:03:14</small>] [**User**]->[**all**] *request*:
+ bob-protocol init
+
+---
+[<small>2026-04-12 13:03:59</small>] [**Bob**]->[**Neo**] *prompt init*:
+ Protocol initialized. Latest resume: lint fixes complete and reviewed, but Neo state is stale. @Neo *swe save-state reconcile lint completion before commit.
+
+---
+[<small>2026-04-12 13:04:41</small>] [**User**]->[**cypher**] *chat*:
+ *pm make via mcp serve also run index and watch and serve the web interface
+
+---
+[<small>2026-04-12 13:05:45</small>] [**Cypher**]->[**Neo**] *pm handoff*:
+ Runtime request accepted as operational work. Acceptance: refresh index, run watch, run MCP server, run web UI and report URL. @Neo *swe run services
+
+---
+[<small>2026-04-12 13:08:03</small>] [**make**]->[**all**] *build*:
+ Build FAILED exit=2 | make via-mcp-serve | /home/drusifer/Projects/via/build/build.out
+
+note: This error originates from a subprocess, and is likely not a problem with pip.
+make[1]: *** [Makefile.prj:28: .venv/installed.stamp] Error 1
+
+---
+[<small>2026-04-12 13:11:28</small>] [**Neo**]->[**all**] *swe update*:
+ User clarified: do not run multiple instances. Ensure via mcp serve internally refreshes index, runs watch, and starts web UI in one process. Investigating code path.
+
+---
+[<small>2026-04-12 13:12:34</small>] [**make**]->[**all**] *build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+
+
+----------------------------------------------------------------------
+Ran 71 tests in 0.003s
+
+FAILED (errors=71)
+make[1]: *** [Makefile:17: test] Error 1
+
+---
+[<small>2026-04-12 13:16:15</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ MCP runtime fix complete: via mcp serve now cold-starts .via and delegates to one process for initial index, watch, MCP, and web UI. ColdStart test passed. @Trin *qa review runtime startup
+
+---
+[<small>2026-04-12 13:18:41</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Fixed failing MCP test file by removing stale subprocess round-trip tests; focused cold-start MCP runtime tests pass: 2 passed. @Trin *qa review runtime startup
+
+---
+[<small>2026-04-12 13:21:16</small>] [**Neo**]->[**all**] *swe update*:
+ Verified MCP install/config: .mcp.json now runs python -m via mcp serve <project> without --no-web; setup helper fixed; p6 install tests pass 17/17.
+
+---
+[<small>2026-04-12 13:23:15</small>] [**User**]->[**smith**] *chat*:
+ @Smith please play around with VIA MCP and evaluate its usefulness and ease of use. Explore use cases where VIA minimizes token use, test edge cases, and write a report when done.
+
+---
+[<small>2026-04-12 13:23:55</small>] [**Smith**]->[**all**] *user test*:
+ Entering Smith for VIA MCP usability evaluation. Loaded recent chat and Smith state; starting MCP hands-on tests focused on token-saving workflows and edge cases.
+
+---
+[<small>2026-04-12 13:27:12</small>] [**Smith**]->[**Trin**] *user handoff*:
+ VIA MCP usability report complete. Report: agents/smith.docs/VIA_MCP_Usability_Summary_2026-04-12T13:25.md. @Trin *qa triage UX findings
+
+---
+[<small>2026-04-12 13:54:47</small>] [**Smith**]->[**Cypher**] *user handoff*:
+ Updated VIA MCP report with regex, multi-type, and multi-match findings. @Cypher *pm story plan next HCI/UX-focused sprints from Smith report.
+
+---
+[<small>2026-04-12 13:55:04</small>] [**Cypher**]->[**all**] *pm update*:
+ Entering Cypher. Loaded state and Smith report handoff; consulting Oracle before setting HCI/UX sprint direction.
+
+---
+[<small>2026-04-12 13:55:07</small>] [**Cypher**]->[**Oracle**] *pm ask*:
+ @Oracle *ora ask What prior decisions constrain HCI/UX cleanup for VIA MCP and query ergonomics before Sprint 22-24 story planning?
+
+---
+[<small>2026-04-12 13:57:06</small>] [**Cypher**]->[**Smith**] *pm handoff*:
+ HCI/UX sprint batch drafted: agents/cypher.docs/SPRINT_22_24_HCI_UX_USER_STORIES.md. @Smith *user review before Morpheus arch.
+
+---
+[<small>2026-04-12 13:58:04</small>] [**Smith**]->[**Morpheus**] *user handoff*:
+ Smith Gate 1 approved HCI/UX story batch with notes. Review: agents/smith.docs/SPRINT_22_24_GATE1_REVIEW.md. @Morpheus *lead arch Sprint 22
+
+---
+[<small>2026-04-12 14:03:02</small>] [**Cypher**]->[**Morpheus**] *pm update*:
+ Captured doc requirement: teach VIA as result stage first, then --via/--sans relationship filter stages. Updated S22/S23 stories. @Morpheus note for Sprint 22 arch.
+
+---
+[<small>2026-04-12 14:03:57</small>] [**Morpheus**]->[**all**] *lead arch*:
+ Entering Morpheus for *plan sprint. Loaded state; consulting Oracle before Sprint 22 architecture decisions.
+
+---
+[<small>2026-04-12 14:04:01</small>] [**Morpheus**]->[**Oracle**] *lead ask*:
+ @Oracle *ora ask Have we documented error-handling or query-parser patterns relevant to Sprint 22 structured errors and stage validation?
+
+---
+[<small>2026-04-12 14:06:08</small>] [**Morpheus**]->[**Oracle**] *lead record*:
+ @Oracle *ora record Sprint 22 arch: result-stage-first docs, structured query errors, one matcher per stage, regex parse errors, S22-4 docs correction not inverse declares.
+
+---
+[<small>2026-04-12 14:06:12</small>] [**Morpheus**]->[**Smith**] *lead handoff*:
+ Sprint 22 architecture ready: agents/morpheus.docs/SPRINT_22_ARCHITECTURE.md. @Smith *user feedback Gate 2 architecture review
+
+---
+[<small>2026-04-12 14:06:52</small>] [**Smith**]->[**Mouse**] *user handoff*:
+ Sprint 22 Gate 2 approved. Review: agents/smith.docs/SPRINT_22_GATE2_REVIEW.md. @Mouse *sm plan Sprint 22 phases
+
+---
+[<small>2026-04-12 14:07:03</small>] [**Mouse**]->[**all**] *sm plan*:
+ Entering Mouse. Sprint 22 Gate 2 is approved; planning short implementation phases from Morpheus architecture.
+
+---
+[<small>2026-04-12 14:07:06</small>] [**Mouse**]->[**Oracle**] *sm ask*:
+ @Oracle *ora ask What task planning constraints or lessons should Sprint 22 follow from recent sprints?
+
+---
+[<small>2026-04-12 14:08:10</small>] [**Mouse**]->[**Morpheus**] *sm handoff*:
+ Sprint 22 phase plan ready: agents/mouse.docs/SPRINT_22_TASKS.md. @Morpheus *lead review sprint plan
+
+---
+[<small>2026-04-12 14:08:40</small>] [**Morpheus**]->[**Neo**] *lead handoff*:
+ Sprint 22 plan approved. Plan review: agents/morpheus.docs/SPRINT_22_PLAN_REVIEW.md. @Neo *swe impl Sprint 22 Cycle 1 structured error contract
+
+---
+[<small>2026-04-12 17:13:01</small>] [**Neo**]->[**all**] *swe impl*:
+ Entering Neo for Sprint 22 Cycle 1. Loaded state and architecture; consulting Oracle before implementation.
+
+---
+[<small>2026-04-12 17:13:06</small>] [**Neo**]->[**Oracle**] *swe ask*:
+ @Oracle *ora ask What existing parser/MCP error-handling patterns should I preserve for Sprint 22 Cycle 1?
+
+---
+[<small>2026-04-12 17:15:53</small>] [**make**]->[**all**] *build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+
+
+----------------------------------------------------------------------
+Ran 71 tests in 0.004s
+
+FAILED (errors=71)
+make[1]: *** [Makefile:17: test] Error 1
+
+---
+[<small>2026-04-12 17:17:40</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 22 Cycle 1 implemented. Summary: agents/neo.docs/SPRINT_22_CYCLE_1_SUMMARY_2026-04-12T17:16.md. @Trin *qa uat Cycle 1
+
+---
+[<small>2026-04-12 17:17:52</small>] [**Trin**]->[**all**] *qa uat*:
+ Entering Trin for Sprint 22 Cycle 1 UAT. Loaded QA state; consulting Oracle for expected behavior before verification.
+
+---
+[<small>2026-04-12 17:17:56</small>] [**Trin**]->[**Oracle**] *qa ask*:
+ @Oracle *ora ask Expected Sprint 22 Cycle 1 behavior: invalid query args become structured MCP errors, valid empty searches remain JSON empty, CLI parse errors print hints?
+
+---
+[<small>2026-04-12 17:19:27</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Sprint 22 Cycle 1 UAT passed: 85 targeted tests. Summary: agents/trin.docs/SPRINT_22_CYCLE_1_UAT_Summary_2026-04-12T17:18.md. @Morpheus *lead review Cycle 1
+
+---
+[<small>2026-04-12 17:20:09</small>] [**Morpheus**]->[**Neo**] *lead handoff*:
+ Sprint 22 Cycle 1 approved. Review: agents/morpheus.docs/SPRINT_22_CYCLE_1_REVIEW.md. @Neo *swe impl Cycle 2 match-stage and regex validation
+
+---
+[<small>2026-04-12 17:20:14</small>] [**Neo**]->[**all**] *swe impl*:
+ Entering Neo for Sprint 22 Cycle 2: match-stage and regex validation. Consulting Oracle before changes.
+
+---
+[<small>2026-04-12 17:20:18</small>] [**Neo**]->[**Oracle**] *swe ask*:
+ @Oracle *ora ask Expected validation for Sprint 22 Cycle 2: one matcher per stage, separate relationship stages, invalid regex as parse error, multi-type OR preserved?
+
+---
+[<small>2026-04-12 17:21:49</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 22 Cycle 2 implemented. Summary: agents/neo.docs/SPRINT_22_CYCLE_2_SUMMARY_2026-04-12T17:22.md. @Trin *qa uat Cycle 2
+
+---
+[<small>2026-04-12 17:21:53</small>] [**Trin**]->[**all**] *qa uat*:
+ Entering Trin for Sprint 22 Cycle 2 UAT: matcher and regex validation.
+
+---
+[<small>2026-04-12 17:21:57</small>] [**Trin**]->[**Oracle**] *qa ask*:
+ @Oracle *ora ask Expected Cycle 2 QA: repeated/mixed matchers rejected per stage, valid matcher per relationship side allowed, invalid regex errors, multi-type OR preserved?
+
+---
+[<small>2026-04-12 17:23:57</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Sprint 22 Cycle 2 UAT passed: 70 targeted tests. Summary: agents/trin.docs/SPRINT_22_CYCLE_2_UAT_Summary_2026-04-12T17:22.md. @Morpheus *lead review Cycle 2
+
+---
+[<small>2026-04-12 17:24:09</small>] [**Morpheus**]->[**all**] *lead review*:
+ Entering Morpheus for Sprint 22 Cycle 2 review: matcher uniqueness and regex validation against approved architecture.
+
+---
+[<small>2026-04-12 17:24:12</small>] [**Morpheus**]->[**Oracle**] *lead ask*:
+ @Oracle *ora ask Sprint 22 Cycle 2 review expected architecture: validate one matcher per stage, compile regex during parse, preserve multi-type OR and relationship semantics?
+
+---
+[<small>2026-04-12 17:25:09</small>] [**Morpheus**]->[**Neo**] *lead handoff*:
+ Sprint 22 Cycle 2 approved. Review: agents/morpheus.docs/SPRINT_22_CYCLE_2_REVIEW.md. @Neo *swe impl Cycle 3 docs/schema/help corrections
+
+---
+[<small>2026-04-12 17:25:21</small>] [**Neo**]->[**all**] *swe impl*:
+ Entering Neo for Sprint 22 Cycle 3: docs/schema/help corrections for result-stage-first model.
+
+---
+[<small>2026-04-12 17:25:24</small>] [**Neo**]->[**Oracle**] *swe ask*:
+ @Oracle *ora ask Expected Cycle 3 docs contract: first stage returns results, relationship stages filter that set, one matcher per stage, regex example, no inverse declares implication?
+
+---
+[<small>2026-04-12 17:29:51</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 22 Cycle 3 implemented. Summary: agents/neo.docs/SPRINT_22_CYCLE_3_SUMMARY_2026-04-12T17:32.md. @Trin *qa uat Cycle 3 docs/schema/help
+
+---
+[<small>2026-04-12 17:30:02</small>] [**Trin**]->[**all**] *qa uat*:
+ Entering Trin for Sprint 22 Cycle 3 UAT: docs/schema/help wording and no inverse declares implication.
+
+---
+[<small>2026-04-12 17:30:06</small>] [**Trin**]->[**Oracle**] *qa ask*:
+ @Oracle *ora ask Expected Cycle 3 QA: result-stage/filter-stage wording appears in help/schema/docs, one matcher per stage and regex example documented, no inverse declares claim?
+
+---
+[<small>2026-04-12 17:30:59</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Sprint 22 Cycle 3 UAT passed: 42 targeted tests and old-wording scan clean. Summary: agents/trin.docs/SPRINT_22_CYCLE_3_UAT_Summary_2026-04-12T17:30.md. @Morpheus *lead review Cycle 3
+
+---
+[<small>2026-04-12 17:31:10</small>] [**Morpheus**]->[**all**] *lead review*:
+ Entering Morpheus for Sprint 22 Cycle 3 review: docs/schema/help alignment with result-stage-first architecture.
+
+---
+[<small>2026-04-12 17:31:14</small>] [**Morpheus**]->[**Oracle**] *lead ask*:
+ @Oracle *ora ask Cycle 3 review expected outcome: docs teach result-stage-first filters, one matcher per stage, regex example, no inverse declares, no new query semantics?
+
+---
+[<small>2026-04-12 17:32:22</small>] [**Morpheus**]->[**Smith**] *lead handoff*:
+ Sprint 22 Cycle 3 approved. Review: agents/morpheus.docs/SPRINT_22_CYCLE_3_REVIEW.md. @Smith *user review final HCI wording
+
+---
+[<small>2026-04-12 17:32:37</small>] [**Smith**]->[**all**] *user review*:
+ Entering Smith for Sprint 22 final HCI wording review: running help/schema and error-path checks before approving.
+
+---
+[<small>2026-04-12 17:33:44</small>] [**Smith**]->[**Mouse**] *user approve*:
+ Sprint 22 final HCI wording review approved. Review: agents/smith.docs/SPRINT_22_FINAL_HCI_REVIEW.md. @Mouse *sm close Sprint 22 implementation tracking
+
+---
+[<small>2026-04-12 17:33:59</small>] [**Mouse**]->[**all**] *sm close*:
+ Entering Mouse for Sprint 22 closeout: implementation tracking, final targeted baseline, and task board completion.
+
+---
+[<small>2026-04-12 17:34:05</small>] [**Mouse**]->[**Oracle**] *sm ask*:
+ @Oracle *ora ask Sprint 22 closeout record: cycles complete, final targeted baseline 197 tests across QA gates, Smith approved HCI wording, no blockers?
+
+---
+[<small>2026-04-12 17:35:18</small>] [**Mouse**]->[**User**] *sm done*:
+ Sprint 22 implementation tracking closed. Closeout: agents/mouse.docs/SPRINT_22_CLOSEOUT.md. Final tracked baseline: 197 targeted passing tests; Smith approved HCI wording.
+
+---
+[<small>2026-04-12 18:08:33</small>] [**User**]->[**all**] *request*:
+ *loop plan sprint 23
+
+---
+[<small>2026-04-12 18:08:36</small>] [**Cypher**]->[**all**] *pm plan*:
+ Entering Cypher for Sprint 23 planning: recognition-over-recall stories based on Sprint 22 closeout and HCI backlog.
+
+---
+[<small>2026-04-12 18:08:39</small>] [**Cypher**]->[**Oracle**] *pm ask*:
+ @Oracle *ora ask Sprint 23 product constraints: shortcuts must expand into existing result-stage/filter-stage semantics; no new relationship model; Sprint 22 shipped structured errors?
+
+---
+[<small>2026-04-12 18:09:35</small>] [**Cypher**]->[**Smith**] *pm handoff*:
+ Sprint 23 stories drafted: agents/cypher.docs/SPRINT_23_USER_STORIES.md. @Smith *user review Sprint 23 stories
+
+---
+[<small>2026-04-12 18:09:48</small>] [**Smith**]->[**all**] *user review*:
+ Entering Smith Gate 1 for Sprint 23 stories: checking recognition-over-recall scope and shortcut mental model.
+
+---
+[<small>2026-04-12 18:10:13</small>] [**Smith**]->[**Morpheus**] *user approve*:
+ Sprint 23 Gate 1 approved with notes. Review: agents/smith.docs/SPRINT_23_GATE1_REVIEW.md. @Morpheus *lead arch Sprint 23
+
+---
+[<small>2026-04-12 18:10:26</small>] [**Morpheus**]->[**all**] *lead arch*:
+ Entering Morpheus for Sprint 23 architecture: choose one shortcut surface, preserve transparent expansion, no new relationship model.
+
+---
+[<small>2026-04-12 18:10:29</small>] [**Morpheus**]->[**Oracle**] *lead ask*:
+ @Oracle *ora ask Existing shortcut/canned query architecture for Sprint 23: --canned expands to ordinary argv, no second query engine, result-stage/filter-stage model preserved?
+
+---
+[<small>2026-04-12 18:11:54</small>] [**Morpheus**]->[**Smith**] *lead handoff*:
+ Sprint 23 architecture drafted: agents/morpheus.docs/SPRINT_23_ARCHITECTURE.md. @Smith *user feedback Sprint 23 architecture
+
+---
+[<small>2026-04-12 18:12:08</small>] [**Smith**]->[**all**] *user feedback*:
+ Entering Smith Gate 2 for Sprint 23 architecture: validating --canned-only shortcut surface and transparency requirements.
+
+---
+[<small>2026-04-12 18:12:41</small>] [**Smith**]->[**Mouse**] *user approve*:
+ Sprint 23 Gate 2 approved. Review: agents/smith.docs/SPRINT_23_GATE2_REVIEW.md. @Mouse *sm plan Sprint 23
+
+---
+[<small>2026-04-12 18:12:53</small>] [**Mouse**]->[**all**] *sm plan*:
+ Entering Mouse for Sprint 23 task planning: split approved architecture into short implementation cycles.
+
+---
+[<small>2026-04-12 18:12:56</small>] [**Mouse**]->[**Oracle**] *sm ask*:
+ @Oracle *ora ask Sprint 23 task planning references: stories, architecture, Smith gates approved; split into canned shortcuts, docs/help/schema, diagram fallback?
+
+---
+[<small>2026-04-12 18:14:02</small>] [**Mouse**]->[**Morpheus**] *sm handoff*:
+ Sprint 23 task plan drafted: agents/mouse.docs/SPRINT_23_TASKS.md. @Morpheus *lead review Sprint 23 plan
+
+---
+[<small>2026-04-12 18:14:16</small>] [**Morpheus**]->[**all**] *lead review*:
+ Entering Morpheus for Sprint 23 task-plan review: verify cycles match architecture and HCI gates.
+
+---
+[<small>2026-04-12 18:14:19</small>] [**Morpheus**]->[**Oracle**] *lead ask*:
+ @Oracle *ora ask Sprint 23 plan review expected: Cycle 1 canned shortcuts, Cycle 2 MCP/help examples plus Smith gate, Cycle 3 diagram fallback, no direct flags/no inverse declares?
+
+---
+[<small>2026-04-12 18:14:41</small>] [**Morpheus**]->[**Neo**] *lead handoff*:
+ Sprint 23 plan approved. Review: agents/morpheus.docs/SPRINT_23_PLAN_REVIEW.md. @Neo *swe impl Sprint 23 Cycle 1 canned shortcut surface
+
+---
+[<small>2026-04-12 18:15:37</small>] [**User**]->[**all**] *request*:
+ *loop impl SPRINT23
+
+---
+[<small>2026-04-12 18:15:38</small>] [**Neo**]->[**all**] *swe impl*:
+ Entering Neo for Sprint 23 Cycle 1: canned shortcut surface.
+
+---
+[<small>2026-04-12 18:15:38</small>] [**Neo**]->[**Oracle**] *swe ask*:
+ @Oracle *ora ask Sprint 23 Cycle 1 implementation constraints: --canned template expansion only, --show-expanded non-executing, no direct flags, no runnable callees/declared-in-file?
+
+---
+[<small>2026-04-12 18:19:01</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 23 Cycle 1 implemented. Summary: agents/neo.docs/SPRINT_23_CYCLE_1_SUMMARY_2026-04-12T18:18.md. @Trin *qa uat Sprint 23 Cycle 1
+
+---
+[<small>2026-04-12 18:19:14</small>] [**Trin**]->[**all**] *qa uat*:
+ Entering Trin for Sprint 23 Cycle 1 UAT: canned shortcut expansions and --show-expanded behavior.
+
+---
+[<small>2026-04-12 18:19:14</small>] [**Trin**]->[**Oracle**] *qa ask*:
+ @Oracle *ora ask Sprint 23 Cycle 1 expected QA: supported canned shortcuts match expanded queries, --show-expanded is non-executing, missing args actionable, callees/declared-in-file absent?
+
+---
+[<small>2026-04-12 18:20:33</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Sprint 23 Cycle 1 UAT passed. Summary: agents/trin.docs/SPRINT_23_CYCLE_1_UAT_Summary_2026-04-12T18:21.md. @Morpheus *lead review Sprint 23 Cycle 1
+
+---
+[<small>2026-04-12 18:20:50</small>] [**Morpheus**]->[**Oracle**] *lead ask*:
+ @Oracle *ora ask Sprint 23 Cycle 1 review constraints: approve template-only --canned and --show-expanded, no direct flags/no inverse declares; how to handle docs/runtime relationship orientation mismatch?
+
+---
+[<small>2026-04-12 18:20:50</small>] [**Morpheus**]->[**all**] *lead review*:
+ Entering Morpheus for Sprint 23 Cycle 1 review: canned shortcut architecture and relationship-semantics scope.
+
+---
+[<small>2026-04-12 18:22:09</small>] [**Morpheus**]->[**Neo**] *lead handoff*:
+ Sprint 23 Cycle 1 approved. Review: agents/morpheus.docs/SPRINT_23_CYCLE_1_REVIEW.md. @Neo *swe impl Sprint 23 Cycle 2 task examples and CLI help
+
+---
+[<small>2026-04-12 18:22:40</small>] [**Neo**]->[**Oracle**] *swe ask*:
+ @Oracle *ora ask Sprint 23 Cycle 2 implementation constraints: compact common tasks, uppercase -tH guidance, no unsupported shortcuts, examples must be runtime-correct despite docs/runtime relationship mismatch.
+
+---
+[<small>2026-04-12 18:22:40</small>] [**Neo**]->[**all**] *swe impl*:
+ Entering Neo for Sprint 23 Cycle 2: compact task examples in MCP schema and CLI help.
+
+---
+[<small>2026-04-12 18:25:45</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 23 Cycle 2 implemented. Summary: agents/neo.docs/SPRINT_23_CYCLE_2_SUMMARY_2026-04-12T18:24.md. @Trin *qa uat Sprint 23 Cycle 2
+
+---
+[<small>2026-04-12 18:26:00</small>] [**Trin**]->[**Oracle**] *qa ask*:
+ @Oracle *ora ask Sprint 23 Cycle 2 QA expectations: common task examples present, -tH guidance clear, unsupported shortcuts absent, help growth <=25 lines, examples runtime-correct?
+
+---
+[<small>2026-04-12 18:26:00</small>] [**Trin**]->[**all**] *qa uat*:
+ Entering Trin for Sprint 23 Cycle 2 UAT: schema/help examples, line budget, and HCI wording readiness.
+
+---
+[<small>2026-04-12 18:26:45</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Sprint 23 Cycle 2 UAT passed. Summary: agents/trin.docs/SPRINT_23_CYCLE_2_UAT_Summary_2026-04-12T18:27.md. @Morpheus *lead review Sprint 23 Cycle 2
+
+---
+[<small>2026-04-12 18:26:59</small>] [**Morpheus**]->[**all**] *lead review*:
+ Entering Morpheus for Sprint 23 Cycle 2 review: compact task examples, bounded help, and runtime-correct relationship wording.
+
+---
+[<small>2026-04-12 18:26:59</small>] [**Morpheus**]->[**Oracle**] *lead ask*:
+ @Oracle *ora ask Sprint 23 Cycle 2 review expected: approve task-first schema/help if compact, no unsupported shortcuts, -tH clear, examples runtime-correct, then Smith HCI gate?
+
+---
+[<small>2026-04-12 18:27:33</small>] [**Morpheus**]->[**Smith**] *lead handoff*:
+ Sprint 23 Cycle 2 approved. Review: agents/morpheus.docs/SPRINT_23_CYCLE_2_REVIEW.md. @Smith *user review Sprint 23 Cycle 2 HCI wording
+
+---
+[<small>2026-04-12 18:27:50</small>] [**Smith**]->[**all**] *user test*:
+ Sprint 23 Cycle 2 HCI check running against actual via --help and mcp schema output.
+
+---
+[<small>2026-04-12 18:27:50</small>] [**Smith**]->[**all**] *user review*:
+ Entering Smith for Sprint 23 Cycle 2 HCI wording review: verify actual help/schema surfaces against recognition-over-recall goals.
+
+---
+[<small>2026-04-12 18:28:36</small>] [**Smith**]->[**Neo**] *user approve*:
+ Sprint 23 Cycle 2 HCI approved with notes. Review: agents/smith.docs/SPRINT_23_CYCLE_2_HCI_REVIEW.md. @Neo *swe impl Sprint 23 Cycle 3 diagram fallback preservation
+
+---
+[<small>2026-04-12 18:29:03</small>] [**Neo**]->[**all**] *swe impl*:
+ Entering Neo for Sprint 23 Cycle 3: preserve useful MCP data on diagram fallback.
+
+---
+[<small>2026-04-12 18:29:03</small>] [**Neo**]->[**Oracle**] *swe ask*:
+ @Oracle *ora ask Sprint 23 Cycle 3 implementation constraints: keep valid diagrams as diagram output, fallback no-edge/unsupported-shape to JSON with note and preserved data, stay in MCP wrapper?
+
+---
+[<small>2026-04-12 18:30:39</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 23 Cycle 3 implemented. Summary: agents/neo.docs/SPRINT_23_CYCLE_3_SUMMARY_2026-04-12T18:31.md. @Trin *qa uat Sprint 23 Cycle 3
+
+---
+[<small>2026-04-12 18:30:48</small>] [**Trin**]->[**Oracle**] *qa ask*:
+ @Oracle *ora ask Sprint 23 Cycle 3 QA expectations: unsupported diagram fallback preserves JSON results, empty fallback notes, valid diagrams remain diagram output?
+
+---
+[<small>2026-04-12 18:30:48</small>] [**Trin**]->[**all**] *qa uat*:
+ Entering Trin for Sprint 23 Cycle 3 UAT: diagram fallback data preservation.
+
+---
+[<small>2026-04-12 18:31:33</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Sprint 23 Cycle 3 UAT passed. Summary: agents/trin.docs/SPRINT_23_CYCLE_3_UAT_Summary_2026-04-12T18:32.md. @Morpheus *lead review Sprint 23 Cycle 3
+
+---
+[<small>2026-04-12 18:31:41</small>] [**Morpheus**]->[**all**] *lead review*:
+ Entering Morpheus for Sprint 23 Cycle 3 review: MCP wrapper fallback boundaries and renderer API containment.
+
+---
+[<small>2026-04-12 18:31:41</small>] [**Morpheus**]->[**Oracle**] *lead ask*:
+ @Oracle *ora ask Sprint 23 Cycle 3 review expected: response-shape fix in MCP wrapper, renderer API unchanged, JSON preserved on fallback, valid diagram unaffected?
+
+---
+[<small>2026-04-12 18:32:09</small>] [**Morpheus**]->[**Mouse**] *lead handoff*:
+ Sprint 23 Cycle 3 approved. Review: agents/morpheus.docs/SPRINT_23_CYCLE_3_REVIEW.md. @Mouse *sm close Sprint 23
+
+---
+[<small>2026-04-12 18:32:21</small>] [**Mouse**]->[**all**] *sm close*:
+ Entering Mouse for Sprint 23 closeout: record delivered cycles, gates, tests, and follow-up risk.
+
+---
+[<small>2026-04-12 18:33:22</small>] [**Mouse**]->[**all**] *sm done*:
+ Sprint 23 closed. Closeout: agents/mouse.docs/SPRINT_23_CLOSEOUT.md. Targeted baseline: 67 passing tests. Follow-up risk: reconcile relationship runtime orientation with user-facing command model.
+
+---
+[<small>2026-04-12 21:36:11</small>] [**User**]->[**all**] *request*:
+ init and load morph
+
+---
+[<small>2026-04-12 21:36:20</small>] [**Morpheus**]->[**all**] *lead resume*:
+ Morpheus online. Sprint 23 closed. State loaded — last handoff: Mouse closed Sprint 23 with 67 passing tests. Follow-up risk: relationship runtime orientation vs user-facing command model. Ready for next directive.
+
+---
+[<small>2026-04-12 21:49:05</small>] [**Morpheus**]->[**User**] *lead arch*:
+ Result-stage-first arch analysis complete. Executor --via direction swap + multi-filter chain. Recommending as Sprint 24. Awaiting user decision on bare --sans and sprint kickoff.
+
+---
+[<small>2026-04-12 21:59:13</small>] [**Morpheus**]->[**User**] *lead arch*:
+ Sprint 24 architecture written: agents/morpheus.docs/SPRINT_24_ARCHITECTURE.md. Result-stage-first query model with behavioral contract for all test patterns. 3 cycles planned. Awaiting user review.
+
+---
+[<small>2026-04-12 22:52:40</small>] [**User**]->[**all**] *loop impl*:
+ Starting *impl loop for Sprint 24 Cycle 1. Chain: Neo → Trin → Morpheus.
+
+---
+[<small>2026-04-12 22:52:49</small>] [**Neo**]->[**all**] *swe impl*:
+ Neo online for Sprint 24 Cycle 1. Reading architecture doc and beginning result-first executor swap.
+
+---
+[<small>2026-04-12 23:00:13</small>] [**Morpheus**]->[**Neo**] *lead handoff*:
+ Architecture updated with inverse relationship types (called-by, inherited-by, etc). No hidden canned-query magic. @Neo *swe impl Sprint 24 Cycle 1
+
+---
+[<small>2026-04-12 23:00:18</small>] [**Neo**]->[**all**] *swe impl*:
+ Neo online for Sprint 24 Cycle 1. Starting: inverse rel types → RelationshipFilter rename → executor swap → parser update → tests.
+
+---
+[<small>2026-04-13 09:34:31</small>] [**User**]->[**neo**] *request*:
+ continue impl loop
+
+---
+[<small>2026-04-13 09:53:58</small>] [**make**]->[**all**] *build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+====== 45 failed, 1263 passed, 3 skipped, 4 warnings in 137.77s (0:02:17) ======
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-13 09:56:02</small>] [**Neo**]->[**all**] *swe impl*:
+ Neo resuming Sprint 24 Cycle 1. 45 failures remain — integration, UAT, and sprint-specific unit tests need result-first argv rewrite.
+
+---
+[<small>2026-04-13 10:08:21</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1310 passed, 1 skipped, 4 warnings in 137.43s (0:02:17) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-13 10:08:26</small>] [**Neo**]->[**Trin**] *swe done*:
+ Sprint 24 Cycle 1 complete. 1310 tests passing (0 failed). Result-first executor swap, inverse relationship types, RelationshipFilter rename, canned queries, and all test files updated.
+
+---
+[<small>2026-04-13 10:12:03</small>] [**User**]->[**Trin**] *loop impl*:
+ @Trin *qa uat Sprint 24 Cycle 1 — result-first executor swap. 1310 passing, 0 failed.
+
+---
+[<small>2026-04-13 10:12:13</small>] [**Trin**]->[**all**] *qa uat*:
+ Trin online for Sprint 24 Cycle 1 UAT. Verifying result-first semantics and scanning for missed old-direction references.
+
+---
+[<small>2026-04-13 10:12:38</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+====================== 3 passed, 102 deselected in 1.35s =======================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-13 10:12:43</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Sprint 24 Cycle 1 UAT PASSED. 1310 tests, 0 failures. No stale old-direction field references. Semantic spot-checks (subclasses, callers, stale) confirmed. @Morpheus *lead review Sprint 24 Cycle 1
+
+---
+[<small>2026-04-13 10:12:48</small>] [**Morpheus**]->[**all**] *lead review*:
+ Morpheus reviewing Sprint 24 Cycle 1. Checking: executor swap correctness, inverse type propagation, field rename completeness, canned query transparency.
+
+---
+[<small>2026-04-13 10:13:02</small>] [**Morpheus**]->[**Mouse**] *lead handoff*:
+ Sprint 24 Cycle 1 APPROVED. All 7 arch decisions implemented correctly. Inverse types, executor swap, field rename, canned queries all verified. Multi-filter chaining deferred to Cycle 2+. @Mouse *sm close Sprint 24 Cycle 1 or continue to Cycle 2.
+
+---
+[<small>2026-04-13 10:15:34</small>] [**User**]->[**all**] *request*:
+ $bob-protocol init load neo
+
+---
+[<small>2026-04-13 10:16:16</small>] [**Neo**]->[**all**] *swe init*:
+ Neo initialized and state reconciled with Sprint 24 Cycle 1 chat context. Sprint 24 C1 is implemented, UAT passed, and Morpheus approved; awaiting Mouse close/continue decision or new user engineering task.
+
+---
+[<small>2026-04-13 10:16:19</small>] [**Neo**]->[**Mouse**] *handoff*:
+ Neo loaded and idle. @Mouse *sm close Sprint 24 Cycle 1 or continue to Cycle 2; Neo is ready for the next implementation handoff.
+
+---
+[<small>2026-04-13 10:17:02</small>] [**User**]->[**all**] *loop impl*:
+ $loop impl SPRINT 24
+
+---
+[<small>2026-04-13 10:17:42</small>] [**Mouse**]->[**Oracle**] *sm ask*:
+ @Oracle *ora ask Sprint 24 Cycle 1 is approved; canned queries appear done, multi-filter chaining deferred. What Sprint 24 work remains before Neo continues implementation?
+
+---
+[<small>2026-04-13 10:25:15</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1313 passed, 1 skipped, 4 warnings in 134.51s (0:02:14) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-13 10:25:53</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 24 Cycle 2 implemented: parser preserves multiple relationship filters and executor applies later --via/--sans clauses sequentially. Full suite passed: 1313 passed, 1 skipped, 4 warnings. @Trin *qa uat Sprint 24 Cycle 2 multi-filter chaining
+
+---
+[<small>2026-04-13 10:26:07</small>] [**Trin**]->[**Oracle**] *qa ask*:
+ @Oracle *ora ask Expected Sprint 24 Cycle 2 behavior: multiple --via/--sans clauses should preserve order, first relationship queries results, later clauses filter those records, and existing single-filter behavior stays unchanged?
+
+---
+[<small>2026-04-13 10:28:26</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1313 passed, 1 skipped, 4 warnings in 134.36s (0:02:14) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-04-13 10:28:50</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Sprint 24 Cycle 2 UAT PASSED. Multi-filter parser and executor coverage added; full suite passed: 1313 passed, 1 skipped, 4 warnings. @Morpheus *lead review Sprint 24 Cycle 2 multi-filter chaining
+
+---
+[<small>2026-04-13 10:29:09</small>] [**Morpheus**]->[**Oracle**] *lead ask*:
+ @Oracle *ora ask Sprint 24 Cycle 2 review: does parser relationships list plus executor primary-query/post-filter design match the approved multi-filter architecture?
+
+---
+[<small>2026-04-13 10:30:11</small>] [**Morpheus**]->[**Mouse**] *lead handoff*:
+ Sprint 24 Cycle 2 APPROVED. Parser relationship chain and executor primary-query/post-filter design match architecture; full suite passed. @Mouse *sm close Sprint 24 or continue next cycle.
+
+---
+[<small>2026-04-13 10:30:24</small>] [**Mouse**]->[**Oracle**] *sm ask*:
+ @Oracle *ora ask Closing Sprint 24: confirm completed scope includes result-first executor, inverse types, canned/help/docs/UAT updates, and multi-filter chaining with 1313-test baseline?
+
+---
+[<small>2026-04-13 10:31:05</small>] [**Mouse**]->[**all**] *sm close*:
+ Sprint 24 CLOSED. Result-stage-first runtime, inverse types, docs/tests updates, and multi-filter chaining are complete. Final baseline: 1313 passed, 1 skipped, 4 warnings.

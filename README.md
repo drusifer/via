@@ -140,7 +140,7 @@ VIA can run as an MCP (Model Context Protocol) server, exposing the `via_query` 
 # Register via as an MCP server in the current project
 via install mcp
 
-# Start the MCP server (watch mode always on)
+# Start the MCP server (initial index, watch mode, and web UI in one process)
 via mcp serve
 
 # Inspect the tool schema
@@ -153,7 +153,7 @@ via status mcp
 via uninstall mcp
 ```
 
-The server auto-starts watch mode so the index is always current. Claude Code can then call `via_query` with CLI args:
+The server creates or refreshes the index on startup, auto-starts watch mode so the index stays current, and serves the web UI on `http://localhost:7891` by default. Claude Code can then call `via_query` with CLI args:
 
 ```json
 {"args": ["-mg", "*Parser*", "-tc"]}

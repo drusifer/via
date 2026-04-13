@@ -1,6 +1,6 @@
 # Bob Context
 
-**Last Updated**: 2026-04-08
+**Last Updated**: 2026-04-12
 
 ## Sprint 14 Implementation (2026-04-06)
 - Sprint 14 shipped: JS/TS calls, --lang/--subtype filters, web UI relationship card UX, doc fixes.
@@ -25,3 +25,13 @@
 - State files across all personas are severely out of date. They were not updated during Sprint 14 implementation.
 - Sprint 15 appears complete in CHAT, but closure artifacts and persona memory may still lag behind the delivery timeline.
 - Need to enforce "EXIT GATE: Save State" rule more strictly.
+
+## Bob Protocol Init (2026-04-12)
+- User requested `bob-protocol init`.
+- Latest chat context supersedes Bob's 2026-04-08 Sprint 15 state:
+  - Sprint 21 closed at 2026-04-12 11:47 with 1259 tests green.
+  - User then asked Neo to run all lints and fix errors.
+  - Neo reported lint fix complete at 2026-04-12 12:08:56: all 18 C901 complexity errors fixed, 1259 tests green, ready for commit.
+  - Morpheus reviewed at 2026-04-12 12:10:29 and approved the changes as non-blocking, ready to commit.
+- State hygiene issue: `agents/neo.docs/current_task.md` and `agents/neo.docs/next_steps.md` still contain stale pre-completion C901 resume instructions that conflict with CHAT.md.
+- Current protocol resume point: resolve Neo state inconsistency, then proceed with commit/verification workflow if the user requests it.

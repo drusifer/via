@@ -42,8 +42,8 @@ def test_cli_http_calls_relationship_query(tmp_path):
 
     query = _run(
         tmp_path,
-        "-mg", "/api/query", "-ts",
-        "--via", "http-calls", "-mg", "*", "-tf", "--lang", "js",
+        "-mg", "*", "-tf", "--lang", "js",
+        "--via", "http-calls", "-mg", "/api/query", "-ts",
         "-oJ",
     )
     assert query.returncode == 0, query.stderr

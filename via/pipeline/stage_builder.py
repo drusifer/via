@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from argparse import Namespace
-from typing import Optional
+from typing import Optional, Sequence
 
 from via.core.duration import parse_duration
 from via.core.relationship_types import ReferenceType
@@ -24,6 +24,7 @@ def finalize_match_namespace(parsed_args: Namespace) -> Namespace:
 
     defaults = {
         'relationship': None,
+        'relationships': [],
         'negate_pattern': False,
         'line_slice': None,
         'language_filter': None,
@@ -55,40 +56,46 @@ def finalize_match_namespace(parsed_args: Namespace) -> Namespace:
 
 def build_relationship_filter(
     relationship_type: ReferenceType,
-    object_args: Namespace,
+    filter_args: Namespace,
     is_negative: bool,
+    inverted: bool = False,
 ) -> RelationshipFilter:
-    """Build a relationship filter from normalized object-side args."""
-    finalize_match_namespace(object_args)
+    """Build a relationship filter from normalized filter-side args."""
+    finalize_match_namespace(filter_args)
 
-    if is_negative and getattr(object_args, 'stale', False):
+    if is_negative and getattr(filter_args, 'stale', False):
         raise ValueError("--stale cannot be combined with --sans")
 
     return RelationshipFilter(
         relationship_type=relationship_type,
-        object_pattern=getattr(object_args, 'pattern', None) or '*',
-        object_match_syntax=getattr(object_args, 'match_syntax', 'glob'),
-        object_types=getattr(object_args, 'symbol_types', None) or [],
+        filter_pattern=getattr(filter_args, 'pattern', None) or '*',
+        filter_match_syntax=getattr(filter_args, 'match_syntax', 'glob'),
+        filter_types=getattr(filter_args, 'symbol_types', None) or [],
         is_negative=is_negative,
+        inverted=inverted,
         result_newerthan_seconds=(
-            parse_duration(object_args.newerthan)
-            if getattr(object_args, 'newerthan', None) else None
+            parse_duration(filter_args.newerthan)
+            if getattr(filter_args, 'newerthan', None) else None
         ),
         result_olderthan_seconds=(
-            parse_duration(object_args.olderthan)
-            if getattr(object_args, 'olderthan', None) else None
+            parse_duration(filter_args.olderthan)
+            if getattr(filter_args, 'olderthan', None) else None
         ),
-        result_stale=getattr(object_args, 'stale', False),
+        result_stale=getattr(filter_args, 'stale', False),
     )
 
 
 def build_match_stage(
     parsed_args: Namespace,
     relationship: Optional[RelationshipFilter] = None,
+    relationships: Optional[Sequence[RelationshipFilter]] = None,
     negate_pattern: bool = False,
 ) -> PipelineStage:
     """Wrap normalized match args as a match pipeline stage."""
     finalize_match_namespace(parsed_args)
-    parsed_args.relationship = relationship
+    if relationships is None:
+        relationships = [relationship] if relationship is not None else []
+    parsed_args.relationships = list(relationships)
+    parsed_args.relationship = relationship or (parsed_args.relationships[0] if parsed_args.relationships else None)
     parsed_args.negate_pattern = negate_pattern
     return PipelineStage(StageType.MATCH, parsed_args)

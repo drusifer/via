@@ -15,6 +15,8 @@ The via index covers all Python, JavaScript, TypeScript, and Markdown files in t
 | Find a function | `["-mg", "*func_name*", "-tf"]` |
 | Find a file | `["-mg", "*filename*", "-tF"]` |
 | Find a markdown section | `["-mg", "*SectionName*", "-tH"]` |
-| Find subclasses of X | `["-mg", "X", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"]` |
-| Find callers of X | `["-mg", "X", "-tf", "--via", "calls", "-mg", "*", "-tf"]` |
-| Find all symbols in a file | `["-mg", "path/to/file.py", "-tF", "-Q", "--via", "declares", "-mg", "*"]` |
+| Find subclasses of X | `["-mg", "*", "-tc", "--via", "inherits-from", "-mg", "X", "-tc"]` |
+| Find callers of X | `["-mg", "*", "-tf", "--via", "calls", "-mg", "X", "-tf"]` |
+| Find files declaring X | `["-mg", "*", "-tF", "--via", "declares", "-mg", "X"]` |
+
+Relationship stages filter the initial result stage. A query for “symbols declared in file” is not a relationship shortcut here; use result-stage-first queries, or a future task-language helper when available.

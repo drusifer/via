@@ -225,8 +225,8 @@ class ViaQuery:
         rel = getattr(args, "relationship", None)
         if rel:
             out.extend(["--sans" if rel.is_negative else "--via", rel.relationship_type.value])
-            object_flag = {"g": "-mg", "r": "-mr", "s": "-ms"}.get(rel.object_match_syntax, "-mg")
-            out.extend([object_flag, rel.object_pattern])
+            object_flag = {"g": "-mg", "r": "-mr", "s": "-ms"}.get(rel.filter_match_syntax, "-mg")
+            out.extend([object_flag, rel.filter_pattern])
         return out
 
 

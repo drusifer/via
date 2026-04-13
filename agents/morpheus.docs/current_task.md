@@ -1,17 +1,21 @@
 # Morpheus Current Task
 
-## Sprint 20 Review
-**Status**: COMPLETE
-**Date**: 2026-04-08
+## Sprint 24 Cycle 2 Review — Multi-Filter Relationship Chaining
+**Status**: COMPLETE — APPROVED
+**Date**: 2026-04-13
 
 ## Deliverables
-- `agents/morpheus.docs/SPRINT_20_ARCHITECTURE.md`
-- `agents/morpheus.docs/SPRINT_20_REVIEW_2026-04-08T21:58.md`
+- `via/pipeline/parser.py`
+- `via/pipeline/stage_builder.py`
+- `via/pipeline/executor.py`
+- `tests/unit/test_relationship_cli.py`
+- `tests/unit/test_type_filter_relationships.py`
 
-## Review Outcome
-- Shared `stage_builder` seam approved
-- Builder/CLI parity improved without changing executor architecture
-- Sprint remained bounded to adoption and documentation
+## Outcome
+- APPROVED.
+- Implementation matches Sprint 24 Decision 4: parser collects all relationship filters; executor applies the first as primary and later filters sequentially.
+- Compatibility preserved through `args.relationship`.
+- Full suite passed: 1313 passed, 1 skipped, 4 warnings.
 
 ## Next
-- Hand off ship decision to Cypher
+Mouse owns Sprint 24 closeout or next-cycle coordination.

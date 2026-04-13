@@ -17,6 +17,45 @@ import argparse
 import datetime
 import os
 import sys
+from pathlib import Path
+
+
+def is_make_build(persona, cmd):
+    """Return whether this message is mkf's build-status chat entry."""
+    return persona.lower() == "make" and cmd.lstrip("*").lower() == "build"
+
+
+def last_entry_is_make_build(content):
+    """Detect whether the final chat entry is a make build-status entry."""
+    marker = "\n---\n["
+    start = content.rfind(marker)
+    if start == -1:
+        return False
+
+    entry = content[start + 1 :]
+    first_line = next((line for line in entry.splitlines() if line.startswith("[")), "")
+    return "[**make**]" in first_line and "build" in first_line
+
+
+def write_message(chat_file, formatted_line, overwrite_last_make_build):
+    """Append a message, or replace the final make build entry when requested."""
+    path = Path(chat_file)
+
+    try:
+        content = path.read_text()
+    except FileNotFoundError:
+        print(f"Error: Could not find {chat_file}")
+        sys.exit(1)
+
+    if overwrite_last_make_build and last_entry_is_make_build(content):
+        marker = "\n---\n["
+        start = content.rfind(marker)
+        path.write_text(content[:start] + formatted_line)
+        return "Replaced last make build message in"
+
+    with path.open("a") as f:
+        f.write(formatted_line)
+    return "Appended to"
 
 
 def main():
@@ -47,16 +86,15 @@ def main():
     # Handle list of recipients or default to "all"
     to = ','.join(args.to) if args.to else "all"
         
-    formatted_line = f"\n---\n[{timestamp}] [**{args.persona}**]->[**{to}**] *{cmd}*:\n {args.message}\n"
+    formatted_line = f"\n---\n[{timestamp}] [**{args.persona}**]->[**{to}**] {cmd}*:\n {args.message}\n"
     
-    try:
-        with open(chat_file, "a") as f:
-            f.write(formatted_line)
-        print(f"Appended to {chat_file}:")
-        print(formatted_line.strip())
-    except FileNotFoundError:
-        print(f"Error: Could not find {chat_file}")
-        sys.exit(1)
+    action = write_message(
+        chat_file,
+        formatted_line,
+        overwrite_last_make_build=is_make_build(args.persona, cmd),
+    )
+    print(f"{action} {chat_file}:")
+    print(formatted_line.strip())
 
 if __name__ == "__main__":
     main()

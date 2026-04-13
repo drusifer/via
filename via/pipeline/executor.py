@@ -9,6 +9,7 @@ Author: Drew Gutstein
 License: GPL-3.0
 """
 import fnmatch
+import copy
 import re
 import sys
 from typing import Dict, Iterator, List, Optional
@@ -152,10 +153,14 @@ class PipelineExecutor:
         # Check if this is a relationship query
         relationship = getattr(args, 'relationship', None)
         if relationship:
-            if relationship.is_negative:
-                results = self._execute_negative_relationship_query(stage)
+            relationships = getattr(args, 'relationships', None) or [relationship]
+            primary_stage = self._stage_with_relationship(stage, relationships[0])
+            if relationships[0].is_negative:
+                results = self._execute_negative_relationship_query(primary_stage)
             else:
-                results = self._execute_relationship_query(stage)
+                results = self._execute_relationship_query(primary_stage)
+            for rel in relationships[1:]:
+                results = self._filter_results_by_relationship(stage, results, rel)
             contains_pattern = getattr(args, 'contains_pattern', None)
             if contains_pattern:
                 return self._filter_records_by_body(results, contains_pattern, not args.case_insensitive)
@@ -213,10 +218,11 @@ class PipelineExecutor:
     def _execute_relationship_query(self, stage: PipelineStage) -> Iterator[MatchRecord]:
         """Execute positive relationship query (--via) against database.
 
-        Direction convention:
-          Pattern BEFORE --via = object_pattern (the "known" anchor side)
-          Pattern AFTER --via  = subject_pattern (filter on results returned)
-          Returns subjects (sources) that have the relationship TO the object.
+        Result-first direction convention:
+          Pattern BEFORE --via = result stage (what gets returned)
+          Pattern AFTER --via  = filter stage (the relationship anchor)
+          For forward relationships: returns source (from) side symbols.
+          For inverse relationships (e.g. called-by): returns target (to) side symbols.
 
         Args:
             stage: PipelineStage with relationship filter (is_negative=False)
@@ -227,46 +233,63 @@ class PipelineExecutor:
         args = stage.args
         rel: RelationshipFilter = args.relationship
 
-        # Pattern BEFORE --via: anchor/object filter (what we're relating through)
-        object_pattern = args.pattern
-        # Pattern AFTER --via: result/subject filter (what gets returned)
-        subject_pattern = rel.object_pattern
+        # Result-first: pattern BEFORE --via is what gets returned
+        subject_pattern = args.pattern
+        # Filter: pattern AFTER --via is the relationship anchor
+        object_pattern = rel.filter_pattern
 
-        object_types = getattr(args, 'symbol_types', None) or []
-        object_type = args.symbol_type if hasattr(args, 'symbol_type') else None
-        if object_types:
-            object_type = object_types[0]
+        # Result stage types
+        result_types = getattr(args, 'symbol_types', None) or []
+        result_type = args.symbol_type if hasattr(args, 'symbol_type') else None
+        if result_types:
+            result_type = result_types[0]
 
-        subject_type = rel.object_types[0] if rel.object_types else None
+        # Filter stage types
+        filter_type = rel.filter_types[0] if rel.filter_types else None
 
-        # declares requires a container (file or class) as the object type
+        # declares requires a container (file or class) as the filter type
         _DECLARES_CONTAINER_TYPES = {'file', 'class', 'filepath', 'filename', None}
-        if rel.relationship_type.value == 'declares' and object_type not in _DECLARES_CONTAINER_TYPES:
-            raise ValueError(
-                f"'{object_type}' is not a valid container type for --via declares. "
-                f"Valid container types: class, file/filepath."
-            )
+        if rel.relationship_type.value == 'declares' and not rel.inverted:
+            if filter_type not in _DECLARES_CONTAINER_TYPES:
+                raise ValueError(
+                    f"'{filter_type}' is not a valid container type for --via declares. "
+                    f"Valid container types: class, file/filepath."
+                )
 
         case_sensitive = not args.case_insensitive
         limit = getattr(args, 'limit', None) or 10
 
+        # Map result-first CLI args to DB subject/object convention.
+        # For forward (inverted=False): result=subject (from side), filter=object (to side)
+        # For inverse (inverted=True): result=object (to side), filter=subject (from side)
+        if not rel.inverted:
+            db_subject_pattern = subject_pattern
+            db_object_pattern = object_pattern
+            db_subject_type = result_type
+            db_object_type = filter_type
+        else:
+            db_subject_pattern = object_pattern
+            db_object_pattern = subject_pattern
+            db_subject_type = filter_type
+            db_object_type = result_type
+
         # calls stored from method symbols, not class symbols.
-        # When object side is a class for calls, expand to include methods.
+        # When subject side is a class for calls, expand to include methods.
         subject_parent_pattern = None
-        if rel.relationship_type.value == 'calls' and subject_type == 'class':
-            subject_parent_pattern = subject_pattern
-            subject_pattern = '*'
-            subject_type = 'method'
+        if rel.relationship_type.value == 'calls' and db_subject_type == 'class':
+            subject_parent_pattern = db_subject_pattern
+            db_subject_pattern = '*'
+            db_subject_type = 'method'
 
         # Query relationships from database
         results = list(self.db.query_relationships(
             relationship_type=rel.relationship_type.value,
-            subject_pattern=subject_pattern,
-            object_pattern=object_pattern,
-            subject_type=subject_type,
-            object_type=object_type,
+            subject_pattern=db_subject_pattern,
+            object_pattern=db_object_pattern,
+            subject_type=db_subject_type,
+            object_type=db_object_type,
             subject_parent_pattern=subject_parent_pattern,
-            invert=False,
+            invert=rel.inverted,
             limit=limit,
             case_sensitive=case_sensitive,
             result_newerthan_seconds=rel.result_newerthan_seconds,
@@ -287,11 +310,49 @@ class PipelineExecutor:
 
         return iter(results)
 
+    @staticmethod
+    def _stage_with_relationship(stage: PipelineStage, rel: RelationshipFilter) -> PipelineStage:
+        """Return a shallow stage copy with one active relationship filter."""
+        args = copy.copy(stage.args)
+        args.relationship = rel
+        args.relationships = [rel]
+        return PipelineStage(stage.stage_type, args)
+
+    @staticmethod
+    def _record_key(record: MatchRecord) -> tuple:
+        """Return a stable identity key for comparing relationship query results."""
+        return (
+            record.symbol_type,
+            record.qualified_name,
+            record.file_path,
+            record.line_number,
+        )
+
+    def _filter_results_by_relationship(
+        self,
+        stage: PipelineStage,
+        prev_results: Iterator[MatchRecord],
+        rel: RelationshipFilter,
+    ) -> Iterator[MatchRecord]:
+        """Apply an additional relationship filter to existing result records."""
+        rel_stage = self._stage_with_relationship(stage, rel)
+        rel_stage.args.limit = 1_000_000
+        if rel.is_negative:
+            matching = self._execute_negative_relationship_query(rel_stage)
+        else:
+            matching = self._execute_relationship_query(rel_stage)
+        allowed = {self._record_key(record) for record in matching}
+        for record in prev_results:
+            if self._record_key(record) in allowed:
+                yield record
+
     def _execute_negative_relationship_query(self, stage: PipelineStage) -> Iterator[MatchRecord]:
         """Execute NOT EXISTS relationship query (--sans) against database.
 
-        Returns symbols that do NOT have the specified relationship
-        to any symbol matching the object pattern.
+        Result-first: the result stage (BEFORE --sans) specifies symbols to return.
+        The filter stage (AFTER --sans) specifies what relationship must NOT exist.
+        For inverse relationship types (e.g. called-by), invert_join flips which
+        side of the join the NOT EXISTS check anchors on.
 
         Args:
             stage: PipelineStage with relationship filter (is_negative=True)
@@ -302,16 +363,16 @@ class PipelineExecutor:
         args = stage.args
         rel: RelationshipFilter = args.relationship
 
-        # Subject = the anchor side (BEFORE --sans): symbols to test for absence of relation
+        # Result-first: result stage pattern = what gets returned
         subject_pattern = args.pattern
-        object_pattern = rel.object_pattern
+        object_pattern = rel.filter_pattern
 
         subject_types = getattr(args, 'symbol_types', None) or []
         subject_type = args.symbol_type if hasattr(args, 'symbol_type') else None
         if subject_types:
             subject_type = subject_types[0]
 
-        object_type = rel.object_types[0] if rel.object_types else None
+        object_type = rel.filter_types[0] if rel.filter_types else None
 
         case_sensitive = not args.case_insensitive
         limit = getattr(args, 'limit', None) or 10
@@ -319,10 +380,11 @@ class PipelineExecutor:
         match_syntax = getattr(args, 'match_syntax', 'g')
         match_op = get_match_op(match_syntax)
 
-        # 'declares' stores container as to_symbol_id, member as from_symbol_id.
-        # For --sans declares (containers with no matching members), the NOT EXISTS
-        # subquery must anchor on to_symbol_id rather than from_symbol_id.
-        invert_join = rel.relationship_type.value == 'declares'
+        # invert_join flips which side of the relationship the NOT EXISTS anchors on.
+        # For inverse relationship types (e.g. called-by, declared-in), the result
+        # is on the target (to) side, so the NOT EXISTS must anchor there.
+        # For forward 'declares', the container is the to_symbol_id, so it also inverts.
+        invert_join = rel.inverted or rel.relationship_type.value == 'declares'
 
         return self.db.query_negative_relationships(
             relationship_type=rel.relationship_type.value,

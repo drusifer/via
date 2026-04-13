@@ -10,9 +10,9 @@ def _stage_signature(stage):
     if rel is not None:
         rel_sig = (
             rel.relationship_type.value,
-            rel.object_pattern,
-            tuple(rel.object_types or []),
-            rel.object_match_syntax,
+            rel.filter_pattern,
+            tuple(rel.filter_types or []),
+            rel.filter_match_syntax,
             rel.is_negative,
             rel.result_stale,
         )
@@ -54,14 +54,14 @@ def test_builder_and_parser_share_plain_match_stage_shape():
 
 def test_builder_and_parser_share_relationship_stage_shape():
     parser_stage = PipelineParser()._parse_stage(
-        ['-mg', 'Base', '-tc', '--via', 'inherits-from', '-mg', '*', '-tc']
+        ['-mg', '*', '-tc', '--via', 'inherits-from', '-mg', 'Base', '-tc']
     )
     builder_stage = (
         ViaQueryBuilder()
-        .glob('Base')
+        .glob('*')
         .classes()
         .via('inherits-from')
-            .glob('*')
+            .glob('Base')
             .classes()
         .done()
         .build()

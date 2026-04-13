@@ -1,16 +1,19 @@
 # Mouse Next Steps
 
-## Resume Point: Sprint 21 shipped
-
-Sprint 21 is complete. Sprint 22 is the next intake point.
+## Resume Point: Sprint 24 complete
 
 ### When Resuming
-1. Read bottom 20 lines of `agents/CHAT.md`
-2. Wait for Cypher to open Sprint 22 planning
-3. Preserve the short-cycle loop: Mouse plan → Neo → Trin → Morpheus → Cypher → Mouse
+1. Read bottom 20 lines of `agents/CHAT.md`.
+2. If the user asks for status, report Sprint 24 as complete.
+3. If the user asks for next work, recommend planning Sprint 25 or a focused polish/regression sprint.
+4. Preserve the short-cycle loop for future work:
+   - Neo implements one cycle
+   - Trin verifies
+   - Morpheus reviews
+   - Smith reviews UX gates when planned
 
-### Sprint 21 References
-- User stories: `agents/cypher.docs/SPRINT_21_USER_STORIES.md`
-- Architecture: `agents/morpheus.docs/SPRINT_21_ARCHITECTURE.md`
-- Closeout: `agents/cypher.docs/SPRINT_21_CLOSEOUT_2026-04-12.md`
-- Task board: `agents/mouse.docs/SPRINT_21_TASKS.md`
+### Sprint 24 References
+- Architecture: `agents/morpheus.docs/SPRINT_24_ARCHITECTURE.md`
+- Cycle 2 review: `agents/morpheus.docs/SPRINT_24_CYCLE_2_REVIEW.md`
+- Cycle 2 UAT: `agents/trin.docs/SPRINT_24_CYCLE_2_UAT_Summary_2026-04-13T10:28.md`
+- Closeout: `agents/mouse.docs/SPRINT_24_CLOSEOUT.md`

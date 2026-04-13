@@ -40,5 +40,27 @@ class ReferenceType(Enum):
         """Get mapping from string values to ReferenceType."""
         return {rt.value: rt for rt in cls}
 
+    @classmethod
+    def get_full_value_map(cls) -> dict:
+        """Get mapping including both forward and inverse relationship names.
+
+        Returns dict of {name: (ReferenceType, inverted: bool)}.
+        """
+        forward = {rt.value: (rt, False) for rt in cls}
+        forward.update(_INVERSE_MAP)
+        return forward
+
+
+# Inverse relationship names → (forward ReferenceType, inverted=True)
+_INVERSE_MAP = {
+    "called-by": (ReferenceType.CALLS, True),
+    "inherited-by": (ReferenceType.INHERITS_FROM, True),
+    "imported-by": (ReferenceType.IMPORTS, True),
+    "referenced-by": (ReferenceType.REFERENCES, True),
+    "declared-in": (ReferenceType.DECLARES, True),
+    "covers": (ReferenceType.COVERED_BY, True),
+    "http-called-by": (ReferenceType.HTTP_CALLS, True),
+}
+
 # Backward-compatibility alias
 RelationshipType = ReferenceType

@@ -1,6 +1,6 @@
 # Mouse Context - Sprint Status
 
-**Last Updated**: 2026-04-08
+**Last Updated**: 2026-04-12
 
 ## Sprint Status
 
@@ -26,27 +26,42 @@
 | 18 | Polymorphic JS parser refactor | ✅ SHIPPED | 96 targeted |
 | 19 | ViaQueryBuilder | ✅ SHIPPED | 30 targeted |
 | 20 | Builder adoption + library usability | ✅ SHIPPED | 50 targeted |
+| 21 | JS body analyzer + MCP runner adoption | ✅ SHIPPED | — |
+| 22 | Query confidence + error recovery | ✅ SHIPPED | 197 targeted |
+| 23 | Recognition over recall | ✅ SHIPPED | 67 targeted |
+| 24 | Result-stage-first query model | ✅ SHIPPED | 1313 full-suite |
 
-## Current Sprint: Sprint 20 Shipped
+## Current Sprint: Sprint 24 Complete
 
-**Latest completed sprint**: Sprint 20
+**Latest completed sprint**: Sprint 24
 **Cycle Protocol**: Mouse plan → Neo TDD → Trin UAT → Morpheus review → Mouse archive/next entry
 
-**Sprint 20 task file**: `agents/mouse.docs/SPRINT_20_TASKS.md`
-**Architecture spec**: `agents/morpheus.docs/SPRINT_20_ARCHITECTURE.md`
-**User stories**: `agents/cypher.docs/SPRINT_20_USER_STORIES.md`
+**Sprint 24 closeout**: `agents/mouse.docs/SPRINT_24_CLOSEOUT.md`
+**Architecture spec**: `agents/morpheus.docs/SPRINT_24_ARCHITECTURE.md`
 
-### Sprint 20 Cycle Status
+### Sprint 24 Cycle Status
 
 | Cycle | Phase | Assigned | Status |
 |-------|-------|----------|--------|
-| 1 | S20-1 | Neo → Trin → Morpheus | ✅ COMPLETE |
-| 2 | S20-2 | Neo → Trin → Morpheus | ✅ COMPLETE |
+| 1 | Result-first executor + inverse types + docs/tests | Neo → Trin → Morpheus | Approved |
+| 2 | Multi-filter relationship chaining | Neo → Trin → Morpheus | Approved |
 
 ## Team Notes
 - Use `make` skill (not raw Bash) for all test runs — team rule
 - Activate venv before Python/via commands
-- Sprint 20 must preserve CLI semantics while reducing builder/CLI drift
-- Highest-risk parity areas: default limits, relationship behavior, and docs/export mismatch
-- Executor redesign remains backlog, not Sprint 20 scope
-- Sprint 20 archived with a 50-test targeted make baseline
+- Sprint 22 must preserve query semantics while improving error clarity.
+- Highest-risk areas: valid empty results vs invalid query errors, multi-type regression, and docs accidentally implying inverse `declares`.
+- Executor redesign and shortcut syntax remain out of scope.
+- Sprint 22 closeout: `agents/mouse.docs/SPRINT_22_CLOSEOUT.md`
+- Final tracked baseline: 197 targeted passing tests across QA gates.
+- Smith approved final HCI wording.
+- Sprint 23 planned around recognition over recall.
+- Sprint 23 must use `--canned` as the single shortcut surface.
+- Do not ship fake `callees` or `declared-in-file` support.
+- Sprint 23 closeout: `agents/mouse.docs/SPRINT_23_CLOSEOUT.md`
+- Final tracked baseline: 67 targeted passing tests across QA gates.
+- Follow-up risk: reconcile relationship runtime orientation with the user-facing command model.
+- Sprint 24 closeout: `agents/mouse.docs/SPRINT_24_CLOSEOUT.md`
+- Final tracked baseline: 1313 passed, 1 skipped, 4 warnings.
+- Result-stage-first runtime orientation is now implemented.
+- Multi-filter relationship chaining is implemented with parser ordering and executor post-filter tests.
