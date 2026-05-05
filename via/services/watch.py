@@ -45,9 +45,7 @@ class _ViaEventHandler(FileSystemEventHandler):
             self._svc._schedule(event.src_path, 'modified')
 
     def on_created(self, event) -> None:
-        if event.is_directory:
-            self._svc._add_dir_watch(event.src_path)
-        else:
+        if not event.is_directory:
             self._svc._schedule(event.src_path, 'created')
 
     def on_deleted(self, event) -> None:
@@ -55,9 +53,7 @@ class _ViaEventHandler(FileSystemEventHandler):
             self._svc._schedule(event.src_path, 'deleted')
 
     def on_moved(self, event) -> None:
-        if event.is_directory:
-            self._svc._add_dir_watch(event.dest_path)
-        else:
+        if not event.is_directory:
             self._svc._schedule(event.src_path, 'deleted')
             self._svc._schedule(event.dest_path, 'modified')
 
@@ -175,24 +171,7 @@ class WatchService:
             self._observer.join(timeout=5)
 
     def _schedule_dir_watches(self) -> None:
-        """Schedule non-recursive watches for all non-excluded directories.
-
-        Walks the tree using FileDiscovery's gitignore logic to prune excluded
-        directories, so the OS only gets inotify watches for directories we
-        actually care about.
-        """
-        for root, dirs, _ in os.walk(self.root_dir):
-            dirs[:] = [d for d in dirs
-                       if self._filter.should_include_dir(root, d)]
-            self._observer.schedule(self._handler, root, recursive=False)
-
-    def _add_dir_watch(self, dir_path: str) -> None:
-        """Dynamically add a watch for a newly created directory if not excluded."""
-        parent = os.path.dirname(dir_path)
-        name = os.path.basename(dir_path)
-        if self._filter.should_include_dir(parent, name):
-            self._observer.schedule(self._handler, dir_path, recursive=False)
-            logger.debug("Added watch: %s", os.path.relpath(dir_path, self.root_dir))
+        self._observer.schedule(self._handler, self.root_dir, recursive=True)
 
     def _schedule(self, path: str, action: str) -> None:
         """Debounce a file event and schedule execution."""
