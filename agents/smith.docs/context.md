@@ -1,6 +1,41 @@
 # Smith Context
 
-**Last updated**: 2026-04-12
+**Last updated**: 2026-05-06
+
+## Sprint 25 Gate 1 Review (2026-05-06)
+
+Full review: `agents/smith.docs/SPRINT_25_GATE1_REVIEW.md`
+
+### Verdict
+- APPROVED WITH NOTES.
+- Dart/Flutter stories are valuable because they give Flutter developers normal VIA structural navigation without pretending to be a Flutter analyzer.
+- Keep `--lang dart` as the user-facing language filter; do not introduce a separate `--lang flutter`.
+- Avoid Flutter-specific flags in Sprint 25; use existing `-tc`, `-tm`, `--via`, and output surfaces.
+- Morpheus must decide constructor representation and parser dependency quality.
+- Docs must explain that `import` / `export` / `part` are directive strings, not resolved package dependencies.
+
+## Sprint 25 Gate 2 Architecture Review (2026-05-06)
+
+Full review: `agents/smith.docs/SPRINT_25_GATE2_REVIEW.md`
+
+### Verdict
+- APPROVED.
+- Architecture preserves normal VIA surfaces and avoids Flutter-specific flags.
+- Cycle 0 dependency spike is UX-positive because it prevents premature claims of Dart support.
+- Required implementation notes: visible language filter is `--lang dart`; docs must state no widget tree, route graph, semantic analyzer, or package dependency resolution.
+- If Cycle 0 fails, team must communicate the rescope plainly.
+
+## Sprint 25 Cycle 2 HCI Review (2026-05-06)
+
+Full review: `agents/smith.docs/SPRINT_25_CYCLE_2_HCI_REVIEW.md`
+
+### Verdict
+- APPROVED.
+- README, user guide, and MCP schema now show Dart/Flutter examples through normal VIA surfaces.
+- `--lang dart` is visible; no Flutter-only flags were added.
+- Docs state Dart imports/exports/parts are directive strings, not resolved package dependencies.
+- Docs state VIA does not infer widget trees, route graphs, pub dependencies, or Dart analyzer semantics.
+- Residual risk: relationship syntax remains cognitively heavy; examples are acceptable for Sprint 25.
 
 ## VIA MCP Usability Evaluation (2026-04-12)
 

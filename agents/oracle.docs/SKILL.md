@@ -144,22 +144,24 @@ make test   # confirm no regressions
 ## State Management Protocol (CRITICAL)
 
 **ENTRY (When Activating):**
-1. Read `agents/CHAT.md` - Understand team context (last 10-20 messages)
-2. Load `agents/oracle.docs/context.md` - Your accumulated knowledge
-3. Load `agents/oracle.docs/current_task.md` - What you were working on
-4. Load `agents/oracle.docs/next_steps.md` - Resume plan
+1. Read Mouse's Sprint Plan (`agents/mouse.docs/`) - Ensure it is relevant/new
+2. Check your own Lessons and Memory (`agents/oracle.docs/lessons.md`, `agents/oracle.docs/memory.md`)
+3. Check your context (`agents/oracle.docs/context.md`)
+4. Read `agents/CHAT.md` - Understand most recent actions and team context (last 10-20 messages)
+5. Load `agents/oracle.docs/current_task.md` - What you were working on
+6. Load `agents/oracle.docs/next_steps.md` - Resume plan
 
 **WORK:**
-5. Execute assigned tasks
-6. Post updates to `agents/CHAT.md`
+7. Execute assigned tasks
+8. Post updates to `agents/CHAT.md`
 
 **EXIT — HARD GATE: Save BEFORE switching (MANDATORY):**
-7. Update `context.md` — knowledge organization notes from this session
-8. Update `current_task.md` — progress %, completed items, exact next item
-9. Update `next_steps.md` — step-by-step resume instructions for a cold start
-10. Post handoff message: `make chat MSG="<summary> @NextPersona *command" PERSONA="<Name>" CMD="handoff" TO="<next>"`
+9. Update `context.md` — knowledge organization notes from this session
+10. Update `current_task.md` — progress %, completed items, exact next item
+11. Update `next_steps.md` — step-by-step resume instructions for a cold start
+12. Post handoff message: `make chat MSG="<summary> @NextPersona *command" PERSONA="<Name>" CMD="handoff" TO="<next>"`
 
-**Do NOT switch or stop until steps 7-10 are written.**
+**Do NOT switch or stop until steps 9-12 are written.**
 **State files are the only memory that survives context overflow or conversation restart.**
 
 ---

@@ -1073,6 +1073,12 @@ class DatabaseStore:
                 if module_id:
                     self.insert_relationship(source_id, module_id, rel_type)
                     resolved_count += 1
+            elif rel_type == 'inherits-from':
+                # External base classes/interfaces are still useful relationship anchors.
+                class_id = self._get_or_create_external_class_symbol(target_name)
+                if class_id:
+                    self.insert_relationship(source_id, class_id, rel_type)
+                    resolved_count += 1
 
             # Delete pending entry (resolved or not)
             self.conn.execute(
@@ -1106,6 +1112,24 @@ class DatabaseStore:
                (symbol_name, symbol_type, file_path, line_number, qualified_name)
                VALUES (?, 'module', '<external>', 0, ?)""",
             (module_name, module_name)
+        )
+        return cursor.lastrowid
+
+    def _get_or_create_external_class_symbol(self, class_name: str) -> int:
+        """Get or create an external class-like symbol for unresolved inheritance targets."""
+        cursor = self.conn.execute(
+            "SELECT id FROM symbols WHERE symbol_name = ? AND symbol_type IN ('class', 'external_class') LIMIT 1",
+            (class_name,)
+        )
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+
+        cursor = self.conn.execute(
+            """INSERT INTO symbols
+               (symbol_name, symbol_type, file_path, line_number, qualified_name, symbol_subtype)
+               VALUES (?, 'external_class', '<external>', 0, ?, 'external')""",
+            (class_name, class_name)
         )
         return cursor.lastrowid
 
@@ -1194,7 +1218,10 @@ class DatabaseStore:
 
         self._add_pattern_clause(where_parts, params, "s.parent_name", subject_parent_pattern, match_op, case_sensitive)
 
-        if object_type:
+        if object_type == 'class':
+            where_parts.append("(t.symbol_type = ? OR t.symbol_type = 'external_class')")
+            params.append(object_type)
+        elif object_type:
             where_parts.append("t.symbol_type = ?")
             params.append(object_type)
 

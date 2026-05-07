@@ -43,6 +43,7 @@ from via.core.constants import (
 from via.core.logging import setup_logging
 from via.core.utils import safe_print
 from via.db.store import DatabaseStore
+from via.parsers.dart_parser import DartParser
 from via.parsers.javascript_parser import JavaScriptParser
 from via.parsers.markdown_parser import MarkdownParser
 from via.parsers.python_parser import PythonParser
@@ -93,7 +94,7 @@ Options:
   --not                 Negate the match pattern (return non-matching symbols)
   --newerthan DURATION  Filter: symbols from files modified within DURATION (e.g. 1h, 2d, 1w)
   --olderthan DURATION  Filter: symbols from files NOT modified within DURATION (e.g. 1h, 2d)
-  --lang LANG           Filter by language: py/python, js/javascript, ts/typescript, md/markdown
+  --lang LANG           Filter by language: py/python, js/javascript, ts/typescript, dart, md/markdown
   --subtype TYPE        Filter by symbol subtype (e.g. interface, enum, arrow_function).
                         Case-sensitive; unknown values return no results.
   --contains PATTERN    Filter matched symbols by whether their source body contains PATTERN
@@ -313,6 +314,7 @@ def _run_index_watch(
         parser_registry.register(PythonParser())
         parser_registry.register(MarkdownParser())
         parser_registry.register(JavaScriptParser())
+        parser_registry.register(DartParser())
         indexing_service = IndexingService(db_store, parser_registry)
         watch_service = WatchService(
             indexing_service=indexing_service,
@@ -392,6 +394,7 @@ def _run_index_command(args: argparse.Namespace) -> int:
             parser_registry.register(PythonParser())
             parser_registry.register(MarkdownParser())
             parser_registry.register(JavaScriptParser())
+            parser_registry.register(DartParser())
 
             # Initialize indexing service
             indexing_service = IndexingService(db_store, parser_registry)

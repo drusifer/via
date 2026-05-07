@@ -1,14 +1,14 @@
 ---
 name: sprint
-description: Full sprint implementation cycle. Covers planning, phase loop, sprint close, retrospective, and launch. Use *plan sprint to start, then *impl <phase> for each phase.
+description: Full sprint implementation cycle. Covers planning, phase Bloop, sprint close, retrospective, and launch. Use *plan sprint to start, then *impl <phase> for each phase.
 triggers: ["*plan sprint", "*sprint close", "*sprint retro", "*sprint launch"]
-requires: ["bob-protocol", "loops", "chat", "make"]
+requires: ["bob-protocol", "bloop", "chat", "make"]
 ---
 
-Full sprint cycle from planning through launch, including all review gates, phase loops, and handoff templates.
+Full sprint cycle from planning through launch, including all review gates, phase Bloops, and handoff templates.
 
 TLDR:
-    Sprints have three stages: Planning (Cypher→Smith→Morpheus→Mouse), Phase Loop (*impl per phase), and Close (Oracle→Smith→All retro→Cypher launch).
+    Sprints have three stages: Planning (Cypher→Smith→Morpheus→Mouse), Phase Bloop (*impl per phase), and Close (Oracle→Smith→All retro→Cypher launch).
     Smith gates after Cypher and Morpheus are mandatory — do not auto-proceed without explicit `*user approve`.
     Keep phases small: 1-3 tasks each. Large phases cause context overflow.
 
@@ -17,10 +17,11 @@ TLDR:
 ## Sprint Stages
 
 ```
-Stage 1: Planning     → Cypher → Smith gate → Morpheus → Smith gate → Mouse → Morpheus review
-Stage 2: Phase Loop   → (Neo → Trin → Morpheus) × N phases
-Stage 3: Close        → Oracle → Smith → All retro → Cypher launch
+Stage 1: Planning      → Cypher → Smith gate → Morpheus → Smith gate → Mouse → Morpheus review
+Stage 2: Phase Bloop   → (Neo → Trin → Morpheus) × N phases
+Stage 3: Close         → Oracle → Smith → All retro → Cypher launch
 ```
+
 
 ---
 
@@ -110,7 +111,7 @@ make chat MSG="Sprint plan approved. Phase 1 ready. @Neo *swe impl phase-1" PERS
 
 ---
 
-## Stage 2: Phase Loop
+## Stage 2: Phase Bloop
 
 Repeat for each phase until all phases complete.
 
@@ -251,12 +252,12 @@ make chat MSG="*pm launch <sprint>. Sprint complete." PERSONA="Cypher" CMD="pm l
 | 2 | Morpheus | `*lead arch sprint` | → Smith `*user feedback` |
 | 2a | Smith | `*user approve` / `*user reject` | Must approve to proceed |
 | 3 | Mouse | `*sm plan sprint` | → Morpheus `*lead review sprint plan` |
-| 3a | Morpheus | `*lead review sprint plan` | Approve to start phase loop |
+| 3a | Morpheus | `*lead review sprint plan` | Approve to start phase Bloop |
 | 4 | Neo | `*swe impl <phase N>` | → Trin UAT |
 | 5 | Trin | `*qa uat <phase N>` | → Morpheus review |
 | 6 | Morpheus | `*lead review <phase N>` | Pass → next phase or Oracle |
 | 7 | Oracle | `*ora groom` | → Smith testing |
-| 8 | Smith | `*user test` + `*user feedback` | Pass → retro; bug → fix loop |
+| 8 | Smith | `*user test` + `*user feedback` | Pass → retro; bug → fix Bloop |
 | 9 | All | `*sprint retro` | Feed backlog to Cypher |
 | 10 | Cypher | `*pm launch <sprint>` | Sprint complete |
 
@@ -266,7 +267,7 @@ make chat MSG="*pm launch <sprint>. Sprint complete." PERSONA="Cypher" CMD="pm l
 
 - **Short phases**: 1-3 tasks each. Large phases cause context overflow.
 - **No skipping gates**: Smith's gates after steps 1 and 2 are mandatory. Never auto-proceed.
-- **Fix loop scope**: Fix loop targets the failing phase only — never restart the full sprint.
+- **Fix Bloop scope**: Fix Bloop targets the failing phase only — never restart the full sprint.
 - **State saves**: Every persona saves state before every handoff (see bob-protocol State Management).
 - **Chat first**: Post the handoff `make chat` call BEFORE switching. The next persona reads CHAT.md on entry.
 - **Retro is required**: Step 9 is not optional. Retro output is the input to the next sprint's backlog.

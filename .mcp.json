@@ -7,6 +7,7 @@
         "via",
         "mcp",
         "serve",
+        "--no-web",
         "/home/drusifer/Projects/via"
       ],
       "env": {

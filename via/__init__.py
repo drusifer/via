@@ -38,6 +38,7 @@ from .parsers.base import (
     ParserABC,
     ParseResult,
 )
+from .parsers.dart_parser import DartParser
 from .parsers.python_parser import PythonParser
 from .parsers.registry import ParserRegistry, get_global_registry
 
@@ -63,6 +64,7 @@ __all__ = [
     "ParserRegistry",
     "get_global_registry",
     "PythonParser",
+    "DartParser",
     # File discovery
     "FileDiscovery",
     "DiscoveredFile",

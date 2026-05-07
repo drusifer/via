@@ -2,7 +2,7 @@
 
 **Version**: 2.0
 **Author**: Cypher (PM)
-**Last Updated**: 2026-03-22
+**Last Updated**: 2026-05-06
 **Status**: Living Document — updated each sprint
 
 ---
@@ -225,14 +225,28 @@ VIA is a fast, pattern-based symbol search and indexing tool for Python, JavaScr
 
 ---
 
+### Sprint 25 — Dart / Flutter Support 📝 PLANNED
+
+| Story | Title | Points | Status |
+|-------|-------|--------|--------|
+| S25-1 | Dart file discovery and `--lang dart` filtering | 2 | Draft |
+| S25-2 | Dart parser foundation for classes, methods, functions, imports, globals | 5 | Draft |
+| S25-3 | Flutter-aware query value for widgets and `build` methods | 2 | Draft |
+| S25-4 | Dart relationships: declares, imports, inherits-from, calls | 3 | Draft |
+| S25-5 | Flutter project hygiene and docs/MCP examples | 1 | Draft |
+
+**Total**: 13pts | **Source**: `agents/cypher.docs/SPRINT_25_DART_FLUTTER_USER_STORIES.md`
+
+---
+
 ## Open Questions / Future Backlog
 
-- **Sprint 12**: JS/TS relationships (inherits-from, imports, calls, declares) + `--lang` filter flag (S11-3 + S11-4 from backlog)
+- **Dart parser engine**: Morpheus to confirm a maintained Dart AST/tree-sitter parser dependency or choose another robust parsing strategy.
 - **Boolean operators in queries**: `AND`, `OR`, `NOT` across pipeline stages
 - **Cross-project queries**: multiple `.via/index.db` sources
 - **Interactive TUI**: browsable results (deferred since Sprint 2)
 - **Git integration**: `git blame`, history-aware queries
-- **Language support beyond Python**: JavaScript, TypeScript, Go
+- **Language support beyond current scope**: Go, Rust, Java/Kotlin, Swift
 
 ---
 

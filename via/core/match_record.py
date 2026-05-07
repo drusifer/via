@@ -275,6 +275,7 @@ class MatchRecordFactory:
 
     _RECORD_TYPES: Dict[str, type] = {
         'class': ClassMatchRecord,
+        'external_class': ClassMatchRecord,
         'method': MethodMatchRecord,
         'function': FunctionMatchRecord,
         'filepath': FileMatchRecord,

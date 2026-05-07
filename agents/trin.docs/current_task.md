@@ -1,16 +1,20 @@
 # Trin Current Task
 
-## Sprint 24 Cycle 2 UAT — PASSED
+## Sprint 25 Cycle 2 UAT — PASSED
 **Status**: DONE
-**Date**: 2026-04-13
-**Tests**: 1313 passed, 1 skipped, 4 warnings
+**Date**: 2026-05-06
+**Tests**: Full suite green
 
 ## Verification
 
-- Multi-filter parser ordering is covered in `tests/unit/test_relationship_cli.py`.
-- Positive chained relationship filtering is covered in `tests/unit/test_type_filter_relationships.py`.
-- Negative chained relationship filtering is covered in `tests/unit/test_type_filter_relationships.py`.
-- Full suite passed after the implementation.
+- Reviewed Sprint 25 Cycle 2 handoff.
+- Reviewed Cycle 2 acceptance criteria.
+- Reran focused Cycle 2 test:
+  - `make test FILE=tests/unit/test_sprint25_c2.py` — 3 passed.
+- Ran full suite:
+  - First full run found one discovery regression.
+  - After scoping `build/` exclusion to Flutter roots, `make test` — 1324 passed, 1 skipped, 4 warnings.
+- Updated root `task.md` Cycle 2 QA checkbox and verification status.
 
 ## Next
-Morpheus owns Sprint 24 Cycle 2 architecture review.
+Smith owns Cycle 2 docs/support-boundary wording review.

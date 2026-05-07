@@ -1,5 +1,38 @@
 # Morpheus Context
 
+## Sprint 25 - Dart / Flutter Support Architecture (2026-05-06)
+- Architecture written: `agents/morpheus.docs/SPRINT_25_ARCHITECTURE.md`.
+- Decision: add Dart as a normal `ParserABC` implementation through existing parser registry, indexing, DB, query, and renderer paths.
+- No Flutter-specific query language or flags in Sprint 25.
+- Parser engine preference is tree-sitter, but dependency viability is a hard Cycle 0 gate because Dart does not currently have the same clean Python language-wheel story as JS/TS.
+- Required Cycle 0: prove Python-loadable Dart grammar path before full parser implementation.
+- Entity mapping uses existing `ClassEntity`, `FunctionEntity`, `GlobalEntity`, and `ImportEntity`; constructors are methods with `symbol_subtype="constructor"`.
+- Relationship mapping uses existing `declares`, `imports`, `inherits-from`, and `calls`; `implements`/`with` map to `inherits-from` for Sprint 25.
+- Structural Flutter awareness only: widgets/base classes/build methods, no widget tree or route graph inference.
+- Sprint plan reviewed and approved: `agents/morpheus.docs/SPRINT_25_PLAN_REVIEW.md`.
+- Mouse's cycle structure is approved: Cycle 0 dependency spike, Cycle 1 parser foundation, Cycle 2 relationships/docs.
+
+## Sprint 25 Cycle 0 Review (2026-05-06)
+- Review written: `agents/morpheus.docs/SPRINT_25_CYCLE_0_REVIEW.md`.
+- Dependency path APPROVED.
+- `tree-sitter-language-pack>=1.6.2` can load Dart and parse a Flutter-style fixture through `tree_sitter.Parser`.
+- Neo may proceed to Cycle 1 parser foundation using `tree_sitter_language_pack.get_language("dart")`.
+
+## Sprint 25 Cycle 1 Review (2026-05-06)
+- Review written: `agents/morpheus.docs/SPRINT_25_CYCLE_1_REVIEW.md`.
+- Parser foundation APPROVED.
+- Dart is integrated as a normal `ParserABC` implementation with `.dart` discovery, CLI/MCP registration, Flutter/Dart excludes, and `--lang dart`.
+- Review found and closed one indexing gap: method `symbol_subtype` values are now persisted, so Dart constructors remain queryable with subtype filters after indexing.
+- Cycle 2 should focus on relationship coverage, Flutter fixture breadth, docs, and MCP examples.
+
+## Sprint 25 Cycle 2 Review (2026-05-06)
+- Review written: `agents/morpheus.docs/SPRINT_25_CYCLE_2_REVIEW.md`.
+- Cycle 2 APPROVED.
+- Dart/Flutter relationships use existing `declares`, `imports`, `inherits-from`, and `calls` types.
+- External unresolved inheritance anchors are stored as `external_class` so Flutter SDK bases can be relationship targets without polluting normal project class searches.
+- Docs and MCP examples preserve the structural-only support boundary.
+- Full suite passed: 1324 passed, 1 skipped, 4 warnings.
+
 ## Key Architectural Decisions
 
 ### Match Command Architecture — v5.0 (CURRENT)

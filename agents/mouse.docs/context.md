@@ -1,6 +1,6 @@
 # Mouse Context - Sprint Status
 
-**Last Updated**: 2026-04-12
+**Last Updated**: 2026-05-06
 
 ## Sprint Status
 
@@ -31,13 +31,16 @@
 | 23 | Recognition over recall | ✅ SHIPPED | 67 targeted |
 | 24 | Result-stage-first query model | ✅ SHIPPED | 1313 full-suite |
 
-## Current Sprint: Sprint 24 Complete
+## Current Sprint: Sprint 25 Planned
 
 **Latest completed sprint**: Sprint 24
+**Current planned sprint**: Sprint 25 - Dart / Flutter Support
 **Cycle Protocol**: Mouse plan → Neo TDD → Trin UAT → Morpheus review → Mouse archive/next entry
 
 **Sprint 24 closeout**: `agents/mouse.docs/SPRINT_24_CLOSEOUT.md`
 **Architecture spec**: `agents/morpheus.docs/SPRINT_24_ARCHITECTURE.md`
+**Sprint 25 task plan**: `agents/mouse.docs/SPRINT_25_TASKS.md`
+**Sprint 25 architecture**: `agents/morpheus.docs/SPRINT_25_ARCHITECTURE.md`
 
 ### Sprint 24 Cycle Status
 
@@ -65,3 +68,5 @@
 - Final tracked baseline: 1313 passed, 1 skipped, 4 warnings.
 - Result-stage-first runtime orientation is now implemented.
 - Multi-filter relationship chaining is implemented with parser ordering and executor post-filter tests.
+- Sprint 25 planned for Dart/Flutter structural indexing.
+- Sprint 25 Cycle 0 is a hard dependency spike: prove Python-loadable Dart tree-sitter grammar before parser implementation.

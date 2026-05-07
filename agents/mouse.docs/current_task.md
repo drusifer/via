@@ -1,24 +1,29 @@
 # Mouse Current Task
 
-**Task**: Sprint 24 closeout
+**Task**: Sprint 25 planning
 **Status**: COMPLETE (100%)
-**Updated**: 2026-04-13
+**Updated**: 2026-05-06
 
-## Sprint 24 Theme
-Result-Stage-First Query Model
-Arch: `agents/morpheus.docs/SPRINT_24_ARCHITECTURE.md`
+## Sprint 25 Theme
+Dart / Flutter Support
+
+## References
+- Stories: `agents/cypher.docs/SPRINT_25_DART_FLUTTER_USER_STORIES.md`
+- Architecture: `agents/morpheus.docs/SPRINT_25_ARCHITECTURE.md`
+- Tasks: `agents/mouse.docs/SPRINT_25_TASKS.md`
 
 ## Cycle Status
 | Cycle | Phase | Points | Status |
 |-------|-------|--------|--------|
-| 1 | Result-first executor, inverse types, docs/tests | ~8pt | Approved |
-| 2 | Multi-filter relationship chaining | ~3pt | Approved |
+| 0 | Parser dependency spike | 1 | Planned |
+| 1 | Discovery, excludes, parser foundation | 7 | Planned |
+| 2 | Flutter value, relationships, docs | 5 | Planned |
 
 ## Completed
-- Sprint 24 closeout written: `agents/mouse.docs/SPRINT_24_CLOSEOUT.md`
-- Root task board updated.
-- All cycles passed Neo → Trin → Morpheus flow.
-- Full suite passed with 1313 passed, 1 skipped, 4 warnings.
+- Sprint 25 task plan written.
+- Root `task.md` updated.
+- Cycle 0 marked as hard gate before parser implementation.
 
 ## Next
-- Await user direction for Sprint 25 or follow-up polish.
+- Morpheus reviews sprint plan.
+- If approved, Neo starts Cycle 0 dependency spike.

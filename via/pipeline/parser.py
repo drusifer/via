@@ -547,7 +547,7 @@ class PipelineParser:
 
         # Language and subtype filters
         parser.add_argument('--lang', dest='language_filter', default=None, metavar='LANG',
-                          help='Filter by language: py/python, js/javascript, ts/typescript, md/markdown')
+                          help='Filter by language: py/python, js/javascript, ts/typescript, dart, md/markdown')
         parser.add_argument('--subtype', dest='symbol_subtype_filter', default=None, metavar='TYPE',
                           help='Filter by symbol subtype (e.g. interface, enum, arrow_function). '
                                'Case-sensitive; unknown values return no results.')

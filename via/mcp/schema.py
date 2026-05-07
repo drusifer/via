@@ -51,6 +51,12 @@ def build_tool_schema() -> dict:
         "  Regex naming search: [\"-mr\", \"^get_\", \"-tm\"]\n"
         "  Multi-type search: [\"-mg\", \"parse*\", \"-tf\", \"-tm\"]\n"
         "  Paged broad scan: [\"--canned\", \"paged-scan\", \"--args\", \"pattern=*,slice=0:20\", \"-tc\"]\n\n"
+        "Dart/Flutter examples:\n"
+        "  Dart classes: [\"-mg\", \"*Screen\", \"-tc\", \"--lang\", \"dart\"]\n"
+        "  Flutter build methods: [\"-mg\", \"build\", \"-tm\", \"--lang\", \"dart\", \"-oR\"]\n"
+        "  Stateful widgets: [\"-mg\", \"*\", \"-tc\", \"--lang\", \"dart\", \"--via\", \"inherits-from\", \"-mg\", \"StatefulWidget\", \"-tc\"]\n"
+        "  Dart imports/exports/parts are directive strings, not resolved package dependencies.\n"
+        "  VIA does not infer widget trees, route graphs, pub dependencies, or Dart analyzer semantics.\n\n"
         "Advanced relationship query syntax:\n"
         "  Prefer --canned for common caller/subclass tasks.\n"
         "  Current runtime positive lookups use the known anchor before --via and wildcard result filter after it.\n"
@@ -64,7 +70,7 @@ def build_tool_schema() -> dict:
         "  Note: --via declares filters containers that declare matching symbols. It does not provide\n"
         "  a supported inverse shortcut for returning all symbols declared in a file.\n\n"
         "Match-stage filters (add to any match stage):\n"
-        "  --lang LANG    Filter by language: py/python, js/javascript, ts/typescript, md/markdown\n"
+        "  --lang LANG    Filter by language: py/python, js/javascript, ts/typescript, dart, md/markdown\n"
         "  --subtype TYPE Filter by symbol subtype (case-sensitive; e.g. interface, enum, arrow_function).\n"
         "                 Unknown values return empty (no error).\n\n"
         "Note: -mg matches against the symbol name (not file path). For filepath symbols (-tF),\n"
@@ -116,6 +122,29 @@ def build_tool_schema() -> dict:
         {
             "description": "Find all subclasses of a base class (advanced relationship)",
             "args": ["-mg", "BaseClass", "-tc", "--via", "inherits-from", "-mg", "*", "-tc"],
+        },
+        {
+            "description": "Find Dart screen classes",
+            "args": ["-mg", "*Screen", "-tc", "--lang", "dart"],
+        },
+        {
+            "description": "Find Flutter build methods as raw source",
+            "args": ["-mg", "build", "-tm", "--lang", "dart", "-oR"],
+        },
+        {
+            "description": "Find Flutter StatefulWidget classes",
+            "args": [
+                "-mg",
+                "*",
+                "-tc",
+                "--lang",
+                "dart",
+                "--via",
+                "inherits-from",
+                "-mg",
+                "StatefulWidget",
+                "-tc",
+            ],
         },
         {
             "description": "Find methods that call a function (advanced relationship)",

@@ -85,9 +85,10 @@ via index . -vvv   # Even more detail
 | Python | `.py`, `.pyx`, `.pyi` | classes, methods, functions, imports, globals |
 | JavaScript | `.js`, `.mjs`, `.cjs`, `.jsx` | classes, methods, functions, imports, globals |
 | TypeScript | `.ts`, `.tsx` | classes, interfaces, enums, methods, functions, imports, globals, type aliases |
+| Dart / Flutter | `.dart` | classes, mixins, enums, extensions, constructors, methods, functions, directives, globals |
 | Markdown | `.md`, `.markdown` | headers |
 
-**Default excluded directories**: `node_modules/`, `dist/`, `.next/`, `.nuxt/`, `.svelte-kit/`, `coverage/`, `.turbo/`, `__pycache__/`, `.git/`. Add more with `--exclude`.
+**Default excluded directories**: `node_modules/`, `dist/`, `.next/`, `.nuxt/`, `.svelte-kit/`, `coverage/`, `.turbo/`, `.dart_tool/`, `build/`, `android/.gradle/`, `ios/Pods/`, `__pycache__/`, `.git/`. Add more with `--exclude`.
 
 ### What Gets Indexed
 
@@ -99,6 +100,19 @@ via index . -vvv   # Even more detail
 | import | `import json` / `import { X } from 'y'` | Import statements |
 | global | `MAX_SIZE = 100` / `const PORT = 3000` | Module-level variables |
 | header | `## Section` | Markdown headers |
+
+### Dart And Flutter
+
+Common Dart class lookup: `via -mg "*Screen" -tc --lang dart`.
+
+```bash
+via -mg "*" -tF --lang dart
+via -mg "*Screen" -tc --lang dart
+via -mg "build" -tm --lang dart -oR
+via -mg "*" -tc --lang dart --via inherits-from -mg "StatefulWidget" -tc
+```
+
+Dart imports, exports, and parts are directive strings, not resolved package dependencies. VIA indexes Flutter source structure: explicit classes, mixins, enums, extensions, constructors, methods, `build` methods, and explicit inheritance names such as `StatelessWidget`, `StatefulWidget`, and `State<T>`. It does not infer widget trees, route graphs, pub dependencies, or Dart analyzer semantics.
 
 ### Incremental Updates
 

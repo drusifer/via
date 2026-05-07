@@ -43,6 +43,12 @@ class PathFilter:
         '.svelte-kit/',
         'coverage/',
         '.turbo/',
+        # Dart/Flutter project directories and generated metadata
+        '.dart_tool/',
+        'android/.gradle/',
+        'ios/Pods/',
+        '.flutter-plugins',
+        '.flutter-plugins-dependencies',
     ]
 
     def __init__(
@@ -56,12 +62,19 @@ class PathFilter:
 
     def should_include_dir(self, parent_path: str, dirname: str) -> bool:
         """Return True if directory should be walked."""
+        if dirname == 'build' and self._is_flutter_project():
+            logger.debug("  Dir excluded: build/ (Flutter project)")
+            return False
         dir_path = os.path.join(parent_path, dirname)
         rel_path = os.path.relpath(dir_path, self.root_dir)
         matched = self._spec.match_file(rel_path + '/')
         if matched:
             logger.debug("  Dir excluded: %s/", rel_path)
         return not matched
+
+    def _is_flutter_project(self) -> bool:
+        """Return True if the root looks like a Dart/Flutter project."""
+        return os.path.exists(os.path.join(self.root_dir, 'pubspec.yaml'))
 
     def should_include_file(self, file_path: str) -> bool:
         """Return True if file should be indexed."""

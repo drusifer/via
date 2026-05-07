@@ -12,6 +12,7 @@ from xml.etree import ElementTree as ET  # nosec B405
 
 from via.core.constants import EXIT_ERROR, EXIT_SUCCESS
 from via.db.store import DatabaseStore
+from via.parsers.dart_parser import DartParser
 from via.parsers.javascript_parser import JavaScriptParser
 from via.parsers.markdown_parser import MarkdownParser
 from via.parsers.python_parser import PythonParser
@@ -97,6 +98,7 @@ def import_coverage_xml(project_root: str, xml_path: str) -> int:
     registry.register(PythonParser())
     registry.register(MarkdownParser())
     registry.register(JavaScriptParser())
+    registry.register(DartParser())
 
     with DatabaseStore(str(db_path), str(root)) as store:
         store.initialize_schema()

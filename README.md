@@ -1,12 +1,12 @@
-TLDR: Fast, pattern-based symbol indexing and search for Python, JS, and TS codebases with a composable pipeline CLI and web UI.
+TLDR: Fast, pattern-based symbol indexing and search for Python, JS, TS, Dart, Flutter, and Markdown codebases with a composable pipeline CLI and web UI.
 
 # VIA - Multi-Language Codebase Indexing and Query Tool
 
-VIA is a command-line tool for indexing and searching Python, JavaScript, and TypeScript codebases. It parses source files using AST parsing (Python's built-in `ast` module for Python, tree-sitter for JS/TS), extracts code entities (classes, methods, functions, imports, globals, headers), and stores them in a SQLite database for fast pattern-based searching with multiple output formats.
+VIA is a command-line tool for indexing and searching Python, JavaScript, TypeScript, Dart, Flutter, and Markdown codebases. It parses source files using AST parsing (Python's built-in `ast` module for Python, tree-sitter for JS/TS/Dart), extracts code entities (classes, methods, functions, imports, globals, headers), and stores them in a SQLite database for fast pattern-based searching with multiple output formats.
 
 ## Features
 
-- **Multi-Language Indexing**: Python, JavaScript, TypeScript, and Markdown — tree-sitter for JS/TS, built-in AST for Python
+- **Multi-Language Indexing**: Python, JavaScript, TypeScript, Dart, Flutter, and Markdown — tree-sitter for JS/TS/Dart, built-in AST for Python
 - **Fast Indexing**: AST-based parsing with incremental updates (only changed files re-indexed)
 - **Pattern Matching**: Glob (`*`), SQL LIKE (`%`), or regex — case-sensitive by default, `-I` to ignore case
 - **Multiple Output Formats**: List, table, raw source, syntax-highlighted, JSON, Mermaid diagram
@@ -38,6 +38,8 @@ via -mg '*' -tc -n 0                   # All classes (unlimited)
 via -mg 'test_*' -tf -n 5             # First 5 test functions
 via -mg '*Manager*' -tc -oT -n 0      # Manager classes as table
 via -mg 'MyClass' -tc -oF             # Class source with syntax highlighting
+via -mg '*Screen' -tc --lang dart     # Dart/Flutter screen classes
+via -mg 'build' -tm --lang dart -oR   # Flutter build methods as raw source
 ```
 
 ## Usage
@@ -109,7 +111,10 @@ via -mg 'Base' -tc --via inherits-from -mg '*' -tc         # Who inherits from B
 via -mg '*' -tc --sans inherits-from -mg '*' -tc           # Root classes (no parent)
 via -mg 'helper' -tf --via calls -mg '*' -tf               # Who calls helper()?
 via -mg 'typing' --via imports -mg '*' -tF                 # Files importing typing
+via -mg '*' -tc --lang dart --via inherits-from -mg 'StatefulWidget' -tc  # Flutter widgets
 ```
+
+For Dart/Flutter, VIA indexes source structure only. It can find Dart files, classes, methods, constructors, directives, explicit inheritance/mixin/interface names, and best-effort calls. It does not infer widget trees, route graphs, pub dependencies, or Dart analyzer semantics.
 
 ### Result Limit and Cap Warning
 

@@ -1,139 +1,126 @@
 ---
 name: make
-description: Invoke project Makefile targets. All targets route through mkf (build output filter) automatically — output is captured to build/build.out and status is posted to CHAT.md.
-triggers: ["*make"]
+description: Invoke project Makefile targets. All targets route through mkf automatically — output is captured to build/build.out, not the context window. Use V= to control verbosity.
+triggers: ["*make", "*mkf", "*build"]
 ---
 
-One-line summary: Invoke project Makefile targets — all output is captured by mkf to `build/build.out`, not the context window.
-
-TLDR:
-    Run `make <target>` (optionally with `V=-v/-vv/-vvv` for verbosity); never pipe with `2>&1` as that defeats mkf and floods context.
-    mkf captures output, posts build status to `agents/CHAT.md`, and returns the exit code for pass/fail detection.
-    If a needed target doesn't exist, add it to the Makefile — do not invoke tools directly.
+One-line summary: Run `make <target>` — never call mkf.py directly, never pipe make output.
 
 # Make Skill
 
-## Discover Available Targets
+## The only correct invocation patterns
 
-**Always run this first** to see the current, authoritative list of targets:
+```bash
+make <target>              # silent — exit code + 10-line tail on finish
+make <target> V=-v         # show stderr live
+make <target> V=-vv        # show stderr + failure lines live
+make <target> V=-vvv       # show all output live
+```
+
+`V=` is the only way to control verbosity. There is no other interface.
+
+## NEVER do these things
+
+```bash
+# WRONG — calls the implementation directly, bypasses make entirely
+python agents/tools/mkf.py -vv <target>
+./agents/tools/mkf.py <target>
+
+# WRONG — pipes defeat mkf and flood the context window
+make <target> 2>&1 | tail -20
+make <target> | grep error
+make <target> 2>&1
+
+# WRONG — capturing output into context
+result=$(make <target>)
+```
+
+`mkf.py` is an internal implementation file. It is not a CLI tool for agents. Running it directly bypasses the Makefile, breaks the `MKF_ACTIVE` environment flag, and produces incorrect behavior.
+
+## How to inspect build output
+
+After any `make` run, the full log is at `build/build.out`. Search it directly — do not re-run the build with pipes.
+
+```bash
+grep -i "error\|fail\|warning" build/build.out
+grep -n "pattern" build/build.out
+grep -A5 "TestFoo" build/build.out
+```
+
+Use `V=-vv` during the run if you want failure lines to appear live. Use `grep build/build.out` after the run if you need to search the full log.
+
+## Discover available targets
+
+Always check what targets exist before assuming:
 
 ```bash
 make help
 ```
 
-This outputs all targets with their descriptions. The list is always up to date — do not rely on hardcoded lists in docs or memory.
+## What happens when you run `make <target>`
 
-## Overview
+1. Make invokes the mkf wrapper automatically
+2. mkf captures all stdout/stderr to `build/build.out`
+3. mkf prints the last 10 lines when the build finishes
+4. mkf posts build status to `agents/CHAT.md`
+5. Make returns the exit code — 0 = pass, non-zero = fail
 
-All project automation runs through `make`. Every target (except `help`, `chat`, `install_bob`,
-`update_bob`, `pull_bob`, and `clean_bob`) is automatically routed through **mkf**
-(`agents/tools/mkf.py`) — the build output filter. You do not need to call mkf directly; just run
-`make <target>`.
+You never need to orchestrate any of this. Running `make <target>` is the complete action.
 
-## CRITICAL — Do not capture make output into context
+## Verbosity reference
 
-**Never** run make with output redirected into the conversation context:
+| Flag | What appears in context |
+|------|------------------------|
+| *(none)* | 10-line tail + exit code only |
+| `V=-v` | stderr live + 10-line tail |
+| `V=-vv` | stderr + failure/error lines live |
+| `V=-vvv` | all output live (large builds will be noisy) |
 
-```bash
-# WRONG — floods context window, defeats mkf entirely
-Bash(make update_bob 2>&1)
-Bash(make update_bob V=-vvv 2>&1)
+Use `V=-v` or `V=-vv` when you need to see what went wrong during the run. Use `grep build/build.out` when the build is already done.
 
-# CORRECT — mkf handles output; only the tail + exit code appear
-Bash(make update_bob)
-Bash(make update_bob V=-vv)
-```
-
-mkf exists specifically to keep build output out of the context window. Piping or capturing the full output (via `2>&1` or shell redirection into a variable) defeats this and bloats the context. Always let mkf manage the output — check `build/build.out` directly if you need details after a run.
-
----
-
-## What mkf does
-
-- Captures all build output to `build/build.out`
-- Prints the last 10 lines of output on exit
-- Posts build status + tail to `agents/CHAT.md` as persona `make`; consecutive make build messages replace the previous make build entry
-- Returns the make exit code — callers can rely on it for pass/fail
-
-## Verbosity
-
-Control how much output appears in your terminal during the run using `V=`:
-
-| Flag | Terminal output |
-|------|----------------|
-| *(none — default)* | Silent. Exit code only. Full log in `build/build.out`. |
-| `V=-v`   | stderr only |
-| `V=-vv`  | stderr + filtered stdout (failures, errors) |
-| `V=-vvv` | stderr + full stdout (everything) |
+## Available targets
 
 ```bash
-make pull_bob                  # silent — exit code + tail on finish
-make pull_bob V=-v             # show stderr live
-make pull_bob V=-vvv           # show everything live
+make help    # always up-to-date — prefer this over any hardcoded list
 ```
 
-## Targets
+Common targets:
 
-### General
 | Command | Description |
 |---------|-------------|
-| `make help` | Show available make targets (bypasses mkf) |
-| `make chat` | Post a message to CHAT.md (bypasses mkf) |
-| `make tldr` | Show TL;DR summaries from all project files |
+| `make help` | Show all targets |
+| `make test` | Run unit tests |
+| `make tldr` | Show TL;DR summaries from project files |
+| `make via_index` | Build the via symbol index |
+| `make install_bob TARGET=/path` | Install BobProtocol into a project |
+| `make update_bob TARGET=/path` | Update agents in a project |
+| `make pull_bob SRC=/path` | Pull updates from another BobProtocol project |
+| `make clean_bob` | Remove generated symlinks and reset state files |
 
-### Installation & Maintenance
-| Command | Description |
-|---------|-------------|
-| `make install_bob` | Copy agents into a project and set up skill links (`make install_bob TARGET=/path`) |
-| `make update_bob` | Update agents and skills in a project, preserving state (`make update_bob TARGET=/path`) |
-| `make pull_bob` | Pull updates from another project using BobProtocol (`make pull_bob SRC=/path`) |
-| `make clean_bob` | Remove generated symlinks and reset agent memory/state files |
+## Adding a new target
 
-## Output file
+If a target does not exist, add it to the Makefile — do not invoke tools directly.
 
-Full build log is always at `build/build.out`. Inspect it after any run:
-
-```bash
-cat build/build.out        # full log
-tail -20 build/build.out   # last 20 lines
-```
-
-## Making targets discoverable
-
-`make help` shows targets that have an inline `## description` comment:
-
-```makefile
-lint: ## Run linting checks
-    @ruff check .
-```
-
-Targets without `##` still appear in `make help` under "Project targets" (by name only). Adding `##` gives them a description.
-
-## Adding a New Target
-
-The Makefile uses two blocks — real recipes inside `ifdef MKF_ACTIVE`, public stubs in `else`:
+The Makefile has two blocks gated by `MKF_ACTIVE`. **Both lines below go inside the Makefile — neither is a shell command.**
 
 ```makefile
 ifdef MKF_ACTIVE
 
+# Real recipe — runs inside mkf's subprocess environment
 lint: ## Run linting checks
     @ruff check .
 
 else
 
+# Public stub — this Makefile line is what triggers mkf; do NOT replicate it at the shell
 lint: ## Run linting checks
     @./agents/tools/mkf.py $(V) $@
 
 endif
 ```
 
-| Type | Where defined | When to use |
-|------|--------------|-------------|
-| Normal targets | Both blocks | Default — output captured by mkf |
-| Bypass targets (like `help`, `chat`) | `else` block only | Interactive output, must reach terminal directly |
+The `./agents/tools/mkf.py` line is Makefile plumbing. It exists so that typing `make lint` at the shell automatically routes through mkf. It is not an indication that agents should call `mkf.py` directly.
 
-In an installed project, add project-specific targets to `Makefile.prj` instead. Bob manages `agents/Makefile.bob` (included via `-include agents/Makefile.bob`) and never touches `Makefile.prj`.
+In an installed project, add project-specific targets to `Makefile.prj`. Bob manages `agents/Makefile.bob` and never modifies `Makefile.prj`.
 
-## Fallback
-
-If a target does not exist, add it to the Makefile — do not invoke tools directly. See **Adding a New Target** above.
+Targets that bypass mkf (output must reach the terminal directly, like `help` and `chat`) are defined only in the `else` block.

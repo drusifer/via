@@ -413,6 +413,7 @@ class IndexingService:
                     parent_name=cls.name,
                     mtime=file_info.mtime,
                     language=parse_result.language,
+                    symbol_subtype=getattr(method, 'symbol_subtype', None),
                 )
 
     def _store_function_symbols(self, file_info: DiscoveredFile, parse_result) -> None:

@@ -2411,3 +2411,151 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-04-13 10:31:05</small>] [**Mouse**]->[**all**] *sm close*:
  Sprint 24 CLOSED. Result-stage-first runtime, inverse types, docs/tests updates, and multi-filter chaining are complete. Final baseline: 1313 passed, 1 skipped, 4 warnings.
+
+---
+[<small>2026-05-06 22:46:28</small>] [**User**]->[**Cypher**] *request*:
+ TO=cypher what's on deck?
+
+---
+[<small>2026-05-06 22:47:11</small>] [**Cypher**]->[**User**] *pm update*:
+ On deck: Sprint 25 planning or focused polish. Sprint 24 is closed with 1313 passed. Recommend HCI/UX query-confidence polish next; details in cypher.docs/DECK_STATUS_Summary_2026-05-06T22:46.md
+
+---
+[<small>2026-05-06 22:47:16</small>] [**Cypher**]->[**User**] *handoff*:
+ Deck status answered. Awaiting user direction: plan Sprint 25, run focused polish, or pick a specific backlog item.
+
+---
+[<small>2026-05-06 22:48:38</small>] [**User**]->[**Cypher**] *request*:
+ *nreq support for flutter / dart code
+
+---
+[<small>2026-05-06 22:51:22</small>] [**Cypher**]->[**Smith**] *handoff*:
+ Drafted Sprint 25 Dart/Flutter requirements: cypher.docs/SPRINT_25_DART_FLUTTER_USER_STORIES.md. Scope is structural indexing/query support, not Flutter semantic analysis. @Smith *user review Sprint 25 Dart/Flutter stories
+
+---
+[<small>2026-05-06 22:52:23</small>] [**User**]->[**all**] *request*:
+ plan sprint 25
+
+---
+[<small>2026-05-06 22:53:22</small>] [**Smith**]->[**Morpheus**] *user approve*:
+ Sprint 25 Gate 1 APPROVED WITH NOTES. Stories give Flutter/Dart users useful structural navigation without semantic-analysis promises. @Morpheus *lead arch sprint 25 Dart/Flutter support
+
+---
+[<small>2026-05-06 22:54:53</small>] [**Morpheus**]->[**Smith**] *lead handoff*:
+ Sprint 25 architecture ready: morpheus.docs/SPRINT_25_ARCHITECTURE.md. Key gate: Cycle 0 must prove Python-loadable Dart tree-sitter grammar before parser work. @Smith *user feedback Sprint 25 architecture
+
+---
+[<small>2026-05-06 22:55:25</small>] [**Smith**]->[**Mouse**] *user approve*:
+ Sprint 25 Gate 2 APPROVED. Architecture keeps normal VIA surfaces and makes Dart grammar viability a hard Cycle 0 gate. @Mouse *sm plan Sprint 25 Dart/Flutter support
+
+---
+[<small>2026-05-06 22:56:35</small>] [**Mouse**]->[**Morpheus**] *sm handoff*:
+ Sprint 25 task plan ready: mouse.docs/SPRINT_25_TASKS.md. Cycles: 0 dependency spike, 1 parser foundation, 2 relationships/docs. @Morpheus *lead review Sprint 25 plan
+
+---
+[<small>2026-05-06 22:57:11</small>] [**Morpheus**]->[**Neo**] *lead approve*:
+ Sprint 25 plan APPROVED. Start Cycle 0 only: prove Python-loadable Dart grammar path before parser implementation. @Neo *swe impl Sprint 25 Cycle 0 dependency spike
+
+---
+[<small>2026-05-06 23:01:07</small>] [**User**]->[**all**] *request*:
+ *bloop *impl SPRINT 25
+
+---
+[<small>2026-05-06 23:10:24</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 1 passed in 2.31s ===============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-05-06 23:11:05</small>] [**drusifer**]->[**all**] *chat*:
+ Sprint 25 Cycle 0 implemented. Added tree-sitter-language-pack dependency and unit proof for Dart grammar parsing: tests/unit/test_sprint25_c0.py passes. @Trin *qa uat Sprint 25 Cycle 0 dependency spike
+
+---
+[<small>2026-05-06 23:11:11</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 25 Cycle 0 implemented. Added tree-sitter-language-pack dependency and unit proof for Dart grammar parsing: tests/unit/test_sprint25_c0.py passes. @Trin *qa uat Sprint 25 Cycle 0 dependency spike
+
+---
+[<small>2026-05-06 23:11:26</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 1 passed in 0.52s ===============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-05-06 23:11:53</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Sprint 25 Cycle 0 UAT PASSED. Targeted dependency proof rerun via make: tests/unit/test_sprint25_c0.py 1 passed. Scope verified: Dart grammar load/parse only. @Morpheus *lead review Sprint 25 Cycle 0 dependency path
+
+---
+[<small>2026-05-06 23:13:04</small>] [**Morpheus**]->[**Neo**] *lead approve*:
+ Sprint 25 Cycle 0 APPROVED. tree-sitter-language-pack is accepted for Dart parser foundation; dependency gate is passed. @Neo *swe impl Sprint 25 Cycle 1 parser foundation
+
+---
+[<small>2026-05-06 23:17:36</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 29 passed in 6.79s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-05-06 23:18:08</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 25 Cycle 1 implemented TDD-style. DartParser, registration, excludes, --lang dart, and focused tests are passing: C1 7, C0 1, JS discovery 23, lang regressions 29. @Trin *qa uat Sprint 25 Cycle 1 parser foundation
+
+---
+[<small>2026-05-06 23:18:34</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 29 passed in 6.69s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-05-06 23:18:59</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Sprint 25 Cycle 1 UAT PASSED. Verified Dart parser/discovery/index/CLI/MCP registry: C1 7 passed; lang regression 29 passed. @Morpheus *lead review Sprint 25 Cycle 1 parser foundation
+
+---
+[<small>2026-05-06 23:22:01</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 1 passed in 0.53s ===============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-05-06 23:22:43</small>] [**Morpheus**]->[**Neo**] *lead approve*:
+ Sprint 25 Cycle 1 APPROVED after focused TDD fix for constructor subtype persistence. Next is Cycle 2 relationships/docs in small red-green increments. @Neo *swe impl Sprint 25 Cycle 2
+
+---
+[<small>2026-05-06 23:31:04</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 1 passed in 0.56s ===============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-05-06 23:32:30</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 25 Cycle 2 implemented TDD-style. Flutter relationships/docs tests pass: C2 3, C1 7, relationship 10, schema/docs 4+4, imports 8, C0 1. @Trin *qa uat Sprint 25 Cycle 2
+
+---
+[<small>2026-05-06 23:38:20</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1324 passed, 1 skipped, 4 warnings in 142.53s (0:02:22) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-05-06 23:38:51</small>] [**Trin**]->[**Smith**] *qa handoff*:
+ Sprint 25 Cycle 2 UAT PASSED. Full suite green: 1324 passed, 1 skipped, 4 warnings. Docs/schema boundary wording ready for review. @Smith *user review Sprint 25 Cycle 2 Dart/Flutter docs
+
+---
+[<small>2026-05-06 23:39:33</small>] [**Smith**]->[**Morpheus**] *user approve*:
+ Sprint 25 Cycle 2 HCI APPROVED. Docs/MCP examples keep normal VIA surfaces, directive-string wording, and no Flutter semantic-analysis overclaim. @Morpheus *lead review Sprint 25 Cycle 2 final
+
+---
+[<small>2026-05-06 23:42:57</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1324 passed, 1 skipped, 4 warnings in 142.19s (0:02:22) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-05-06 23:43:43</small>] [**Morpheus**]->[**Mouse**] *lead approve*:
+ Sprint 25 Cycle 2 FINAL APPROVED. Architecture review closed external inheritance anchor pollution; full suite green: 1324 passed, 1 skipped, 4 warnings. @Mouse *sm close Sprint 25
+
+---
+[<small>2026-05-07 00:08:39</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make install-system | /home/drusifer/Projects/via/build/build.out
+installed package via 0.1.0, installed using Python 3.13.5
+These apps are now globally available
+- via
+make[1]: Leaving directory '/home/drusifer/Projects/via'

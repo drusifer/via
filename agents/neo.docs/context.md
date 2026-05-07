@@ -218,7 +218,59 @@ Sprint 12: Web UI fixes (UX-001 to UX-005). 1121+74+22 tests.
 - Added regression coverage for parser ordering plus positive and negative chained relationship filtering.
 
 ### Verification
+## Sprint 25 Cycle 0 - Dart Tree-Sitter Dependency Spike (2026-05-06)
+
+### Delivered
+- Added `tree-sitter-language-pack>=1.6.2` to `pyproject.toml` as the Dart grammar provider candidate.
+- Used `make install` to refresh the project venv after the dependency change.
+- Added `tests/unit/test_sprint25_c0.py` to prove `tree_sitter_language_pack.get_language("dart")` returns a `tree_sitter.Language` and parses a Flutter-style Dart fixture without ERROR nodes.
+- Removed the temporary script/Makefile spike path in favor of the unit test per user direction.
+
+### Verification
+- `make test FILE=tests/unit/test_sprint25_c0.py` — 1 passed.
+
+### Decision For Review
+- Dependency path is viable enough for Cycle 1: Dart grammar can be loaded from Python through `tree-sitter-language-pack` and used with the existing `tree_sitter.Parser`.
+
+## Sprint 25 Cycle 1 - Dart Parser Foundation (2026-05-06)
+
+### Delivered
+- Added `via/parsers/dart_parser.py` implementing `DartParser(ParserABC)`.
+- Registered `DartParser` in CLI, MCP, coverage registry assembly, and public package exports.
+- Added Flutter/Dart default excludes to `PathFilter`.
+- Extracted core Dart symbols: classes, mixins, enums, extensions, constructors, methods, top-level functions, globals, imports, exports, and parts.
+- Added `--lang dart` alias support and updated related help/schema text.
+- Added focused Cycle 1 tests in `tests/unit/test_sprint25_c1.py`.
+
+### TDD Notes
+- Initial focused Cycle 1 test failed on unnamed constructor extraction; fixed constructor identifier selection.
+- Added CLI registration test next; it failed because `--lang dart` was not in language aliases; added the alias and help/schema wording.
+
+### Verification
+- `make test FILE=tests/unit/test_sprint25_c1.py` — 7 passed.
+- `make test FILE=tests/unit/test_sprint25_c0.py` — 1 passed.
+- `make test FILE=tests/unit/test_sprint11_c1.py` — 23 passed.
+- `make test FILE=tests/unit/test_sprint14_c2.py` — 29 passed.
 - `make test FILE=tests/unit/test_relationship_cli.py` — 39 passed.
 - `make test FILE=tests/unit/test_type_filter_relationships.py` — 6 passed.
 - `make test ARGS='tests/unit/test_pipeline_parser.py tests/unit/test_relationship_pipeline.py tests/unit/test_web_query_relationship.py'` — 1313 passed, 1 skipped, 4 warnings.
 - `make test` — 1313 passed, 1 skipped, 4 warnings in 134.51s.
+
+## Sprint 25 Cycle 2 - Dart/Flutter Relationships And Docs (2026-05-06)
+
+### Delivered
+- Added `tests/unit/test_sprint25_c2.py` for Flutter fixture relationships, docs/MCP examples, and parser error behavior.
+- Added Dart body call extraction for simple `identifier()` call sites.
+- Adjusted Dart generic inheritance extraction so `State<DetailsPage>` contributes `State` as the base relationship anchor.
+- Added unresolved inheritance target resolution to external class-like symbols, enabling queries against Flutter SDK base names such as `StatefulWidget` when SDK sources are not indexed.
+- Fixed Dart directive extraction for tree-sitter `configurable_uri` import nodes.
+- Updated README, `docs/USER_GUIDE.md`, and MCP schema examples with Dart/Flutter workflows and structural-only support boundaries.
+
+### Verification
+- `make test FILE=tests/unit/test_sprint25_c2.py` — 3 passed.
+- `make test FILE=tests/unit/test_sprint25_c1.py` — 7 passed.
+- `make test FILE=tests/unit/test_relationship_pipeline.py` — 10 passed.
+- `make test FILE=tests/unit/test_sprint23_c2.py` — 4 passed.
+- `make test FILE=tests/unit/test_import_relationships.py` — 8 passed.
+- `make test FILE=tests/unit/test_sprint22_c3.py` — 4 passed.
+- `make test FILE=tests/unit/test_sprint25_c0.py` — 1 passed.

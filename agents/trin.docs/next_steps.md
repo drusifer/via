@@ -1,8 +1,13 @@
 # Trin Next Steps
 
-## Resume Point: Sprint 24 Cycle 2 UAT passed
+## Resume Point: Sprint 25 Cycle 2 UAT passed
 
 ### On Resume
-- Read `agents/CHAT.md` for Morpheus review result.
-- If Cycle 2 comes back, rerun `tests/unit/test_relationship_cli.py`, `tests/unit/test_type_filter_relationships.py`, and the specific corrected regression.
-- If Morpheus approves, Mouse owns Sprint 24 closeout or next-cycle coordination.
+- Read `agents/CHAT.md` for Smith review.
+- If Smith rejects wording, rerun docs/schema tests after Neo updates docs.
+- If Morpheus requests changes after final review, rerun the focused failing suite plus `make test`.
+
+### Current Known Status
+- Cycle 2 implementation passed UAT.
+- Full suite result: 1324 passed, 1 skipped, 4 warnings.
+- The only QA-discovered regression was fixed: `build/` is excluded only for Flutter roots with `pubspec.yaml`.

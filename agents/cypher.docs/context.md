@@ -1,6 +1,6 @@
 # Cypher Context - VIA Project
 
-**Last Updated**: 2026-04-12
+**Last Updated**: 2026-05-06
 
 ## Current Project
 Via - Python codebase indexing and querying CLI tool
@@ -151,6 +151,24 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 
 ## Blockers
 None
+
+## Deck Status Update (2026-05-06)
+- User asked Cypher: "what's on deck?"
+- Latest completed sprint in team state is Sprint 24, closed by Mouse on 2026-04-13.
+- Sprint 24 delivered result-stage-first relationship query execution, inverse relationship types, docs/tests updates, and ordered multi-filter `--via`/`--sans` chaining.
+- Final reported baseline: 1313 passed, 1 skipped, 4 warnings.
+- No active Sprint 25 exists yet in Cypher state.
+- Recommended next product move: plan Sprint 25 or run a focused polish/regression sprint, with HCI/UX and query confidence still the strongest product direction.
+- Oracle files named by older Cypher instructions (`lessons.md`, `memory.md`) are absent; available Oracle state is `agents/oracle.docs/context.md`, `current_task.md`, and `next_steps.md`.
+
+## Dart / Flutter Requirement Intake (2026-05-06)
+- User requested new requirement: support for Flutter / Dart code.
+- Product direction: treat this as the likely Sprint 25 theme.
+- Story doc written: `agents/cypher.docs/SPRINT_25_DART_FLUTTER_USER_STORIES.md`.
+- PRD updated with planned Sprint 25 story table.
+- Architecture fit: reuse `ParserABC`, `ParserRegistry`, `.dart` extension registration, `ParseResult.language`, `symbols.language`, `symbol_subtype`, and existing `--lang` / relationship query paths.
+- Scope boundary: support Dart/Flutter structural indexing and query workflows, not full Flutter semantic analysis, widget tree reconstruction, route graph reconstruction, or Dart analyzer replacement.
+- Gate: Smith should review user value/discoverability, then Morpheus should select parser engine and architecture.
 
 ## Runtime Request Intake (2026-04-12)
 - User requested via Bob Protocol: make Via MCP serve, run index/watch, and serve the web interface.

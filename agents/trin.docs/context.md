@@ -218,6 +218,50 @@
 ### Verification Result
 - Status: PASS
 - Full suite baseline: 1313 passed, 1 skipped, 4 warnings.
+
+## Sprint 25 Cycle 2 UAT — PASSED (2026-05-06)
+
+### Verification Result
+- Status: PASS.
+- Full suite baseline: 1324 passed, 1 skipped, 4 warnings.
+- Summary: `agents/trin.docs/SPRINT_25_CYCLE_2_UAT_Summary_2026-05-06T23:38.md`.
+
+### Coverage
+- Dart/Flutter relationship fixture verifies `StatefulWidget`, `State<T>`, `build`, declares, imports, inheritance, and calls.
+- Docs and MCP schema include Dart/Flutter examples and structural-only support boundaries.
+- Regression found and fixed: generic non-Flutter `build/` directories remain discoverable when `.gitignore` is ignored; Flutter roots with `pubspec.yaml` still exclude `build/`.
+
+## Sprint 25 Cycle 0 UAT — PASSED (2026-05-06)
+
+### Verification Result
+- Status: PASS
+- Targeted dependency-spike test: `make test FILE=tests/unit/test_sprint25_c0.py` — 1 passed.
+
+### Coverage
+- Confirms `tree-sitter-language-pack` is installed as a project dependency.
+- Confirms `tree_sitter_language_pack.get_language("dart")` returns a `tree_sitter.Language`.
+- Confirms that language parses a Flutter-style Dart snippet without tree-sitter ERROR nodes.
+
+### QA Note
+- This verifies dependency viability only. It does not verify `DartParser`, indexing, `--lang dart`, or relationships; those remain Cycle 1/2 scope.
+
+## Sprint 25 Cycle 1 UAT — PASSED (2026-05-06)
+
+### Verification Result
+- Status: PASS
+- Cycle 1 targeted test: `make test FILE=tests/unit/test_sprint25_c1.py` — 7 passed.
+- Language regression test: `make test FILE=tests/unit/test_sprint14_c2.py` — 29 passed.
+
+### Coverage
+- `DartParser` extension matching and core symbol extraction.
+- Flutter/Dart default excludes.
+- File discovery marks `.dart` parseable.
+- Indexed Dart symbols are filterable with `--lang dart`.
+- MCP registry resolves `.dart` to `DartParser`.
+- CLI index/query path works for a Dart class with `--lang dart`.
+
+### QA Note
+- Cycle 1 does not cover relationships or docs/MCP examples; those remain Cycle 2 scope.
 - Summary: `agents/trin.docs/SPRINT_24_CYCLE_2_UAT_Summary_2026-04-13T10:28.md`
 
 ### Coverage

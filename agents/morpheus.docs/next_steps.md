@@ -1,19 +1,15 @@
 # Morpheus Next Steps
 
-## Resume Point: Sprint 24 Cycle 2 approved
+## Resume Point: Sprint 25 Cycle 2 approved
 
 ### On Resume
 1. Read bottom 20 lines of `agents/CHAT.md`.
-2. Check whether Mouse closed Sprint 24 or assigned another cycle.
-3. If another cycle is assigned, review it against `agents/morpheus.docs/SPRINT_24_ARCHITECTURE.md`.
+2. If continuing sprint ceremony, Mouse should prepare closeout.
+3. If changes are requested, preserve the structural-only Dart/Flutter boundary and rerun focused tests plus full suite.
 
-### Key Decisions (Sprint 24)
-- Result-stage-first: first stage = returned results, --via/--sans = filters.
-- Inverse relationship types: `called-by`, `inherited-by`, `imported-by`, `referenced-by`, `declared-in`, `covers`, `http-called-by`.
-- Rename RelationshipFilter fields: object_* → filter_*, add `inverted: bool`.
-- Swap subject/object in executor; pass `invert=True`/`invert_join=True` for inverse types.
-- Canned queries are transparent argv — no hidden behavior.
-- Multi-filter chaining: parser preserves ordered filters; executor applies first as primary and later filters as sequential post-filters.
-- No DB schema changes.
-- No backward compatibility.
-- 3 cycles: inverse types + executor swap + tests → canned/MCP/help → integration/UAT/docs.
+### Key Decisions
+- Dart support remains a normal parser-registry addition, not a Flutter-specific query path.
+- External unresolved inheritance anchors use `external_class` to support relationship filtering without appearing in normal project class searches.
+- Dart directive relationships are directive strings, not resolved dependency graph data.
+- Flutter support remains structural: no widget tree, route graph, pub dependency, or Dart analyzer inference.
+- Full suite result at approval: 1324 passed, 1 skipped, 4 warnings.

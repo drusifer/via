@@ -30,6 +30,7 @@ _LANG_ALIASES: Dict[str, str] = {
     'js': 'javascript', 'javascript': 'javascript',
     'ts': 'typescript', 'typescript': 'typescript',
     'md': 'markdown', 'markdown': 'markdown',
+    'dart': 'dart',
 }
 
 # User-friendly render type names for CLI flags
@@ -135,7 +136,7 @@ class PipelineExecutor:
             from via.pipeline.parser import PipelineParseError
             raise PipelineParseError(
                 f"Unknown --lang '{raw_lang}'. "
-                f"Valid: py/python, js/javascript, ts/typescript, md/markdown."
+                f"Valid: py/python, js/javascript, ts/typescript, dart, md/markdown."
             )
         return language_filter
 

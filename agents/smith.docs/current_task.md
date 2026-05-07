@@ -1,16 +1,15 @@
 # Smith Current Task
 
-## Task: Sprint 23 Cycle 2 HCI Review
-**Status**: COMPLETE — APPROVED WITH NOTES
-**Date**: 2026-04-12
-**Report**: `agents/smith.docs/SPRINT_23_CYCLE_2_HCI_REVIEW.md`
+## Task: Sprint 25 Cycle 2 HCI Review
+**Status**: COMPLETE - APPROVED
+**Date**: 2026-05-06
+**Report**: `agents/smith.docs/SPRINT_25_CYCLE_2_HCI_REVIEW.md`
 
 ## Results
-- Tested actual `via --help` and `via mcp schema` output.
-- Approved `Common Tasks` as recognition-over-recall improvement.
-- Approved progressive disclosure between common tasks and advanced relationships.
-- Approved `-tH` guidance.
-- Noted future wording cleanup after relationship-orientation reconciliation.
+- Reviewed README, user guide, and MCP schema Dart/Flutter wording.
+- Approved normal VIA surfaces and concrete Flutter examples.
+- Confirmed directive-string wording is visible.
+- Confirmed no widget tree, route graph, pub dependency, or Dart analyzer overclaim.
 
 ## Next
-- Neo owns Sprint 23 Cycle 3 diagram fallback preservation.
+- Morpheus owns final Cycle 2 architecture review.

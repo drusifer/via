@@ -2,7 +2,7 @@
 name: bob-protocol
 description: Multi-persona coordination protocol. Enables AI to switch between specialized personas (Neo, Morpheus, Trin, Oracle, Mouse, Cypher, Bob, Smith) based on task needs. Use for *chat workflow, state management, and cross-agent communication.
 triggers: ["*chat"]
-requires: ["chat", "loops", "sprint", "make"]
+requires: ["chat", "bloop", "sprint", "make"]
 ---
 
 Orchestrates multi-persona AI coordination through a shared chat log using the `*chat` trigger.
@@ -10,7 +10,7 @@ Orchestrates multi-persona AI coordination through a shared chat log using the `
 TLDR:
     Routes `*chat` messages to the right specialist persona — by explicit `@mention` or auto-selection.
     Each persona loads state on entry, executes one task, saves state on exit, posts to `agents/CHAT.md`.
-    For full workflow chains use loop commands (*fix, *impl, *qa, *review, *plan sprint) — see loops skill.
+    For full workflow chains use loop commands (*fix, *impl, *qa, *review, *plan sprint) — see bloop skill.
     Key rule: no third fix attempt without Oracle consult + user sign-off.
 
 # Bob Protocol — Multi-Persona Coordination
@@ -43,6 +43,8 @@ Each persona is defined in `agents/<name>.docs/SKILL.md`:
 make chat MSG="<user's message>" PERSONA="User" CMD="request"
 ```
 
+**Note on External Invocations**: Different AI harnesses use different prefixes for direct persona invocation (e.g., `@persona` or `/persona` in Gemini CLI, `/persona` in Claude, `$persona` in Codex). If you are invoked directly via such a command, you MUST log the invocation to `agents/CHAT.md` immediately upon entry if it has not already been logged. This ensures the shared team context is complete.
+
 ### Step 2: Read Chat Log
 Read the bottom of `agents/CHAT.md` (newest messages at END, last 10-20 messages).
 
@@ -71,7 +73,7 @@ Analyze the request and route to the best persona:
 | Agent creation, prompt improvement | Bob (`*prompt`) |
 | UX review, usability, sprint gates | Smith (`*user`) |
 
-For multi-step workflows, use a loop command instead: `*fix`, `*impl`, `*qa`, `*review`, `*plan sprint`.
+For multi-step workflows, use a Bloop command instead: `*fix`, `*impl`, `*qa`, `*review`, `*plan sprint`.
 
 ### Step 4: Load Persona and Execute
 1. Read `agents/<name>.docs/SKILL.md`

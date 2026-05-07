@@ -243,7 +243,9 @@ def configure_project_via_mcp(project_root: Path) -> bool:
 
     via_entry = data.setdefault("mcpServers", {}).setdefault("via", {})
     args = list(via_entry.get("args", []))
-    args = [arg for arg in args if arg != "--no-web"]
+    if "serve" in args and "--no-web" not in args:
+        serve_index = args.index("serve")
+        args.insert(serve_index + 1, "--no-web")
     via_entry["args"] = args
 
     env = dict(via_entry.get("env", {}))
@@ -303,7 +305,7 @@ def install_codex_via_mcp(project_root: Path) -> bool:
         print("     Install via and re-run: pip install via")
         return False
 
-    expected_args = ["mcp", "serve", str(project_root)]
+    expected_args = ["mcp", "serve", "--no-web", str(project_root)]
     expected_env = f"HOME={project_root}"
 
     def add_server() -> bool:
