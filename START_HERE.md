@@ -1,6 +1,6 @@
 TLDR: Onboarding instructions for AI agents, emphasizing the BOB protocol, CLI usage, and workspace conventions.
 
-1. Read agents/bob.docs/BOB_SYSTEM_PROTOCOL.md
+1. Read agents/bob/bob.docs/BOB_SYSTEM_PROTOCOL.md
 
 1. Helpful hints:
     1. Always use agents/tools/chat.py to sent a message via chat.md. (just run it it's executable.)

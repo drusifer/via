@@ -1170,3 +1170,45 @@ via ... --olderthan 1w         # Symbols from files not changed in last week
 -mr 'pattern'                 # Regex (if available)
 -Q                            # Match qualified name (full path for -tF)
 ```
+
+---
+
+## Natural Language Queries (`via ask` / `via q`)
+
+VIA includes a local, fast, deterministic natural query interpreter that compiles simplified English-like queries directly into standard VIA pipeline commands.
+
+### Usage
+
+```bash
+via ask "find functions calling classes matching *Widget*"
+via q "locate all classes extending class matching *Controller*"
+```
+
+To view the compiled VIA command without executing it, append `--dry-run` or `-d`:
+
+```bash
+via ask --dry-run "find functions calling classes matching *Widget*"
+# Outputs: via -mg "*" -tf --via calls -mg "*Widget*" -tc -fm
+```
+
+### Grammar Vocabulary
+
+| English Phrase | VIA Equivalent / Stage |
+|---|---|
+| **Action Prefixes** *(optional)* | `find`, `show me`, `list`, `locate`, `get`, `search for` |
+| **Noise Articles** *(optional)* | `the`, `a`, `an` |
+| **Target Nouns** | `class`/`classes` (`-tc`), `function`/`functions` (`-tf`), `method`/`methods` (`-tm`), `file`/`files` (`-tF`), `global`/`globals`/`variable`/`variables`/`constant`/`constants` (`-tg`), `import`/`imports` (`-ti`), `header`/`headers`/`section`/`sections` (`-tH`) |
+| **Matchers** | `matching '*pattern*'`, `named '*pattern*'`, `whose name contains '*pattern*'` (`-mg`), `matching regex '<pattern>'` (`-mr`) |
+| **Relational Chains** | `that call`/`calling` (`--via calls`), `called by` (`--via called-by`), `that reference`/`referencing` (`--via references`), `referenced by` (`--via referenced-by`), `that inherit from`/`extending`/`extend` (`--via inherits-from`), `inherited by`/`extended by` (`--via inherited-by`), `http calls to` (`--via http-calls`), etc. |
+| **Negated Filters** | `do not call`/`not calling` (`--sans calls`), `do not reference`/`not referencing` (`--sans references`), `do not inherit from`/`not extending` (`--sans inherits-from`), `do not import`/`not importing` (`--sans imports`) |
+| **Limit Modifiers** | `all` (`-n 0` to disable default result limit) |
+| **Result Bounds** | `first N rows`/`top N matches` (`-n N`), `last N matches` (`--slice -N:`), `between rows X and Y` (`--slice (X-1):Y`), `from row X` (`--slice (X-1):`) |
+
+### Example Queries
+
+- **Basic search**: `find classes matching '*Controller*'`
+- **Case-insensitive search**: `locate all classes matching '*Service*' ignoring case`
+- **Result paging bounds**: `get first 10 methods matching 'save*'`
+- **Negative bounds**: `show last 50 files matching '*.py'`
+- **Relationship chaining**: `find functions calling classes matching '*Widget*' that extend BaseWidget`
+- **Negated relationship**: `classes extending class matching '*Controller*' not calling methods matching '*post*'`

@@ -38,6 +38,9 @@ $(INSTALL_DEV_STAMP): $(VENV_STAMP) $(REQUIREMENTS)
 
 install-dev: $(INSTALL_DEV_STAMP)
 
+compile-agents: install-dev ## Compile all agent.yaml files into SKILL.md and agent.json
+	. ${VENV_ACTIVATE} && python agents/tools/compile_agents.py
+
 # Run tests using the virtual environment's python
 test: install-dev
 	. ${VENV_ACTIVATE} && pytest $(or $(FILE),tests/) $(ARGS)

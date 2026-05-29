@@ -213,6 +213,25 @@ def run_mcp_server(
     def via_query(args: list[str]) -> dict:
         return _mcp_query_response(runner, args, logger)
 
+    @mcp.tool(description="Query the codebase using a natural language English query. Translates the query deterministicly into a VIA pipeline command and executes it.")
+    def via_ask(query: str) -> dict:
+        from via.pipeline.natural_query import LarkNaturalQueryParser
+        from via.pipeline.errors import PipelineParseError
+        try:
+            parser = LarkNaturalQueryParser()
+            compiled_args = parser.parse(query)
+        except PipelineParseError as exc:
+            return _mcp_error_response(exc.to_query_error())
+        except Exception as exc:
+            logger.exception("via_ask internal error: %s", exc)
+            from via.pipeline.errors import QueryError
+            return _mcp_error_response(QueryError(
+                code="internal_error",
+                message="VIA natural query translation failed unexpectedly.",
+                hint="Check the MCP server log for details.",
+            ))
+        return _mcp_query_response(runner, compiled_args, logger)
+
     try:
         mcp.run(transport="stdio")
     finally:

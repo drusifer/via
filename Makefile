@@ -11,7 +11,7 @@ ifdef MKF_ACTIVE
 .PHONY: tldr via_index install_bob update_bob pull_bob clean_bob diff_bob
 
 tldr: ## Show TL;DR summaries from all project files (quick orientation for agents)
-	@rg --no-heading "TL;DR:" --glob "*.md" -N | sed 's|^\./||' | sort
+	@rg --no-heading "TL;DR:" --glob "*.*" -N | sed 's|^\./||' | sort
 
 via_index: ## Build the via index required by the via MCP server
 	@via index "$(CURDIR)"
@@ -21,13 +21,13 @@ install_bob: ## Copy agents into a project and set up skill links (usage: make i
 	@[ -d "$(TARGET)" ] || { echo "Error: $(TARGET) does not exist"; exit 1; }
 	@echo "Installing BobProtocol into $(TARGET)..."
 	@rsync -a \
-		--exclude='*.docs/context.md' \
-		--exclude='*.docs/current_task.md' \
-		--exclude='*.docs/next_steps.md' \
+		--exclude='*/*.docs/context.md' \
+		--exclude='*/*.docs/current_task.md' \
+		--exclude='*/*.docs/next_steps.md' \
 		--exclude='CHAT.md' \
 		agents/ $(TARGET)/agents/
 	@echo "Initialising agent state files..."
-	@for dir in $(TARGET)/agents/*.docs; do \
+	@for dir in $(TARGET)/agents/*/*.docs; do \
 		cp agents/templates/_template_context.md    $$dir/context.md; \
 		cp agents/templates/_template_current_task.md $$dir/current_task.md; \
 		cp agents/templates/_template_next_steps.md $$dir/next_steps.md; \
@@ -51,11 +51,11 @@ update_bob: ## Update bob-protocol personas, skills, tools, and templates in a t
 	@rsync -a agents/skills/ $(TARGET)/agents/skills/
 	@rsync -a agents/tools/  $(TARGET)/agents/tools/
 	@rsync -a agents/templates/ $(TARGET)/agents/templates/
-	@for f in agents/*.docs/SKILL.md; do \
+	@for f in agents/*/SKILL.md; do \
 		rsync -a "$$f" "$(TARGET)/$$f"; \
 	done
 	@echo "Ensuring agent state files are initialised..."
-	@for dir in $(TARGET)/agents/*.docs; do \
+	@for dir in $(TARGET)/agents/*/*.docs; do \
 		[ -f $$dir/context.md ]      || cp agents/templates/_template_context.md      $$dir/context.md; \
 		[ -f $$dir/current_task.md ] || cp agents/templates/_template_current_task.md $$dir/current_task.md; \
 		[ -f $$dir/next_steps.md ]   || cp agents/templates/_template_next_steps.md   $$dir/next_steps.md; \
@@ -78,7 +78,7 @@ pull_bob: ## Pull bob-protocol personas, skills, tools, and templates from anoth
 	@rsync -a --existing $(SRC)/agents/skills/    agents/skills/
 	@rsync -a --existing $(SRC)/agents/tools/     agents/tools/
 	@rsync -a --existing $(SRC)/agents/templates/ agents/templates/
-	@for f in agents/*.docs/SKILL.md; do \
+	@for f in agents/*/SKILL.md; do \
 		[ -f "$(SRC)/$$f" ] && rsync -a "$(SRC)/$$f" "$$f" || true; \
 	done
 	@echo ""
@@ -88,7 +88,7 @@ clean_bob: ## Remove generated symlinks and reset agent memory/state files
 	@echo "Removing generated symlinks..."
 	@python agents/tools/teardown_agent_links.py --keep-mcp
 	@echo "Resetting agent state files to templates..."
-	@for dir in agents/*.docs; do \
+	@for dir in agents/*/*.docs; do \
 		cp agents/templates/_template_context.md    $$dir/context.md; \
 		cp agents/templates/_template_current_task.md $$dir/current_task.md; \
 		cp agents/templates/_template_next_steps.md $$dir/next_steps.md; \
@@ -108,7 +108,7 @@ diff_bob: ## Compare bob-protocol personas, skills, tools, and templates with a 
 			echo "Only in this project: $$dir/"; \
 		fi; \
 	done || true
-	@for f in agents/*.docs/SKILL.md; do \
+	@for f in agents/*/SKILL.md; do \
 		tgt="$(TARGET)/$$f"; \
 		if [ -f "$$tgt" ]; then \
 			diff -q "$$f" "$$tgt" || true; \

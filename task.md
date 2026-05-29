@@ -2,9 +2,10 @@
 
 ## Sprint 25 - Dart / Flutter Support
 
-**Status**: Planned  
+**Status**: Complete  
 **Architecture**: `agents/morpheus.docs/SPRINT_25_ARCHITECTURE.md`  
-**Task Plan**: `agents/mouse.docs/SPRINT_25_TASKS.md`
+**Task Plan**: `agents/mouse.docs/SPRINT_25_TASKS.md`  
+**Closeout**: `agents/mouse.docs/SPRINT_25_CLOSEOUT.md`
 
 ### Cycle 0 - Parser Dependency Spike
 
@@ -37,3 +38,4 @@
 - [x] Cycle 1 parser foundation passed focused and adjacent regression tests.
 - [x] Cycle 2 implementation passed focused Dart/Flutter relationship and docs tests.
 - [x] Existing Python, JS/TS, Markdown behavior remains green.
+- [x] Full suite: 1324 passed, 1 skipped, 4 warnings.

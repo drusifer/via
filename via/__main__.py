@@ -274,6 +274,24 @@ def _create_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable the web UI",
     )
+    # --- Ask / Q subcommand ---
+    ask_parser = subparsers.add_parser(
+        "ask",
+        aliases=["q"],
+        help="Query the codebase using natural language",
+        description="Translate a natural language query into a VIA pipeline command and execute it.",
+    )
+    ask_parser.add_argument(
+        "query",
+        help="Natural language query string",
+    )
+    ask_parser.add_argument(
+        "-d",
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        help="Print the compiled VIA CLI arguments and exit",
+    )
 
     return parser
 
@@ -705,9 +723,36 @@ def _run_canned_command(argv: list) -> int:
     return _run_pipeline_command(expanded)
 
 
+def _run_ask_command(args: argparse.Namespace) -> int:
+    """Execute natural language query pre-compilation and dispatch to pipeline runner."""
+    from via.pipeline.natural_query import LarkNaturalQueryParser
+    from via.pipeline.errors import PipelineParseError
+    
+    try:
+        parser = LarkNaturalQueryParser()
+        compiled_args = parser.parse(args.query)
+    except PipelineParseError as e:
+        print(f"PipelineParseError: {e}", file=sys.stderr)
+        return EXIT_ERROR
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_ERROR
+        
+    if args.dry_run:
+        # Double quote arguments containing wildcards for shell safety
+        quoted_args = [f'"{t}"' if any(c in t for c in "*?[]'^$()") else t for t in compiled_args]
+        command = " ".join(["via"] + quoted_args)
+        print(command)
+        return EXIT_SUCCESS
+        
+    return _run_pipeline_command(compiled_args)
+
+
 def _dispatch_subcommand(args, parser) -> int:
     """Dispatch parsed args to the appropriate subcommand handler."""
-    if args.command in ("index", "i"):
+    if args.command in ("ask", "q"):
+        return _run_ask_command(args)
+    elif args.command in ("index", "i"):
         return _run_index_command(args)
     elif args.command in ("stats", "s"):
         return _run_stats_command(args)
