@@ -1,33 +1,38 @@
 # Cypher Current Task
 
-**Task**: Dart / Flutter support requirements
-**Status**: COMPLETE (100%)
-**Updated**: 2026-05-06
+**Task**: Test Coverage & Quality Analysis — Requirement Intake
+**Status**: IN PROGRESS (33% — requirements written, awaiting Morpheus feasibility + Smith gate)
+**Updated**: 2026-07-01
 
 ## User Request
-User requested: "support for flutter / dart code"
+User request via `*chat TO=cypher *nreq`: a precise way to explore test coverage as
+a means of measuring test quality and efficiency. Phase 1 = run tests one at a time,
+capture per-test coverage data + metadata (last run, status, duration). Phase 2 =
+analysis, deliberately left unscoped until Phase 1 data exists.
 
 ## Current Product State
-- Sprint 24 is closed as of 2026-04-13.
-- Delivered Sprint 24 scope: result-stage-first runtime, inverse types, docs/tests updates, and multi-filter relationship chaining.
-- Final Sprint 24 baseline reported by Mouse: 1313 passed, 1 skipped, 4 warnings.
-- No active sprint is currently assigned in Cypher state.
+- Requirements written: `agents/cypher.docs/TEST_COVERAGE_QUALITY_REQUIREMENTS.md`
+  (3 Phase 1 user stories + AC, non-goals, 3 open questions for Morpheus).
+- Added as backlog item 7 in `BACKLOG.md`, flagged as Sprint 27 candidate.
+- Confirmed this doesn't duplicate the existing whole-suite `covered-by` coverage
+  import (`via/commands/coverage.py`, Sprint 16) — that's aggregate, this is per-test.
+- Posted to CHAT.md, addressed to Morpheus for OQ-1 feasibility (coverage.py
+  dynamic contexts vs. one-process-per-test isolation, given 1300+ tests).
 
 ## Completed
-- [x] Loaded Cypher state, Mouse sprint state, Oracle context, and latest CHAT.md.
-- [x] Logged the user request to `agents/CHAT.md`.
-- [x] Grounded scope against current VIA parser registry and JS/TS support pattern.
-- [x] Wrote `agents/cypher.docs/SPRINT_25_DART_FLUTTER_USER_STORIES.md`.
-- [x] Updated `agents/cypher.docs/PRD.md` with planned Sprint 25 story table.
-- [x] Updated Cypher context and next steps.
-
-## Product Scope
-- Dart `.dart` indexing and `--lang dart`.
-- Dart parser foundation for classes, mixins, enums, extensions, functions, methods, constructors, globals, imports, exports, and parts.
-- Flutter-aware structural value for widgets and `build` methods.
-- Existing relationship types for Dart declarations, imports, inheritance/mixins/interfaces, and best-effort calls.
-- Flutter project hygiene excludes and docs/MCP examples.
+- [x] Logged user request to CHAT.md.
+- [x] Checked existing coverage tooling before writing requirements (avoided duplicate work).
+- [x] Wrote `TEST_COVERAGE_QUALITY_REQUIREMENTS.md`.
+- [x] Updated `BACKLOG.md`.
+- [x] Posted handoff to Morpheus in CHAT.md.
 
 ## Next
-- Smith owns user-value and discoverability review.
-- Morpheus owns parser engine and architecture after Smith gate.
+- Awaiting Morpheus's feasibility read on OQ-1..3.
+- Then hand to Smith for Gate 1 (user value/discoverability) review before this
+  becomes a sized sprint.
+
+## Note on Sprint 26
+Sprint 26 (Tech Debt) planning, which this task file previously tracked at 50%,
+has since progressed independently — Mouse/Neo state shows it's now at Cycle 2
+verification. That thread is not owned by this task file going forward; see
+Mouse's `current_task.md` for its live status.

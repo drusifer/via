@@ -13,12 +13,14 @@ Author: Drew Gutstein
 License: GPL-3.0
 """
 
+import argparse
 import json
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
+from .base import CommandHandlerABC
 from via.core.constants import EXIT_ERROR, EXIT_SUCCESS
 
 
@@ -109,3 +111,35 @@ class McpInstallTarget(InstallTarget):
 INSTALL_TARGETS: dict[str, type[InstallTarget]] = {
     'mcp': McpInstallTarget,
 }
+
+
+class InstallCommandHandler(CommandHandlerABC):
+    """Handler for install/uninstall/status integrations."""
+
+    @classmethod
+    def add_arguments(cls, parser: argparse.ArgumentParser):
+        pass
+
+    @classmethod
+    def get_help(cls) -> str:
+        return "Install, uninstall or check status of VIA integrations"
+
+    def run(self, args: argparse.Namespace) -> int:
+        target_cls = INSTALL_TARGETS.get(args.target)
+        if not target_cls:
+            print(f"Error: Unsupported installation target: {args.target}", file=sys.stderr)
+            return EXIT_ERROR
+
+        target = target_cls()
+        global_install = getattr(args, "global_install", False)
+
+        if args.command == "install":
+            return target.install(global_install=global_install)
+        elif args.command == "uninstall":
+            return target.uninstall(global_install=global_install)
+        elif args.command == "status":
+            return target.status()
+        else:
+            print(f"Error: Unknown command: {args.command}", file=sys.stderr)
+            return EXIT_ERROR
+

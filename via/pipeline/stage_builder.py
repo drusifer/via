@@ -1,4 +1,16 @@
-"""Shared helpers for constructing executor-facing match stages."""
+"""Helper utilities to construct normalized match stages and relationship filters.
+
+TLDR:
+    Provides construction helper functions for building match stages and filters.
+    Key functions: finalize_match_namespace() (normalizes CLI options),
+    build_relationship_filter() (builds filters), and build_match_stage()
+    (constructs match pipeline stages).
+    Role: Builder helper functions. Consumed by parser.py and query_builder.py.
+
+Author: Oracle
+------------------------------------------------------------------------------
+License: GPL-3.0
+"""
 
 from __future__ import annotations
 
@@ -82,6 +94,7 @@ def build_relationship_filter(
             if getattr(filter_args, 'olderthan', None) else None
         ),
         result_stale=getattr(filter_args, 'stale', False),
+        filter_qualified=getattr(filter_args, 'match_qualified', False),
     )
 
 

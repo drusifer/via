@@ -737,38 +737,38 @@ class TestStory1_Vhas:
     """
 
     def test_file_has_classes_by_filename(self, proj):
-        """via -mg '*' -tc -V declares -mg 'my_service.py' -tN → BaseClass, MyClass, AnotherService."""
-        r = _q(proj, "-mg", "*", "-tc", "-V", "declares", "-mg", "my_service.py", "-tN")
+        """via -mg '*' -tc -V declared-in -mg 'my_service.py' -tN → BaseClass, MyClass, AnotherService."""
+        r = _q(proj, "-mg", "*", "-tc", "-V", "declared-in", "-mg", "my_service.py", "-tN")
         assert r.returncode == 0
         assert "BaseClass" in r.stdout
         assert "MyClass" in r.stdout
         assert "AnotherService" in r.stdout
 
     def test_file_has_functions_by_filename(self, proj):
-        """via -mg '*' -tf -V declares -mg 'my_service.py' -tN → connect, helper_func."""
-        r = _q(proj, "-mg", "*", "-tf", "-V", "declares", "-mg", "my_service.py", "-tN")
+        """via -mg '*' -tf -V declared-in -mg 'my_service.py' -tN → connect, helper_func."""
+        r = _q(proj, "-mg", "*", "-tf", "-V", "declared-in", "-mg", "my_service.py", "-tN")
         assert r.returncode == 0
         assert "connect" in r.stdout
         assert "helper_func" in r.stdout
 
     def test_file_has_classes_by_filepath(self, proj):
-        """via -mg '*' -tc -V declares -mg '*my_service*' -tF → classes in my_service.py."""
-        r = _q(proj, "-mg", "*", "-tc", "-V", "declares", "-mg", "*my_service*", "-tF")
+        """via -mg '*' -tc -V declared-in -mg '*my_service*' -tF → classes in my_service.py."""
+        r = _q(proj, "-mg", "*", "-tc", "-V", "declared-in", "-mg", "*my_service*", "-tF")
         assert r.returncode == 0
         assert "BaseClass" in r.stdout
         assert "MyClass" in r.stdout
 
     def test_class_has_methods(self, proj):
-        """via -mg '*' -tm -V declares -mg 'MyClass' -tc → get_name, get_value, run."""
-        r = _q(proj, "-mg", "*", "-tm", "-V", "declares", "-mg", "MyClass", "-tc")
+        """via -mg '*' -tm -V declared-in -mg 'MyClass' -tc → get_name, get_value, run."""
+        r = _q(proj, "-mg", "*", "-tm", "-V", "declared-in", "-mg", "MyClass", "-tc")
         assert r.returncode == 0
         assert "get_name" in r.stdout
         assert "get_value" in r.stdout
         assert "run" in r.stdout
 
     def test_class_has_methods_does_not_include_other_class(self, proj):
-        """via -mg '*' -tm -V declares -mg 'BaseClass' -tc → only base_method, not get_name."""
-        r = _q(proj, "-mg", "*", "-tm", "-V", "declares", "-mg", "BaseClass", "-tc")
+        """via -mg '*' -tm -V declared-in -mg 'BaseClass' -tc → only base_method, not get_name."""
+        r = _q(proj, "-mg", "*", "-tm", "-V", "declared-in", "-mg", "BaseClass", "-tc")
         assert r.returncode == 0
         assert "base_method" in r.stdout
         assert "get_name" not in r.stdout
@@ -779,8 +779,8 @@ class TestStory1_Vhas:
         assert r.returncode == 0
 
     def test_invalid_container_type_raises_error(self, proj):
-        """via -mg '*' -tc -V declares -mg 'run' -tm → error: method is not a container type."""
-        r = _q(proj, "-mg", "*", "-tc", "-V", "declares", "-mg", "run", "-tm")
+        """via -mg '*' -tm -V declares -mg 'MyClass' -tc → error: method is not a container type."""
+        r = _q(proj, "-mg", "*", "-tm", "-V", "declares", "-mg", "MyClass", "-tc")
         assert r.returncode != 0
         err = r.stderr + r.stdout
         assert "not a valid container" in err or "container" in err.lower()
@@ -902,8 +902,8 @@ class TestViaFlagUnification:
         assert r.returncode == 0
 
     def test_V_declares_finds_members(self, proj):
-        """-V declares finds declared members."""
-        r = _q(proj, "-mg", "*", "-tm", "-V", "declares", "-mg", "BaseClass", "-tc")
+        """-V declared-in finds declared members."""
+        r = _q(proj, "-mg", "*", "-tm", "-V", "declared-in", "-mg", "BaseClass", "-tc")
         assert r.returncode == 0
         assert "base_method" in r.stdout
 

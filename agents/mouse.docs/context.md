@@ -31,16 +31,16 @@
 | 23 | Recognition over recall | ✅ SHIPPED | 67 targeted |
 | 24 | Result-stage-first query model | ✅ SHIPPED | 1313 full-suite |
 
-## Current Sprint: Sprint 25 Planned
+## Current Sprint: Sprint 26 Planned
 
-**Latest completed sprint**: Sprint 24
-**Current planned sprint**: Sprint 25 - Dart / Flutter Support
+**Latest completed sprint**: Sprint 25
+**Current planned sprint**: Sprint 26 - CLI/Executor Refactoring & Query Performance (Tech Debt)
 **Cycle Protocol**: Mouse plan → Neo TDD → Trin UAT → Morpheus review → Mouse archive/next entry
 
-**Sprint 24 closeout**: `agents/mouse.docs/SPRINT_24_CLOSEOUT.md`
-**Architecture spec**: `agents/morpheus.docs/SPRINT_24_ARCHITECTURE.md`
-**Sprint 25 task plan**: `agents/mouse.docs/SPRINT_25_TASKS.md`
-**Sprint 25 architecture**: `agents/morpheus.docs/SPRINT_25_ARCHITECTURE.md`
+**Sprint 25 closeout**: `agents/mouse.docs/SPRINT_25_CLOSEOUT.md`
+**Architecture spec**: `agents/morpheus.docs/SPRINT_26_ARCHITECTURE.md`
+**Sprint 26 task plan**: `agents/mouse.docs/SPRINT_26_TASKS.md`
+**Sprint 26 architecture**: `agents/morpheus.docs/SPRINT_26_ARCHITECTURE.md`
 
 ### Sprint 24 Cycle Status
 
@@ -70,3 +70,15 @@
 - Multi-filter relationship chaining is implemented with parser ordering and executor post-filter tests.
 - Sprint 25 planned for Dart/Flutter structural indexing.
 - Sprint 25 Cycle 0 is a hard dependency spike: prove Python-loadable Dart tree-sitter grammar before parser implementation.
+
+## Sprint 26 Cycle 1 - Completed (2026-06-20)
+- Neo fixed baseline failures and added JS body analyzer unit tests.
+- Trin verified that all 1345 tests are green.
+- Morpheus reviewed and approved.
+- Closed Cycle 1. Ready to launch Cycle 2.
+
+## Sprint 26 Cycle 2 - Code Complete (2026-06-21)
+- Neo refactored argparse parser and stage executor to use polymorphic registries (`COMMAND_REGISTRY` and `STAGE_REGISTRY`).
+- Neo unified CLI and programmatic `ViaRunner` execution paths.
+- Baseline test suite is fully verified green (1345 passed).
+- Pending formal QA verification and Tech Lead review signatures.

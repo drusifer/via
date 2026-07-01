@@ -195,10 +195,10 @@ def md_proj(tmp_path_factory):
 
 
 class TestMarkdownDeclaresIntegration:
-    """CLI integration: --via declares on markdown files returns headers."""
+    """CLI integration: --via declared-in on markdown files returns headers."""
 
     def test_via_declares_returns_headers(self, md_proj):
-        r = _q(md_proj, "-mg", "*", "-tH", "--via", "declares", "-mg", "README.md", "-tF", "-Q")
+        r = _q(md_proj, "-mg", "*", "-tH", "--via", "declared-in", "-mg", "README.md", "-tF", "-Q")
         assert r.returncode == 0, f"CLI failed:\n{r.stderr}"
         lines = [l for l in r.stdout.splitlines() if l.strip()]
         assert len(lines) == 3, f"Expected 3 headers, got {len(lines)}: {lines}"
@@ -208,7 +208,7 @@ class TestMarkdownDeclaresIntegration:
         assert "Usage" in output
 
     def test_sans_declares_returns_empty_markdown(self, md_proj):
-        r = _q(md_proj, "-mg", "*.md", "-tF", "--sans", "declared-in", "-mg", "*", "-tH")
+        r = _q(md_proj, "-mg", "*.md", "-tF", "--sans", "declares", "-mg", "*", "-tH")
         assert r.returncode == 0, f"CLI failed:\n{r.stderr}"
         lines = [l for l in r.stdout.splitlines() if l.strip()]
         # Only empty.md has no headers
@@ -216,7 +216,7 @@ class TestMarkdownDeclaresIntegration:
         assert "empty.md" in lines[0]
 
     def test_via_declares_glob_filter_on_headers(self, md_proj):
-        r = _q(md_proj, "-mg", "Install*", "-tH", "--via", "declares",
+        r = _q(md_proj, "-mg", "Install*", "-tH", "--via", "declared-in",
                "-mg", "README.md", "-tF", "-Q")
         assert r.returncode == 0, f"CLI failed:\n{r.stderr}"
         lines = [l for l in r.stdout.splitlines() if l.strip()]

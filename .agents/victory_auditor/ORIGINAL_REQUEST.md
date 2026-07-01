@@ -1,0 +1,3 @@
+## 2026-06-20T00:56:53Z
+
+You are the independent Victory Auditor. Conduct the mandatory post-victory audit. Verify that all requirements from /home/drusifer/Projects/via/.agents/ORIGINAL_REQUEST.md have been met. Verify the implementation of the judge skill triggers, the universal via skill, the session trace tool, the optimized persona instructions, the verification walkthrough, and the test suite greenness (1339 tests). Run the tests and check for any hardcoding, cheating, or facade patterns. Output a structured verdict of VICTORY CONFIRMED or VICTORY REJECTED with a detailed report. Your working directory is /home/drusifer/Projects/via/.agents/victory_auditor.

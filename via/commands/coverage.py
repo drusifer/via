@@ -8,8 +8,11 @@ TLDR:
 
 from pathlib import Path
 from typing import Dict, Iterable, Set
+import argparse
+import sys
 from xml.etree import ElementTree as ET  # nosec B405
 
+from .base import CommandHandlerABC
 from via.core.constants import EXIT_ERROR, EXIT_SUCCESS
 from via.db.store import DatabaseStore
 from via.parsers.dart_parser import DartParser
@@ -118,3 +121,24 @@ def import_coverage_xml(project_root: str, xml_path: str) -> int:
 
     print(f"Imported covered-by relationships: {imported}")
     return EXIT_SUCCESS
+
+
+class CoverageCommandHandler(CommandHandlerABC):
+    """Handler for coverage command."""
+
+    @classmethod
+    def add_arguments(cls, parser: argparse.ArgumentParser):
+        coverage_sub = parser.add_subparsers(dest="coverage_command")
+        coverage_import = coverage_sub.add_parser("import", help="Import coverage.xml")
+        coverage_import.add_argument("path", help="Path to coverage.xml")
+
+    @classmethod
+    def get_help(cls) -> str:
+        return "Import test coverage data"
+
+    def run(self, args: argparse.Namespace) -> int:
+        if getattr(args, 'coverage_command', None) == 'import':
+            return import_coverage_xml(str(Path('.').resolve()), args.path)
+        print("Error: coverage requires a subcommand", file=sys.stderr)
+        return EXIT_ERROR
+

@@ -51,7 +51,7 @@ def test_project_quick_reference_removed_inverse_declares_claim():
 
 
 def test_user_guide_relationship_section_uses_result_stage_language():
-    guide = (ROOT / "docs" / "USER_GUIDE.md").read_text()
+    guide = (ROOT / "docs" / "specs" / "relationships_and_filters.md").read_text()
 
     assert "via <result-stage> --via <rel> <filter-stage>" in guide
     assert "result stage" in guide

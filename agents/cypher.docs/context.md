@@ -1,6 +1,6 @@
 # Cypher Context - VIA Project
 
-**Last Updated**: 2026-05-06
+**Last Updated**: 2026-06-20
 
 ## Current Project
 Via - Python codebase indexing and querying CLI tool
@@ -78,7 +78,7 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 - 6 stories, 9pt: --slice pagination, MCP output wrapper, --lang/-tF fix, markdown declares, -Q full-path/docs clarification, --help examples
 - Delivered across 3 cycles; QA and lead review passed for each cycle
 - Final reported test baseline: 1235 passed, 1 skipped, 4 warnings
-- Closeout doc: `agents/cypher.docs/SPRINT_15_CLOSEOUT_2026-04-08T18:24.md`
+- Closeout doc: `agents/cypher.docs/SPRINT_15_CLOSEOUT_2026-04-08T18-24.md`
 - Deferred to Sprint 16: string constants, coverage import, link indexing, canned queries
 - Additional Sprint 16 backlog note: `--slice` ignored for OR'd type queries
 
@@ -92,7 +92,7 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
   - S16-4 canned queries
 - Implementation, QA, and lead review completed on 2026-04-08
 - Targeted verification baseline for ship decision: 176 passing tests
-- Closeout doc: `agents/cypher.docs/SPRINT_16_CLOSEOUT_2026-04-08T19:00.md`
+- Closeout doc: `agents/cypher.docs/SPRINT_16_CLOSEOUT_2026-04-08T19-00.md`
 - Stories doc: `agents/cypher.docs/SPRINT_16_USER_STORIES.md`
 - Backlog retained: link indexing, HTTP bridge, generic `--contains` search
 
@@ -105,7 +105,7 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 - Intentional boundary preserved: no claim of automatic framework-aware cross-language tracing
 - Verification baseline for ship decision: 138 passing targeted tests
 - Stories doc: `agents/cypher.docs/SPRINT_17_USER_STORIES.md`
-- Closeout doc: `agents/cypher.docs/SPRINT_17_CLOSEOUT_2026-04-08T20:45.md`
+- Closeout doc: `agents/cypher.docs/SPRINT_17_CLOSEOUT_2026-04-08T20-45.md`
 
 ### Sprint 18 — Planned (2026-04-08)
 - Theme: polymorphic refactor, starting with JavaScript parser top-level dispatch
@@ -119,13 +119,13 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
 - Delivered scope:
   - S18-1 polymorphic top-level JS parser handlers
 - Verification baseline for ship decision: 96 passing targeted tests
-- Closeout doc: `agents/cypher.docs/SPRINT_18_CLOSEOUT_2026-04-08T21:14.md`
+- Closeout doc: `agents/cypher.docs/SPRINT_18_CLOSEOUT_2026-04-08T21-14.md`
 
 ### Sprint 19 — Planned (2026-04-08)
 - Theme: fluent builder API for programmatic via queries
 - Scope is bounded to a new `ViaQueryBuilder` plus migration of the web query layer away from manual `Namespace` construction
 - Story doc: `agents/cypher.docs/SPRINT_19_USER_STORIES.md`
-- Architecture source: `agents/morpheus.docs/VIA_QUERY_BUILDER_ARCHITECTURE_2026-04-08T21:22.md`
+- Architecture source: `agents/morpheus.docs/VIA_QUERY_BUILDER_ARCHITECTURE_2026-04-08T21-22.md`
 
 ### Sprint 19 — SHIPPED (2026-04-08)
 - Theme: ViaQueryBuilder
@@ -133,7 +133,7 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
   - S19-1 fluent programmatic query builder
   - S19-2 web API builder adoption
 - Verification baseline for ship decision: 30 passing targeted tests
-- Closeout doc: `agents/cypher.docs/SPRINT_19_CLOSEOUT_2026-04-08T21:37.md`
+- Closeout doc: `agents/cypher.docs/SPRINT_19_CLOSEOUT_2026-04-08T21-37.md`
 
 ### Sprint 20 — Planned (2026-04-08)
 - Theme: builder adoption + library usability
@@ -147,7 +147,7 @@ via index [-w] [-v|-vv|-vvv|-vvvv] [--force] [--exclude PATTERN] [<dir>]
   - S20-1 shared CLI/programmatic query construction seam
   - S20-2 documented `ViaQueryBuilder` and `ViaRunner` as the supported Python API
 - Verification baseline for ship decision: 50 passing targeted tests
-- Closeout doc: `agents/cypher.docs/SPRINT_20_CLOSEOUT_2026-04-08T21:58.md`
+- Closeout doc: `agents/cypher.docs/SPRINT_20_CLOSEOUT_2026-04-08T21-58.md`
 
 ## Blockers
 None
@@ -197,3 +197,38 @@ None
 - Product constraint: shortcuts must be task-language and transparent; no new relationship model.
 - High-risk story: `declared-in-file` must not recreate the Sprint 22 inverse `declares` docs bug.
 - Gate handoff goes to Smith for HCI story review.
+
+## Sprint 25 — SHIPPED (2026-05-07)
+- **Theme**: Dart / Flutter Support
+- **Scope**: structural Dart/Flutter indexing and query workflows
+- **Deliverables**: `.dart` file discovery, `DartParser` foundation, Flutter-aware query value, relationships query support (`declares`, `imports`, `inherits-from`, `calls`), default exclusions for caches/builds.
+- **Verification**: full test suite green with 1324 tests passing.
+
+## Judge & Learn Feature/Fix (2026-06-20)
+- **Theme**: Query engine bug resolution and CLI robustness.
+- **Fixed Issues**:
+  - BUG-1: Corrected type mapping and container validation for inverted declarations queries.
+  - BUG-2: Resolved transitive file-level imports resolution.
+  - Settle `make via` target to avoid virtual environment activation issues.
+- **Verification**: full test suite passing with 1339 tests.
+
+## Backlog Query (2026-06-20)
+- User requested what's on the backlog.
+- Created [BACKLOG.md](file:///home/drusifer/Projects/via/agents/cypher.docs/BACKLOG.md) to document product backlog and roadmap items.
+- Recommended Boolean query operators, Interactive TUI, or a QA regression sprint.
+
+## Sprint 26 Planning (2026-06-20)
+- User requested `*bloop *plan TechDept Sprint`.
+- Cypher planned Sprint 26 (theme: Tech Debt, 11pts).
+- Wrote [SPRINT_26_USER_STORIES.md](file:///home/drusifer/Projects/via/agents/cypher.docs/SPRINT_26_USER_STORIES.md).
+- Handed off to Smith for Gate 1 User Story Review.
+- NOTE: as of 2026-07-01, Sprint 26 has progressed to Cycle 2 verification (Mouse 90%, Neo Cycle 4 design in progress) — Gate 1 evidently passed at some point; no separate closeout doc found yet for Sprint 26.
+
+## Test Coverage & Quality Analysis — Requirement Intake (2026-07-01)
+- User requested (via `*chat TO=cypher *nreq`): a precise way to explore test coverage as a means of measuring test quality/efficiency.
+- Scope as stated: Phase 1 = run tests one at a time, capture per-test coverage data + metadata (last run, status, duration). Phase 2 (analysis) explicitly deferred by PM until Phase 1 data exists — not enough signal yet to design redundancy/efficiency scoring.
+- Checked existing capability first: `via/commands/coverage.py` already imports a single aggregate `coverage.xml` into `covered-by` relationships (shipped Sprint 16, S16-3). That is whole-suite, not per-test — confirmed this is a genuinely new capability, not a duplicate.
+- Wrote requirements: `agents/cypher.docs/TEST_COVERAGE_QUALITY_REQUIREMENTS.md` (3 user stories for Phase 1, explicit non-goals, 3 open questions for Morpheus).
+- Added to `BACKLOG.md` as item 7 under Features & Capabilities — candidate for **Sprint 27** (not folded into in-flight Sprint 26).
+- Key open question flagged to Morpheus: whether `coverage.py`'s dynamic-context feature can tag per-test coverage within one run, vs. needing a fully isolated one-process-per-test runner (suite has 1300+ tests, so process-per-test cost matters).
+- Handoff chain per protocol: Morpheus (feasibility/OQ-1..3) → Smith (Gate 1 user value review) before this becomes a sized sprint.

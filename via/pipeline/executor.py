@@ -12,7 +12,7 @@ import fnmatch
 import copy
 import re
 import sys
-from typing import Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from via.core.duration import parse_duration
 from via.core.match_record import FormatType, MatchRecord, RenderType
@@ -21,6 +21,7 @@ from via.core.utils import get_match_op, parse_result_slice, safe_print
 from via.db.store import DatabaseStore
 from via.pipeline.relationship_filter import RelationshipFilter
 from via.pipeline.types import PipelineStage, StageType
+from via.pipeline.handlers import STAGE_REGISTRY
 from via.renderers.factory import RendererFactory
 from via.renderers.utils import extract_source
 
@@ -75,23 +76,13 @@ class PipelineExecutor:
         last_match_stage = None
 
         for stage in stages:
-            if stage.stage_type == StageType.MATCH:
-                # First match stage queries DB
+            handler = STAGE_REGISTRY.get(stage.stage_type)
+            if handler:
+                result_iter = handler.handle(stage, self, result_iter)
                 if result_iter is None:
-                    result_iter = self._execute_match_stage(stage)
-                # Subsequent match stages filter previous results
-                else:
-                    result_iter = self._execute_filter_stage(stage, result_iter)
-                last_match_stage = stage
-
-            elif stage.stage_type == StageType.RENDER:
-                # Legacy: Render consumes iterator and outputs formatted results
-                self._execute_render_stage(stage, result_iter)
-                return None  # Render is terminal stage
-
-            elif stage.stage_type == StageType.STATS:
-                self._execute_stats_stage(stage)
-                return None  # Stats is terminal stage
+                    return None
+                if stage.stage_type == StageType.MATCH:
+                    last_match_stage = stage
 
         # Apply line slice if -mL was specified on the last match stage
         if last_match_stage and getattr(last_match_stage.args, 'line_slice', None):
@@ -155,13 +146,43 @@ class PipelineExecutor:
         relationship = getattr(args, 'relationship', None)
         if relationship:
             relationships = getattr(args, 'relationships', None) or [relationship]
+            if len(relationships) > 1:
+                compiled_stages = [
+                    self._compile_relationship_params(stage, rel, is_first=(i == 0))
+                    for i, rel in enumerate(relationships)
+                ]
+                limit = getattr(args, 'limit', None) or 10
+                case_sensitive = not args.case_insensitive
+                results = list(self.db.query_relationships_chained(
+                    compiled_stages,
+                    limit=limit,
+                    case_sensitive=case_sensitive,
+                ))
+                
+                # Post-filter for --stale for any relationship filter that requested it
+                for rel in relationships:
+                    if rel.result_stale:
+                        if results and all(r.mtime is None for r in results):
+                            raise ValueError(
+                                '--stale requires symbols.mtime — rebuild index with `via index --force`.'
+                            )
+                        results = [
+                            r for r in results
+                            if r.anchor_mtime is not None and r.mtime is not None
+                            and r.mtime < r.anchor_mtime
+                        ]
+                
+                # Contains filter
+                contains_pattern = getattr(args, 'contains_pattern', None)
+                if contains_pattern:
+                    return self._filter_records_by_body(iter(results), contains_pattern, case_sensitive)
+                return iter(results)
+
             primary_stage = self._stage_with_relationship(stage, relationships[0])
             if relationships[0].is_negative:
                 results = self._execute_negative_relationship_query(primary_stage)
             else:
                 results = self._execute_relationship_query(primary_stage)
-            for rel in relationships[1:]:
-                results = self._filter_results_by_relationship(stage, results, rel)
             contains_pattern = getattr(args, 'contains_pattern', None)
             if contains_pattern:
                 return self._filter_records_by_body(results, contains_pattern, not args.case_insensitive)
@@ -216,7 +237,122 @@ class PipelineExecutor:
             return self._filter_records_by_body(results, contains_pattern, case_sensitive)
         return results
 
-    def _execute_relationship_query(self, stage: PipelineStage) -> Iterator[MatchRecord]:
+    def _compile_relationship_params(self, stage: PipelineStage, rel: RelationshipFilter, is_first: bool) -> Dict[str, Any]:
+        args = stage.args
+        negated = getattr(args, 'negate_pattern', False) if is_first else False
+        subject_pattern = args.pattern if is_first else "*"
+
+        # Result stage types
+        result_types = getattr(args, 'symbol_types', None) or []
+        result_type = args.symbol_type if hasattr(args, 'symbol_type') else None
+        if result_types:
+            result_type = result_types[0]
+
+        match_syntax = getattr(args, 'match_syntax', 'g')
+        match_op = get_match_op(match_syntax)
+
+        if not rel.is_negative:
+            # Positive relationship
+            object_pattern = rel.filter_pattern
+            filter_type = rel.filter_types[0] if rel.filter_types else None
+            actual_inverted = self._get_actual_inverted(rel, result_type, filter_type)
+
+            if not actual_inverted:
+                db_subject_pattern = subject_pattern
+                db_object_pattern = object_pattern
+                db_subject_type = result_type
+                db_object_type = filter_type
+            else:
+                db_subject_pattern = object_pattern
+                db_object_pattern = subject_pattern
+                db_subject_type = filter_type
+                db_object_type = result_type
+
+            subject_parent_pattern = None
+            if rel.relationship_type.value == 'calls' and db_subject_type == 'class':
+                subject_parent_pattern = db_subject_pattern
+                db_subject_pattern = '*'
+                db_subject_type = 'method'
+
+            if not actual_inverted:
+                subject_qualified = getattr(args, 'match_qualified', False) if is_first else False
+                object_qualified = rel.filter_qualified
+            else:
+                subject_qualified = rel.filter_qualified
+                object_qualified = getattr(args, 'match_qualified', False) if is_first else False
+
+            # Check container validation
+            _DECLARES_CONTAINER_TYPES = {'file', 'class', 'filepath', 'filename', None}
+            if rel.relationship_type.value == 'declares':
+                container_type = db_subject_type if actual_inverted else db_object_type
+                if container_type not in _DECLARES_CONTAINER_TYPES:
+                    raise ValueError(
+                        f"'{container_type}' is not a valid container type for "
+                        f"{'declares' if actual_inverted else 'declared-in'}. "
+                        f"Valid container types: class, file/filepath."
+                    )
+
+            return {
+                'is_negative': False,
+                'relationship_type': rel.relationship_type.value,
+                'subject_pattern': db_subject_pattern,
+                'object_pattern': db_object_pattern,
+                'subject_type': db_subject_type,
+                'object_type': db_object_type,
+                'subject_parent_pattern': subject_parent_pattern,
+                'invert': actual_inverted,
+                'match_op': match_op,
+                'result_newerthan_seconds': rel.result_newerthan_seconds,
+                'result_olderthan_seconds': rel.result_olderthan_seconds,
+                'subject_negated': negated if not actual_inverted else False,
+                'object_negated': negated if actual_inverted else False,
+                'subject_qualified': subject_qualified,
+                'object_qualified': object_qualified,
+            }
+        else:
+            # Negative relationship
+            object_pattern = rel.filter_pattern
+            object_type = rel.filter_types[0] if rel.filter_types else None
+            actual_inverted = self._get_actual_inverted(rel, result_type, object_type)
+            invert_join = actual_inverted
+
+            # Check container validation
+            _DECLARES_CONTAINER_TYPES = {'file', 'class', 'filepath', 'filename', None}
+            if rel.relationship_type.value == 'declares':
+                container_type = result_type if actual_inverted else object_type
+                if container_type not in _DECLARES_CONTAINER_TYPES:
+                    raise ValueError(
+                        f"'{container_type}' is not a valid container type for "
+                        f"{'declares' if actual_inverted else 'declared-in'}. "
+                        f"Valid container types: class, file/filepath."
+                    )
+
+            subject_qualified = getattr(args, 'match_qualified', False) if is_first else False
+            object_qualified = rel.filter_qualified
+
+            return {
+                'is_negative': True,
+                'relationship_type': rel.relationship_type.value,
+                'subject_pattern': subject_pattern,
+                'object_pattern': object_pattern,
+                'subject_type': result_type,
+                'object_type': object_type,
+                'match_op': match_op,
+                'result_newerthan_seconds': rel.result_newerthan_seconds,
+                'result_olderthan_seconds': rel.result_olderthan_seconds,
+                'invert_join': invert_join,
+                'subject_negated': negated,
+                'object_negated': False,
+                'subject_qualified': subject_qualified,
+                'object_qualified': object_qualified,
+            }
+
+    @staticmethod
+    def _get_actual_inverted(rel: RelationshipFilter, result_type: Optional[str], filter_type: Optional[str]) -> bool:
+        """Determine actual inversion status, correcting for declares user query directions."""
+        return rel.inverted
+
+    def _execute_relationship_query(self, stage: PipelineStage, result_names: Optional[List[str]] = None) -> Iterator[MatchRecord]:
         """Execute positive relationship query (--via) against database.
 
         Result-first direction convention:
@@ -226,13 +362,15 @@ class PipelineExecutor:
           For inverse relationships (e.g. called-by): returns target (to) side symbols.
 
         Args:
-            stage: PipelineStage with relationship filter (is_negative=False)
+          stage: PipelineStage with relationship filter (is_negative=False)
+          result_names: Optional list of names to filter returned symbols
 
         Returns:
-            Iterator of MatchRecord from database
+          Iterator of MatchRecord from database
         """
         args = stage.args
         rel: RelationshipFilter = args.relationship
+        negated = getattr(args, 'negate_pattern', False)
 
         # Result-first: pattern BEFORE --via is what gets returned
         subject_pattern = args.pattern
@@ -248,12 +386,16 @@ class PipelineExecutor:
         # Filter stage types
         filter_type = rel.filter_types[0] if rel.filter_types else None
 
-        # declares requires a container (file or class) as the filter type
+        actual_inverted = self._get_actual_inverted(rel, result_type, filter_type)
+
+        # declares requires a container (file or class) as the container type
         _DECLARES_CONTAINER_TYPES = {'file', 'class', 'filepath', 'filename', None}
-        if rel.relationship_type.value == 'declares' and not rel.inverted:
-            if filter_type not in _DECLARES_CONTAINER_TYPES:
+        if rel.relationship_type.value == 'declares':
+            container_type = result_type if actual_inverted else filter_type
+            if container_type not in _DECLARES_CONTAINER_TYPES:
                 raise ValueError(
-                    f"'{filter_type}' is not a valid container type for --via declares. "
+                    f"'{container_type}' is not a valid container type for "
+                    f"{'declares' if actual_inverted else 'declared-in'}. "
                     f"Valid container types: class, file/filepath."
                 )
 
@@ -263,7 +405,7 @@ class PipelineExecutor:
         # Map result-first CLI args to DB subject/object convention.
         # For forward (inverted=False): result=subject (from side), filter=object (to side)
         # For inverse (inverted=True): result=object (to side), filter=subject (from side)
-        if not rel.inverted:
+        if not actual_inverted:
             db_subject_pattern = subject_pattern
             db_object_pattern = object_pattern
             db_subject_type = result_type
@@ -282,6 +424,13 @@ class PipelineExecutor:
             db_subject_pattern = '*'
             db_subject_type = 'method'
 
+        if not actual_inverted:
+            subject_qualified = getattr(args, 'match_qualified', False)
+            object_qualified = rel.filter_qualified
+        else:
+            subject_qualified = rel.filter_qualified
+            object_qualified = getattr(args, 'match_qualified', False)
+
         # Query relationships from database
         results = list(self.db.query_relationships(
             relationship_type=rel.relationship_type.value,
@@ -290,11 +439,16 @@ class PipelineExecutor:
             subject_type=db_subject_type,
             object_type=db_object_type,
             subject_parent_pattern=subject_parent_pattern,
-            invert=rel.inverted,
+            invert=actual_inverted,
             limit=limit,
             case_sensitive=case_sensitive,
             result_newerthan_seconds=rel.result_newerthan_seconds,
             result_olderthan_seconds=rel.result_olderthan_seconds,
+            subject_negated=negated if not actual_inverted else False,
+            object_negated=negated if actual_inverted else False,
+            subject_qualified=subject_qualified,
+            object_qualified=object_qualified,
+            result_names=result_names,
         ))
 
         # --stale post-filter: keep results whose mtime < anchor's mtime
@@ -336,18 +490,32 @@ class PipelineExecutor:
         rel: RelationshipFilter,
     ) -> Iterator[MatchRecord]:
         """Apply an additional relationship filter to existing result records."""
-        rel_stage = self._stage_with_relationship(stage, rel)
-        rel_stage.args.limit = 1_000_000
-        if rel.is_negative:
-            matching = self._execute_negative_relationship_query(rel_stage)
-        else:
-            matching = self._execute_relationship_query(rel_stage)
-        allowed = {self._record_key(record) for record in matching}
-        for record in prev_results:
+        prev_list = list(prev_results)
+        if not prev_list:
+            return iter([])
+
+        result_qualified = getattr(stage.args, 'match_qualified', False)
+        candidate_names = [
+            r.qualified_name if result_qualified else r.symbol_name 
+            for r in prev_list
+        ]
+
+        allowed = set()
+        for chunk in [candidate_names[i:i + 500] for i in range(0, len(candidate_names), 500)]:
+            rel_stage = self._stage_with_relationship(stage, rel)
+            rel_stage.args.limit = 1_000_000
+            if rel.is_negative:
+                matching = self._execute_negative_relationship_query(rel_stage, result_names=chunk)
+            else:
+                matching = self._execute_relationship_query(rel_stage, result_names=chunk)
+            for record in matching:
+                allowed.add(self._record_key(record))
+
+        for record in prev_list:
             if self._record_key(record) in allowed:
                 yield record
 
-    def _execute_negative_relationship_query(self, stage: PipelineStage) -> Iterator[MatchRecord]:
+    def _execute_negative_relationship_query(self, stage: PipelineStage, result_names: Optional[List[str]] = None) -> Iterator[MatchRecord]:
         """Execute NOT EXISTS relationship query (--sans) against database.
 
         Result-first: the result stage (BEFORE --sans) specifies symbols to return.
@@ -357,12 +525,14 @@ class PipelineExecutor:
 
         Args:
             stage: PipelineStage with relationship filter (is_negative=True)
+            result_names: Optional list of names to filter returned symbols
 
         Returns:
             Iterator of MatchRecord from database
         """
         args = stage.args
         rel: RelationshipFilter = args.relationship
+        negated = getattr(args, 'negate_pattern', False)
 
         # Result-first: result stage pattern = what gets returned
         subject_pattern = args.pattern
@@ -384,8 +554,22 @@ class PipelineExecutor:
         # invert_join flips which side of the relationship the NOT EXISTS anchors on.
         # For inverse relationship types (e.g. called-by, declared-in), the result
         # is on the target (to) side, so the NOT EXISTS must anchor there.
-        # For forward 'declares', the container is the to_symbol_id, so it also inverts.
-        invert_join = rel.inverted or rel.relationship_type.value == 'declares'
+        actual_inverted = self._get_actual_inverted(rel, subject_type, object_type)
+        invert_join = actual_inverted
+
+        # declares requires a container (file or class) as the container type
+        _DECLARES_CONTAINER_TYPES = {'file', 'class', 'filepath', 'filename', None}
+        if rel.relationship_type.value == 'declares':
+            container_type = subject_type if actual_inverted else object_type
+            if container_type not in _DECLARES_CONTAINER_TYPES:
+                raise ValueError(
+                    f"'{container_type}' is not a valid container type for "
+                    f"{'declares' if actual_inverted else 'declared-in'}. "
+                    f"Valid container types: class, file/filepath."
+                )
+
+        subject_qualified = getattr(args, 'match_qualified', False)
+        object_qualified = rel.filter_qualified
 
         return self.db.query_negative_relationships(
             relationship_type=rel.relationship_type.value,
@@ -399,6 +583,11 @@ class PipelineExecutor:
             result_newerthan_seconds=rel.result_newerthan_seconds,
             result_olderthan_seconds=rel.result_olderthan_seconds,
             invert_join=invert_join,
+            subject_negated=negated,
+            object_negated=False,
+            subject_qualified=subject_qualified,
+            object_qualified=object_qualified,
+            result_names=result_names,
         )
 
     def _match_multiple_types(

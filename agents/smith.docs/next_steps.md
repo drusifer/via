@@ -1,12 +1,11 @@
 # Smith Next Steps
 
-## Current State: Sprint 25 Cycle 2 HCI review approved
+## Current Status
 
-## Pending Actions
-1. Wait for Morpheus final architecture review.
-2. If Morpheus requests docs wording changes, re-review only the changed wording.
-3. If sprint closeout starts, verify release notes do not overclaim Flutter semantic analysis.
+Sprint 26 Gate 2 review is complete and approved.
 
-## Risks To Watch
-- Relationship queries remain advanced; future shortcuts should expand transparently to normal VIA args.
-- Keep `--lang dart` as the user-facing language filter; do not introduce `--lang flutter`.
+## On Resume
+
+1. Wait for Mouse to break down the sprint into implementation phases (`*sm plan sprint`).
+2. Await Neo's phase implementation (`*swe impl`) and Trin's UAT (`*qa uat`).
+3. Prepare for usability testing of delivered phases (`*user test`).

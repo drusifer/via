@@ -1,8 +1,15 @@
-"""
-Natural query interpreter and Lark-based pre-compiler for VIA.
+"""Natural language parser mapping English queries to standard VIA pipeline arguments.
 
-Translates simplified, English-like natural language queries into standard,
-structured VIA command-line arguments list.
+TLDR:
+    Implements Lark-based grammar translation of English-like query strings.
+    Key classes: LarkNaturalQueryParser (compiles query to AST and transforms it
+    to standard arguments using Lark and EBNF), QueryTransformer (walks parsed AST),
+    and NaturalQueryParserBase (abstract parser interface).
+    Role: EBNF natural query compiler. Consumed by AskCommandHandler.
+
+Author: Oracle
+------------------------------------------------------------------------------
+License: GPL-3.0
 """
 from __future__ import annotations
 

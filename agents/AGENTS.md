@@ -54,6 +54,17 @@ When acting as a specific persona, **load their specific instructions** from the
    - 🔍 Run `make help` to discover available project automation.
    - 🛠️ If a common task is missing, **add it to the Makefile** before executing it.
 
+2. **Bounded Testing (CRITICAL)**: **Do not run tests for code that has not changed since the last run.**
+   - ❌ Never execute full test suites (`make test`) repeatedly without making code modifications.
+   - ✅ Only run tests to validate recent code changes or bug fixes.
+   - 📋 Use the task board (`task.md`) and persona state files for tracking sprint/task progress instead of triggering test suite execution.
+
+3. **Strict Symbol Lookup & CLI Fallback (CRITICAL)**: **Always query symbol definitions via VIA.**
+   - ❌ Never use `grep_search` or `view_file` to find class, function, method, global, or import definitions.
+   - ✅ Always use `via` first to locate symbol definitions and analyze relationships.
+   - 🛠️ If the `mcp__via__via_query` MCP tool is missing from your toolset but `via` is enabled, you **must** use the `via` CLI command (using `run_command` or `make via` targets) to run your queries.
+   - 🔍 Only use `grep_search` for free-text search inside files (such as logs, comments, string constants, or raw SQL tables) or when `via` queries yield no results.
+
 1. **Persistence**: **Load/Save state files EVERY switch** - this is non-negotiable
 2. **Coordination**: Personas *must* "talk" to each other through chat messages
 3. **Task Handoffs**: One persona *must* assign work to another (e.g., Morpheus assigns tasks to Neo)
@@ -66,4 +77,14 @@ When acting as a specific persona, **load their specific instructions** from the
    - ❌ Don't spend numerous cycles as one persona
    - ✅ Break large tasks into smaller chunks
    - ✅ Hand off work frequently to ensure incremental progress
+9. **Active Anti-Loop Guard (CRITICAL)**: If any workflow loop iteration (e.g. Neo implements → Trin fails → Neo fixes) repeats **more than twice** without resolution, you **must** pause the loop, post logs and blocker details in CHAT.md, and ask the user for manual guidance instead of triggering a third cycle.
+10. **Sprint Planning Tiers (CRITICAL)**: Optimize sprint planning overhead based on sprint complexity:
+    - **Tier 1 (Major Sprints)**: Standard 6-step planning loop (Cypher story $\rightarrow$ Smith review $\rightarrow$ Morpheus arch $\rightarrow$ Smith review $\rightarrow$ Mouse plan $\rightarrow$ Morpheus review $\rightarrow$ Neo).
+    - **Tier 2 (Minor/Maintenance/Tech Debt Sprints)**: Fast-track planning loop:
+      1. Cypher & Morpheus combine story writing and architecture design into a single document in a single turn.
+      2. Smith reviews both stories & architecture in one turn, and Mouse generates the task plan in the same turn, handing off directly to Neo.
+11. **Single Source of Truth for Tasks (CRITICAL)**: Mouse must write sprint tasks directly to the root [task.md](file:///home/drusifer/Projects/via/task.md). Do not duplicate or maintain secondary sprint task lists inside agent folders.
+
+
+
 

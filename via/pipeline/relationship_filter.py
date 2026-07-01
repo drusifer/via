@@ -38,3 +38,4 @@ class RelationshipFilter:
     result_newerthan_seconds: Optional[float] = None
     result_olderthan_seconds: Optional[float] = None
     result_stale: bool = False
+    filter_qualified: bool = False

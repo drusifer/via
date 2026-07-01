@@ -1,29 +1,28 @@
-"""
-CLI argument provider and executor for the 'stats' subcommand.
+"""Command handler for displaying database statistics.
 
 TLDR:
-    Defines StatsCommand, which implements ArgumentProvider and HelpProvider
-    for 'via stats' and also owns the execute() logic. At verbosity 0 it
-    prints a summary (total symbols/files plus per-type counts); -v adds a
-    full by-type breakdown; -vv appends the top-10 files by symbol count.
-    Output can be switched to machine-readable JSON via --json. Stats are
-    gathered directly from DatabaseStore aggregation queries.
+    Implements the 'via stats' CLI command.
+    Key class: StatsCommand (gathers record counts, language breakdowns, and
+    indexing details from DatabaseStore, outputting as text or JSON).
+    Role: Database statistics reporter. Consumed by __main__.py.
 
-Author: Drew Gutstein
+Author: Oracle
 ------------------------------------------------------------------------------
-$Id$
-
 License: GPL-3.0
 """
-
 import argparse
 import json
+import sys
+import logging
+from pathlib import Path
 from typing import Any, Dict
 
-from ..core.interfaces import ArgumentProvider, HelpProvider
+from .base import CommandHandlerABC
+from ..core.constants import DEFAULT_INDEX_DIR, DEFAULT_DB_NAME, EXIT_ERROR, EXIT_SUCCESS
+from ..db.store import DatabaseStore
 
 
-class StatsCommand(ArgumentProvider, HelpProvider):
+class StatsCommand(CommandHandlerABC):
     """Display database statistics."""
 
     @classmethod
@@ -58,13 +57,49 @@ class StatsCommand(ArgumentProvider, HelpProvider):
         """Return help string for stats subcommand."""
         return "Display statistics about the indexed codebase"
 
-    def __init__(self, db_store):
+    def __init__(self, db_store=None):
         """Initialize with database store.
 
         Args:
-            db_store: DatabaseStore instance
+            db_store: DatabaseStore instance (optional, resolved in run if None)
         """
         self.db = db_store
+
+    def run(self, args: argparse.Namespace) -> int:
+        # Resolve directory
+        target_dir = Path(args.directory).resolve()
+
+        if not target_dir.exists():
+            print(f"Error: Directory does not exist: {target_dir}", file=sys.stderr)
+            return EXIT_ERROR
+
+        # Determine database path
+        if args.db:
+            db_path = Path(args.db)
+        else:
+            index_dir = target_dir / DEFAULT_INDEX_DIR
+            db_path = index_dir / DEFAULT_DB_NAME
+
+        if not db_path.exists():
+            print(f"Error: Database not found: {db_path}", file=sys.stderr)
+            print(f"Run 'via index' first to create the index.", file=sys.stderr)
+            return EXIT_ERROR
+
+        try:
+            with DatabaseStore(str(db_path), str(target_dir)) as db_store:
+                self.db = db_store
+                result = self.execute(
+                    verbose=args.verbose,
+                    as_json=args.json
+                )
+                print(result)
+
+            return EXIT_SUCCESS
+
+        except Exception as e:
+            logging.exception("Stats command failed with exception")
+            print(f"\nError: Stats failed: {e}", file=sys.stderr)
+            return EXIT_ERROR
 
     def execute(
         self,
@@ -145,3 +180,7 @@ class StatsCommand(ArgumentProvider, HelpProvider):
             for file_path, count in stats['top_files']:
                 lines.append(f"  {count:4d}  {file_path}")
         return '\n'.join(lines)
+
+
+# Keep legacy alias for backward compatibility
+StatsCommandHandler = StatsCommand

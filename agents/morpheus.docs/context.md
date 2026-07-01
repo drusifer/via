@@ -105,3 +105,17 @@
 
 ## Current Blockers
 None.
+
+## Sprint 26 Architecture design & Plan Review (2026-06-20)
+- User requested Sprint 26 Architecture (Tech Debt Sprint).
+- Drafted and finalized [SPRINT_26_ARCHITECTURE.md](file:///home/drusifer/Projects/via/agents/morpheus.docs/SPRINT_26_ARCHITECTURE.md).
+- Handed off to Smith for Gate 2 review; approved by Smith.
+- Reviewed and approved Mouse's task breakdown. Wrote [SPRINT_26_PLAN_REVIEW.md](file:///home/drusifer/Projects/via/agents/morpheus.docs/SPRINT_26_PLAN_REVIEW.md).
+- Handed off to Neo for Cycle 1 implementation.
+
+## Sprint 26 Cycle 1 Review (2026-06-20)
+- Review written: [SPRINT_26_CYCLE_1_REVIEW.md](file:///home/drusifer/Projects/via/agents/morpheus.docs/SPRINT_26_CYCLE_1_REVIEW.md).
+- Cycle 1 implementation APPROVED.
+- Baseline query engine failures (declares validation, filepath imports, empty markdown declares) resolved and verified.
+- New unit tests for JS body analyzer subclasses implemented and verified.
+- Handing off to Mouse to close Cycle 1.

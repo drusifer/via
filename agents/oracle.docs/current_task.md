@@ -1,15 +1,16 @@
 # Oracle Current Task
 
-**Task**: *ora update tldrs using via and skill
-**Status**: IN PROGRESS (25%)
+**Task**: *ora update tldrs (via codebase sweep)
+**Status**: COMPLETED (100%)
 
 **Completed**:
 - [x] Initialized Oracle persona
-- [x] Ran prep_tldr.py to gather fresh symbol data
-- [x] Updated TLDRs for key MD files: README.md, START_HERE.md, CHANGELOG.md, ARCH.md, USER_GUIDE.md
-- [x] Updated TLDRs for core Python files: flag_groups.py, match_record.py, path_filter.py, relationship_types.py
+- [x] Consolidated all per-sprint documents (Sprints 1-26) to `docs/sprints/`
+- [x] Distilled monolithic `docs/USER_GUIDE.md` into 7 focused specs under `docs/specs/`
+- [x] Ran `check_missing_tldrs.py` to identify missing blocks in Python files
+- [x] Formulated and applied Code Module docstrings (with TLDR blocks) to all 14 missing files
+- [x] Relocated scratch helper scripts to `agents/tools/` for project reusability
+- [x] Ran test suite within venv to verify docstring additions (1346/1346 passed)
 
 **Next**:
-- [ ] Update pipeline files: parser.py, executor.py, relationship_filter.py
-- [ ] Update service files: indexing.py, watch.py
-- [ ] Update web/api files
+- [ ] Standby for further documentation auditing or knowledge record queries

@@ -1,0 +1,104 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /home/drusifer/Projects/via
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.0.0, anyio-4.12.1
+collected 1343 items / 1340 deselected / 3 selected
+run-last-failure: rerun previous 3 failures
+
+<Dir via>
+  <Package tests>
+    <Package uat>
+      <Module test_documented_queries_uat.py>
+        <Class TestStory1_Vhas>
+          <Function test_invalid_container_type_raises_error>
+    <Package unit>
+      <Module test_import_relationships.py>
+        <Class TestImportRelationshipQueries>
+          <Function test_query_filepath_imports_filepath>
+      <Module test_sprint15_c3.py>
+        <Class TestMarkdownDeclaresIntegration>
+          <Function test_sans_declares_returns_empty_markdown>
+
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.5-final-0 ________________
+
+Name                                             Stmts   Miss  Cover   Missing
+------------------------------------------------------------------------------
+via/__init__.py                                      9      0   100%
+via/__main__.py                                    356    320    10%   66-78, 168-296, 308-312, 323-355, 369-468, 482-514, 529-589, 605-639, 644-658, 663-680, 685-691, 696-723, 728-748, 753-773, 783-798, 802
+via/api/__init__.py                                  2      0   100%
+via/api/query_builder.py                           199    117    41%   46-48, 53-55, 60-62, 67-80, 87, 90-92, 95-97, 100-102, 105-106, 109, 112, 115, 118, 121, 124, 127, 130, 133, 136, 139-140, 143-144, 147-148, 151-152, 155-156, 159-160, 163-164, 167-174, 177-178, 181-182, 185-186, 189-190, 201, 205-230, 237-239, 243, 250-252, 256-260, 264-268, 272-317, 324, 328, 332-333
+via/canned.py                                       38     32    16%   21-31, 36-46, 51-65
+via/cli/__init__.py                                  0      0   100%
+via/commands/__init__.py                             3      0   100%
+via/commands/coverage.py                            74     60    19%   24-29, 35-49, 60-79, 84-120
+via/commands/index.py                               15      8    47%   24-59, 67
+via/commands/install.py                             58     58     0%   16-109
+via/commands/stats.py                               58     45    22%   32-50, 59, 67, 83-88, 99-115, 127-147
+via/core/__init__.py                                 0      0   100%
+via/core/constants.py                               20      0   100%
+via/core/discovery.py                               75     52    31%   32-45, 89-95, 104-131, 135, 139, 151-172, 181-183
+via/core/duration.py                                10      6    40%   38-45
+via/core/flag_groups.py                             36      7    81%   37, 42, 87, 92, 97, 102, 107
+via/core/gitignore.py                                0      0   100%
+via/core/interfaces.py                               9      2    78%   25, 34
+via/core/logging.py                                 32     27    16%   39-89, 104
+via/core/match_record.py                           113     30    73%   73, 77, 81-83, 88, 92-97, 114, 135, 154, 174, 192, 211, 232, 247, 262, 308-338
+via/core/path_filter.py                             41     28    32%   60-61, 65-73, 77, 81-82, 86-101
+via/core/relationship_types.py                      26      9    65%   33-36, 41, 49-55
+via/core/types.py                                   21      0   100%
+via/core/utils.py                                   29     18    38%   41-48, 72-78, 102, 114, 129
+via/db/__init__.py                                   0      0   100%
+via/db/schema.py                                    10      0   100%
+via/db/store.py                                    536    457    15%   51-53, 68-73, 77-88, 92-95, 99-100, 105-106, 110-112, 116-117, 121, 126-220, 232-235, 247, 259, 286-297, 317-345, 357-361, 373-376, 388-393, 402-404, 413-416, 427-439, 457-464, 485-500, 513-523, 560-575, 584-589, 596-597, 602-603, 608-609, 613-614, 630-663, 701-771, 804-895, 916-924, 932-934, 942-944, 948-955, 966-971, 994-999, 1020-1025, 1038-1089, 1101-1116, 1120-1134, 1147-1156, 1205-1348, 1389-1531, 1540-1542, 1552-1557
+via/mcp/__init__.py                                  0      0   100%
+via/mcp/schema.py                                    9      7    22%   31-159
+via/mcp/server.py                                  130    100    23%   52-57, 62-81, 86, 97-100, 105-109, 114-122, 127-147, 171-246
+via/parsers/__init__.py                              0      0   100%
+via/parsers/_js_body.py                            102     82    20%   40, 45, 50-52, 57-64, 69-83, 108-110, 129-164, 171-189, 192-212, 219-247
+via/parsers/base.py                                129      6    95%   170, 174, 187, 201, 211, 222
+via/parsers/dart_parser.py                         183    149    19%   29, 33, 37, 41-52, 56-78, 83, 88, 93, 98-104, 109-112, 117-125, 130-132, 137-157, 162-164, 169-176, 191-205, 210-213, 218-223, 228-233, 243-258, 263-265, 276-283, 302-305, 318-323, 328-332
+via/parsers/javascript_parser.py                   337    255    24%   66, 70-71, 75-76, 80, 88-99, 103-113, 117-127, 140-170, 179-181, 186, 191-195, 205, 212, 219-222, 235, 242-245, 269, 276-279, 291-292, 314-317, 326-327, 332-336, 347-369, 379-395, 401-440, 446-468, 479-494, 512-516, 523-533, 540-548, 555-559, 568-591, 597-624, 629-640, 645-663, 668-679
+via/parsers/markdown_parser.py                      63     49    22%   40, 44, 48-50, 63-120, 128-146, 150-153
+via/parsers/python_parser.py                       427    375    12%   60-61, 74-91, 95, 100, 112-127, 131-151, 155-196, 207-208, 212-214, 218-221, 227-235, 241, 245, 250-252, 262-274, 289-308, 322-348, 352-368, 372-390, 394-420, 424-430, 434-440, 444-451, 455-457, 461-472, 476-492, 515-542, 555-561, 580-612, 616-632, 636-639, 665-675, 680-684, 696-701, 721-743, 747-753, 764-793, 806-825, 848-863, 889-918, 922-934, 938-950, 954-966
+via/parsers/registry.py                             33     17    48%   42-46, 55-56, 69-78, 87, 96, 106, 114, 122
+via/pipeline/__init__.py                             4      0   100%
+via/pipeline/errors.py                              24      9    62%   27-33, 45-46, 51, 56, 60
+via/pipeline/executor.py                           327    285    13%   60, 74-109, 114-127, 132-141, 152-217, 222-230, 247-341, 346-349, 354, 368-377, 393-434, 481-504, 520-565, 585-598, 606-610, 619-639, 662-682, 691-741, 758-761, 771
+via/pipeline/natural_query.py                      159    125    21%   113-116, 119, 122-131, 134-135, 138, 141-147, 150, 153-154, 157-158, 161-162, 165-166, 169-170, 173, 176-194, 197, 200, 203-206, 209-216, 222-272, 281, 407-408, 423-468
+via/pipeline/parser.py                             214    185    14%   37-38, 41-42, 49-50, 53-55, 72-73, 87-94, 110-129, 146-197, 208-213, 229-246, 250-265, 276-284, 302-314, 322-327, 341-414, 435-443, 462-558, 566-574
+via/pipeline/relationship_filter.py                 15      0   100%
+via/pipeline/stage_builder.py                       32     22    31%   16-54, 64-69, 96-102
+via/pipeline/types.py                               11      0   100%
+via/renderers/__init__.py                            7      0   100%
+via/renderers/base.py                               30      9    70%   52-55, 72, 76, 89, 109-110
+via/renderers/diagram.py                            30     21    30%   41, 56-68, 79-102
+via/renderers/factory.py                            41     20    51%   96-123
+via/renderers/formatted.py                          37     24    35%   46, 64-112, 123-152
+via/renderers/formatters/__init__.py                 2      0   100%
+via/renderers/formatters/code_formatters.py         95     73    23%   39-61, 88, 100-106, 137-155, 166-182, 194-200, 226-242, 269-278
+via/renderers/formatters/diagram_formatters.py       9      3    67%   31, 46, 61
+via/renderers/formatters/table_formatters.py        75     52    31%   47, 60, 73, 82-92, 96-111, 115-118, 127-137, 141-148, 152-155, 163-166, 170-178, 182-187
+via/renderers/formatters/usage_formatters.py        50     26    48%   46, 58, 65-71, 74-75, 82-86, 89-90, 97-106, 109-110
+via/renderers/json_renderer.py                      11      2    82%   28, 32
+via/renderers/list.py                               19     12    37%   43-60
+via/renderers/raw.py                                21     13    38%   50-76
+via/renderers/table.py                              26     17    35%   41, 53-81
+via/renderers/usage.py                              64     48    25%   64-85, 99-133, 151-160
+via/renderers/utils/__init__.py                      2      0   100%
+via/renderers/utils/source_extraction.py            43     37    14%   45-70, 84-98, 112-126
+via/services/__init__.py                             0      0   100%
+via/services/indexing.py                           263    217    17%   46-56, 99-101, 120-214, 227-234, 248-251, 264-286, 300-305, 325-347, 352-372, 376-405, 421-423, 439-456, 464-466, 481-508, 512-514, 530-544, 559-570, 574-583, 597-624, 638-648, 656-668, 691-696, 706-715
+via/services/watch.py                              136    103    24%   41, 44-45, 48-49, 52-53, 56-58, 79-96, 104-125, 129-130, 140, 152-156, 159, 164-171, 174, 178-192, 196-206, 210-218, 222-248, 252-258
+via/web/__init__.py                                  2      0   100%
+via/web/api/__init__.py                              0      0   100%
+via/web/api/query.py                                88     73    17%   52-74, 91, 96-113, 118-125, 130-169, 174-176, 189-198, 218
+via/web/api/status.py                                6      4    33%   32-36
+via/web/handler.py                                 100     82    18%   31-40, 43-46, 50-52, 59-67, 70-88, 91-107, 110-120, 127-133, 136, 139-141, 145
+via/web/server.py                                   58     39    33%   42-52, 64-75, 79-81, 86, 94-98, 103, 108, 118-119, 138-149
+via/web/template.py                                  1      0   100%
+------------------------------------------------------------------------------
+TOTAL                                             5185   3817    26%
+============== 3/1343 tests collected (1340 deselected) in 2.47s ===============

@@ -252,3 +252,82 @@ from collections import defaultdict
 
         # Should match typing imports
         assert len(results) >= 1
+
+    def test_query_filepath_imports_module(self, db_store, indexing_service, tmp_path):
+        """Test finding filepath symbols that import a module."""
+        test_file = tmp_path / "uses_sqlite.py"
+        test_file.write_text("import sqlite3\n")
+
+        file_info = DiscoveredFile(path=str(test_file), size_bytes=100, mtime=0.0, is_parseable=True, is_oversized=False)
+        indexing_service._index_file(file_info)
+        db_store.resolve_pending_relationships()
+
+        # Query: Find filepath symbols that import 'sqlite3'
+        results = list(db_store.query_relationships(
+            relationship_type='imports',
+            subject_type='filepath',
+            object_pattern='sqlite3',
+            object_type='import',
+            invert=False
+        ))
+
+        assert len(results) == 1
+        assert results[0].symbol_type == 'filepath'
+        assert results[0].symbol_name == "uses_sqlite.py"
+
+    def test_query_filepath_imports_filepath(self, db_store, indexing_service, tmp_path):
+        """Test finding filepath symbols that import another file's exported module/symbol."""
+        file_a = tmp_path / "module_a.py"
+        file_a.write_text("class MyClass:\n    pass\n")
+
+        file_b = tmp_path / "module_b.py"
+        file_b.write_text("from module_a import MyClass\n")
+
+        # Index both
+        for f in (file_a, file_b):
+            file_info = DiscoveredFile(path=str(f), size_bytes=100, mtime=0.0, is_parseable=True, is_oversized=False)
+            indexing_service._index_file(file_info)
+
+        db_store.resolve_pending_relationships()
+
+        # Query: Find filepath symbols that import from module_a
+        results = list(db_store.query_relationships(
+            relationship_type='imports',
+            subject_type='filepath',
+            object_pattern='*module_a*',
+            object_type='filepath',
+            invert=False
+        ))
+
+        assert len(results) == 1
+        assert results[0].symbol_type == 'filepath'
+        assert results[0].symbol_name == "module_b.py"
+
+    def test_query_filepath_sans_imports_module(self, db_store, indexing_service, tmp_path):
+        """Test finding files that do NOT import a module (negative query)."""
+        file_a = tmp_path / "uses_sqlite.py"
+        file_a.write_text("import sqlite3\n")
+
+        file_b = tmp_path / "no_sqlite.py"
+        file_b.write_text("import os\n")
+
+        for f in (file_a, file_b):
+            file_info = DiscoveredFile(path=str(f), size_bytes=100, mtime=0.0, is_parseable=True, is_oversized=False)
+            indexing_service._index_file(file_info)
+
+        db_store.resolve_pending_relationships()
+
+        # Query: Find filepaths that do NOT import 'sqlite3'
+        results = list(db_store.query_negative_relationships(
+            relationship_type='imports',
+            subject_type='filepath',
+            object_pattern='sqlite3',
+            object_type='import',
+            invert_join=False
+        ))
+
+        # Should find file_b (no_sqlite.py) but not file_a (uses_sqlite.py)
+        names = [r.symbol_name for r in results]
+        assert "no_sqlite.py" in names
+        assert "uses_sqlite.py" not in names
+

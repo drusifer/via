@@ -1,6 +1,17 @@
 # Oracle Context
 
-**Last Updated**: 2026-03-24
+**Last Updated**: 2026-07-01
+
+## Sprint 26 Doc Groom (2026-07-01)
+
+### Changes Made
+- Distilled monolithic `docs/USER_GUIDE.md` into 7 focused specifications in `docs/specs/`.
+- Replaced `docs/USER_GUIDE.md` with a clean index file linking to all distilled specs.
+- Consolidated all per-sprint documentation (Sprints 1-26) from individual agent folders into `docs/sprints/sprint_{N}.md`.
+- Deleted over 200 redundant individual sprint files.
+- Linked `docs/sprints/` in `agents/DOCUMENTATION_INDEX.md`.
+- Completed codebase-wide TLDR sweep, applying Code Module docstrings with TLDR blocks to all 14 remaining Python files.
+- Relocated scratch helper scripts (audit, consolidation, and distillation) to `agents/tools/` for project reuse.
 
 ## Sprint 13 Doc Groom (2026-03-24)
 

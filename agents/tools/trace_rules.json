@@ -1,0 +1,32 @@
+{
+  "AP-SKILL-RELOAD": {
+    "description": "Same Skill invoked >1× in a session for the same purpose — wastes full SKILL.md reload (~6k tokens each).",
+    "fix": "After the first Skill load, call sub-commands via Bash directly (make, python, etc.). Do NOT re-invoke Skill(make,...) or Skill(chat,...) within the same session.",
+    "multi_call_allowed": ["bloop", "chat", "personas"],
+    "multi_call_note": "Skills in multi_call_allowed are orchestrators designed for chained phase invocations (e.g. bloop *plan then bloop *impl). These are NOT flagged as AP-SKILL-RELOAD."
+  },
+  "AP-MAKE-BYPASS": {
+    "description": "Bash runs pytest/ruff/pylint/mypy directly — bypasses make targets.",
+    "fix": "Always use make <target>. Never call test runners or linters directly. Output is captured to build/build.out by the Makefile."
+  },
+  "AP-RAW-VENV": {
+    "description": "Bash calls .venv/bin/<tool> directly — bypasses make targets and project tooling.",
+    "fix": "Use make <target> — never reference .venv/bin directly. If no make target exists for the tool, add one to Makefile.prj rather than calling .venv/bin."
+  },
+  "AP-MAKE-PIPE": {
+    "description": "Bash pipes make output (e.g. `make test 2>&1 | tail -30`) — violates the make skill rule. mkf already captures output to build/build.out.",
+    "fix": "For test feedback: use `make test-q` (pytest -q --tb=short) — built-in concise output, no piping needed. For other targets: run `make <target>` then `tail -n 30 build/build.out`. Or use `make <target> V=-vv` to see failures live. NEVER pipe make output."
+  },
+  "AP-VIA-GREP": {
+    "description": "Grep/Glob used for symbol, import, or function lookup when via is enabled.",
+    "fix": "Use mcp__via__via_query for symbol/relationship lookups. Reserve grep for content search (strings in files), not symbol navigation."
+  },
+  "AP-VIA-READ": {
+    "description": "Read used on a source file that is never subsequently edited in this session — likely symbol hunting rather than pre-edit inspection.",
+    "fix": "Use mcp__via__via_query to locate symbols and trace relationships. Read is only needed when you intend to edit the file or need its full content for review."
+  },
+  "AP-DUP-READ": {
+    "description": "Same file Read 3+ times in one session without the file changing between reads.",
+    "fix": "Read a file once and keep the relevant excerpt in context. Use Edit/Write to change it; only re-Read if you need to verify the result of an edit."
+  }
+}

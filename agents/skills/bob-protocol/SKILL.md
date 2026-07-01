@@ -104,12 +104,15 @@ make chat MSG="<response>" PERSONA="<Name>" CMD="<command>" TO="<recipient>"
 **State files are the only memory that survives context overflow and session restarts.**
 Write them as if you will never be asked again and someone else must continue.
 
-### ENTRY
+### ENTRY (When Activating / Rapid Startup)
 1. Read `agents/CHAT.md` — last 10-20 messages
 2. Load `agents/[persona].docs/context.md`
 3. Load `agents/[persona].docs/current_task.md`
 4. Load `agents/[persona].docs/next_steps.md`
-5. If `agents/PROJECT.md` exists — read it for project capabilities
+5. **Rapid Startup Option (CRITICAL)**: Do NOT run a full test suite baseline check (`make test`) or other heavy execution cycles on initialization unless explicitly requested or implementing/testing bug fixes. Reconcile state files quickly and proceed.
+6. Verify that agent links are synced (run `setup_agent_links.py` if needed).
+7. Post your persona initialization message using `make chat` immediately.
+8. If `agents/PROJECT.md` exists — read it for project capabilities
 
 ### WORK
 6. Execute assigned tasks

@@ -1,4 +1,15 @@
-"""Dart language parser using tree-sitter."""
+"""Parser for Dart and Flutter source files using tree-sitter.
+
+TLDR:
+    Extracts structural code entities and relationships from Dart (.dart) files.
+    Key class: DartParser (implements parse() using tree-sitter-language-pack to
+    extract classes, mixins, enums, constructors, methods, globals, calls, and imports).
+    Role: Dart parser plugin. Consumed by ParserRegistry.
+
+Author: Oracle
+------------------------------------------------------------------------------
+License: GPL-3.0
+"""
 
 from pathlib import Path
 from typing import Optional, Set

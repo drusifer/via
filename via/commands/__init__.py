@@ -8,7 +8,21 @@ TLDR:
 
 """
 
-from .index import IndexCommand
-from .stats import StatsCommand
+from .index import IndexCommandHandler, IndexCommand
+from .stats import StatsCommandHandler, StatsCommand
+from .mcp import McpCommandHandler
+from .install import InstallCommandHandler
+from .coverage import CoverageCommandHandler
+from .ask import AskCommandHandler, AskCommand
 
-__all__ = ['StatsCommand', 'IndexCommand']
+__all__ = [
+    'IndexCommandHandler',
+    'IndexCommand',
+    'StatsCommandHandler',
+    'StatsCommand',
+    'McpCommandHandler',
+    'InstallCommandHandler',
+    'CoverageCommandHandler',
+    'AskCommandHandler',
+    'AskCommand',
+]

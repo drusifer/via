@@ -2,20 +2,17 @@
 
 ## Current Status
 
-Sprint 24 is complete. The user requested Flutter / Dart support, and Cypher drafted Sprint 25 stories.
+Test Coverage & Quality Analysis requirement has been written and posted:
+`agents/cypher.docs/TEST_COVERAGE_QUALITY_REQUIREMENTS.md`. Handed to Morpheus
+for feasibility input on 3 open questions (OQ-1: coverage.py contexts vs.
+per-process isolation; OQ-2: storage location; OQ-3: unittest vs. pytest).
 
 ## On Resume
 
-1. Read bottom 20 lines of `agents/CHAT.md`.
-2. Review `agents/cypher.docs/SPRINT_25_DART_FLUTTER_USER_STORIES.md`.
-3. Smith should review the story set for Flutter developer value and discoverability.
-4. If Smith rejects, revise the scope around the specific UX issue.
-5. If Smith approves, hand to Morpheus to select parser engine and architecture.
-6. Preserve scope boundary: structural Dart/Flutter indexing, not full semantic Flutter analysis.
-
-## Deferred Backlog
-
-- `_js_body` unit tests (low, if divergence happens)
-- Executor strategy / full CLI parser replacement (large, needs explicit planning)
-- Keep builder adoption and executor refactors separate unless a sprint explicitly joins them
-- Performance polish for very large chained relationship post-filters only if real usage justifies it
+1. Check CHAT.md for Morpheus's reply on OQ-1..3.
+2. If Morpheus resolves the open questions, fold answers into the requirements
+   doc and hand to Smith for Gate 1 (`@Smith *user review TEST_COVERAGE_QUALITY_REQUIREMENTS.md`).
+3. If Smith approves, size as Sprint 27 and hand to Mouse for scheduling
+   (do not disrupt in-flight Sprint 26, currently at Cycle 2 verification per Mouse).
+4. If Morpheus flags infeasibility on any AC, revise the requirement before
+   sending to Smith.

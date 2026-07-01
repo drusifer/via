@@ -22,6 +22,9 @@ Type `*help` for complete command reference with examples.
   - [mcp_protocol.md](tools/mcp_protocol.md) - Integration protocol
   - Individual tool docs: `*_mcp.md`
 
+### Sprint Archives
+- **[docs/sprints/](../docs/sprints/)** - Unified per-sprint documentation (Sprints 1-26)
+
 ---
 
 ## Persona Documentation

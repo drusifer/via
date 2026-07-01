@@ -1,4 +1,15 @@
-"""Built-in and user-defined canned queries for VIA."""
+"""Loading and expanding of predefined 'canned' search queries.
+
+TLDR:
+    Handles built-in and user-defined canned queries from JSON configuration files.
+    Key functions: load_canned_queries() (reads queries from disk),
+    expand_canned_query() (expands a canned name into CLI arguments).
+    Role: Consumed by CLI routing to support canned search shortcuts.
+
+Author: Oracle
+------------------------------------------------------------------------------
+License: GPL-3.0
+"""
 
 import json
 from pathlib import Path

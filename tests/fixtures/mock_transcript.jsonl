@@ -1,0 +1,6 @@
+{"timestamp": "2026-06-20T00:31:00Z", "conversation_id": "9f18b865-a4d9-4d77-8084-177a82f56922", "tool": "read_file", "input": "settings.json", "status": "SUCCESS"}
+{"timestamp": "2026-06-20T00:31:15Z", "conversation_id": "9f18b865-a4d9-4d77-8084-177a82f56922", "tool": "via", "input": "-mg * -tc -n 5", "status": "SUCCESS"}
+{"timestamp": "2026-06-20T00:32:00Z", "conversation_id": "9f18b865-a4d9-4d77-8084-177a82f56922", "tool_call": {"name": "run_command", "args": {"CommandLine": "via -mg __main__* -tN"}}, "status": 0}
+{"timestamp": "2026-06-20T00:32:30Z", "conversation_id": "other-conv-id", "tool": "via", "input": "-mg via.web.api.* -Q -n 5", "status": "SUCCESS"}
+{"timestamp": "2026-06-20T00:33:00Z", "conversation_id": "9f18b865-a4d9-4d77-8084-177a82f56922", "method": "tools/call", "params": {"name": "via", "arguments": {"query": "-mg * -tc --via inherits-from -mg ParserABC -tc -n 5"}}, "success": true}
+{"timestamp": "2026-06-20T00:33:45Z", "conversation_id": "9f18b865-a4d9-4d77-8084-177a82f56922", "tool": "run_command", "input": "pytest tests/", "status": "SUCCESS"}

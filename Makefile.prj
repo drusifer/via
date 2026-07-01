@@ -1,6 +1,6 @@
 # Makefile for the VIA project
 
-.PHONY: all venv test coverage clean lint-fast lint lints lint-slow duplicates security dead-code analyze install-system via-watch via-mcp-serve
+.PHONY: all venv test coverage clean lint-fast lint lints lint-slow duplicates security dead-code analyze install-system via-watch via-mcp-serve via
 
 # Variables
 PYTHON := python3
@@ -40,6 +40,9 @@ install-dev: $(INSTALL_DEV_STAMP)
 
 compile-agents: install-dev ## Compile all agent.yaml files into SKILL.md and agent.json
 	. ${VENV_ACTIVATE} && python agents/tools/compile_agents.py
+
+via: install-dev ## Run via command in the virtual environment (usage: make via ARGS="...")
+	$(VENV_DIR)/bin/via $(ARGS)
 
 # Run tests using the virtual environment's python
 test: install-dev

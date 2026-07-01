@@ -124,7 +124,7 @@ def test_dart_flutter_docs_and_mcp_examples_are_visible():
     schema_text = schema["description"]
     example_args = [example["args"] for example in schema["examples"]]
 
-    with open("docs/USER_GUIDE.md", encoding="utf-8") as guide_file:
+    with open("docs/specs/installation_and_indexing.md", encoding="utf-8") as guide_file:
         guide = guide_file.read()
     with open("README.md", encoding="utf-8") as readme_file:
         readme = readme_file.read()

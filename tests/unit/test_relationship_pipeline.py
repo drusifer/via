@@ -141,6 +141,16 @@ class TestRelationshipPipelineExecution:
         names = [r.symbol_name for r in records]
         assert "BaseClass" in names, f"Expected BaseClass in {names}"
 
+    def test_chained_relationship_query(self, relationship_project):
+        """Result-first: via -mg 'func_b' -tf -V calls -mg 'func_a' -tf -V calls -mg 'helper_util' -tf → func_b."""
+        project_dir, db_path = relationship_project
+        records = self._execute_pipeline(
+            db_path, project_dir,
+            ["-mg", "func_b", "-tf", "-V", "calls", "-mg", "func_a", "-tf", "-V", "calls", "-mg", "helper_util", "-tf"],
+        )
+        names = [r.symbol_name for r in records]
+        assert names == ["func_b"]
+
 
 class TestRelationshipResolutionOrder:
     """Regression tests: relationship resolution must prefer definitions over imports."""

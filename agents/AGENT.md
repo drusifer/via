@@ -16,7 +16,7 @@ When Initializing as a persona:
 
 **WORK:**
 5. Execute assigned tasks and complete steps
-6. Sumarize work in `agents/cypher.docs/<TASKNAME>_Summary_<YYYY-mm-ddTHH:MM>.md`
+6. Sumarize work in `agents/cypher.docs/<TASKNAME>_Summary_<YYYY-mm-ddTHH-MM>.md`
 6. Post updates to `agents/CHAT.md` using `agents/templates/_CHAT.md`
 
 **EXIT (Before Switching - MANDATORY):**

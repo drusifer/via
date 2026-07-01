@@ -25,8 +25,6 @@ import sys
 from pathlib import Path
 
 from via.canned import expand_canned_query
-from via.commands.coverage import import_coverage_xml
-from via.commands.stats import StatsCommand
 from via.core.constants import (
     DEFAULT_DB_NAME,
     DEFAULT_INDEX_DIR,
@@ -48,9 +46,31 @@ from via.parsers.javascript_parser import JavaScriptParser
 from via.parsers.markdown_parser import MarkdownParser
 from via.parsers.python_parser import PythonParser
 from via.parsers.registry import ParserRegistry
-from via.pipeline.executor import PipelineExecutor
 from via.pipeline.parser import PipelineParseError, PipelineParser
 from via.services.indexing import IndexingService
+
+from via.commands import (
+    IndexCommandHandler,
+    StatsCommandHandler,
+    McpCommandHandler,
+    InstallCommandHandler,
+    CoverageCommandHandler,
+    AskCommandHandler,
+)
+
+COMMAND_REGISTRY = {
+    "index": IndexCommandHandler,
+    "i": IndexCommandHandler,
+    "stats": StatsCommandHandler,
+    "s": StatsCommandHandler,
+    "mcp": McpCommandHandler,
+    "install": InstallCommandHandler,
+    "uninstall": InstallCommandHandler,
+    "status": InstallCommandHandler,
+    "coverage": CoverageCommandHandler,
+    "ask": AskCommandHandler,
+    "q": AskCommandHandler,
+}
 
 
 def _build_pipeline_help() -> str:
@@ -192,23 +212,22 @@ def _create_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # --- Index subcommand ---
-    from via.commands.index import IndexCommand
     index_parser = subparsers.add_parser(
         "index",
         aliases=["i"],
         help="Index a directory tree",
-        description=IndexCommand.get_help(),
+        description=IndexCommandHandler.get_help(),
     )
-    IndexCommand.add_arguments(index_parser)
+    IndexCommandHandler.add_arguments(index_parser)
 
     # --- Stats subcommand ---
     stats_parser = subparsers.add_parser(
         "stats",
         aliases=["s"],
         help="Show database statistics",
-        description=StatsCommand.get_help(),
+        description=StatsCommandHandler.get_help(),
     )
-    StatsCommand.add_arguments(stats_parser)
+    StatsCommandHandler.add_arguments(stats_parser)
 
     # --- Install / Uninstall / Status subcommands ---
     from via.commands.install import INSTALL_TARGETS
@@ -231,67 +250,26 @@ def _create_parser() -> argparse.ArgumentParser:
     coverage_parser = subparsers.add_parser(
         "coverage",
         help="Coverage import commands",
-        description="Import coverage artifacts into VIA relationships.",
+        description=CoverageCommandHandler.get_help(),
     )
-    coverage_sub = coverage_parser.add_subparsers(dest="coverage_command")
-    coverage_import = coverage_sub.add_parser("import", help="Import coverage.xml")
-    coverage_import.add_argument("path", help="Path to coverage.xml")
+    CoverageCommandHandler.add_arguments(coverage_parser)
 
     # --- MCP subcommand ---
     mcp_parser = subparsers.add_parser(
         "mcp",
         help="MCP server commands",
-        description="Commands for the VIA MCP server.",
+        description=McpCommandHandler.get_help(),
     )
-    mcp_sub = mcp_parser.add_subparsers(dest="mcp_command", help="MCP sub-commands")
+    McpCommandHandler.add_arguments(mcp_parser)
 
-    # via mcp schema
-    mcp_sub.add_parser(
-        "schema",
-        help="Print the via_query MCP tool schema as JSON",
-    )
-
-    # via mcp serve
-    mcp_serve = mcp_sub.add_parser(
-        "serve",
-        help="Start the MCP stdio server",
-    )
-    mcp_serve.add_argument(
-        "directory",
-        nargs="?",
-        default=".",
-        help="Root directory to watch and serve (default: current directory)",
-    )
-    mcp_serve.add_argument(
-        "--port",
-        type=int,
-        default=7891,
-        metavar="PORT",
-        help="Web UI port (default: 7891)",
-    )
-    mcp_serve.add_argument(
-        "--no-web",
-        action="store_true",
-        help="Disable the web UI",
-    )
     # --- Ask / Q subcommand ---
     ask_parser = subparsers.add_parser(
         "ask",
         aliases=["q"],
         help="Query the codebase using natural language",
-        description="Translate a natural language query into a VIA pipeline command and execute it.",
+        description=AskCommandHandler.get_help(),
     )
-    ask_parser.add_argument(
-        "query",
-        help="Natural language query string",
-    )
-    ask_parser.add_argument(
-        "-d",
-        "--dry-run",
-        action="store_true",
-        dest="dry_run",
-        help="Print the compiled VIA CLI arguments and exit",
-    )
+    AskCommandHandler.add_arguments(ask_parser)
 
     return parser
 
@@ -548,8 +526,9 @@ def _run_pipeline_command(argv: list, directory: str = ".") -> int:
 
         # Open database and execute pipeline
         with DatabaseStore(str(db_path), str(target_dir)) as db_store:
-            executor = PipelineExecutor(db_store)
-            result = executor.execute(stages)
+            from via.api.query_builder import ViaRunner
+            runner = ViaRunner(db_store)
+            result = runner.run_cli_args(argv)
 
             # If executor returns iterator (no render stage), print results
             if result is not None:
@@ -750,27 +729,16 @@ def _run_ask_command(args: argparse.Namespace) -> int:
 
 def _dispatch_subcommand(args, parser) -> int:
     """Dispatch parsed args to the appropriate subcommand handler."""
-    if args.command in ("ask", "q"):
-        return _run_ask_command(args)
-    elif args.command in ("index", "i"):
-        return _run_index_command(args)
-    elif args.command in ("stats", "s"):
-        return _run_stats_command(args)
-    elif args.command == "mcp":
-        return _run_mcp_command(args)
-    elif args.command in ("install", "uninstall", "status"):
-        return _run_install_command(args)
-    elif args.command == "coverage":
-        if getattr(args, 'coverage_command', None) == 'import':
-            return import_coverage_xml(str(Path('.').resolve()), args.path)
-        print("Error: coverage requires a subcommand", file=sys.stderr)
-        return EXIT_ERROR
-    elif args.command is None:
+    if args.command is None:
         parser.print_help()
         return EXIT_SUCCESS
-    else:
-        print(f"Error: Unknown command: {args.command}", file=sys.stderr)
-        return EXIT_ERROR
+
+    handler_cls = COMMAND_REGISTRY.get(args.command)
+    if handler_cls:
+        return handler_cls().run(args)
+
+    print(f"Error: Unknown command: {args.command}", file=sys.stderr)
+    return EXIT_ERROR
 
 
 def main() -> int:

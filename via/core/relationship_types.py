@@ -47,6 +47,10 @@ class ReferenceType(Enum):
         Returns dict of {name: (ReferenceType, inverted: bool)}.
         """
         forward = {rt.value: (rt, False) for rt in cls}
+        # In the database, DECLARES relationship is stored as member (from) -> container (to).
+        # Therefore, 'declares' (container --via declares member) targets the 'to' side (inverted=True),
+        # while 'declared-in' (member --via declared-in container) targets the 'from' side (inverted=False).
+        forward['declares'] = (ReferenceType.DECLARES, True)
         forward.update(_INVERSE_MAP)
         return forward
 
@@ -57,7 +61,7 @@ _INVERSE_MAP = {
     "inherited-by": (ReferenceType.INHERITS_FROM, True),
     "imported-by": (ReferenceType.IMPORTS, True),
     "referenced-by": (ReferenceType.REFERENCES, True),
-    "declared-in": (ReferenceType.DECLARES, True),
+    "declared-in": (ReferenceType.DECLARES, False),
     "covers": (ReferenceType.COVERED_BY, True),
     "http-called-by": (ReferenceType.HTTP_CALLS, True),
 }

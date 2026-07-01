@@ -1,4 +1,16 @@
-"""Fluent query builder for programmatic VIA queries."""
+"""Fluent query builders and execution adapters for programmatic VIA queries.
+
+TLDR:
+    Implements a fluent API for building and executing VIA search pipeline stages.
+    Key classes: ViaQueryBuilder (constructs queries), RelationshipQueryBuilder
+    (constructs relationship filters), ViaQuery (holds compiled query stages),
+    and ViaRunner (runs compiled queries against DatabaseStore).
+    Role: Programmatic entry point, consumed by external tools and scripts.
+
+Author: Oracle
+------------------------------------------------------------------------------
+License: GPL-3.0
+"""
 
 from __future__ import annotations
 

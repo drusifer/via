@@ -7,7 +7,7 @@ TLDR:
     CHAT.md communication log used by AI agents in the project. Each message is
     stamped with a timestamp, persona, command prefix, and optional recipient list.
     Key function: main() — parses arguments and appends a formatted message entry
-    to agents/CHAT.md, enforcing a 256-character message limit.
+    to agents/CHAT.md, enforcing a 512-character message limit.
     Role in the system: consumed by mkf.py (which calls it to post build status)
     and invoked directly by agents or developers to coordinate via the chat log.
 
@@ -60,7 +60,7 @@ def write_message(chat_file, formatted_line, overwrite_last_make_build):
 
 def main():
     parser = argparse.ArgumentParser(description="Append a message to agents/CHAT.md")
-    parser.add_argument("message", help="The message content max  256 characters")
+    parser.add_argument("message", help="The message content max 512 characters")
     parser.add_argument("--persona", "-p", default=os.environ.get("USER", "User"), help="Persona name (default: $USER)")
     parser.add_argument("--cmd", "-c", default="chat", help="Command prefix (default: chat)")
     parser.add_argument("--to", "-t", action="append", help="Name of intended recipient. Can be provided multiple times. (default: all)")
@@ -73,8 +73,8 @@ def main():
     
     timestamp = datetime.datetime.now().strftime("<small>%Y-%m-%d %H:%M:%S</small>")
 
-    if len(args.message) > 256:
-        print("Error: Message exceeds 256 characters. Use a Markdown file for longer messages. Then use chat to send the location of the file and a short summary.")
+    if len(args.message) > 512:
+        print("Error: Message exceeds 512 characters. Use a Markdown file for longer messages. Then use chat to send the location of the file and a short summary.")
         sys.exit(1)
     
     # Format: [DATETIME] [Persona] *cmd message

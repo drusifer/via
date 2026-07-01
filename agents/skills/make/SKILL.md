@@ -39,15 +39,19 @@ result=$(make <target>)
 
 ## How to inspect build output
 
-After any `make` run, the full log is at `build/build.out`. Search it directly — do not re-run the build with pipes.
+After any `make` run, the full log is at `build/build.out`. Search or tail it directly — do not re-run the build with pipes.
 
 ```bash
+# See last N lines of output (use instead of make test 2>&1 | tail -N)
+tail -n 30 build/build.out
+
+# Search for failures
 grep -i "error\|fail\|warning" build/build.out
 grep -n "pattern" build/build.out
 grep -A5 "TestFoo" build/build.out
 ```
 
-Use `V=-vv` during the run if you want failure lines to appear live. Use `grep build/build.out` after the run if you need to search the full log.
+Use `V=-vv` during the run if you want failure lines to appear live. Use `tail`/`grep` on `build/build.out` after the run if you need to see the results — **never pipe `make` output**.
 
 ## Discover available targets
 
@@ -89,38 +93,60 @@ Common targets:
 | Command | Description |
 |---------|-------------|
 | `make help` | Show all targets |
-| `make test` | Run unit tests |
+| `make test` | Run unit tests (full: lints + secret scan + verbose pytest) |
+| `make test-q` | Concise test run — quiet pytest with short tracebacks; **use this for quick feedback instead of piping make test** |
 | `make tldr` | Show TL;DR summaries from project files |
 | `make via_index` | Build the via symbol index |
 | `make install_bob TARGET=/path` | Install BobProtocol into a project |
 | `make update_bob TARGET=/path` | Update agents in a project |
 | `make pull_bob SRC=/path` | Pull updates from another BobProtocol project |
 | `make clean_bob` | Remove generated symlinks and reset state files |
+| `make dump-render-env` | Export current Render env vars to `.render-env-export.json` (requires `RENDER_API_KEY` + `RENDER_SERVICE_ID` in `.env`) |
+| `make push-key` | Push `FIELD_ENCRYPTION_KEY` from `.env` to Render — validates JSON before pushing, does not redeploy (requires `RENDER_API_KEY` + `RENDER_SERVICE_ID` in `.env`) |
 
 ## Adding a new target
 
-If a target does not exist, add it to the Makefile — do not invoke tools directly.
+Project-specific targets live in **two files**. Both must be updated or the target will either be unknown to `make help` or silently bypass mkf.
 
-The Makefile has two blocks gated by `MKF_ACTIVE`. **Both lines below go inside the Makefile — neither is a shell command.**
+### Step 1 — Real recipe in `Makefile.prj`
+
+Add the recipe and include the target in `.PHONY`:
 
 ```makefile
-ifdef MKF_ACTIVE
+.PHONY: ... existing-targets ... new-target   # add to existing .PHONY line
 
-# Real recipe — runs inside mkf's subprocess environment
-lint: ## Run linting checks
-    @ruff check .
-
-else
-
-# Public stub — this Makefile line is what triggers mkf; do NOT replicate it at the shell
-lint: ## Run linting checks
-    @./agents/tools/mkf.py $(V) $@
-
-endif
+new-target: $(VENV_STAMP) ## One-line description shown in make help
+	$(PYTHON) scripts/new_target.py
 ```
 
-The `./agents/tools/mkf.py` line is Makefile plumbing. It exists so that typing `make lint` at the shell automatically routes through mkf. It is not an indication that agents should call `mkf.py` directly.
+### Step 2 — Stub in `Makefile` (`else` block only)
 
-In an installed project, add project-specific targets to `Makefile.prj`. Bob manages `agents/Makefile.bob` and never modifies `Makefile.prj`.
+Add the stub that routes through mkf, and add to the `.PHONY` in the `else` block:
 
-Targets that bypass mkf (output must reach the terminal directly, like `help` and `chat`) are defined only in the `else` block.
+```makefile
+# in the else block .PHONY line:
+.PHONY: ... existing-targets ... new-target
+
+# stub entry (routes through mkf — captures output, posts to CHAT.md):
+new-target: ## One-line description shown in make help
+	@./agents/tools/mkf.py $(V) $@
+```
+
+### What each file does
+
+| File | Purpose |
+|------|---------|
+| `Makefile.prj` | Real recipe — runs inside mkf's subprocess (included via `-include Makefile.prj` when `MKF_ACTIVE=1`) |
+| `Makefile` (`else` block) | Public stub — intercepts `make new-target` at the shell and delegates to mkf |
+
+### Verification
+
+```bash
+make help | grep new-target   # should appear twice: once from Makefile, once from Makefile.prj
+```
+
+Appearing twice is correct — `make help` greps both files. If it only appears once, one of the two steps above was missed.
+
+### Targets that bypass mkf
+
+Targets where output must reach the terminal directly (e.g. `help`, `chat`) are defined only in the `else` block with their real recipe — no stub pattern, no `Makefile.prj` entry needed.

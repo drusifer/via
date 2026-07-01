@@ -105,18 +105,31 @@ class TestRelationshipFlagParsing:
         assert rel.relationship_type == RelationshipType.INHERITS_FROM
         assert rel.inverted is True
 
-    def test_parse_via_declared_in_inverse(self):
-        """Test --via declared-in sets inverted=True."""
+    def test_parse_via_declares_inverse(self):
+        """Test --via declares sets inverted=True."""
         parser = PipelineParser()
         stages = parser.parse([
             '-mg', '*', '-tF',
-            '--via', 'declared-in',
+            '--via', 'declares',
             '-mg', 'MyClass', '-tc'
         ])
 
         rel = stages[0].args.relationship
         assert rel.relationship_type == RelationshipType.DECLARES
         assert rel.inverted is True
+
+    def test_parse_via_declared_in_not_inverse(self):
+        """Test --via declared-in sets inverted=False."""
+        parser = PipelineParser()
+        stages = parser.parse([
+            '-mg', '*', '-tc',
+            '--via', 'declared-in',
+            '-mg', 'my_file.py', '-tF'
+        ])
+
+        rel = stages[0].args.relationship
+        assert rel.relationship_type == RelationshipType.DECLARES
+        assert rel.inverted is False
 
     def test_parse_sans_called_by_inverse(self):
         """Test --sans called-by (unused functions) sets inverted=True + is_negative=True."""
@@ -322,7 +335,7 @@ class TestRelationshipEdgeCases:
         assert relationships[1].relationship_type == RelationshipType.DECLARES
         assert relationships[1].filter_pattern == '*test*'
         assert relationships[1].is_negative is True
-        assert relationships[1].inverted is True
+        assert relationships[1].inverted is False
 
     def test_unknown_relationship_type_raises(self):
         parser = PipelineParser()
@@ -378,11 +391,16 @@ class TestViaFlag:
 
     def test_V_all_forward_types(self):
         parser = PipelineParser()
-        valid_types = ['inherits-from', 'calls', 'imports', 'references', 'declares']
+        valid_types = ['inherits-from', 'calls', 'imports', 'references']
         for rt in valid_types:
             stage = parser._parse_stage(['-mg', '*', '-tc', '-V', rt, '-mg', 'Anchor'])
             assert stage.args.relationship.relationship_type.value == rt
             assert stage.args.relationship.inverted is False
+
+        # Test declares which is inverted=True to match DB layout
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'declares', '-mg', 'Anchor'])
+        assert stage.args.relationship.relationship_type.value == 'declares'
+        assert stage.args.relationship.inverted is True
 
     def test_V_all_inverse_types(self):
         parser = PipelineParser()
@@ -391,12 +409,16 @@ class TestViaFlag:
             'inherited-by': 'inherits-from',
             'imported-by': 'imports',
             'referenced-by': 'references',
-            'declared-in': 'declares',
         }
         for inv_name, forward_value in inverse_types.items():
             stage = parser._parse_stage(['-mg', '*', '-tc', '-V', inv_name, '-mg', 'X'])
             assert stage.args.relationship.relationship_type.value == forward_value
             assert stage.args.relationship.inverted is True
+
+        # Test declared-in which is inverted=False
+        stage = parser._parse_stage(['-mg', '*', '-tc', '-V', 'declared-in', '-mg', 'X'])
+        assert stage.args.relationship.relationship_type.value == 'declares'
+        assert stage.args.relationship.inverted is False
 
     def test_V_invalid_value_raises(self):
         parser = PipelineParser()
