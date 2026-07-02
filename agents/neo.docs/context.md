@@ -1,5 +1,16 @@
 # Neo Context
 
+## Sprint 27 Cycle 1 — Per-Test Coverage Import (2026-07-01)
+- Rewrote `via/commands/coverage.py`: retired `import_coverage_xml`/`_parse_covered_lines` (whole-suite `coverage.xml` parsing), replaced with `import_contexts`/`_covered_lines_by_test` reading coverage.py's native dynamic-context data (`coverage.CoverageData.contexts_by_lineno()`).
+- Context labels from pytest-cov look like `"path/to/test.py::TestClass::test_method|run"` — stripped the `|run`/`|setup`/`|teardown` phase suffix via `_test_id_from_context()` to get the canonical test id. Empty-string context (module-level/import-time execution outside any test) is skipped — not attributable to a test.
+- New CLI subcommand: `via coverage import-contexts [path]` (default `.coverage`), replacing `via coverage import <coverage.xml>` entirely — no back-compat shim per user directive.
+- Per-test synthetic symbols: `symbol_type='test', file_path='<test>', qualified_name=test_id`. Cleanup on every import: `store.delete_symbols_by_file('<coverage>')` (old blanket-symbol data) and `delete_symbols_by_file('<test>')` (previous run's per-test symbols) before inserting fresh ones — cascade-deletes their `covered-by` edges via the existing FK. This makes re-import idempotent (verified: writing a fresh `.coverage` with only test_bravo's context and re-importing leaves no trace of a prior test_alpha symbol).
+- Hit a real gap: `via/core/match_record.py`'s `MatchRecordFactory._RECORD_TYPES` raises `ValueError: Unknown symbol type` for any symbol_type not in its dict — `'test'` wasn't registered, so directly querying/rendering test symbols crashed (didn't affect using them as `--via`/`--sans` relationship targets, only direct rendering). Fixed by adding `'test': GlobalMatchRecord` to the factory map (same generic-reuse pattern the original Sprint 16 code used for `'module'` → `ImportMatchRecord`).
+- Added `coverage>=7.0` to `pyproject.toml` main `dependencies` (was previously only a transitive dev dep via `pytest-cov`) since `via/commands/coverage.py` now imports it directly at runtime, not just during test runs.
+- Updated `tests/unit/test_sprint16_c3.py`: replaced the old XML-based test with `test_coverage_import_contexts_adds_per_test_covered_by_relationships` (constructs a real coverage.py data file via the public API, verifies per-test attribution through `--via covered-by`) and added `test_coverage_import_contexts_cleans_up_stale_data_on_reimport`.
+- Full suite: 1347 passed, 1 skipped (was 1346 before Cycle 1's new test).
+- Handed to Trin for UAT.
+
 ## Sprint 13 (2026-03-24)
 
 ### Problem Diagnosed (session 2)

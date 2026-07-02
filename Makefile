@@ -9,14 +9,9 @@ ifdef MKF_ACTIVE
 # ── Re-invocation Layer ──────────────────────────────────────────────────────
 # Included by mkf.py to run the actual target.
 
-# Include the project's original targets.
-# We try Makefile.prj (legacy) and Makefile (if we are running as Makefile.bob).
-ifneq ($(firstword $(MAKEFILE_LIST)),Makefile)
--include Makefile
-endif
--include Makefile.prj
-
-# ── Bob Protocol Targets ─────────────────────────────────────────────────────
+# ── Bob Protocol Targets (generic fallbacks) ────────────────────────────────
+# Defined BEFORE including Makefile.prj so a project's own recipe (if any)
+# overrides these defaults — GNU Make uses the last recipe seen for a target.
 
 .PHONY: tldr test via_index install_bob update_bob pull_bob clean_bob diff_bob
 
@@ -28,6 +23,15 @@ test: ## Run unit tests
 
 via_index: ## Build the via index required by the via MCP server
 	@via index "$(CURDIR)"
+
+# Include the project's original targets.
+# We try Makefile.prj (legacy) and Makefile (if we are running as Makefile.bob).
+# Included AFTER the generic fallbacks above so a project-specific `test`,
+# `tldr`, or `via_index` recipe takes precedence over the bob-protocol default.
+ifneq ($(firstword $(MAKEFILE_LIST)),Makefile)
+-include Makefile
+endif
+-include Makefile.prj
 
 install_bob: ## Copy agents into a project and set up skill links (usage: make install_bob TARGET=/path/to/project)
 	@[ -n "$(TARGET)" ] || { echo "Usage: make install_bob TARGET=/path/to/project"; exit 1; }
@@ -163,7 +167,7 @@ else
 #   make tldr V=-vv        stderr + filtered failures to terminal
 #   make tldr V=-vvv       stderr + full stdout to terminal
 
-.PHONY: help chat test via_index install_bob update_bob pull_bob clean_bob diff_bob
+.PHONY: help chat test test-coverage via_index install_bob update_bob pull_bob clean_bob diff_bob
 
 install_bob: ## Copy agents into a project and set up skill links (usage: make install_bob TARGET=/path/to/project)
 	@$(MAKE) MKF_ACTIVE=1 install_bob TARGET="$(TARGET)"
@@ -213,6 +217,9 @@ chat: ## Post a message to CHAT.md (usage: make chat MSG="<msg>" [PERSONA="<name
 		$(if $(TO),--to "$(TO)")
 
 test: ## Run unit tests
+	@./agents/tools/mkf.py $(V) $@
+
+test-coverage: ## Capture per-test coverage + run metadata, then import (Sprint 27)
 	@./agents/tools/mkf.py $(V) $@
 
 via_index: ## Build the via index required by the via MCP server

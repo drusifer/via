@@ -2958,3 +2958,244 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-07-01 12:39:36</small>] [**Cypher**]->[**Morpheus**] *pm story*:
  New requirement intake: per-test coverage capture + metadata (status/duration/last-run), foundation for future test quality analysis. See agents/cypher.docs/TEST_COVERAGE_QUALITY_REQUIREMENTS.md. Added to BACKLOG.md as Sprint 27 candidate (not folding into in-flight Sprint 26). @Morpheus *lead please weigh in on OQ-1 (coverage.py contexts vs per-process isolation) before Smith's gate.
+
+---
+[<small>2026-07-01 12:54:03</small>] [**User**]->[**Morpheus**] *request*:
+ User invoked *bloop, continuing as Morpheus per Cypher's handoff on TEST_COVERAGE_QUALITY_REQUIREMENTS.md
+
+---
+[<small>2026-07-01 12:54:15</small>] [**Morpheus**]->[**all**] *lead resume*:
+ Morpheus online — reviewing Cypher's TEST_COVERAGE_QUALITY_REQUIREMENTS.md and OQ-1..3 for feasibility before Smith's gate.
+
+---
+[<small>2026-07-01 12:55:40</small>] [**Morpheus**]->[**Cypher**] *lead guide*:
+ Feasibility read on TEST_COVERAGE_QUALITY_REQUIREMENTS.md OQ-1..3 done. OQ-1: yes — coverage.py dynamic contexts give per-test attribution in ONE run, no process-per-test needed (pytest+pytest-cov already installed). Recommend relaxing AC1 wording to outcome-level. OQ-2: new 'tested-by' relationship + test_runs table. OQ-3: add pytest path alongside make test. Feasible in 1 sprint. Details: agents/morpheus.docs/TEST_COVERAGE_FEASIBILITY_OQ1-3.md. @Cypher please adjust AC1, then hand to Smith Gate 1.
+
+---
+[<small>2026-07-01 13:01:31</small>] [**Cypher**]->[**Smith**] *pm handoff*:
+ AC1 revised per Morpheus feasibility (outcome-level per-test attribution, not process-per-test). Requirements doc ready: TEST_COVERAGE_QUALITY_REQUIREMENTS.md. @Smith please Gate 1 review for user value/discoverability.
+
+---
+[<small>2026-07-01 13:01:52</small>] [**Smith**]->[**all**] *user resume*:
+ Smith online — reviewing TEST_COVERAGE_QUALITY_REQUIREMENTS.md for Gate 1 (user value/discoverability).
+
+---
+[<small>2026-07-01 13:02:11</small>] [**Smith**]->[**Morpheus**] *user approve*:
+ Gate 1 APPROVED WITH NOTES on TEST_COVERAGE_QUALITY_REQUIREMENTS.md. Value is real (measure what tests actually test, not just suite-green). 2 conditions for the arch doc: (1) expose tested-by via existing -V<relationship> query pattern, not a bespoke report format (2) capture run must show visible per-test progress, not silent for 1300+ tests. Full review: agents/smith.docs/TEST_COVERAGE_GATE1_REVIEW.md. @Morpheus proceed to full architecture (Gate 2).
+
+---
+[<small>2026-07-01 13:04:33</small>] [**Morpheus**]->[**Smith**] *lead arch*:
+ Gate 2 architecture done, superseding tested-by per user directive: redefine covered-by in place, one relationship, no back-compat shim. Bonus: covered-by is already wired into -V query flag, so Gate1 condition 1 is auto-satisfied. Old blanket <coverage> symbol/import retired + cleaned up in the same transaction. New test_runs table + make test-coverage target (pytest -v --cov-context=test) covers Gate1 condition 2. Full doc: agents/morpheus.docs/TEST_COVERAGE_ARCHITECTURE.md. @Smith confirm Gate 2.
+
+---
+[<small>2026-07-01 13:05:00</small>] [**Smith**]->[**all**] *user resume*:
+ Smith reviewing Gate 2: TEST_COVERAGE_ARCHITECTURE.md (revised single-path covered-by design).
+
+---
+[<small>2026-07-01 13:05:18</small>] [**Smith**]->[**Mouse**] *user approve*:
+ Gate 2 APPROVED. Both Gate 1 conditions met, condition 1 exceeded (zero new query surface — covered-by redefined in place beats the tested-by proposal). Cleanup-in-same-transaction prevents stale mixed old/new data confusing users. One note for Oracle post-ship: update docs/specs + USER_GUIDE for the renamed import-contexts subcommand. Full review: agents/smith.docs/TEST_COVERAGE_GATE2_REVIEW.md. @Mouse please break Sprint 27 into phases.
+
+---
+[<small>2026-07-01 13:06:06</small>] [**Mouse**]->[**all**] *sm resume*:
+ Mouse online — breaking Sprint 27 (Test Coverage & Quality Analysis) into phases per Morpheus's approved architecture. Sprint 26 Cycle 2/3 board left untouched.
+
+---
+[<small>2026-07-01 13:06:40</small>] [**Mouse**]->[**Morpheus**] *sm plan*:
+ Sprint 27 broken into 3 short cycles: (1) per-test covered-by import + old-data cleanup, (2) test_runs metadata table, (3) make test-coverage entrypoint + full UAT. Queued behind in-flight Sprint 26 board. Plan: agents/mouse.docs/SPRINT_27_TASKS.md, mirrored in task.md. No Tank gate needed (no infra/env/deploy scope). @Morpheus please review plan vs architecture.
+
+---
+[<small>2026-07-01 13:07:35</small>] [**Morpheus**]->[**all**] *lead resume*:
+ Morpheus reviewing Mouse's SPRINT_27_TASKS.md against TEST_COVERAGE_ARCHITECTURE.md.
+
+---
+[<small>2026-07-01 13:07:53</small>] [**Morpheus**]->[**all**] *lead review*:
+ Sprint 27 plan APPROVED. All architecture decisions map to a task, cycle boundaries sensible (Cycle 1 isolates the breaking/highest-risk change). Correctly queued behind Sprint 26, Tank gate correctly skipped. Full review: agents/morpheus.docs/SPRINT_27_PLAN_REVIEW.md. This closes the plan-sprint loop for the Test Coverage & Quality Analysis requirement — execution awaits Sprint 26 closing.
+
+---
+[<small>2026-07-01 13:10:16</small>] [**Trin**]->[**all**] *qa resume*:
+ Trin resuming — actually running full test suite to verify Sprint 26 Cycle 2 (CLI/executor refactor) and Cycle 3 (CTE perf) before signing off, per user request to close the real gate rather than reconcile paperwork.
+
+---
+[<small>2026-07-01 13:18:09</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1346 passed, 1 skipped, 4 warnings in 146.66s (0:02:26) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-07-01 13:18:32</small>] [**Morpheus**]->[**all**] *lead resume*:
+ Morpheus reviewing actual Cycle 2 (CLI/executor registries) and Cycle 3 (CTE query perf) code, now that Trin has real green evidence (1346 passed) after fixing the make test bug.
+
+---
+[<small>2026-07-01 13:22:13</small>] [**Morpheus**]->[**Smith**] *lead review*:
+ Cycle 2/3 code review: COMMAND_REGISTRY (via/__main__.py) and STAGE_REGISTRY (via/pipeline/handlers.py) are clean dispatch-table refactors, no lingering if/elif chains. CTE query building (_build_relationship_cte_sql, _build_negative_relationship_cte_sql) is properly isolated in DatabaseStore. Combined with Trin's real 1346-passed run, Cycle 2 + Cycle 3 architecture APPROVED. @Smith please do the real UX/CLI flag consistency pass for Cycle 2 (run via --help, not spec-only).
+
+---
+[<small>2026-07-01 13:22:31</small>] [**Smith**]->[**Mouse**] *user approve*:
+ Ran via --help, via index --help, via stats --help for real (not spec-only). --db PATH, verbosity flags, directory positional args all consistent across subcommands post-refactor. No CLI regressions or naming drift introduced by the registry refactor. Cycle 2 UX/CLI flag consistency APPROVED.
+
+---
+[<small>2026-07-01 13:22:55</small>] [**Mouse**]->[**all**] *sm done*:
+ Sprint 26 CLOSED. All cycles complete, all gates (Trin/Smith/Morpheus) signed off with real verified evidence: 1346 passed, 1 skipped. Also fixed a real infra bug found along the way: make test was silently broken (bob-protocol layer shadowed the project pytest recipe with unittest discover, always reporting 0 tests). task.md updated. Sprint 27 is now unblocked and ready to start whenever the user wants.
+
+---
+[<small>2026-07-01 13:25:16</small>] [**Neo**]->[**all**] *swe resume*:
+ Neo starting Sprint 27 Cycle 1: per-test covered-by import rewrite, per SPRINT_27_TASKS.md and TEST_COVERAGE_ARCHITECTURE.md.
+
+---
+[<small>2026-07-01 13:27:00</small>] [**User**]->[**Neo**] *approve*:
+ User directly approved docs/DESIGN_RELATIONSHIP_HIERARCHY.md (Neo's Cycle 4 class-based relationship hierarchy design for blast-radius queries). This was stalled 3 pings with no persona review. Approval now overrides the pending Morpheus/Smith review gate. Neo's Cycle 4 implementation (via/core/relationship_types.py, PipelineParser, DatabaseStore) is unblocked and queued behind the current Sprint 27 implementation work.
+
+---
+[<small>2026-07-01 14:16:35</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+[notice] To update, run: pip install --upgrade pip
+
+---
+[<small>2026-07-01 14:16:45</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 27 Cycle 1 implemented: via/commands/coverage.py rewritten (import-contexts subcommand, per-test synthetic symbols via coverage.py dynamic contexts, cleanup of stale <coverage>/<test> symbols on re-import). Registered 'test' as a renderable symbol_type in match_record.py (GlobalMatchRecord). Added coverage>=7.0 to pyproject deps. Updated tests/unit/test_sprint16_c3.py with 2 new tests (per-test attribution, re-import cleanup). Full suite: 1347 passed, 1 skipped. @Trin please UAT.
+
+---
+[<small>2026-07-01 14:17:34</small>] [**Trin**]->[**all**] *qa resume*:
+ Trin UAT on Sprint 27 Cycle 1: verifying per-test coverage import end-to-end against a real scratch project, not just the unit tests.
+
+---
+[<small>2026-07-01 14:32:00</small>] [**Trin**]->[**Morpheus**] *qa blocked*:
+ Cycle 1 UAT PASSES (real check: 94 covered-by relationships across 7 tests). Critical Cycle 3 gap found: pytest --cov-context=test measures ZERO code inside subprocesses, and 30/92 test files drive via via subprocess. ~1/3 of suite would show falsely uncovered. Validated fix path in full report. @Morpheus please decide how to fold into Cycle 3: agents/trin.docs/SPRINT27_CYCLE1_UAT.md
+
+---
+[<small>2026-07-01 14:34:40</small>] [**Morpheus**]->[**all**] *lead resume*:
+ Morpheus reviewing Trin's Cycle 3 subprocess-coverage finding — this changes architecture for the capture entrypoint.
+
+---
+[<small>2026-07-01 14:36:05</small>] [**Morpheus**]->[**Neo**] *lead review*:
+ Cycle 1 code review APPROVED (clean, properly isolated, reuses existing store helpers). Decision: fold subprocess coverage capture into Cycle 3 rather than defer — shipping without it would misreport ~1/3 of the suite as uncovered, defeating the sprint's purpose. Trin's fix path is already validated, so this is bounded (+2-3pt). Updated SPRINT_27_TASKS.md + TEST_COVERAGE_ARCHITECTURE.md. @Neo please implement Cycle 3 with this expanded scope.
+
+---
+[<small>2026-07-01 14:36:57</small>] [**Neo**]->[**all**] *swe resume*:
+ Neo starting Sprint 27 Cycle 2: test_runs metadata table (status/duration/last_run_at, upsert-only).
+
+---
+[<small>2026-07-01 14:51:37</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+=========== 1351 passed, 1 skipped, 5 warnings in 174.41s (0:02:54) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-07-01 14:54:06</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 27 Cycle 2 implemented: test_runs table (via/db/schema.py, SCHEMA_VERSION 6->7), DatabaseStore.upsert_test_run/get_test_run (upsert-only, no history). Added root conftest.py capturing per-test status/duration to .via/test_runs.json via pytest hooks. import-contexts now also imports that JSON into test_runs. 4 new tests in test_sprint27_c2.py. Fixed 2 pre-existing tests hardcoding SCHEMA_VERSION==6. Full suite: 1351 passed, 1 skipped. @Trin please UAT.
+
+---
+[<small>2026-07-01 15:37:15</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============ 1351 passed, 1 skipped, 5 warnings in 81.79s (0:01:21) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-07-01 15:37:59</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 27 Cycles 2+3 done. Cycle 2: test_runs table + upsert. Cycle 3 scope changed per user directive: converted 27/30 subprocess-spawning tests to run in-process instead of building subprocess-coverage capture; 3 genuine daemon/stdin tests moved to new tests/subprocess/. Found+fixed a real O(tests x files) perf bug along the way. Verified: 1351 passed in 83s (was 174s), 49204 covered-by relationships, 1352 test_runs rows. Details: agents/neo.docs/current_task.md. @Trin @Smith @Morpheus please sign off.
+
+---
+[<small>2026-07-01 15:42:43</small>] [**Trin**]->[**all**] *qa resume*:
+ Trin formal UAT on Sprint 27 Cycles 2+3 (test_runs metadata + in-process test conversion + capture entrypoint).
+
+---
+[<small>2026-07-01 16:03:18</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test-coverage | /home/drusifer/Projects/via/build/build.out
+Imported test run metadata: 1352 tests
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+Makefile:22: warning: ignoring old recipe for target 'test'
+
+---
+[<small>2026-07-01 17:36:07</small>] [**Trin**]->[**Smith**] *qa handoff*:
+ Cycles 2+3 UAT PASSES with real evidence: test_runs upsert verified for real, tests/subprocess/ confirmed still using real subprocess, no dead cruft, full make test-coverage verified (1351 passed, 49204 relationships, 1352 test_runs rows). One UX note for Smith: import-contexts has no guard against a partial coverage file wiping other tests' data (make test-coverage itself is safe, raw CLI isn't). Full report: agents/trin.docs/SPRINT27_CYCLE2_3_UAT.md. @Smith please do usability test.
+
+---
+[<small>2026-07-01 17:36:38</small>] [**Smith**]->[**all**] *user resume*:
+ Smith running usability test on make test-coverage for real (per own rule: never approve based on spec alone), plus deciding on Trin's partial-import safety note.
+
+---
+[<small>2026-07-01 17:37:21</small>] [**Smith**]->[**Neo**] *user approve*:
+ Usability test APPROVED. Help text clear, visible progress confirmed, -Vcovered-by needs no new syntax. Agree with Trin's partial-import finding (Heuristic 5, error prevention) - recommend a non-blocking warning when new test count is dramatically smaller than previously-tracked count. Cheap enough to fix now rather than backlog. Full review: agents/smith.docs/SPRINT27_USABILITY_TEST.md. @Neo please add the warning, then @Morpheus final review.
+
+---
+[<small>2026-07-01 17:42:01</small>] [**Neo**]->[**Morpheus**] *swe handoff*:
+ Added the partial-import warning per Smith's recommendation: DatabaseStore.count_symbols_by_file() + a check in import_contexts comparing previous vs new test count, warns (non-blocking) if it would drop by more than half. New test test_coverage_import_contexts_warns_on_dramatic_test_count_drop passes. Full suite re-running now to confirm no regressions. @Morpheus ready for final review once suite confirms green.
+
+---
+[<small>2026-07-01 17:43:18</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============ 1352 passed, 1 skipped, 5 warnings in 81.00s (0:01:20) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-07-01 17:43:26</small>] [**Morpheus**]->[**all**] *lead resume*:
+ Full suite re-verified after the partial-import warning fix: 1352 passed (was 1351, +1 new test), 1 skipped, 81s. Morpheus resuming final architecture review of Sprint 27 Cycles 2+3.
+
+---
+[<small>2026-07-01 17:44:05</small>] [**Morpheus**]->[**all**] *lead review*:
+ Sprint 27 Phase 1 (capture) APPROVED and CLOSED. Cycle 2 schema/migration correct, Cycle 3 no dead cruft, perf fix and in-process conversion both solid. All 3 Phase 1 user stories traced and met. Full report: agents/morpheus.docs/SPRINT27_FINAL_REVIEW.md. Sprint 27 is done - Phase 2 (analysis) remains explicitly out of scope until a fresh requirement.
+
+---
+[<small>2026-07-01 17:48:23</small>] [**Neo**]->[**all**] *swe resume*:
+ Neo starting Sprint 26 Cycle 4 implementation: class-based relationship hierarchy for blast-radius queries, per docs/DESIGN_RELATIONSHIP_HIERARCHY.md (user-approved 2026-07-01).
+
+---
+[<small>2026-07-01 19:34:33</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============ 1352 passed, 1 skipped, 5 warnings in 80.54s (0:01:20) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-07-01 20:47:30</small>] [**Neo**]->[**Trin**] *swe handoff*:
+ Sprint 26 Cycle 4 implemented: real polymorphic hierarchy (issubclass/__subclasses__, no lookup table), one uniform execute_relation() call in executor, 4 bugs found+fixed during implementation (design doc diagram/prose inconsistency, RelationshipFilter.inverted desync, plain ReferenceType compat, category fan-out error suppression policy). 20 new tests passing. Full details: agents/neo.docs/SPRINT26_CYCLE4_SUMMARY.md. @Trin please UAT.
+
+---
+[<small>2026-07-01 20:48:03</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============ 1372 passed, 1 skipped, 5 warnings in 81.56s (0:01:21) ============
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-07-01 20:48:24</small>] [**Trin**]->[**all**] *qa resume*:
+ Trin UAT on Sprint 26 Cycle 4 (relationship hierarchy / blast queries).
+
+---
+[<small>2026-07-01 21:03:52</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 20 passed in 0.83s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-07-01 21:04:40</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ Cycle 4 UAT PASSES: 20/20 targeted + 1372 full suite, real end-to-end blast queries verified correct direction, --sans/chained category guards confirmed. One usability finding for Smith (non-blocking): any-ref includes declares/declared-in per the diagram, so blast radius surfaces the containing file alongside call-graph results - may be noisier than users expect. Full report: agents/trin.docs/SPRINT26_CYCLE4_UAT.md. @Morpheus please review architecture, especially the diagram/prose inconsistency Neo found.
+
+---
+[<small>2026-07-01 21:05:05</small>] [**Morpheus**]->[**all**] *lead resume*:
+ Morpheus reviewing Sprint 26 Cycle 4 architecture: relationship hierarchy implementation + the design-doc diagram/prose inconsistency Neo found and fixed.
+
+---
+[<small>2026-07-01 21:05:43</small>] [**Morpheus**]->[**Smith**] *lead review*:
+ Cycle 4 architecture APPROVED. Genuine polymorphism confirmed (leaves() walks __subclasses__, execute() is one uniform entry point, is_category() only used at 2 policy boundaries not in query execution). Backward compat with ReferenceType/web API/ViaQueryBuilder confirmed real. Diagram/prose fix and declares/declared-in judgment call both correct. Full report: agents/morpheus.docs/SPRINT26_CYCLE4_REVIEW.md. @Smith please read on the declares/declared-in noise finding - that's the only open item.
+
+---
+[<small>2026-07-01 21:06:09</small>] [**Smith**]->[**all**] *user resume*:
+ Smith reviewing the declares/declared-in noise finding in any-ref blast queries.
+
+---
+[<small>2026-07-01 21:06:57</small>] [**Smith**]->[**Neo**] *user feedback*:
+ Recommend removing declares/declared-in from Upstream/DownstreamRef categories - the design doc's Actual Requirements prose never mentions containers/members, only the diagram did (same diagram-vs-prose gap Neo already fixed for direction). They'd stay usable standalone via --via declares/declared-in, just not swept into blast/any-ref. Full read: agents/smith.docs/SPRINT26_CYCLE4_USABILITY.md. @Neo please make this small adjustment.
+
+---
+[<small>2026-07-01 21:07:23</small>] [**Neo**]->[**all**] *swe resume*:
+ Neo making the small declares/declared-in adjustment per Smith's usability recommendation.
+
+---
+[<small>2026-07-01 21:09:52</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+Makefile:22: warning: ignoring old recipe for target 'test'
+
+---
+[<small>2026-07-01 21:10:06</small>] [**Neo**]->[**all**] *swe done*:
+ Adjustment made: declares/declared-in now plain Relation leaves (no category parent), matching Smith's finding. Updated the fan-out error-suppression test to use a monkeypatched synthetic failure instead of relying on Declares specifically. 20/20 targeted + 1372 full suite green. Sprint 26 Cycle 4 is CLOSED.

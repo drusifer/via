@@ -286,6 +286,7 @@ class MatchRecordFactory:
         'header': HeaderMatchRecord,
         'string_constant': StringConstantMatchRecord,
         'link': LinkMatchRecord,
+        'test': GlobalMatchRecord,  # synthetic per-test symbol from coverage import-contexts
     }
 
     def create_from_row(

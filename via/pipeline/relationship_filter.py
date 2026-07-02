@@ -9,9 +9,9 @@ Author: Drew Gutstein
 License: GPL-3.0
 """
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Type
 
-from via.core.relationship_types import ReferenceType
+from via.core.relationship_types import Relation, ReferenceType
 
 
 @dataclass
@@ -19,7 +19,11 @@ class RelationshipFilter:
     """Filter for relationship-based queries.
 
     Attributes:
-        relationship_type: Type of relationship (inherits-from, calls, etc.)
+        relationship_type: A leaf class (e.g. Calls, CalledBy) for a concrete
+            relationship, or a category class (e.g. UpstreamRef) for
+            --via/--sans category names like 'upstream-ref'. Leaves are also
+            drop-in compatible with the older `ReferenceType` enum wherever
+            code reads `.value` (see `via/core/relationship_types.py`).
         filter_pattern: Pattern to match against filter-stage symbols (AFTER --via/--sans)
         filter_match_syntax: Match syntax for filter pattern (glob, regex, sql)
         filter_types: Symbol types to filter matches in the filter stage
@@ -29,7 +33,7 @@ class RelationshipFilter:
         result_olderthan_seconds: Filter results to symbols older than N seconds ago
         result_stale: If True, filter to stale results (not meaningful with --sans)
     """
-    relationship_type: ReferenceType
+    relationship_type: 'Type[Relation] | ReferenceType'
     filter_pattern: str
     filter_match_syntax: str = 'glob'
     filter_types: List[str] = field(default_factory=list)

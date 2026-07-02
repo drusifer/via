@@ -232,3 +232,4 @@ None
 - Added to `BACKLOG.md` as item 7 under Features & Capabilities — candidate for **Sprint 27** (not folded into in-flight Sprint 26).
 - Key open question flagged to Morpheus: whether `coverage.py`'s dynamic-context feature can tag per-test coverage within one run, vs. needing a fully isolated one-process-per-test runner (suite has 1300+ tests, so process-per-test cost matters).
 - Handoff chain per protocol: Morpheus (feasibility/OQ-1..3) → Smith (Gate 1 user value review) before this becomes a sized sprint.
+- Morpheus feasibility read received 2026-07-01 (`agents/morpheus.docs/TEST_COVERAGE_FEASIBILITY_OQ1-3.md`): dynamic contexts confirmed, `tested-by` relationship + `test_runs` table proposed, add-pytest-alongside-unittest confirmed. Revised AC1 in the requirements doc to be outcome-level (per-test attribution) rather than mandating one-process-per-test. Handed to Smith for Gate 1.

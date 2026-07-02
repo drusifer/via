@@ -198,6 +198,15 @@ class DatabaseStore:
                 (6, time.time(), "Add symbols.language and symbols.symbol_subtype columns")
             )
 
+        if current_version < 7:
+            # test_runs itself is already created unconditionally via ALL_TABLES
+            # (CREATE TABLE IF NOT EXISTS) — this just records the migration.
+            cursor.execute(
+                "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
+                " VALUES (?, ?, ?)",
+                (7, time.time(), "Add test_runs table for per-test coverage run metadata")
+            )
+
         # Store metadata
         cursor.execute(
             "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
@@ -587,6 +596,13 @@ class DatabaseStore:
             (file_path,)
         )
         self._commit_if_needed()
+
+    def count_symbols_by_file(self, file_path: str) -> int:
+        """Count symbol records for a file (e.g. synthetic '<test>' entries)."""
+        return self.conn.execute(
+            "SELECT COUNT(*) FROM symbols WHERE file_path = ?",
+            (file_path,)
+        ).fetchone()[0]
 
     # Batch operations for performance
 
@@ -2012,3 +2028,55 @@ class DatabaseStore:
             return None
         ts = float(row[0])
         return _dt.datetime.fromtimestamp(ts, tz=_dt.timezone.utc).isoformat()
+
+    # =========================================================================
+    # Test Run Methods (Sprint 27)
+    # =========================================================================
+
+    @require_connection
+    def upsert_test_run(
+        self,
+        test_id: str,
+        status: str,
+        duration_seconds: float,
+        last_run_at: str,
+    ) -> None:
+        """Record the latest run outcome for a test, replacing any prior row.
+
+        Args:
+            test_id: Canonical test id (e.g. 'tests/unit/test_x.py::test_y')
+            status: 'pass', 'fail', 'error', or 'skip'
+            duration_seconds: Wall-clock duration of the test run
+            last_run_at: ISO8601 timestamp of the run
+        """
+        self.conn.execute(
+            """INSERT INTO test_runs (test_id, status, duration_seconds, last_run_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(test_id) DO UPDATE SET
+                   status = excluded.status,
+                   duration_seconds = excluded.duration_seconds,
+                   last_run_at = excluded.last_run_at""",
+            (test_id, status, duration_seconds, last_run_at),
+        )
+        self._commit_if_needed()
+
+    @require_connection
+    def get_test_run(self, test_id: str) -> Optional[dict]:
+        """Return the latest recorded run for a test, or None if never recorded.
+
+        Returns:
+            dict with keys 'test_id', 'status', 'duration_seconds', 'last_run_at'
+        """
+        row = self.conn.execute(
+            "SELECT test_id, status, duration_seconds, last_run_at"
+            " FROM test_runs WHERE test_id = ?",
+            (test_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            'test_id': row[0],
+            'status': row[1],
+            'duration_seconds': row[2],
+            'last_run_at': row[3],
+        }

@@ -8,6 +8,7 @@ Author: Drew Gutstein
 
 License: GPL-3.0
 """
+import dataclasses
 import fnmatch
 import copy
 import re
@@ -16,6 +17,7 @@ from typing import Any, Dict, Iterator, List, Optional
 
 from via.core.duration import parse_duration
 from via.core.match_record import FormatType, MatchRecord, RenderType
+from via.core.relationship_types import execute_relation, is_category
 from via.core.types import MatchOp, SymbolType
 from via.core.utils import get_match_op, parse_result_slice, safe_print
 from via.db.store import DatabaseStore
@@ -147,6 +149,14 @@ class PipelineExecutor:
         if relationship:
             relationships = getattr(args, 'relationships', None) or [relationship]
             if len(relationships) > 1:
+                for rel in relationships:
+                    if is_category(rel.relationship_type):
+                        raise ValueError(
+                            "Relationship categories (e.g. 'upstream-ref') are not yet "
+                            "supported when chaining multiple --via/--sans filters in one "
+                            "query. Use a category as the only relationship filter, or use "
+                            "concrete relationship types when chaining."
+                        )
                 compiled_stages = [
                     self._compile_relationship_params(stage, rel, is_first=(i == 0))
                     for i, rel in enumerate(relationships)
@@ -355,6 +365,53 @@ class PipelineExecutor:
     def _execute_relationship_query(self, stage: PipelineStage, result_names: Optional[List[str]] = None) -> Iterator[MatchRecord]:
         """Execute positive relationship query (--via) against database.
 
+        One uniform call regardless of whether the resolved relationship is a
+        concrete leaf (e.g. Calls) or a category (e.g. UpstreamRef, from
+        --via upstream-ref) — `execute_relation` asks the relationship type
+        itself to run `run_leaf` once per concrete leaf beneath it and merge,
+        via real polymorphism (`leaves()` walking `__subclasses__()`), not a
+        branch here. A leaf's `leaves()` is just itself, so this runs the
+        query exactly once for the plain single-relationship case.
+
+        Error-handling policy differs by *why* a leaf is being run, not by
+        mechanism: a category (e.g. upstream-ref) pulls in leaves like
+        Declares that may not apply to every type combination (e.g. a
+        function can't be a 'declares' container) — that leaf should just
+        contribute nothing. A direct `--via declares` query with the same
+        invalid combination should still raise its normal, clear error.
+        """
+        args = stage.args
+        rel: RelationshipFilter = args.relationship
+        limit = getattr(args, 'limit', None) or 10
+        fan_out = is_category(rel.relationship_type)
+
+        def run_leaf(leaf_cls):
+            # inverted is a separate RelationshipFilter field from
+            # relationship_type.inverted (the class attribute) — both must
+            # be replaced together or a category's leaves silently keep the
+            # category's own (meaningless) top-level inverted flag. Plain
+            # ReferenceType members (older call sites, e.g. tests/web API)
+            # have no .inverted at all — rel.inverted is already correct
+            # for those, so fall back to it unchanged.
+            leaf_inverted = getattr(leaf_cls, 'inverted', rel.inverted)
+            leaf_rel = dataclasses.replace(rel, relationship_type=leaf_cls, inverted=leaf_inverted)
+            if not fan_out:
+                return self._execute_single_relationship_query(stage, leaf_rel, result_names)
+            try:
+                return self._execute_single_relationship_query(stage, leaf_rel, result_names)
+            except ValueError:
+                return []
+
+        return iter(execute_relation(rel.relationship_type, run_leaf)[:limit])
+
+    def _execute_single_relationship_query(
+        self,
+        stage: PipelineStage,
+        rel: RelationshipFilter,
+        result_names: Optional[List[str]] = None,
+    ) -> Iterator[MatchRecord]:
+        """Execute positive relationship query (--via) against database for one concrete leaf.
+
         Result-first direction convention:
           Pattern BEFORE --via = result stage (what gets returned)
           Pattern AFTER --via  = filter stage (the relationship anchor)
@@ -363,13 +420,13 @@ class PipelineExecutor:
 
         Args:
           stage: PipelineStage with relationship filter (is_negative=False)
+          rel: The (concrete leaf) relationship filter to execute
           result_names: Optional list of names to filter returned symbols
 
         Returns:
           Iterator of MatchRecord from database
         """
         args = stage.args
-        rel: RelationshipFilter = args.relationship
         negated = getattr(args, 'negate_pattern', False)
 
         # Result-first: pattern BEFORE --via is what gets returned

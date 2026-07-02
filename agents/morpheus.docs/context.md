@@ -119,3 +119,44 @@ None.
 - Baseline query engine failures (declares validation, filepath imports, empty markdown declares) resolved and verified.
 - New unit tests for JS body analyzer subclasses implemented and verified.
 - Handing off to Mouse to close Cycle 1.
+- NOTE: as of 2026-07-01, Sprint 26 has progressed to Cycle 2 (Mouse verification 90%, Neo Cycle 4 design in progress) without a Morpheus-authored update in this file for Cycles 2-4 — reconcile with Mouse/Neo state before doing further Sprint 26 review work.
+
+## Test Coverage & Quality Analysis — Feasibility Read (2026-07-01)
+- Cypher requested feasibility input on 3 open questions before Smith's Gate 1, re: new requirement `agents/cypher.docs/TEST_COVERAGE_QUALITY_REQUIREMENTS.md`.
+- Verified in-repo: `coverage.py` 7.13.4, `pytest` 9.0.2, `pytest-cov` 7.0.0 all already installed as deps, even though `make test` currently runs `unittest discover`.
+- **OQ-1 (feasibility of per-test coverage)**: YES via coverage.py/pytest-cov dynamic contexts (`--cov-context=test`) — attributes coverage per test id within a single run, no process-per-test needed. Critical for cost given 1300+ tests. Recommended Cypher relax AC1 wording from "one process per invocation" to an outcome-level "coverage attributable per test id".
+- **OQ-2 (storage)**: two different concerns — (a) coverage attribution should reuse the existing symbol/relationship pattern from `via/commands/coverage.py`'s aggregate `covered-by` import, but via a **new relationship name `tested-by`** (not overloading `covered-by`) so the existing Sprint 16 aggregate import stays untouched; (b) test run metadata (status/duration/last-run) doesn't fit the symbol model — new `test_runs(test_id PK, status, duration_seconds, last_run_at)` table, upserted per run (no history table — matches Cypher's AC2 preference).
+- **OQ-3 (runner)**: add a pytest-based capture path alongside the existing `make test` (unittest discover), don't replace it — pytest auto-discovers unittest.TestCase subclasses so no test rewrite needed.
+- Sizing estimate given to Cypher/Mouse: feasible in one sprint (~6-7pt), confirms Sprint 27 sequencing (not folded into in-flight Sprint 26).
+- Full writeup: `agents/morpheus.docs/TEST_COVERAGE_FEASIBILITY_OQ1-3.md`.
+- Handed back to Cypher to adjust AC1 wording, then Smith for Gate 1. Full architecture doc (schema DDL, relationship naming, Makefile target) deferred until after Gate 1 approval, per normal sprint flow.
+- Smith Gate 1: APPROVED WITH NOTES (2 conditions: reuse `-V<relationship>` query surface, visible per-test progress).
+- **User directive (2026-07-01, overrides my earlier `tested-by` proposal)**: do not add a second relationship type — alter `covered-by` itself for per-test precision. One path, no back-compat shim, breaking changes OK as long as we clean up dead cruft after.
+- Wrote Gate 2 architecture: `agents/morpheus.docs/TEST_COVERAGE_ARCHITECTURE.md`. Key points: `covered-by` redefined to link source symbols to one synthetic symbol *per test id* (was: one blanket `<coverage>` symbol). Since `covered-by` is already registered in `via/core/relationship_types.py` and wired into `-V`, Smith's Gate 1 condition 1 is satisfied for free — no new CLI surface. Old blanket-symbol import path in `via/commands/coverage.py` is retired outright (not kept as fallback); cleanup step deletes stale `<coverage>` symbols (cascade-deletes their edges via existing FK) in the same import transaction. New `test_runs` table for status/duration/last-run (upsert, no history). New `make test-coverage` target using `pytest -v --cov-context=test` satisfies Gate 1 condition 2 (visible progress).
+- Handed to Smith to confirm Gate 2 given the revised single-path design.
+- Smith Gate 2: APPROVED (`agents/smith.docs/TEST_COVERAGE_GATE2_REVIEW.md`), both Gate 1 conditions confirmed met.
+- Mouse broke Sprint 27 into 3 cycles (`agents/mouse.docs/SPRINT_27_TASKS.md`); queued behind in-flight Sprint 26.
+- Reviewed Mouse's plan against the architecture doc: APPROVED, all decisions map 1:1 to tasks (`agents/morpheus.docs/SPRINT_27_PLAN_REVIEW.md`). This closes the `*plan sprint` bloop chain for this requirement — Cypher → Smith Gate1 → Morpheus arch → Smith Gate2 → Mouse plan → Morpheus review, no Tank gate needed.
+- Execution (`*impl cycle-1`) is queued, not started — waits for Sprint 26 to close first.
+
+## Sprint 26 Closure (2026-07-01) — real verification, not paperwork
+- Per user request, actually verified Sprint 26 Cycle 2/3 rather than trusting stale state files.
+- Trin found `make test` silently broken: bob-protocol Makefile's generic `unittest discover` target shadowed the project's real pytest recipe in `Makefile.prj` due to include order (bug present since Sprint 7). Fixed by reordering the include so project-specific recipes win — see `Makefile` diff.
+- Re-verified for real: 1346 passed, 1 skipped.
+- Reviewed actual Cycle 2/3 code: `COMMAND_REGISTRY` (via/__main__.py) and `STAGE_REGISTRY` (via/pipeline/handlers.py) are clean dispatch-table refactors; CTE query building (`_build_relationship_cte_sql`, `_build_negative_relationship_cte_sql`) properly isolated in `DatabaseStore`. APPROVED.
+- Smith ran `via --help`/`index --help`/`stats --help` for real and confirmed no CLI regressions from the registry refactor. APPROVED.
+- Sprint 26 is now CLOSED in `task.md`. Sprint 27 is unblocked but not started — user said wait for Sprint 26 to close before starting Sprint 27, which has now happened.
+
+## Sprint 27 Cycle 1 Review + Cycle 3 Scope Decision (2026-07-01)
+- Reviewed Neo's Cycle 1 implementation (`via/commands/coverage.py` rewrite, `match_record.py` 'test' type registration): clean, properly isolated, reuses existing `DatabaseStore` helpers (`delete_symbols_by_file`, `get_symbol_id`, `insert_relationship`). APPROVED.
+- Trin's UAT surfaced a critical finding: 30/92 test files drive `via` via subprocess; `pytest --cov-context=test` measures zero code inside subprocesses. Decided to fold subprocess coverage capture into Cycle 3 rather than defer it — shipping without it would misreport ~1/3 of the suite as uncovered, undermining the sprint's whole purpose. Trin already validated the fix mechanism (sitecustomize + `PYTEST_CURRENT_TEST` context propagation + `coverage combine`), so this is bounded scope (+2-3pt), not open-ended research.
+- Updated `TEST_COVERAGE_ARCHITECTURE.md` (Capture path section) and `agents/mouse.docs/SPRINT_27_TASKS.md` / `task.md` Cycle 3 scope accordingly.
+- Handed to Neo to implement Cycle 3 with the expanded scope.
+
+## Sprint 27 CLOSED (2026-07-01) — final summary
+- User overrode the subprocess-coverage-capture plan (sitecustomize + combine) in favor of the root fix: 27 of 30 subprocess-spawning test files had no real reason to run out-of-process. Converted via a shared in-process runner + a transparent `conftest.py` redirect shim (zero per-file edits); the 3 genuine daemon/stdin-protocol tests moved to `tests/subprocess/`.
+- A real O(tests × files) performance bug surfaced during full-scale validation (import was re-parsing every covered file once per test, 6+ minutes) — found and fixed before shipping.
+- Smith's Heuristic 5 finding (partial-import data loss with no warning) was fixed immediately (`DatabaseStore.count_symbols_by_file` + a non-blocking warning) rather than backlogged.
+- Side benefit: full suite runtime dropped ~174s → ~81s.
+- Cycle 2 schema/migration reviewed and approved (SCHEMA_VERSION 6→7, upsert-only `test_runs`).
+- Full final review: `agents/morpheus.docs/SPRINT27_FINAL_REVIEW.md`. Sprint 27 Phase 1 (capture) is CLOSED. Phase 2 (analysis) remains explicitly out of scope until a fresh requirement.

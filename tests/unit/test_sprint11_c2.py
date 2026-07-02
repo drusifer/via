@@ -325,7 +325,7 @@ class TestSchemaMigrationV6:
         assert 'symbol_subtype' in cols, "symbol_subtype column missing after v6 migration"
 
         version = store.get_metadata("schema_version")
-        assert version == "6"
+        assert version == "7"
         store.close()
 
     def test_language_populated_on_insert(self, tmp_path):

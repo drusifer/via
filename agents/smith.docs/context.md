@@ -1,6 +1,22 @@
 # Smith Context
 
-**Last updated**: 2026-06-20
+**Last updated**: 2026-07-01
+
+## Session: 2026-07-01 — Test Coverage & Quality Analysis Gate 1
+- Reviewed `agents/cypher.docs/TEST_COVERAGE_QUALITY_REQUIREMENTS.md`.
+- APPROVED WITH NOTES: `agents/smith.docs/TEST_COVERAGE_GATE1_REVIEW.md`.
+- Value is real: lets developers see what tests actually exercise, not just suite-green.
+- `tested-by` naming is consistent with existing relationship grammar (`covered-by`, `declares`, etc.) — no objection.
+- 2 conditions passed to Morpheus for the architecture doc: (1) expose `tested-by` via the existing `-V<relationship>` query pattern rather than a bespoke report format (heuristic #6/#10); (2) capture run over 1300+ tests must show visible per-test progress, not run silently (heuristic #1).
+- Handed to Morpheus for Gate 2 architecture.
+- Morpheus's Gate 2 doc incorporated a user directive to drop the proposed `tested-by` relationship and redefine `covered-by` in place instead (one path, no back-compat shim, breaking change OK with cleanup). This exceeds Gate 1 condition 1 — zero new query surface at all.
+- Gate 2 APPROVED: `agents/smith.docs/TEST_COVERAGE_GATE2_REVIEW.md`. Both Gate 1 conditions confirmed met. Flagged a docs-update note for Oracle post-ship (rename to `import-contexts`, update docs/specs + USER_GUIDE).
+- Handed to Mouse for Sprint 27 phase breakdown.
+
+## Session: 2026-07-01 — Sprint 26 Cycle 2 real UX review
+- Ran `via --help`, `via index --help`, `via stats --help` for real (per own rule: never approve based on spec alone).
+- `--db PATH`, verbosity flags, directory positional args all consistent across subcommands after the CLI registry refactor — no regressions or naming drift.
+- Cycle 2 UX/CLI flag consistency APPROVED. Sprint 26 is now closed.
 
 ## Session: 2026-06-20 (Iteration 4) — Sprint 26 Gate 2 Review
 - Reviewed architecture design in `agents/morpheus.docs/SPRINT_26_ARCHITECTURE.md`.

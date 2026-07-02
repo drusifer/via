@@ -2,10 +2,11 @@
 
 ## Current Status
 
-Sprint 26 Gate 2 review is complete and approved.
+Recommended removing declares/declared-in from the blast categories. Handed
+to Neo for the small adjustment.
 
 ## On Resume
 
-1. Wait for Mouse to break down the sprint into implementation phases (`*sm plan sprint`).
-2. Await Neo's phase implementation (`*swe impl`) and Trin's UAT (`*qa uat`).
-3. Prepare for usability testing of delivered phases (`*user test`).
+1. Check CHAT.md for confirmation the adjustment landed and Cycle 4 closed.
+2. No other open threads — next work is either Sprint 27 Phase 2 (needs a
+   fresh requirement pass) or whatever the user picks up next.

@@ -15,10 +15,10 @@ License: GPL-3.0
 from __future__ import annotations
 
 from argparse import Namespace
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Type
 
 from via.core.duration import parse_duration
-from via.core.relationship_types import ReferenceType
+from via.core.relationship_types import Relation, ReferenceType
 from via.pipeline.relationship_filter import RelationshipFilter
 from via.pipeline.types import PipelineStage, StageType
 

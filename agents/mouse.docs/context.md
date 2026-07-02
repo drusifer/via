@@ -82,3 +82,20 @@
 - Neo unified CLI and programmatic `ViaRunner` execution paths.
 - Baseline test suite is fully verified green (1345 passed).
 - Pending formal QA verification and Tech Lead review signatures.
+- NOTE: `task.md` shows Cycle 3 items already checked off by Neo (CTE query optimization) even though this context predates that — reconcile actual Cycle 2/3 status against `task.md` directly next time this thread is picked up, rather than trusting this file alone.
+
+## Sprint 27 Planning — Test Coverage & Quality Analysis (2026-07-01)
+- Cypher → Morpheus (feasibility + architecture) → Smith (Gate 1 + Gate 2, both approved) chain completed for a new requirement: per-test coverage capture + test run metadata.
+- Key design point from Morpheus's architecture: `covered-by` is redefined in place (per-test synthetic symbols) rather than adding a new relationship — per explicit user directive, no back-compat shim, breaking change with in-transaction cleanup of old blanket `<coverage>` data.
+- Broke Sprint 27 into 3 cycles: (1) per-test `covered-by` import + old-data cleanup, (2) `test_runs` metadata table, (3) `make test-coverage` entrypoint + full UAT.
+- Plan doc: `agents/mouse.docs/SPRINT_27_TASKS.md`; mirrored into `task.md` below the Sprint 26 board.
+- Sprint 27 is queued behind Sprint 26 (which is still open, Cycle 2/3 unresolved) — did not reorder or touch the Sprint 26 board.
+- No Tank/devops gate needed — no new env vars, services, or deploy scope.
+- Handed to Morpheus for plan-vs-architecture review.
+
+## Sprint 26 Closure (2026-07-01) — real verification
+- Per user request, had Trin/Morpheus/Smith actually verify Cycle 2/3 instead of trusting stale state files.
+- Found + fixed a real `make test` bug (bob-protocol layer's generic `unittest discover` target was shadowing the project's real pytest recipe due to Makefile include order — present since Sprint 7, not a Sprint 26 defect).
+- Re-verified: 1346 passed, 1 skipped. All Cycle 2/3 gates (Trin, Smith, Morpheus) now genuinely signed off in `task.md`.
+- **Sprint 26 is CLOSED.**
+- Sprint 27 is now unblocked (per user's stated preference: wait for Sprint 26 to close before starting Sprint 27) but not yet started.

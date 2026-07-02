@@ -20,7 +20,7 @@ from via.core.flag_groups import (
     get_match_short_flags,
     get_type_short_flags,
 )
-from via.core.relationship_types import ReferenceType
+from via.core.relationship_types import get_relation_names, resolve_relation
 from via.pipeline.stage_builder import (
     build_match_stage,
     build_relationship_filter,
@@ -28,6 +28,18 @@ from via.pipeline.stage_builder import (
 )
 from via.pipeline.errors import PipelineParseError
 from via.pipeline.types import PipelineStage, StageType
+
+
+def _relation_name_map() -> dict:
+    """Map every valid --via/--sans name to (resolved class, inverted).
+
+    The resolved class is a leaf (e.g. Calls) for concrete relationship
+    names, or a category (e.g. UpstreamRef) for names like 'upstream-ref' —
+    callers distinguish via `.is_category()`. `inverted` is only meaningful
+    for leaves; categories carry their own per-leaf inverted flags via
+    `.leaf_pairs()`, resolved later during execution.
+    """
+    return {name: (resolve_relation(name), resolve_relation(name).inverted) for name in get_relation_names()}
 
 
 class _StoreSyntax(argparse.Action):
@@ -107,7 +119,7 @@ class PipelineParser:
         Returns:
             List of argument segments (empty segments filtered out)
         """
-        full_map = ReferenceType.get_full_value_map()
+        full_map = _relation_name_map()
         segments = [[]]
         i = 0
         while i < len(argv):
@@ -143,7 +155,7 @@ class PipelineParser:
         Raises:
             PipelineParseError: If relationship type value is invalid
         """
-        full_map = ReferenceType.get_full_value_map()
+        full_map = _relation_name_map()
         valid_rels = ', '.join(sorted(full_map.keys()))
 
         rel_flags = {'--via', '-V', '--sans', '-S'}
@@ -186,6 +198,16 @@ class PipelineParser:
                 )
 
             rel_type, inverted = full_map[rel_str]
+            if is_negative and rel_type.is_category():
+                raise PipelineParseError(
+                    f"--sans does not support relationship categories like '{rel_str}'.\n"
+                    "NOT EXISTS across a category (e.g. 'has none of these upstream "
+                    "relationship types') is a different, unimplemented semantic from "
+                    "--via's union-of-matches. Use --sans with a single concrete "
+                    "relationship type instead (e.g. --sans calls).",
+                    code="category_not_supported_for_sans",
+                    hint=f"'{rel_str}' is a category; --sans requires a concrete relationship type.",
+                )
             filter_start = i + 2
             next_rel_index = next(
                 (j for j in range(filter_start, len(args)) if args[j] in rel_flags),

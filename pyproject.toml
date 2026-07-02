@@ -18,6 +18,7 @@ dependencies = [
     "tree-sitter-language-pack>=1.6.2",
     "tree-sitter-typescript>=0.23",
     "lark>=1.1.0",
+    "coverage>=7.0",
 ]
 
 [project.optional-dependencies]

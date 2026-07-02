@@ -18,7 +18,7 @@ License: GPL-3.0
 """
 
 # Schema version for migrations
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 # SQL statements for creating tables
 CREATE_METADATA_TABLE = """
@@ -103,6 +103,18 @@ CREATE TABLE IF NOT EXISTS line_offsets (
 );
 """
 
+# Per-test run metadata (status/duration/last-run) for `via coverage import-contexts`.
+# Upsert-only: one row per test id, latest run overwrites the previous one —
+# no run history is kept (test quality analysis needs current health, not a log).
+CREATE_TEST_RUNS_TABLE = """
+CREATE TABLE IF NOT EXISTS test_runs (
+    test_id           TEXT PRIMARY KEY,
+    status            TEXT NOT NULL,
+    duration_seconds  REAL NOT NULL,
+    last_run_at       TEXT NOT NULL
+);
+"""
+
 # Index definitions for performance
 CREATE_INDEXES = [
     # Files indexes
@@ -142,4 +154,5 @@ ALL_TABLES = [
     CREATE_REFERENCES_TABLE,
     CREATE_PENDING_RELATIONSHIPS_TABLE,
     CREATE_LINE_OFFSETS_TABLE,
+    CREATE_TEST_RUNS_TABLE,
 ]

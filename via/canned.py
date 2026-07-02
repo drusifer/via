@@ -25,6 +25,7 @@ _BUILTINS = {
     "symbol-body": ["-mg", "{symbol}", "-tf", "-tm", "-tc", "-oR"],
     "paged-scan": ["-mg", "{pattern}", "--slice", "{slice}"],
     "dead-docs": ["-mg", "*.md", "-tF", "--sans", "declared-in", "-mg", "*", "-tH"],
+    "blast": ["-mg", "*", "--via", "any-ref", "-mg", "{symbol}"],
 }
 
 

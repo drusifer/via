@@ -2,7 +2,7 @@
 
 **Author**: Cypher (PM)
 **Date**: 2026-07-01
-**Status**: DRAFT — intake from user request, not yet sequenced into a sprint
+**Status**: AC1 revised per Morpheus feasibility read — ready for Smith Gate 1
 
 ## Problem Statement
 
@@ -26,14 +26,18 @@ Phase 1 data exists to validate against.
 
 ### Phase 1 — Per-Test Coverage & Metadata Capture (this requirement)
 
-**User Story 1**: As a developer, I want to run the test suite one test at a time
-(rather than as a single aggregate run) so that coverage data can be attributed to
-an individual test rather than smeared across the whole suite.
+**User Story 1**: As a developer, I want coverage data attributed to the
+individual test that produced it (rather than smeared across the whole suite)
+so I can tell which test(s) cover which code.
 
-- AC1: There is a runner mode that executes exactly one test case per invocation
-  (test id in, pass/fail/error/skip + coverage out).
-- AC2: Running "one at a time" for the full suite must be automatable (loop over
-  all discovered test ids) without the user hand-picking tests.
+- AC1 (revised 2026-07-01 per Morpheus OQ-1 feasibility): Coverage is
+  attributable per test id. Mechanism is implementation's choice — a single
+  instrumented run using coverage.py dynamic contexts is preferred over
+  spawning one process per test, given the suite has 1300+ tests. Original
+  "one process per invocation" wording is dropped; the requirement is the
+  outcome (per-test attribution), not the mechanism.
+- AC2: The full suite must be captured in one pass (no user hand-picking of
+  individual tests).
 - AC3: A single test's failure must not abort collection for the remaining tests.
 
 **User Story 2**: As a developer, I want each test's coverage data captured in
@@ -71,10 +75,17 @@ about it.
 
 ## Non-Goals (Phase 1)
 - No redundancy/efficiency scoring yet (Phase 2).
-- No change to the existing whole-suite `coverage.xml` → `covered-by` import;
-  Phase 1 is additive.
 - No mandate on storage engine (SQLite table vs. JSON file vs. reuse of
   `.via/index.db`) — that is an architecture decision for Morpheus.
+
+## Decision (2026-07-01, user directive)
+Do not add a second relationship type alongside `covered-by`. **Alter
+`covered-by` itself** to carry per-test precision — one relationship, not two
+parallel paths. This is an explicit breaking change to the Sprint 16 aggregate
+import: no backward-compatibility shim is required. Old blanket-coverage data
+is superseded and should be cleaned up (not left as dead cruft) as part of
+delivering this, per user direction ("we can break things as long as we clean
+up after").
 
 ## Open Questions for Morpheus (architecture)
 - OQ-1: Can per-test coverage be captured cheaply with `coverage.py`'s API
@@ -100,5 +111,5 @@ already at Cycle 2 verification. Awaiting Morpheus feasibility input on OQ-1
 before final story sizing.
 
 ## Handoff
-Per protocol, next stop is Smith (Gate 1 — user value/discoverability review),
-then Morpheus for architecture / OQ-1..3 resolution and sizing.
+Morpheus's feasibility read is in: `agents/morpheus.docs/TEST_COVERAGE_FEASIBILITY_OQ1-3.md`.
+AC1 revised above. Next stop: Smith Gate 1 (user value/discoverability review).

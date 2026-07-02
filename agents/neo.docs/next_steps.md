@@ -1,8 +1,16 @@
 # Neo Next Steps
 
-## Sprint 26 Cycle 4 In Progress
+## Resume Point: Sprint 26 (all 4 cycles) and Sprint 27 Phase 1 both CLOSED
 
 ## On Resume
-1. Present the design document [DESIGN_RELATIONSHIP_HIERARCHY.md](file:///home/drusifer/Projects/via/docs/DESIGN_RELATIONSHIP_HIERARCHY.md) to Morpheus and Smith for review.
-2. Implement class-based hierarchy definitions in [relationship_types.py](file:///home/drusifer/Projects/via/via/core/relationship_types.py) once approved.
-3. Update unit and UAT tests to verify hierarchical query expansion.
+No queued implementation work. Options for next session:
+1. Sprint 27 Phase 2 (test quality/efficiency analysis) — needs a fresh
+   Cypher requirement + planning pass first, per the original scope boundary.
+2. Whatever the user picks up next.
+
+## Standing reminders
+- Use `make test FILE=<path>` for targeted runs while iterating; full suite
+  only at checkpoints (user feedback, 2026-07-01).
+- Reference: `agents/neo.docs/SPRINT26_CYCLE4_SUMMARY.md` for the relationship
+  hierarchy design if extending it later (e.g. adding ReaderRef/WriterRef
+  once their query semantics are actually defined).

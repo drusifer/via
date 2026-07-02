@@ -57,6 +57,16 @@ coverage: install-dev
 		--cov-report=lcov:coverage/lcov.info \
 		$(ARGS)
 
+# Capture per-test coverage + run metadata (status/duration/last-run), then
+# import into the via index as `covered-by` (per-test) and `test_runs`.
+# Sprint 27. Note: tests/subprocess/ tests spawn a real subprocess for
+# genuine daemon/stdin-protocol reasons, so coverage inside that subprocess
+# isn't attributed to a specific test — everything else in tests/ runs
+# in-process (see conftest.py) and is captured normally.
+test-coverage: install-dev
+	. ${VENV_ACTIVATE} && pytest --cov=via --cov-context=test -v tests/
+	. ${VENV_ACTIVATE} && python -m via coverage import-contexts .coverage
+
 # Run JavaScript unit tests
 test-js:
 	npm test

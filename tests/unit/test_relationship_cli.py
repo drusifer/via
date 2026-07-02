@@ -28,7 +28,7 @@ class TestRelationshipFlagParsing:
 
         rel = result.args.relationship
         assert rel is not None
-        assert rel.relationship_type == RelationshipType.INHERITS_FROM
+        assert rel.relationship_type.value == RelationshipType.INHERITS_FROM.value
         assert rel.filter_pattern == 'BaseClass'
         assert 'class' in rel.filter_types
         assert rel.is_negative is False
@@ -45,7 +45,7 @@ class TestRelationshipFlagParsing:
 
         result = stages[0]
         rel = result.args.relationship
-        assert rel.relationship_type == RelationshipType.CALLS
+        assert rel.relationship_type.value == RelationshipType.CALLS.value
         assert rel.filter_pattern == 'connect'
         assert rel.inverted is False
 
@@ -60,7 +60,7 @@ class TestRelationshipFlagParsing:
 
         result = stages[0]
         rel = result.args.relationship
-        assert rel.relationship_type == RelationshipType.IMPORTS
+        assert rel.relationship_type.value == RelationshipType.IMPORTS.value
         assert rel.filter_pattern == 'os'
 
     def test_parse_via_references_long_form(self):
@@ -74,7 +74,7 @@ class TestRelationshipFlagParsing:
 
         result = stages[0]
         rel = result.args.relationship
-        assert rel.relationship_type == RelationshipType.REFERENCES
+        assert rel.relationship_type.value == RelationshipType.REFERENCES.value
 
     def test_parse_via_called_by_inverse(self):
         """Test --via called-by sets inverted=True."""
@@ -87,7 +87,7 @@ class TestRelationshipFlagParsing:
 
         result = stages[0]
         rel = result.args.relationship
-        assert rel.relationship_type == RelationshipType.CALLS
+        assert rel.relationship_type.value == RelationshipType.CALLS.value
         assert rel.filter_pattern == 'main_func'
         assert rel.inverted is True
         assert rel.is_negative is False
@@ -102,7 +102,7 @@ class TestRelationshipFlagParsing:
         ])
 
         rel = stages[0].args.relationship
-        assert rel.relationship_type == RelationshipType.INHERITS_FROM
+        assert rel.relationship_type.value == RelationshipType.INHERITS_FROM.value
         assert rel.inverted is True
 
     def test_parse_via_declares_inverse(self):
@@ -115,7 +115,7 @@ class TestRelationshipFlagParsing:
         ])
 
         rel = stages[0].args.relationship
-        assert rel.relationship_type == RelationshipType.DECLARES
+        assert rel.relationship_type.value == RelationshipType.DECLARES.value
         assert rel.inverted is True
 
     def test_parse_via_declared_in_not_inverse(self):
@@ -128,7 +128,7 @@ class TestRelationshipFlagParsing:
         ])
 
         rel = stages[0].args.relationship
-        assert rel.relationship_type == RelationshipType.DECLARES
+        assert rel.relationship_type.value == RelationshipType.DECLARES.value
         assert rel.inverted is False
 
     def test_parse_sans_called_by_inverse(self):
@@ -141,7 +141,7 @@ class TestRelationshipFlagParsing:
         ])
 
         rel = stages[0].args.relationship
-        assert rel.relationship_type == RelationshipType.CALLS
+        assert rel.relationship_type.value == RelationshipType.CALLS.value
         assert rel.is_negative is True
         assert rel.inverted is True
 
@@ -158,7 +158,7 @@ class TestRelationshipVShortFlag:
         ])
 
         rel = stages[0].args.relationship
-        assert rel.relationship_type == RelationshipType.INHERITS_FROM
+        assert rel.relationship_type.value == RelationshipType.INHERITS_FROM.value
         assert rel.filter_pattern == 'Base'
 
     def test_parse_V_calls(self):
@@ -170,7 +170,7 @@ class TestRelationshipVShortFlag:
         ])
 
         rel = stages[0].args.relationship
-        assert rel.relationship_type == RelationshipType.CALLS
+        assert rel.relationship_type.value == RelationshipType.CALLS.value
 
     def test_parse_V_imports(self):
         parser = PipelineParser()
@@ -181,7 +181,7 @@ class TestRelationshipVShortFlag:
         ])
 
         rel = stages[0].args.relationship
-        assert rel.relationship_type == RelationshipType.IMPORTS
+        assert rel.relationship_type.value == RelationshipType.IMPORTS.value
 
     def test_parse_V_references(self):
         parser = PipelineParser()
@@ -192,7 +192,7 @@ class TestRelationshipVShortFlag:
         ])
 
         rel = stages[0].args.relationship
-        assert rel.relationship_type == RelationshipType.REFERENCES
+        assert rel.relationship_type.value == RelationshipType.REFERENCES.value
 
     def test_parse_V_called_by_inverse(self):
         """Inverse types work with -V short form."""
@@ -204,7 +204,7 @@ class TestRelationshipVShortFlag:
         ])
 
         rel = stages[0].args.relationship
-        assert rel.relationship_type == RelationshipType.CALLS
+        assert rel.relationship_type.value == RelationshipType.CALLS.value
         assert rel.inverted is True
 
 
@@ -329,10 +329,10 @@ class TestRelationshipEdgeCases:
         relationships = stages[0].args.relationships
         assert len(relationships) == 2
         assert stages[0].args.relationship is relationships[0]
-        assert relationships[0].relationship_type == RelationshipType.CALLS
+        assert relationships[0].relationship_type.value == RelationshipType.CALLS.value
         assert relationships[0].filter_pattern == 'connect'
         assert relationships[0].is_negative is False
-        assert relationships[1].relationship_type == RelationshipType.DECLARES
+        assert relationships[1].relationship_type.value == RelationshipType.DECLARES.value
         assert relationships[1].filter_pattern == '*test*'
         assert relationships[1].is_negative is True
         assert relationships[1].inverted is False

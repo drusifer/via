@@ -57,3 +57,17 @@
 
 ## Legacy Sprint History
 - Sprint 23, 22, 20, 19, 18, 17, 16, 8, 6, 5 UAT all passed and verified.
+
+## Session: 2026-07-01 — Sprint 26 Cycle 2/3 UAT — PASSED (real verification)
+- `task.md` showed Cycle 2/3 Trin/Smith/Morpheus checkboxes unchecked despite Neo having moved on to Cycle 4 — investigated for real rather than reconciling paperwork.
+- Found `make test` was silently broken: bob-protocol layer's generic `test:` recipe (`unittest discover`) was included *before* the project's real pytest recipe in `Makefile.prj`, so GNU Make's last-recipe-wins rule let the wrong one silently shadow it — every `make test` run reported "0 tests ran" as a failure, meaning no `make test` run this sprint had actually verified anything.
+- Fixed by reordering the include in `Makefile` (generic fallbacks defined first, `-include Makefile.prj` after, so project-specific recipes win).
+- Re-ran for real: **1346 passed, 1 skipped, 4 warnings.**
+- This is a shared-tooling bug (present since Sprint 7 per git history), not a Sprint 26 code defect.
+
+## Session: 2026-07-01 — Sprint 27 Cycle 1 UAT — PASSES + critical Cycle 3 finding
+- Verified Neo's per-test coverage import end-to-end against this project's real `.via/index.db` (not just tmp_path unit tests): imported real dynamic-context data, got 94 `covered-by` relationships across 7 tests, correctly per-test attributed. Cleaned up the diagnostic import afterward (deleted the 7 `<test>` symbols) so it doesn't linger in the real index.
+- Full suite: 1347 passed, 1 skipped.
+- **Critical finding**: 30/92 test files in this project drive `via` via `subprocess.run`, not in-process. Plain `pytest --cov-context=test` measures **zero** code executed inside a subprocess — verified directly (0 lines measured for `via/commands/coverage.py` from a subprocess-only test file). This means Cycle 3's planned `make test-coverage` target, as currently scoped, would produce systematically wrong per-test coverage for ~1/3 of the suite.
+- Validated a fix path (not yet implemented): `COVERAGE_PROCESS_START` + a `sitecustomize.py` calling `coverage.process_startup()` does make subprocesses write their own coverage data (confirmed: parallel `.coverage.<host>.<pid>.<rand>` files appeared). Missing piece: per-test context tagging doesn't propagate into subprocess data automatically — the sitecustomize hook would also need to read pytest's `PYTEST_CURRENT_TEST` env var (auto-set by pytest, inherited by subprocess.run by default) and call `switch_context()`. Then a `coverage combine` step merges the parallel files before `import-contexts` runs.
+- Full report: `agents/trin.docs/SPRINT27_CYCLE1_UAT.md`. Escalated to Morpheus — this changes Cycle 3 scope, didn't unilaterally expand it myself.

@@ -1,15 +1,19 @@
 # Neo Current Task
 
-**Task**: Sprint 26 Cycle 4 — Class-Based Relationship Type Hierarchy Design
-**Status**: IN PROGRESS (50% complete)
-**Updated**: 2026-06-21
+**Task**: Sprint 26 Cycle 4 — Class-Based Relationship Type Hierarchy
+**Status**: COMPLETE (100%) — CLOSED
+**Updated**: 2026-07-01
 
 ## Completed
-- [x] Resumed context and reviewed user request regarding "blast radius" query.
-- [x] Clarified the design requirements for upstream (dependent) and downstream (dependency) relationship matching.
-- [x] Created design proposal artifact `relationship_hierarchy_design.md` detailing the relationship hierarchy categories (Any, UpstreamRef, DownstreamRef, ReaderRef, WriterRef).
-- [x] Wrote formal design document at `docs/DESIGN_RELATIONSHIP_HIERARCHY.md` for team review.
+- Full implementation, review cycle, and post-review usability adjustment —
+  see `agents/neo.docs/SPRINT26_CYCLE4_SUMMARY.md` for the complete writeup.
+- 20 tests in `tests/unit/test_sprint26_c4.py`, full suite 1372 passed, 1 skipped.
+- Trin UAT, Morpheus architecture review, Smith usability read — all signed
+  off. `task.md` updated, Sprint 26 (all 4 cycles) marked CLOSED.
 
-## In Progress
-- [ ] Implement the class-based hierarchy in `via/core/relationship_types.py`.
-- [ ] Adapt `PipelineParser` and `DatabaseStore` to parse and compile hierarchical queries.
+## Next
+- No open threads. Sprint 27 Phase 2 (test analysis) needs a fresh
+  requirement/planning pass before starting — not queued.
+- Reminder for Oracle (not Neo's job): update docs/specs + USER_GUIDE for
+  both the Cycle 4 blast/upstream-ref/downstream-ref/any-ref query syntax
+  and the Sprint 27 `import-contexts` rename.
