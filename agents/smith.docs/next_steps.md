@@ -1,12 +1,12 @@
 # Smith Next Steps
 
-## Current Status
-
-Recommended removing declares/declared-in from the blast categories. Handed
-to Neo for the small adjustment.
+## Resume Point: Sprint 27 Phase 2 Cycle 1 usability test complete, approved, cycle closing
 
 ## On Resume
-
-1. Check CHAT.md for confirmation the adjustment landed and Cycle 4 closed.
-2. No other open threads — next work is either Sprint 27 Phase 2 (needs a
-   fresh requirement pass) or whatever the user picks up next.
+1. Check CHAT.md / `task.md` for Cycle 1 closure confirmation and whether
+   Cycle 2 (mocking-usage signal) has started.
+2. When Cycle 2 produces a UI change (mock-count column on the efficiency
+   table), do the same real-browser check — extend
+   `tests/e2e/coverage.spec.js` rather than starting a new spec file.
+3. The legend-contrast finding (`Adequate (100%)` swatch low contrast) is
+   parked, not queued — only act on it if someone picks it up explicitly.

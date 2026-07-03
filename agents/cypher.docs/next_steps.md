@@ -2,13 +2,17 @@
 
 ## Current Status
 
-AC1 of `TEST_COVERAGE_QUALITY_REQUIREMENTS.md` revised per Morpheus's feasibility
-read. Handed to Smith for Gate 1 (user value/discoverability) review.
+Sprint 27 Phase 2 stories revised per user directive (merged heatmap +
+redundancy into one hierarchical intensity-heatmap story, D3-based). Handed
+to Smith for Gate 1+2 re-confirmation.
 
 ## On Resume
 
-1. Check CHAT.md for Smith's Gate 1 verdict.
-2. If approved: no further Cypher action needed until Mouse's sprint plan is
-   ready for a product sanity check.
-3. If rejected: revise the requirements doc per Smith's UX feedback and
-   re-submit for Gate 1.
+1. Check CHAT.md for Smith's re-confirmation verdict.
+2. If approved: Mouse re-issues the cycle plan (old Cycle 2 — test-overlap
+   grouping — no longer exists; Story 1 is now the bigger single cycle).
+3. If rejected: revise `SPRINT27_PHASE2_USER_STORIES.md` per Smith's
+   feedback and re-submit.
+4. Still watch for Morpheus's Story 4 mocking-signal OQ answers (unchanged
+   by this revision) — already answered in the architecture doc (static AST
+   approach confirmed cheap).

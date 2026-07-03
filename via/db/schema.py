@@ -18,7 +18,7 @@ License: GPL-3.0
 """
 
 # Schema version for migrations
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 # SQL statements for creating tables
 CREATE_METADATA_TABLE = """
@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS symbols (
     symbol_type TEXT NOT NULL,
     file_path TEXT NOT NULL,
     line_number INTEGER NOT NULL,
+    line_end INTEGER,
     byte_offset INTEGER,
     byte_length INTEGER,
     qualified_name TEXT NOT NULL,

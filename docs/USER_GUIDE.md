@@ -24,3 +24,6 @@ How to configure and start the Model Context Protocol (MCP) server for Claude Co
 
 ### 7. [Real-World Query Handbook & Troubleshooting](specs/real_world_queries.md)
 20 common developer questions answered with exact commands, troubleshooting common errors, quick command references, and legacy syntax maps.
+
+### 8. [Test Coverage & Quality Visualization](specs/test_coverage.md)
+Capturing per-test coverage (`via coverage import-contexts`), querying it via `-Vcovered-by`, and browsing it visually in the web UI's Coverage view (intensity heatmap, efficiency table, leaf drill-down).

@@ -10,6 +10,8 @@ This document consolidates all documentation for Sprint 7.
 
 - [SPRINT_7_TASKS.md](#sprint-7-tasksmd) (originally `agents/mouse.docs/SPRINT_7_TASKS.md`)
 
+- [sprint_7_test_status.md](sprint_7_test_status.md) (moved from root `TEST_STATUS.md` — a point-in-time snapshot, not current status; superseded by every later sprint's own closeout)
+
 
 ---
 

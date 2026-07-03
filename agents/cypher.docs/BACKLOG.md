@@ -31,6 +31,25 @@
      green suite). Phase 1 (capture) requirements: `agents/cypher.docs/TEST_COVERAGE_QUALITY_REQUIREMENTS.md`.
      Phase 2 (analysis) intentionally unscoped until Phase 1 data exists.
    - *Status*: Open backlog item — candidate for Sprint 27, pending Morpheus feasibility (OQ-1..3).
+8. **Sankey view: test-suite-to-code-area flow**
+   - *Description*: A Sankey diagram showing flow from test directories/suites
+     to the code areas (package/module) they exercise, aggregated at
+     directory granularity (raw test-id/symbol granularity hairballs past
+     ~30 nodes — same problem flagged for the earlier redundancy-view idea).
+     Answers a different question than the Sprint 27 Phase 2 hierarchy
+     heatmap: not "how well is this code tested" but "which parts of the
+     test suite are entangled with which parts of the app" — useful before
+     reorganizing tests or splitting a module. Edge thickness should be
+     configurable/toggleable between two weightings: **by coverage** (count
+     of symbols in that code area exercised by that test group — shows
+     where test effort concentrates structurally) or **by time** (total
+     `test_runs.duration_seconds` for tests in that group flowing into that
+     code area — shows where test *cost* concentrates, which can surface a
+     different hotspot, e.g. a small module that's expensive to test only
+     because it shares a slow test directory).
+   - *Status*: Open backlog item — parked until after Sprint 27 Phase 2
+     (hierarchy heatmap) ships and is actually used; revisit if the
+     test-organization-vs-code-structure question comes up for real.
 
 ### Technical Debt & Code Quality
 1. **Unified executor strategy & CLI parser replacement**

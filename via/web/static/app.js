@@ -12,17 +12,24 @@
  * Author: Drew Gutstein
  * License: GPL-3.0
  */
-import { esc, relTime, badgeClass } from './utils.js';
+import { esc, relTime, badgeClass, intensityColor } from './utils.js';
 
 // -------------------------------------------------------------------------
 // Module-level state (no DOM access at declaration time)
 // -------------------------------------------------------------------------
 let mermaidReady = false;
+let d3Ready = false;
 let outputFormat = 'list';
 let lastStatus = null;
 let tableData = [];
 let sortCol = 'symbol_name';
 let sortAsc = true;
+
+// Coverage view (Sprint 27 Phase 2) state
+let coverageLoaded = false;
+let efficiencyData = [];
+let efficiencySortCol = 'duration_seconds';
+let efficiencySortAsc = false;
 
 // -------------------------------------------------------------------------
 // DOM helpers
@@ -254,6 +261,248 @@ async function renderDiagram(src) {
 }
 
 // -------------------------------------------------------------------------
+// Coverage view (Sprint 27 Phase 2) — nav toggle
+// -------------------------------------------------------------------------
+function initViewNav() {
+  $$('#view-nav button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('#view-nav button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const view = btn.dataset.view;
+      $('app').style.display = view === 'query' ? 'flex' : 'none';
+      $('coverage-view').style.display = view === 'coverage' ? 'block' : 'none';
+      if (view === 'coverage' && !coverageLoaded) loadCoverageView();
+    });
+  });
+}
+
+function initCoverageSubnav() {
+  $$('#coverage-subnav button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('#coverage-subnav button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const view = btn.dataset.covview;
+      $('coverage-heatmap-wrap').style.display = view === 'heatmap' ? 'block' : 'none';
+      $('coverage-efficiency-wrap').style.display = view === 'efficiency' ? 'block' : 'none';
+    });
+  });
+}
+
+// -------------------------------------------------------------------------
+// Coverage view — data loading
+// -------------------------------------------------------------------------
+export async function loadCoverageView() {
+  coverageLoaded = true;
+  try {
+    const [hierarchyResp, efficiencyResp] = await Promise.all([
+      fetch('/api/coverage/hierarchy'),
+      fetch('/api/coverage/test-efficiency'),
+    ]);
+    const tree = await hierarchyResp.json();
+    const efficiency = await efficiencyResp.json();
+    renderCoverageHeatmap(tree);
+    renderEfficiencyTable(efficiency.results || []);
+  } catch (err) {
+    $('coverage-heatmap-fallback').style.display = 'block';
+    $('coverage-heatmap-fallback').textContent = 'Failed to load coverage data: ' + err.message;
+  }
+}
+
+// -------------------------------------------------------------------------
+// Coverage view — hierarchy heatmap renderer
+// -------------------------------------------------------------------------
+
+// Flatten the hierarchy tree into "indent level + line" pairs for the
+// no-D3 text fallback (mirrors the diagram text-fallback pattern below).
+export function flattenHierarchyForFallback(node, depth = 0) {
+  const label = node.name || '(root)';
+  const pct = (node.intensity_pct ?? 0).toFixed(0);
+  const outlierMark = node.is_outlier ? ' [OUTLIER]' : '';
+  const line = '  '.repeat(depth) + label + ' — ' + pct + '%' + outlierMark;
+  const lines = depth === 0 && !node.name ? [] : [line];
+  for (const child of node.children || []) {
+    lines.push(...flattenHierarchyForFallback(child, depth + 1));
+  }
+  return lines;
+}
+
+export function renderCoverageHeatmap(tree) {
+  $('coverage-heatmap-svg').style.display = 'block';
+  $('coverage-heatmap-fallback').style.display = 'none';
+
+  if (!tree || !tree.children || tree.children.length === 0) {
+    $('coverage-heatmap-svg').innerHTML = '';
+    $('coverage-heatmap-fallback').style.display = 'block';
+    $('coverage-heatmap-fallback').textContent = 'No coverage data yet — run `make test-coverage` first.';
+    return;
+  }
+
+  if (d3Ready) {
+    renderIcicleD3(tree);
+    return;
+  }
+
+  // No-D3 fallback: indented text tree, still carries the intensity % and
+  // the [OUTLIER] marker so the information is available even without the
+  // charting library (mirrors the Mermaid diagram text-fallback pattern).
+  $('coverage-heatmap-svg').style.display = 'none';
+  $('coverage-heatmap-fallback').style.display = 'block';
+  $('coverage-heatmap-fallback').textContent = flattenHierarchyForFallback(tree).join('\n');
+}
+
+// Real D3 zoomable-icicle rendering — only reachable once the D3 CDN script
+// has loaded (browser only; never exercised by jsdom unit tests, which is
+// why the fallback path above carries its own full test coverage instead).
+function renderIcicleD3(tree) {
+  const container = $('coverage-heatmap-svg');
+  container.innerHTML = '';
+  const width = container.clientWidth || 928;
+  const nodeHeight = 28;
+
+  // Size = lines of code (leaf.loc), color = coverage intensity — two
+  // independent dimensions per user directive. `|| 1` guards symbols
+  // indexed before the line_end column existed (loc defaults to 1 there).
+  const root = d3.hierarchy(tree, d => d.children)
+    .sum(d => (d.children && d.children.length ? 0 : (d.loc || 1)))
+    .sort((a, b) => b.value - a.value);
+  const height = (root.height + 1) * nodeHeight;
+
+  d3.partition().size([width, height])(root);
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', [0, 0, width, height])
+    .style('font', '11px Roboto, sans-serif');
+
+  let focus = root;
+
+  const g = svg.append('g');
+
+  function rectX(d) { return xScale(d.x0); }
+  function rectWidth(d) { return Math.max(0, xScale(d.x1) - xScale(d.x0)); }
+
+  let xScale = d3.scaleLinear().domain([0, width]).range([0, width]);
+
+  const cell = g.selectAll('g.node')
+    .data(root.descendants())
+    .join('g')
+    .attr('class', d => 'node' + (d.data.is_outlier ? ' node-outlier' : ''))
+    .attr('transform', d => `translate(${rectX(d)},${d.y0})`);
+
+  cell.append('rect')
+    .attr('width', rectWidth)
+    .attr('height', d => d.y1 - d.y0 - 1)
+    .attr('fill', d => intensityColor(d.data.intensity_pct ?? 0))
+    .style('cursor', 'pointer')
+    .on('click', (_event, d) => {
+      // Leaves (no children) drill down to symbol detail (Cypher AC7);
+      // ancestors (package/module/class) zoom instead, per user directive.
+      if (!d.children) {
+        showSymbolDetail(d.data.id);
+      } else {
+        zoomTo(d === focus ? root : d);
+      }
+    });
+
+  cell.append('text')
+    .attr('x', 4)
+    .attr('y', 16)
+    .attr('fill', '#202124')
+    .text(d => d.data.name || '(root)')
+    .style('pointer-events', 'none');
+
+  cell.append('title')
+    .text(d => `${d.data.name || '(root)'}\n${(d.data.intensity_pct ?? 0).toFixed(0)}%${d.data.is_outlier ? ' (outlier — unusual vs. peers)' : ''}`);
+
+  function zoomTo(d) {
+    focus = d;
+    xScale = d3.scaleLinear().domain([d.x0, d.x1]).range([0, width]);
+    cell.attr('transform', node => `translate(${rectX(node)},${node.y0})`);
+    cell.select('rect').attr('width', rectWidth);
+  }
+}
+
+// -------------------------------------------------------------------------
+// Coverage view — leaf drill-down (Cypher AC7)
+// -------------------------------------------------------------------------
+export async function showSymbolDetail(symbolId) {
+  const panel = $('coverage-symbol-detail');
+  panel.style.display = 'block';
+  panel.innerHTML = '<em>Loading…</em>';
+  try {
+    const r = await fetch('/api/coverage/symbol?id=' + encodeURIComponent(symbolId));
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed to load symbol detail');
+    renderSymbolDetail(data);
+  } catch (err) {
+    panel.innerHTML = '<span style="color:var(--md-sys-color-error)">⚠ ' + esc(err.message) + '</span>';
+  }
+}
+
+export function renderSymbolDetail(data) {
+  const panel = $('coverage-symbol-detail');
+  const parts = [
+    `<div class="symbol-detail-name">${esc(data.signature || data.qualified_name)}</div>`,
+    `<div class="symbol-detail-path">${esc(relPath(data.file_path))}:${data.line_number}</div>`,
+  ];
+  if (data.docstring) {
+    parts.push(`<div class="symbol-detail-docstring">${esc(data.docstring)}</div>`);
+  } else {
+    parts.push('<div class="symbol-detail-docstring symbol-detail-empty">No docstring available.</div>');
+  }
+  parts.push('<button class="btn-secondary" id="symbol-detail-close">Close</button>');
+  panel.innerHTML = parts.join('');
+  $('symbol-detail-close').addEventListener('click', () => {
+    panel.style.display = 'none';
+  });
+}
+
+// -------------------------------------------------------------------------
+// Coverage view — test efficiency table renderer
+// -------------------------------------------------------------------------
+export function renderEfficiencyTable(results) {
+  efficiencyData = results;
+  renderEfficiencyTableBody();
+}
+
+export function renderEfficiencyTableBody() {
+  const sorted = [...efficiencyData].sort((a, b) => {
+    const av = a[efficiencySortCol];
+    const bv = b[efficiencySortCol];
+    const an = av === null || av === undefined ? -Infinity : av;
+    const bn = bv === null || bv === undefined ? -Infinity : bv;
+    if (typeof an === 'string' || typeof bn === 'string') {
+      return efficiencySortAsc
+        ? String(an).localeCompare(String(bn))
+        : String(bn).localeCompare(String(an));
+    }
+    return efficiencySortAsc ? an - bn : bn - an;
+  });
+  $('coverage-efficiency-tbody').innerHTML = sorted.map(r => `
+    <tr>
+      <td>${esc(r.test_id)}</td>
+      <td>${esc(r.status)}</td>
+      <td>${(r.duration_seconds ?? 0).toFixed(2)}</td>
+      <td>${r.covered_symbol_count ?? 0}</td>
+      <td>${r.symbols_per_second == null ? '—' : r.symbols_per_second.toFixed(2)}</td>
+    </tr>
+  `).join('');
+}
+
+function initEfficiencySort() {
+  $$('#coverage-efficiency-table th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      if (efficiencySortCol === th.dataset.col) efficiencySortAsc = !efficiencySortAsc;
+      else { efficiencySortCol = th.dataset.col; efficiencySortAsc = true; }
+      $$('#coverage-efficiency-table th').forEach(h => {
+        h.textContent = h.textContent.replace(/ [▾▴]$/, '');
+      });
+      th.textContent += efficiencySortAsc ? ' ▾' : ' ▴';
+      renderEfficiencyTableBody();
+    });
+  });
+}
+
+// -------------------------------------------------------------------------
 // Status bar polling
 // -------------------------------------------------------------------------
 export async function updateStatus() {
@@ -330,11 +579,23 @@ export function initApp() {
   };
   document.head.appendChild(mermaidScript);
 
+  // D3 CDN (Sprint 27 Phase 2 coverage heatmap — zoomable icicle)
+  const d3Script = document.createElement('script');
+  d3Script.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+  d3Script.onload = () => { d3Ready = true; };
+  d3Script.onerror = () => {
+    console.warn('D3 CDN unavailable — coverage heatmap text fallback active');
+  };
+  document.head.appendChild(d3Script);
+
   initChips('type-chips');
   initChips('target-type-chips');
   initOutputFormat();
   initTableSort();
   initReset();
+  initViewNav();
+  initCoverageSubnav();
+  initEfficiencySort();
 
   $('relationship').addEventListener('change', () => {
     const hasRel = Boolean($('relationship').value);

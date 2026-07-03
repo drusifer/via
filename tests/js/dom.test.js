@@ -19,6 +19,10 @@ function createFixture() {
       <span id="status-files">—</span>
       <span id="status-symbols">—</span>
       <span id="status-time">—</span>
+      <div id="view-nav">
+        <button data-view="query" class="active">Query</button>
+        <button data-view="coverage">Coverage</button>
+      </div>
     </div>
     <div id="cdn-error" style="display:none"></div>
     <div id="app">
@@ -34,6 +38,12 @@ function createFixture() {
           <option value="">(none)</option>
           <option value="calls">calls</option>
         </select>
+        <div id="rel-mode-field" style="display:none">
+          <div id="rel-mode">
+            <button type="button" class="seg-btn active" data-mode="via">With</button>
+            <button type="button" class="seg-btn" data-mode="sans">Without</button>
+          </div>
+        </div>
         <div id="target-card" style="display:none">
           <select id="target-match-type"><option value="glob">Glob</option></select>
           <input id="target-pattern" type="text" value="*" />
@@ -41,7 +51,6 @@ function createFixture() {
             <span class="chip" data-type="class">Class</span>
           </div>
         </div>
-        <input id="invert" type="checkbox" />
         <input id="stale" type="checkbox" />
         <div id="type-chips" class="chip-group">
           <span class="chip" data-type="class">Class</span>
@@ -79,6 +88,31 @@ function createFixture() {
           <div id="diagram-render"></div>
           <pre id="diagram-fallback"></pre>
         </div>
+      </div>
+    </div>
+    <div id="coverage-view" style="display:none">
+      <div id="coverage-subnav">
+        <button data-covview="heatmap" class="active">Heatmap</button>
+        <button data-covview="efficiency">Efficiency</button>
+      </div>
+      <div id="coverage-heatmap-wrap">
+        <div id="coverage-heatmap-svg"></div>
+        <pre id="coverage-heatmap-fallback" style="display:none"></pre>
+        <div id="coverage-symbol-detail" style="display:none"></div>
+      </div>
+      <div id="coverage-efficiency-wrap" style="display:none">
+        <table id="coverage-efficiency-table">
+          <thead>
+            <tr>
+              <th data-col="test_id">Test ▾</th>
+              <th data-col="status">Status</th>
+              <th data-col="duration_seconds">Duration (s)</th>
+              <th data-col="covered_symbol_count">Symbols Covered</th>
+              <th data-col="symbols_per_second">Symbols/sec</th>
+            </tr>
+          </thead>
+          <tbody id="coverage-efficiency-tbody"></tbody>
+        </table>
       </div>
     </div>
     <div id="toast"></div>
@@ -300,12 +334,10 @@ describe('buildQueryBody', () => {
     const { buildQueryBody } = await getModule();
     document.getElementById('case-insensitive').checked = true;
     document.getElementById('qualified').checked = true;
-    document.getElementById('invert').checked = true;
     document.getElementById('stale').checked = true;
     const body = buildQueryBody();
     expect(body.case_insensitive).toBe(true);
     expect(body.qualified).toBe(true);
-    expect(body.invert).toBe(true);
     expect(body.stale).toBe(true);
   });
 
@@ -634,5 +666,47 @@ describe('toast on reindex', () => {
     expect(toast.classList.contains('show')).toBe(true);
     expect(toast.textContent).toBe('Re-indexed 2 files');
     vi.useRealTimers();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coverage view nav (Sprint 27 Phase 2 — requires initApp to wire listeners)
+// ---------------------------------------------------------------------------
+describe('coverage view nav', () => {
+  beforeEach(createFixture);
+
+  it('switching to Coverage hides #app and shows #coverage-view', async () => {
+    const { initApp } = await getModule();
+    initApp();
+    document.querySelector('#view-nav button[data-view="coverage"]').click();
+    expect(document.getElementById('app').style.display).toBe('none');
+    expect(document.getElementById('coverage-view').style.display).toBe('block');
+  });
+
+  it('switching back to Query restores #app and hides #coverage-view', async () => {
+    const { initApp } = await getModule();
+    initApp();
+    document.querySelector('#view-nav button[data-view="coverage"]').click();
+    document.querySelector('#view-nav button[data-view="query"]').click();
+    expect(document.getElementById('app').style.display).toBe('flex');
+    expect(document.getElementById('coverage-view').style.display).toBe('none');
+  });
+
+  it('marks the clicked nav button active and deactivates the other', async () => {
+    const { initApp } = await getModule();
+    initApp();
+    const coverageBtn = document.querySelector('#view-nav button[data-view="coverage"]');
+    const queryBtn = document.querySelector('#view-nav button[data-view="query"]');
+    coverageBtn.click();
+    expect(coverageBtn.classList.contains('active')).toBe(true);
+    expect(queryBtn.classList.contains('active')).toBe(false);
+  });
+
+  it('coverage subnav toggles heatmap/efficiency panels', async () => {
+    const { initApp } = await getModule();
+    initApp();
+    document.querySelector('#coverage-subnav button[data-covview="efficiency"]').click();
+    expect(document.getElementById('coverage-heatmap-wrap').style.display).toBe('none');
+    expect(document.getElementById('coverage-efficiency-wrap').style.display).toBe('block');
   });
 });

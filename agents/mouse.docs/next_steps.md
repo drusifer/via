@@ -1,17 +1,21 @@
 # Mouse Next Steps
 
-## Resume Point: Sprint 26 closed, Sprint 27 unblocked but not started
+## Resume Point: Sprint 27 Phase 2 Cycle 1 blocked on a user product decision (AC7 drill-down)
 
 ## On Resume
-1. Check CHAT.md for the user's decision on what starts next: Sprint 27
-   Cycle 1, or resolving Neo's stalled Cycle 4 design review first.
-2. If Sprint 27: hand Cycle 1 to Neo (`@Neo *swe impl cycle-1`, Sprint 27 —
-   see `agents/mouse.docs/SPRINT_27_TASKS.md`).
-3. If Cycle 4: wait for Morpheus/Smith's review of
-   `docs/DESIGN_RELATIONSHIP_HIERARCHY.md`, then resume Neo on implementing
-   the class hierarchy in `via/core/relationship_types.py`.
+1. Check CHAT.md / the user's response for a decision on AC7 (implement
+   with what semantics, cut, or backlog).
+2. If implement: hand to Neo with the specific semantics the user chose
+   (don't let Neo guess either).
+3. If cut/backlog: update `task.md`/`SPRINT_27_PHASE2_TASKS.md` to mark
+   Cycle 1 fully CLOSED, note AC7 as intentionally dropped (with a backlog
+   pointer if parked, not silently deleted).
+4. Once resolved: Cycle 2 (mocking-usage signal) starts.
 
 ## Remember
-`make test` is fixed — the Makefile include-order bug that silently shadowed
-the real pytest recipe with `unittest discover` is resolved. No need to
-re-diagnose if `make test` behaves oddly again; check the include order first.
+This whole cycle is a good example of why closing the loop matters — the
+gap wasn't caught by implementation, UAT, code review, or usability
+testing; only surfaced during the boring bookkeeping pass of reconciling
+the task checklist against the actual code. Worth doing that
+reconciliation explicitly at cycle-close time going forward, not just
+trusting each gate's own checklist.

@@ -1,5 +1,33 @@
 # Trin Context - Working Memory
 
+## Session: 2026-07-02 — Sprint 27 Phase 2 Cycle 1 UAT — PASSES
+- Verified Neo's D3 intensity heatmap + efficiency table implementation.
+- Independently re-ran (not just trusted) full suite: 1400 passed, 1
+  skipped. JS suite: 98 passed.
+- Found a second missing `make` public stub: `test-coverage` itself
+  (Sprint 27 Phase 1's own capture command) had no stub in the top-level
+  Makefile's `else` block, same class of gap Neo found for `test-js`/`lint`.
+  Existed in `Makefile.prj` but was unreachable via plain `make`. Fixed.
+- Ran the real capture pipeline for real (`make via_index` +
+  `make test-coverage`) to get fresh ground-truth data: 52,201 `covered-by`
+  relationships across 1,263 tests, 1,399 `test_runs` rows, 20,392 symbols,
+  769 files.
+- Cross-checked a real symbol's `covering_test_count`/`intensity_pct` via
+  the CLI's own `-Vcovered-by` relationship query (independent of Neo's
+  code path) against the new `/api/coverage/hierarchy` endpoint — exact
+  match (8 tests, 800%).
+- Re-verified the absolute/relative `file_path` bugfix Neo found holds at
+  real project scale, not just his synthetic smoke-test project — `via`
+  correctly appears as the top-level package, no filesystem path segments
+  (`home`, `Projects`) leak into the tree.
+- Added 2 new real, rerunnable pytest tests capturing both checks:
+  `tests/uat/test_sprint27_phase2_cycle1_uat.py` — skips cleanly if no real
+  `.via/index.db` exists (won't break CI/fresh clones).
+- Full report: `agents/trin.docs/SPRINT27_PHASE2_CYCLE1_UAT.md`. Flagged
+  (not blocking): real browser rendering (D3, color scale, outlier marker)
+  still needs Smith's usability test — none of it is exercised by jsdom/CI.
+- Handed to Morpheus for code review.
+
 ## Session: 2026-06-20 — Sprint 26 Cycle 1 UAT — PASSED
 - Verified Neo's Cycle 1 implementation.
 - Full test suite baseline: **1345 passed, 1 skipped, 4 warnings**.

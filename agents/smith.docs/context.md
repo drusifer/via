@@ -2,6 +2,63 @@
 
 **Last updated**: 2026-07-01
 
+## Session: 2026-07-02 — Sprint 27 Phase 2 Cycle 1 Usability Test
+- Wrote a real Playwright e2e spec (`tests/e2e/coverage.spec.js`, 4 tests)
+  and ran it via `make test-e2e` — 26/26 pass including the new ones, real
+  Chromium not jsdom.
+- Actually looked at the screenshots (own rule) — D3 loaded for real in
+  this environment, rendered a genuine zoomable icicle.
+- Found one real, non-blocking finding: "Adequate (100%)" neutral-gray
+  legend swatch has low contrast against the page background, easy to
+  miss (Heuristic #1). Filed for later, not blocking.
+- Confirmed the colorblind-safe scale and separate outlier visual marker
+  are present as designed (couldn't visually confirm the mid/high end of
+  the color range or an actual outlier marker in this pass — the e2e
+  fixture has zero coverage data, everything renders at 0%/blue; Trin
+  already verified those cases at the data level against the real project).
+- Full report: `agents/smith.docs/SPRINT27_PHASE2_CYCLE1_USABILITY.md`.
+  APPROVED WITH 1 MINOR NOTE. Cycle 1 can close.
+
+## Session: 2026-07-01 — Sprint 27 Phase 2 Gate 2 (architecture)
+- Reviewed `agents/morpheus.docs/SPRINT27_PHASE2_ARCHITECTURE.md`.
+- Confirmed both Gate 1 notes addressed: colorblind-safe sequential scale +
+  numeric % label (Story 1), quantitative `overlap_pct` in Story 2's
+  response shape (not just visual grouping density).
+- APPROVED: `agents/smith.docs/SPRINT27_PHASE2_GATE2_REVIEW.md`.
+- Agreed with Morpheus's grouped-list-over-matrix/diagram default for Story
+  2, and folding Story 4's mock-count into Story 3's table as a column
+  rather than a new view.
+- Handed to Mouse for cycle breakdown.
+
+## Session: 2026-07-01 — Sprint 27 Phase 2 Gate 1 (user stories)
+- Reviewed `agents/cypher.docs/SPRINT27_PHASE2_USER_STORIES.md` (4 stories:
+  coverage heatmap, redundancy view, efficiency table, mocking signal).
+- APPROVED WITH NOTES: `agents/smith.docs/SPRINT27_PHASE2_GATE1_REVIEW.md`.
+- Stories tracked my own pre-work opinion closely — no major objection.
+- 2 non-blocking notes carried to Morpheus's Gate 2 architecture:
+  (1) heatmap must use a colorblind-safe scale + numeric % label, not
+  red/green color alone (~8% of men have red-green colorblindness);
+  (2) redundancy view needs a quantitative overlap %/count label, not just
+  visual density — "these look similar" isn't actionable.
+- Handed to Morpheus for Gate 2, including Story 4's mocking-signal OQs.
+
+## Session: 2026-07-01 — Coverage visualization opinion (pre-Phase-2)
+- User asked directly (`*chat @Smith`) for an opinion on a web-mode
+  enhancement to visually inspect test coverage: redundant tests, overly
+  mocked tests, uncovered code — sankey or heatmap ideas floated.
+- Checked real code before opining: `via/web/static/app.js` already
+  lazy-loads Mermaid and renders `data.mermaid_source` — a diagram pipeline
+  exists. Sprint 27 Phase 1 schema (`covered-by` + `test_runs`) supports a
+  coverage view. Grepped schema.py — zero mocking signal anywhere.
+- Opinion: split into 3 separate visuals rather than one diagram —
+  (1) file coverage heatmap (buildable now, cheapest win), (2) test-overlap
+  matrix for redundancy (beats Sankey past ~30 nodes; we have 1217 tests),
+  (3) mocking metric (blocked — data gap, needs Cypher to define the metric
+  first, not a viz problem at all).
+- Recommended this go through the normal Cypher -> Morpheus -> Smith
+  requirement chain (new web API surface), not a quick `*impl`.
+- Full doc: `agents/smith.docs/SPRINT27_PHASE2_VIZ_OPINION.md`.
+
 ## Session: 2026-07-01 — Test Coverage & Quality Analysis Gate 1
 - Reviewed `agents/cypher.docs/TEST_COVERAGE_QUALITY_REQUIREMENTS.md`.
 - APPROVED WITH NOTES: `agents/smith.docs/TEST_COVERAGE_GATE1_REVIEW.md`.

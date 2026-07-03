@@ -1,6 +1,24 @@
 # Oracle Context
 
-**Last Updated**: 2026-07-01
+**Last Updated**: 2026-07-02
+
+## *ora groom docs (2026-07-02)
+- Verified via `via/core/relationship_types.py` (not guessed) the exact
+  relationship/category names before documenting them: `any-ref` IS the
+  informal "blast radius" query (both directions); `upstream-ref` =
+  dependencies (`calls`/`references`/`imports`/`inherits-from`/
+  `http-calls`); `downstream-ref` = dependents (the `-by` inverses).
+  `declares`/`declared-in` deliberately excluded from `any-ref` (structural,
+  not a dependency edge — same reasoning Smith/Neo already applied at
+  Sprint 26 Cycle 4 for blast-query noise).
+- This closes docs debt that sat unfixed across 2+ sprint closes (flagged
+  repeatedly in CHAT.md history as "Oracle's job at close," never done)
+  — the entire inverse-relationship/category system and the entire
+  `via coverage` subsystem had zero spec coverage until now.
+- Found the root-file staleness (`ARCH.md`, `TEST_STATUS.md`) and the
+  broken README link by directly grepping for actual usage before
+  moving/editing anything — confirmed no code/config dependency broke.
+- Full findings: `agents/oracle.docs/current_task.md`.
 
 ## Sprint 26 Doc Groom (2026-07-01)
 

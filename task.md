@@ -104,5 +104,75 @@ converting the tests, not by building subprocess-coverage capture — see
 **Side benefit**: full suite runtime dropped from ~174s to ~81s (no more
 per-test interpreter-startup cost from the subprocess spawns).
 
-**Phase 2 (redundancy/efficiency analysis) remains explicitly out of scope**
-per the original requirement — not started.
+**Phase 1 (redundancy/efficiency analysis) is Phase 1 (capture) above; Phase 2
+below is now planned** (2026-07-01), seeded by a user request for web-mode
+coverage visualization.
+
+## Sprint 27 - Test Coverage & Quality Analysis (Phase 2: Visualization) — PLANNED (2026-07-01, REVISED same day)
+
+**Stories**: `agents/cypher.docs/SPRINT27_PHASE2_USER_STORIES.md` (revised — heatmap + redundancy merged)
+**Architecture**: `agents/morpheus.docs/SPRINT27_PHASE2_ARCHITECTURE.md` (revised)
+**Task Plan**: `agents/mouse.docs/SPRINT_27_PHASE2_TASKS.md` (revised)
+**Gates**: Smith Gate 1 APPROVED WITH NOTES, Gate 2 APPROVED, Gate
+re-confirmation APPROVED WITH 2 NEW NOTES (`agents/smith.docs/SPRINT27_PHASE2_GATE_RECONFIRM.md`)
+
+**Revision**: redundancy detection reframed from test-to-test overlap to
+symbol-side test-fan-in outliers, merged with the coverage heatmap into one
+hierarchical intensity view (package/module/class/method, D3 zoomable
+icicle). Old Cycle 2 (Jaccard-bucketing test-overlap) dissolved.
+
+### Cycle 1 - Hierarchical test-intensity heatmap (D3) + test efficiency table — CLOSED (2026-07-02)
+- [x] `/api/coverage/hierarchy` (nested tree: intensity_pct, outlier flag) + `/api/coverage/test-efficiency` endpoints
+- [x] D3 zoomable-icicle heatmap (blue/orange colorblind-safe scale, numeric % always shown, separate visual marker for outliers) + sortable efficiency table in web UI
+- [x] **Drill-down on a leaf (Cypher AC7), resolved per user directive 2026-07-02**:
+      clicking a leaf (method/function) shows qualified name, signature
+      (args, no defaults — matches `python_parser.py`'s `_extract_args`
+      convention), and docstring if available, re-extracted from source on
+      demand via a new `GET /api/coverage/symbol?id=` endpoint. Ancestor
+      nodes (package/module/class) still zoom on click; leaves drill down
+      instead. Non-Python symbols degrade gracefully (location only, no
+      docstring/signature). New `DatabaseStore.get_symbol_detail()`.
+- [x] **Leaf sizing changed to lines-of-code, color unchanged (coverage
+      intensity)** — per user directive. Required a schema migration
+      (v7→v8: `symbols.line_end`, threaded through from the parsers'
+      already-computed-but-previously-discarded `line_end` field, zero new
+      parsing work). `loc` computed as `line_end - line_number + 1`,
+      defaults to 1 for symbols indexed before the migration.
+- [x] Lambda/anonymous-function coverage — researched, not implemented as
+      a new leaf type (see chat / Neo's context.md for the full answer):
+      Python lambdas aren't indexed as symbols at all today, and their
+      covered lines already roll into whatever named function/method
+      contains them (coverage is line-range based, not symbol based) — so
+      lambda coverage is already implicitly reflected in the enclosing
+      leaf's intensity_pct with zero extra work. Making a lambda its *own*
+      leaf (separate signature/fully-qualified path) would need new Python
+      parser capability — scoped as a backlog candidate, not guessed at.
+- [x] Trin UAT (incl. hierarchy rollup + outlier-flag correctness, ground-truth cross-check vs. real CLI, plus fresh ground-truth checks for LOC + drill-down against the real re-indexed project): PASSES — `agents/trin.docs/SPRINT27_PHASE2_CYCLE1_UAT.md`
+- [x] Morpheus review: APPROVED — `agents/morpheus.docs/SPRINT27_PHASE2_CYCLE1_REVIEW.md`
+- [x] Smith usability test (real browser, Playwright e2e + screenshots): APPROVED WITH 1 MINOR NOTE — `agents/smith.docs/SPRINT27_PHASE2_CYCLE1_USABILITY.md`
+
+**Side findings fixed during Cycle 1** (all infra, none blocking): a regressed
+Makefile bug shadowing `make test` with a generic `unittest discover` recipe;
+`test-coverage`/`test-js`/`test-e2e`/`test-all`/`lint`/`lint-fast`/`lint-slow`
+had no public `make` stubs despite existing in `Makefile.prj`; 2 unrelated
+pre-existing JS test bugs (stale fixture gap, dead test for a removed
+checkbox); 2 pre-existing tests hardcoded `SCHEMA_VERSION == 7`/`"7"` (broke
+on the v8 bump — fixed to compare against `SCHEMA_VERSION` dynamically
+instead of a stale literal). A real statistical bug (z-score self-capping
+at sqrt(n-1)) and a real path bug (hierarchy rooting at the filesystem
+root, not project root) were found and fixed in Cycle 1's own new code via
+a real end-to-end smoke test, not just fixture-driven unit tests.
+
+### Cycle 2 - Mocking-usage signal (static AST count)
+- [ ] Static AST count of mock usage per test, added as a column on the Cycle 1 efficiency table
+- [ ] Trin UAT, Smith usability test, Morpheus review
+
+**Non-scope**: runtime mock-call instrumentation, automated test-deletion
+recommendations, test-suite-to-code-area Sankey view (parked in
+`agents/cypher.docs/BACKLOG.md` item 8).
+
+**Status**: Cycle 1 CLOSED (2026-07-02) — AC7 drill-down resolved per user
+directive (qualified name + docstring + args for functions/methods),
+LOC-based leaf sizing added (schema v8), lambda coverage question answered
+(implicitly covered via enclosing function/method, not a new leaf type).
+Cycle 2 not started.

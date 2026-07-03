@@ -9,13 +9,6 @@ ifdef MKF_ACTIVE
 # ── Re-invocation Layer ──────────────────────────────────────────────────────
 # Included by mkf.py to run the actual target.
 
-# Include the project's original targets.
-# We try Makefile.prj (legacy) and Makefile (if we are running as Makefile.bob).
-ifneq ($(firstword $(MAKEFILE_LIST)),Makefile)
--include Makefile
-endif
--include Makefile.prj
-
 # ── Bob Protocol Targets ─────────────────────────────────────────────────────
 
 .PHONY: tldr test via_index install_bob update_bob pull_bob clean_bob diff_bob
@@ -151,6 +144,16 @@ diff_bob: ## Compare bob-protocol personas, skills, tools, and templates with a 
 	@echo ""
 	@echo "Done."
 
+# Include the project's original targets LAST so a project-specific recipe
+# (e.g. Makefile.prj's real `pytest`-based `test:`) overrides the generic
+# bob-protocol default above it (e.g. `unittest discover`) rather than the
+# reverse — GNU Make uses whichever recipe for a target is parsed last.
+# We try Makefile.prj (legacy) and Makefile (if we are running as Makefile.bob).
+ifneq ($(firstword $(MAKEFILE_LIST)),Makefile)
+-include Makefile
+endif
+-include Makefile.prj
+
 else
 
 # ── Interception layer ───────────────────────────────────────────────────────
@@ -164,7 +167,7 @@ else
 #   make tldr V=-vv        stderr + filtered failures to terminal
 #   make tldr V=-vvv       stderr + full stdout to terminal
 
-.PHONY: help chat test via_index install_bob update_bob pull_bob clean_bob diff_bob
+.PHONY: help chat test test-coverage test-js test-e2e test-all lint lint-fast lint-slow via_index install_bob update_bob pull_bob clean_bob diff_bob
 
 install_bob: ## Copy agents into a project and set up skill links (usage: make install_bob TARGET=/path/to/project)
 	@$(MAKE) MKF_ACTIVE=1 install_bob TARGET="$(TARGET)"
@@ -214,6 +217,27 @@ chat: ## Post a message to CHAT.md (usage: make chat MSG="<msg>" [PERSONA="<name
 		$(if $(TO),--to "$(TO)")
 
 test: ## Run unit tests
+	@./agents/tools/mkf.py $(V) $@
+
+test-coverage: ## Capture per-test coverage + run metadata, import as covered-by/test_runs
+	@./agents/tools/mkf.py $(V) $@
+
+test-js: ## Run JS/vitest unit tests (via/web/static)
+	@./agents/tools/mkf.py $(V) $@
+
+test-e2e: ## Run Playwright e2e tests
+	@./agents/tools/mkf.py $(V) $@
+
+test-all: ## Run Python + JS + e2e test suites
+	@./agents/tools/mkf.py $(V) $@
+
+lint: ## Run ruff + bandit lint checks (with autofix)
+	@./agents/tools/mkf.py $(V) $@
+
+lint-fast: ## Run quick ruff hygiene checks only (unused imports/vars, dead code)
+	@./agents/tools/mkf.py $(V) $@
+
+lint-slow: ## Run full lint suite: ruff, pylint duplicates, bandit, vulture
 	@./agents/tools/mkf.py $(V) $@
 
 via_index: ## Build the via index required by the via MCP server

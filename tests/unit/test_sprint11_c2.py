@@ -324,8 +324,9 @@ class TestSchemaMigrationV6:
         assert 'language' in cols, "language column missing after v6 migration"
         assert 'symbol_subtype' in cols, "symbol_subtype column missing after v6 migration"
 
+        from via.db.schema import SCHEMA_VERSION
         version = store.get_metadata("schema_version")
-        assert version == "7"
+        assert version == str(SCHEMA_VERSION)
         store.close()
 
     def test_language_populated_on_insert(self, tmp_path):

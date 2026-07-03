@@ -205,7 +205,7 @@ records = list(ViaRunner(db_store).run(query))
 ## Documentation
 
 - **[User Guide](docs/USER_GUIDE.md)** - Complete usage reference, web UI guide, and 20 real-world queries
-- **[Architecture](agents/morpheus/morpheus.docs/VIA_ARCHITECTURE.md)** - System design
+- **[Architecture](agents/morpheus.docs/VIA_ARCHITECTURE.md)** - System design
 
 ## Development
 

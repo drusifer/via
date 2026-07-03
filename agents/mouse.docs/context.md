@@ -99,3 +99,46 @@
 - Re-verified: 1346 passed, 1 skipped. All Cycle 2/3 gates (Trin, Smith, Morpheus) now genuinely signed off in `task.md`.
 - **Sprint 26 is CLOSED.**
 - Sprint 27 is now unblocked (per user's stated preference: wait for Sprint 26 to close before starting Sprint 27) but not yet started.
+
+## Sprint 27 Phase 2 Planning — Test Quality Visualization (2026-07-01)
+- User asked Smith directly for a coverage-viz opinion, then invoked
+  `*plan Sprint 27 Phase 2` for the full chain.
+- Cypher -> Smith Gate1 -> Morpheus arch -> Smith Gate2 all completed same
+  session; broke into 3 cycles matching Morpheus's sequencing: (1) heatmap +
+  efficiency table, (2) redundancy grouping (+ mandatory perf benchmark at
+  the project's real 1217-test scale), (3) mock-usage column.
+- Plan: `agents/mouse.docs/SPRINT_27_PHASE2_TASKS.md`, mirrored into
+  `task.md` as a new Phase 2 board under the existing Sprint 27 entry.
+- Handed to Morpheus for plan-vs-architecture review (closes the chain).
+- Unlike Phase 1, no queuing dependency — Sprint 26 already fully closed.
+
+## Sprint 27 Phase 2 Cycle 1 Closure Bookkeeping (2026-07-02)
+- Full `*impl` chain completed: Neo → Trin (PASSES) → Morpheus (APPROVED)
+  → Smith (APPROVED WITH 1 NOTE).
+- While reconciling the task checklist against actual code for closure,
+  found that Cypher's AC7 (drill-down on a low-coverage leaf reusing
+  `/api/query`) was never implemented — only D3 zoom-click exists. This
+  slipped past every gate (Trin's UAT, Morpheus's review, Smith's usability
+  test) — a real lesson: checklist items need to be verified against the
+  actual code at closure time, not just trusted because each persona
+  signed off on their own slice.
+- Root cause: AC7 was written pre-merge (for the file-level version of
+  Story 1), and its semantics don't obviously carry over to per-symbol
+  leaves. Rather than guess, escalated to the user for a product call.
+- Did not mark Cycle 1 fully CLOSED — marked "substantially complete, 1 AC
+  deferred" in `task.md` and `SPRINT_27_PHASE2_TASKS.md` instead of
+  overstating completion.
+
+## Sprint 27 Phase 2 Cycle Re-Breakdown — post revision (2026-07-01)
+- User reframed redundancy detection (symbol-side test-fan-in outliers
+  instead of test-to-test overlap) and merged it with the coverage heatmap
+  into one hierarchical D3 view. Cypher/Morpheus revised stories and
+  architecture; Smith re-confirmed gates with 2 new notes (colorblind-safe
+  blue/orange scale; separate visual marker for outlier flags, since
+  peer-relative outlier status and absolute color value can disagree).
+- Dissolved old Cycle 2 (Jaccard-bucketing test-overlap) — folded its
+  intent into Cycle 1's outlier detection. Renumbered old Cycle 3
+  (mock-usage signal) to Cycle 2.
+- Updated `agents/mouse.docs/SPRINT_27_PHASE2_TASKS.md` and `task.md`.
+- Handed to Morpheus for plan-vs-architecture re-review, to re-close the
+  chain after the mid-flight revision.

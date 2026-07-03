@@ -3,7 +3,7 @@
  * No DOM required — these run in Node without jsdom.
  */
 import { describe, it, expect } from 'vitest';
-import { esc, relTime, badgeClass } from '../../via/web/static/utils.js';
+import { esc, relTime, badgeClass, intensityColor } from '../../via/web/static/utils.js';
 
 // ---------------------------------------------------------------------------
 // esc
@@ -75,4 +75,49 @@ describe('relTime', () => {
 
   it('boundary: exactly 1h is "1h ago"', () =>
     expect(relTime(ago(3_600_000))).toBe('1h ago'));
+});
+
+// ---------------------------------------------------------------------------
+// intensityColor
+// ---------------------------------------------------------------------------
+describe('intensityColor', () => {
+  it('is deep blue at 0%', () => expect(intensityColor(0)).toBe('rgb(21, 101, 192)'));
+
+  it('is neutral gray at 100% (adequate baseline)', () =>
+    expect(intensityColor(100)).toBe('rgb(240, 240, 240)'));
+
+  it('is deep orange at the 300% clip point', () =>
+    expect(intensityColor(300)).toBe('rgb(230, 81, 0)'));
+
+  it('clips values above 300% to the same color as 300%', () => {
+    expect(intensityColor(900)).toBe(intensityColor(300));
+  });
+
+  it('low end is blue-dominant (B > R), not red/green', () => {
+    const [r, , b] = intensityColor(0).match(/\d+/g).map(Number);
+    expect(b).toBeGreaterThan(r);
+  });
+
+  it('high end is red/orange-dominant (R > B), not red/green', () => {
+    const [r, , b] = intensityColor(300).match(/\d+/g).map(Number);
+    expect(r).toBeGreaterThan(b);
+  });
+
+  it('red channel rises monotonically from blue to neutral (0-100%)', () => {
+    const parse = s => s.match(/\d+/g).map(Number);
+    const at0 = parse(intensityColor(0))[0];
+    const at50 = parse(intensityColor(50))[0];
+    const at100 = parse(intensityColor(100))[0];
+    expect(at0).toBeLessThanOrEqual(at50);
+    expect(at50).toBeLessThanOrEqual(at100);
+  });
+
+  it('blue channel falls monotonically from neutral to orange (100-300%)', () => {
+    const parse = s => s.match(/\d+/g).map(Number);
+    const at100 = parse(intensityColor(100))[2];
+    const at200 = parse(intensityColor(200))[2];
+    const at300 = parse(intensityColor(300))[2];
+    expect(at100).toBeGreaterThanOrEqual(at200);
+    expect(at200).toBeGreaterThanOrEqual(at300);
+  });
 });

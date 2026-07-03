@@ -1,5 +1,119 @@
 # Neo Context
 
+## Sprint 27 Phase 2 Cycle 1 — AC7 Drill-Down + LOC Sizing Addition (2026-07-02)
+- User's answer to the AC7 semantics question I escalated: leaf = method/
+  function; click shows qualified name + docstring/args; anon funcs show
+  signature + fully-qualified scope path; color = coverage, size = LOC.
+- Schema v7→v8: added `symbols.line_end`. Every parser (`base.py`'s
+  `FunctionEntity`/`ClassEntity`) already computes this at parse time — it
+  was just discarded before insert. Threading it through
+  `insert_symbol()`/`indexing.py`'s 3 call sites was the whole cost, no new
+  parsing logic needed.
+- Docstring/signature drill-down mirrors `via/renderers/usage.py`'s
+  existing `_extract_docstring` pattern (re-parse the source file with
+  `ast`, match by line+name, fall back to name-only) rather than persisting
+  docstrings at index time — on-demand, drill-down-only cost.
+- `_format_args()` deliberately matches `python_parser.py`'s
+  `_extract_args()` convention (names + annotations, no default values
+  shown) for consistency rather than inventing a different format.
+- **Lambda coverage question — answered, not guessed**: Python lambdas
+  aren't indexed as symbols at all (`grep -i lambda python_parser.py` = 0
+  hits). But this isn't actually a gap for coverage purposes: `covered-by`
+  attribution works off symbol *line ranges* (`_iter_symbol_ranges` in
+  `coverage.py`), and a lambda's lines fall inside its enclosing named
+  function/method's range — so a lambda's coverage is already implicitly
+  rolled into whichever function/method contains it, today, with zero new
+  capture work. The only real gap: a lambda can't be its own *separate*
+  leaf with its own signature/qualified path — that needs genuine new
+  Python parser capability (synthetic naming like `<lambda at line N>`,
+  scope tracking). Recommended as a backlog candidate, not implemented
+  speculatively.
+- New endpoint `GET /api/coverage/symbol?id=` — query-string parsing
+  (`urllib.parse.parse_qs`/`urlsplit`) added to `handler.py`, which
+  previously only matched exact path strings.
+- Fixed 2 more pre-existing test bugs surfaced by the SCHEMA_VERSION bump:
+  `test_line_index.py`/`test_sprint11_c2.py` both hardcoded the literal
+  `7`/`"7"` instead of importing and comparing against `SCHEMA_VERSION` —
+  fixed both to compare dynamically so future migrations don't re-break them.
+- Re-ran `make via_index && make test-coverage` twice this session to keep
+  the real ground-truth UAT tests honest against the latest code (52,452
+  `covered-by` relationships across 1,287 tests on the final run).
+- Full suite: 1424 passed, 1 skipped. `coverage.py` at 100% test coverage.
+  JS: 106 passed. E2E: 27 passed (added a real click-through drill-down
+  test + screenshot).
+- `task.md`/`SPRINT_27_PHASE2_TASKS.md` updated — Cycle 1 now fully CLOSED.
+
+## Sprint 27 Phase 2 Cycle 1 — Test-Intensity Heatmap + Efficiency Table (2026-07-02)
+- Implemented per `agents/mouse.docs/SPRINT_27_PHASE2_TASKS.md` Cycle 1.
+- `DatabaseStore.get_symbol_coverage_counts()`: per-symbol `covering_test_count`
+  (distinct `covered-by` test fan-in) for function/method/class symbols.
+  `get_test_efficiency_data()`: per-test duration joined against covered-symbol
+  count. Both in `via/db/store.py`.
+- `via/web/api/coverage.py` (new): `build_coverage_hierarchy()` builds the
+  package/module/class/method tree from those rows. Key design points:
+  - Drops a class's own row when it has method children (its `covered-by`
+    line range spans all its methods, so keeping both would double-count —
+    see `_drop_redundant_class_rows`).
+  - Ancestor `intensity_pct` = mean across *all* leaf descendants (flattened),
+    not mean-of-child-means — matters for packages with uneven module sizes.
+  - Outlier detection (`_compute_outliers`) uses **leave-one-out** z-score,
+    not a naive z-score against the whole peer group. Including the
+    candidate in its own mean/stdev caps z at sqrt(n-1) — exactly 2.0 for a
+    5-member group — so a plain z-score can never cross a >2.0 threshold no
+    matter how extreme the outlier. Also added `_MIN_PEER_GROUP_SIZE = 10`:
+    leave-one-out stats from <10 points are themselves noisy enough to
+    produce false positives on a merely-tight (not truly outlying) cluster.
+  - Peer groups are `(symbol_type, is_constructor_like)` — constructor-like
+    names (`__init__`/`__new__`/`__post_init__`/`__call__`) are their own
+    bucket so they're only flagged relative to *other* constructors.
+- **Real bug caught by a smoke test, not the unit tests**: `symbols.file_path`
+  is stored *absolute* (`core/discovery.py` `FileInfo.path`), but the
+  hierarchy build naively split it into package segments — on a real project
+  this rooted the tree at the filesystem root (`home/drusifer/Projects/...`)
+  instead of the project root. Fixed by relativizing in
+  `get_symbol_coverage_counts()` via the existing (private but same-class)
+  `DatabaseStore._to_relative_path()` helper — the fixture-driven unit tests
+  never caught this because they inserted short relative-looking literal
+  strings as `file_path` directly, never exercising a truly absolute path.
+- New endpoints: `GET /api/coverage/hierarchy` (nested tree),
+  `GET /api/coverage/test-efficiency` (`{results: [...]}`), wired into
+  `via/web/handler.py` following the exact `_handle_status`-style pattern
+  (fresh `DatabaseStore` per request).
+- Frontend (`via/web/static/app.js` + `utils.js` + `template.py`): D3 v7
+  lazy-loaded from CDN (same pattern as the existing Mermaid load), a
+  Query/Coverage nav toggle, a zoomable-icicle heatmap with a no-D3 text
+  fallback (mirrors the Mermaid diagram fallback — same reason: D3 never
+  loads in jsdom/CI, so the fallback path carries the real test coverage),
+  a colorblind-safe blue/orange diverging color scale (`intensityColor()` in
+  `utils.js`, clipped at 300%), and a separate visual marker (CSS
+  stroke/dash, not color) for `is_outlier` — per Smith's gate re-confirm
+  note that peer-relative outlier status and absolute color can disagree.
+- **Infra fixes along the way** (all pre-existing, found because I finally
+  ran `make test-js`/`make lint-fast` for the first time this session):
+  - Makefile `test:` recipe regression — the generic bob-protocol
+    `unittest discover` target was again shadowing Makefile.prj's real
+    pytest recipe (same bug class Mouse's notes describe as "fixed" once
+    before — it had regressed, likely via a Makefile template sync).
+    Reordered the `-include Makefile.prj` to parse *after* the bob-protocol
+    target block so project recipes win by GNU Make's "last recipe wins" rule.
+  - `test-js`/`test-e2e`/`test-all`/`lint`/`lint-fast`/`lint-slow` existed
+    in Makefile.prj but had no public stub in the top-level Makefile's
+    `else` block — added them (routes through mkf like `test`/`via_index`).
+  - `tests/js/dom.test.js`'s fixture was missing `#rel-mode-field` (present
+    in the real template, app.js's reset handler crashed on the missing
+    element) — added it to the fixture.
+  - Dead test asserting on a `#invert` checkbox that doesn't exist in the
+    real template anymore (superseded by the `rel-mode` via/sans segmented
+    control, which `via/web/api/query.py` already reads correctly via
+    `mode`) — removed the stale checkbox + assertion.
+- Tests: `tests/unit/test_web_coverage.py` (25, 100% cov on `coverage.py`),
+  `tests/js/coverage-view.test.js` (12), `tests/js/dom.test.js` (+4 nav
+  tests), `tests/integration/test_coverage_web_smoke.py` — a real
+  end-to-end smoke test (real IndexingService parse, real DB, real
+  WebServer, real HTTP) added per explicit user request so it's rerunnable
+  later, not a one-off. Full suite: 1398 passed, 1 skipped.
+- Handed to Trin for UAT.
+
 ## Sprint 27 Cycle 1 — Per-Test Coverage Import (2026-07-01)
 - Rewrote `via/commands/coverage.py`: retired `import_coverage_xml`/`_parse_covered_lines` (whole-suite `coverage.xml` parsing), replaced with `import_contexts`/`_covered_lines_by_test` reading coverage.py's native dynamic-context data (`coverage.CoverageData.contexts_by_lineno()`).
 - Context labels from pytest-cov look like `"path/to/test.py::TestClass::test_method|run"` — stripped the `|run`/`|setup`/`|teardown` phase suffix via `_test_id_from_context()` to get the canonical test id. Empty-string context (module-level/import-time execution outside any test) is skipped — not attributable to a test.

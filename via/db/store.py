@@ -207,6 +207,18 @@ class DatabaseStore:
                 (7, time.time(), "Add test_runs table for per-test coverage run metadata")
             )
 
+        if current_version < 8:
+            existing_cols = {
+                row[1] for row in cursor.execute("PRAGMA table_info(symbols)")
+            }
+            if 'line_end' not in existing_cols:
+                cursor.execute("ALTER TABLE symbols ADD COLUMN line_end INTEGER")
+            cursor.execute(
+                "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
+                " VALUES (?, ?, ?)",
+                (8, time.time(), "Add symbols.line_end for lines-of-code sizing (coverage heatmap)")
+            )
+
         # Store metadata
         cursor.execute(
             "INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
@@ -546,6 +558,7 @@ class DatabaseStore:
         mtime: Optional[float] = None,
         language: Optional[str] = None,
         symbol_subtype: Optional[str] = None,
+        line_end: Optional[int] = None,
     ) -> int:
         """
         Insert a symbol record into the denormalized symbols table.
@@ -562,6 +575,8 @@ class DatabaseStore:
             mtime: File modification time (Unix timestamp) when symbol was indexed
             language: Source language ('python', 'javascript', 'typescript', 'markdown')
             symbol_subtype: Optional subtype ('interface', 'enum', 'arrow_function', etc.)
+            line_end: Last line of the symbol's span (None if unknown) — used to
+                derive lines-of-code for the coverage heatmap's leaf sizing
 
         Returns:
             Symbol ID
@@ -570,13 +585,13 @@ class DatabaseStore:
         cursor.execute(
             """
             INSERT INTO symbols (
-                symbol_name, symbol_type, file_path, line_number,
+                symbol_name, symbol_type, file_path, line_number, line_end,
                 byte_offset, byte_length, qualified_name, parent_name, mtime,
                 language, symbol_subtype
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (symbol_name, symbol_type, file_path, line_number,
+            (symbol_name, symbol_type, file_path, line_number, line_end,
              byte_offset, byte_length, qualified_name, parent_name, mtime,
              language, symbol_subtype)
         )
@@ -2080,3 +2095,123 @@ class DatabaseStore:
             'duration_seconds': row[2],
             'last_run_at': row[3],
         }
+
+    # =========================================================================
+    # Test Quality Visualization Methods (Sprint 27 Phase 2)
+    # =========================================================================
+
+    @require_connection
+    def get_symbol_coverage_counts(self) -> List[Dict[str, Any]]:
+        """Return per-symbol test-coverage fan-in for functions/methods/classes.
+
+        Each row's `covering_test_count` is the number of distinct tests whose
+        `covered-by` edge points at that symbol — the raw input to the Sprint
+        27 Phase 2 intensity heatmap and outlier detection. `line_number`/
+        `line_end` are included so callers can size leaves by lines of code;
+        `line_end` is NULL for symbols indexed before the `line_end` column
+        was added (schema v8) until the project is re-indexed.
+
+        Returns:
+            List of dicts with keys: id, symbol_name, symbol_type, file_path,
+            parent_name, line_number, line_end, covering_test_count.
+        """
+        rows = self.conn.execute(
+            """
+            SELECT s.id, s.symbol_name, s.symbol_type, s.file_path, s.parent_name,
+                   s.line_number, s.line_end,
+                   COUNT(DISTINCT sr.to_symbol_id) AS covering_test_count
+            FROM symbols s
+            LEFT JOIN symbol_references sr
+                   ON sr.from_symbol_id = s.id AND sr.reference_type = 'covered-by'
+            WHERE s.symbol_type IN ('function', 'method', 'class')
+            GROUP BY s.id
+            """
+        ).fetchall()
+        return [
+            {
+                'id': row[0],
+                'symbol_name': row[1],
+                'symbol_type': row[2],
+                # symbols.file_path is stored absolute (see FileInfo.path in
+                # core/discovery.py) — relativize here so the hierarchy build
+                # roots its package tree at the project root, not the
+                # filesystem root (e.g. 'via/pipeline/...', not
+                # 'home/drusifer/Projects/via/pipeline/...').
+                'file_path': self._to_relative_path(row[3]),
+                'parent_name': row[4],
+                'line_number': row[5],
+                'line_end': row[6],
+                'covering_test_count': row[7],
+            }
+            for row in rows
+        ]
+
+    @require_connection
+    def get_symbol_detail(self, symbol_id: int) -> Optional[Dict[str, Any]]:
+        """Return identifying fields for one symbol, for the coverage heatmap's
+        leaf drill-down (qualified name + enough to re-locate it in source for
+        docstring/signature extraction).
+
+        `file_path` is returned absolute (matching the rest of the query API,
+        e.g. `via/web/api/query.py`'s results) since callers need to actually
+        open the file on disk to re-extract the docstring/signature; the
+        frontend already has a `relPath()` helper for display-time stripping.
+
+        Returns:
+            dict with keys: id, symbol_name, symbol_type, qualified_name,
+            file_path, line_number, language — or None if not found.
+        """
+        row = self.conn.execute(
+            """
+            SELECT id, symbol_name, symbol_type, qualified_name, file_path,
+                   line_number, language
+            FROM symbols WHERE id = ?
+            """,
+            (symbol_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            'id': row[0],
+            'symbol_name': row[1],
+            'symbol_type': row[2],
+            'qualified_name': row[3],
+            'file_path': row[4],
+            'line_number': row[5],
+            'language': row[6],
+        }
+
+    @require_connection
+    def get_test_efficiency_data(self) -> List[Dict[str, Any]]:
+        """Return per-test duration vs. covered-symbol-count for the efficiency table.
+
+        Joins `test_runs` (status/duration/last-run) against each test
+        symbol's `covered-by` fan-out so callers can compute a
+        symbols-per-second ratio without a second round trip.
+
+        Returns:
+            List of dicts with keys: test_id, status, duration_seconds,
+            last_run_at, covered_symbol_count.
+        """
+        rows = self.conn.execute(
+            """
+            SELECT tr.test_id, tr.status, tr.duration_seconds, tr.last_run_at,
+                   COUNT(sr.from_symbol_id) AS covered_symbol_count
+            FROM test_runs tr
+            LEFT JOIN symbols test_sym
+                   ON test_sym.symbol_name = tr.test_id AND test_sym.symbol_type = 'test'
+            LEFT JOIN symbol_references sr
+                   ON sr.to_symbol_id = test_sym.id AND sr.reference_type = 'covered-by'
+            GROUP BY tr.test_id
+            """
+        ).fetchall()
+        return [
+            {
+                'test_id': row[0],
+                'status': row[1],
+                'duration_seconds': row[2],
+                'last_run_at': row[3],
+                'covered_symbol_count': row[4],
+            }
+            for row in rows
+        ]

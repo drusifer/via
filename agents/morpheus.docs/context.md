@@ -153,6 +153,92 @@ None.
 - Updated `TEST_COVERAGE_ARCHITECTURE.md` (Capture path section) and `agents/mouse.docs/SPRINT_27_TASKS.md` / `task.md` Cycle 3 scope accordingly.
 - Handed to Neo to implement Cycle 3 with the expanded scope.
 
+## Sprint 27 Phase 2 Cycle 1 Code Review (2026-07-02)
+- Reviewed Neo's implementation and Trin's UAT for the D3 intensity heatmap
+  + efficiency table. APPROVED.
+- Checked architecture alignment: `via/web/api/coverage.py` matches my
+  design doc 1:1 (3-step build, class-row-dropping fix, flattened-mean
+  rollup, leave-one-out outlier detection).
+- Independently assessed (not just trusted) the 3 real bugs found this
+  cycle: verified the leave-one-out z-score reasoning myself, read
+  `core/discovery.py` myself to confirm `FileInfo.path` really is absolute
+  (validating the relativization fix), confirmed the Makefile include-order
+  fix matches actual GNU Make "last recipe wins" semantics rather than
+  being a workaround.
+- One non-blocking style note: `id()`-based dict key in
+  `build_coverage_hierarchy` works but is unconventional — flagged for next
+  touch, not worth blocking on.
+- Full review: `agents/morpheus.docs/SPRINT27_PHASE2_CYCLE1_REVIEW.md`.
+  Handed to Smith for the real-browser usability test (last gate before
+  Cycle 1 closes).
+
+## Sprint 27 Phase 2 Architecture Revision — heatmap+overlap merge (2026-07-01)
+- User asked "cypher/morph what do you two think" then clarified 3 points
+  reframing the design: redundancy = symbol-side test-fan-in outliers (not
+  test-pair overlap), aggregate via package/module/class/method hierarchy,
+  heatmap metric = intensity % (tested twice = 200%) rendered with D3
+  (zoomable icicle/treemap example), not custom viz.
+- Confirmed hierarchy is buildable from existing columns with no schema
+  change: `file_path` (dir nesting), `symbol_type`, `parent_name` (checked
+  `via/services/indexing.py:413`, `parent_name=cls.name` for methods).
+- Rewrote `agents/morpheus.docs/SPRINT27_PHASE2_ARCHITECTURE.md`: merged old
+  Story 1 (binary heatmap) + Story 2 (test-overlap) into one
+  `/api/coverage/hierarchy` endpoint returning a nested tree; designed
+  outlier detection (peer-group z-score, constructor exclusion via naming
+  convention `__init__`/`__new__`/etc.); specified D3 zoomable icicle +
+  diverging/clipped color scale for the frontend.
+- Net effect: simpler/lower-risk than the original plan — the pairwise
+  Jaccard-bucketing algorithm (old Story 2's biggest risk) is gone entirely.
+- Handed to Smith for Gate 1+2 re-confirmation (material UX change from what
+  she already approved once).
+- Smith re-confirmed APPROVED WITH 2 NEW NOTES
+  (`agents/smith.docs/SPRINT27_PHASE2_GATE_RECONFIRM.md`): (1) `is_outlier`
+  needs its own visual marker independent of the color fill — peer-relative
+  outlier status and absolute intensity color can disagree; (2) name a
+  specific colorblind-safe hue pair (blue↔orange) rather than leaving
+  "warm/cool" unconstrained (which could default to red/green).
+- Mouse dissolved old Cycle 2 (test-overlap) and folded its intent into
+  Cycle 1; renumbered mock-signal to Cycle 2
+  (`agents/mouse.docs/SPRINT_27_PHASE2_TASKS.md`).
+- Re-reviewed Mouse's revised plan: APPROVED, 1:1 mapping, both Smith notes
+  present as explicit tasks
+  (`agents/morpheus.docs/SPRINT27_PHASE2_PLAN_REVIEW.md`). This re-closes
+  the `*plan sprint` chain after the mid-flight revision. Execution
+  unblocked: `@Neo *swe impl cycle-1`.
+
+## Sprint 27 Phase 2 Gate 2 — Test Quality Visualization Architecture (2026-07-01)
+- User asked Smith directly for a coverage-viz opinion; Smith recommended a
+  real requirements pass; user invoked `*plan Sprint 27 Phase 2`.
+- Reviewed Cypher's 4 stories (heatmap, redundancy, efficiency, mocking) and
+  Smith's Gate 1 notes (colorblind-safe heatmap + numeric labels; redundancy
+  needs quantitative overlap label, not just visual density).
+- Verified against real code: `covered-by` direction is from=code symbol,
+  to=synthetic test symbol (`coverage.py:128`); confirmed no schema changes
+  needed for Stories 1-3, pure read/aggregation layer on Phase 1 data.
+- Designed `/api/coverage/files`, `/api/coverage/test-efficiency`,
+  `/api/coverage/test-overlap` endpoints matching the existing
+  `via/web/api/*.py` pattern (fresh DatabaseStore per call).
+- Story 2 (redundancy): rejected raw-test-id matrix/Sankey (1217 tests would
+  hairball); designed file-granularity grouping + bucketed near-duplicate
+  detection instead, with quantitative overlap % in the response.
+- Story 4 (mocking): answered Cypher's OQ-1/OQ-2 — static AST mock-usage
+  count is cheap (extends existing parser AST walk, ~1-2pt); recommended
+  skipping runtime instrumentation this sprint; surface as a column on
+  Story 3's efficiency table rather than a new view.
+- Full doc: `agents/morpheus.docs/SPRINT27_PHASE2_ARCHITECTURE.md`. Handed
+  to Smith for Gate 2.
+- Smith Gate 2: APPROVED (`agents/smith.docs/SPRINT27_PHASE2_GATE2_REVIEW.md`),
+  both Gate 1 notes confirmed addressed.
+- Mouse broke Phase 2 into 3 cycles (`agents/mouse.docs/SPRINT_27_PHASE2_TASKS.md`).
+- Reviewed Mouse's plan against the architecture: APPROVED, 1:1 mapping, no
+  mismatches — notably the Cycle 2 benchmark-risk task survived into the
+  plan rather than being quietly dropped
+  (`agents/morpheus.docs/SPRINT27_PHASE2_PLAN_REVIEW.md`).
+- This closes the `*plan sprint` chain for Phase 2: Cypher -> Smith Gate1 ->
+  Morpheus arch -> Smith Gate2 -> Mouse plan -> Morpheus review, no Tank
+  gate needed. Execution unblocked: `@Neo *swe impl cycle-1`, no queuing
+  dependency (Sprint 26 already closed).
+
 ## Sprint 27 CLOSED (2026-07-01) — final summary
 - User overrode the subprocess-coverage-capture plan (sitecustomize + combine) in favor of the root fix: 27 of 30 subprocess-spawning test files had no real reason to run out-of-process. Converted via a shared in-process runner + a transparent `conftest.py` redirect shim (zero per-file edits); the 3 genuine daemon/stdin-protocol tests moved to `tests/subprocess/`.
 - A real O(tests × files) performance bug surfaced during full-scale validation (import was re-parsing every covered file once per test, 6+ minutes) — found and fixed before shipping.

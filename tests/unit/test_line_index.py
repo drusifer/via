@@ -54,9 +54,8 @@ def test_line_offsets_index_exists(tmp_db):
 
 
 def test_schema_version_is_4(tmp_db):
-    assert SCHEMA_VERSION == 7
     version = tmp_db.get_metadata("schema_version")
-    assert version == "7"
+    assert version == str(SCHEMA_VERSION)
 
 
 # ── P1-7b: Migration — existing DB at version 3 migrates to 4 cleanly ────────
@@ -86,7 +85,7 @@ def test_migration_v3_to_v4(tmp_db_path):
     assert cursor.fetchone() is not None, "line_offsets table should be created during migration"
 
     version = store.get_metadata("schema_version")
-    assert version == "7"
+    assert version == str(SCHEMA_VERSION)
     store.close()
 
 

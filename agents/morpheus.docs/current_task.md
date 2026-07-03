@@ -1,21 +1,30 @@
 # Morpheus Current Task
 
-**Task**: Sprint 26 Cycle 4 Architecture Review
+**Task**: Sprint 27 Phase 2 Cycle 1 Code Review
 **Status**: COMPLETE (100%) — APPROVED, handed to Smith
-**Updated**: 2026-07-01
+**Updated**: 2026-07-02
 
 ## Completed
-- [x] Reviewed the relationship hierarchy implementation — genuine
-      polymorphism confirmed, not a lookup table.
-- [x] Confirmed backward compatibility with `ReferenceType`/web API/`ViaQueryBuilder`.
-- [x] Reviewed and endorsed Neo's diagram/prose inconsistency fix.
-- [x] Reviewed and endorsed the declares/declared-in judgment call (kept matching the diagram).
-- [x] Recorded (not fixed) the `__subclasses__()` process-global scoping tradeoff for future awareness.
-- [x] Wrote `agents/morpheus.docs/SPRINT26_CYCLE4_REVIEW.md`, posted to CHAT.md.
+- [x] Reviewed `via/web/api/coverage.py` against my own architecture doc —
+      1:1 match on the 3-step design, class-row-dropping fix, flattened-mean
+      rollup.
+- [x] Reviewed `DatabaseStore.get_symbol_coverage_counts()`/
+      `get_test_efficiency_data()` — consistent with existing patterns.
+- [x] Assessed (not just trusted) the 3 real bugs Neo/Trin found: leave-
+      one-out z-score fix, absolute-path relativization fix, Makefile
+      include-order fix — all architecturally sound, verified reasoning
+      independently (e.g. read `core/discovery.py` myself to confirm
+      `FileInfo.path` really is absolute).
+- [x] Flagged one non-blocking style nitpick (`id()`-based dict key in
+      `build_coverage_hierarchy`) — not worth blocking on.
+- [x] Wrote `agents/morpheus.docs/SPRINT27_PHASE2_CYCLE1_REVIEW.md`.
+- [x] Handed to Smith for usability test (real browser).
 
 ## Next
-- Smith's usability finding was applied by Neo (declares/declared-in are now
-  plain leaves, no category parent) and re-verified (1372 passed, 1 skipped).
-  Sprint 26 Cycle 4 is CLOSED; `task.md` updated.
-- No other queued threads. Sprint 27 Phase 2 (analysis) needs a fresh
-  requirement pass before starting.
+- Awaiting Smith's usability test verdict — this is the last gate before
+  Cycle 1 formally closes.
+- If Smith finds issues: back to Neo for the specific fix.
+- If Smith approves: Cycle 1 CLOSED, Cycle 2 (mocking-usage signal) starts.
+
+## Previous task (for reference)
+Sprint 27 Phase 2 Plan Re-Review — COMPLETE, closed 2026-07-01.

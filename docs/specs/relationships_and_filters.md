@@ -32,13 +32,57 @@ Use only one match flag (`-mg`, `-mr`, or `-ms`) per stage. Type flags may be co
 
 ### Relationship Types
 
+Forward (dependency) relationships — "what does this depend on":
+
 | Relationship | `--via` / `-V` value | Description |
 |---|---|---|
 | Inheritance | `inherits-from` | Result classes filtered by the base classes they inherit from |
 | Calls | `calls` | Result functions/methods filtered by what they call |
 | Imports | `imports` | Result files/modules filtered by what they import |
 | References | `references` | Result symbols filtered by what they reference in their body |
+| HTTP calls | `http-calls` | Result symbols filtered by the HTTP routes/endpoints they call |
 | Container membership | `declares` | Result containers filtered by the symbols they declare |
+| Test coverage | `covered-by` | Result symbols filtered by which test(s) cover them |
+
+Inverse (dependent) relationships — "what depends on this" — same query model, opposite direction:
+
+| Relationship | `--via` / `-V` value | Description |
+|---|---|---|
+| Inherited by | `inherited-by` | Result classes filtered by their subclasses |
+| Called by | `called-by` | Result functions/methods filtered by their callers |
+| Imported by | `imported-by` | Result files/modules filtered by what imports them |
+| Referenced by | `referenced-by` | Result symbols filtered by what references them |
+| HTTP called by | `http-called-by` | Result symbols filtered by the HTTP routes/endpoints that call them |
+| Declared in | `declared-in` | Result symbols filtered by their containing file/class |
+| Covers | `covers` | Result test symbols filtered by which code they cover |
+
+### Multi-Relationship Categories: Blast-Radius Queries
+
+Three category names expand to *multiple* concrete relationships in one
+query — useful when you want "everything connected to X" without listing
+every relationship type by hand:
+
+| Category | `--via` / `-V` value | Expands to |
+|---|---|---|
+| Blast radius (both directions) | `any-ref` | All forward + inverse relationships above (excluding `declares`/`declared-in` — see note) |
+| Upstream (what this depends on) | `upstream-ref` | `calls`, `references`, `imports`, `inherits-from`, `http-calls` |
+| Downstream (what depends on this) | `downstream-ref` | `called-by`, `referenced-by`, `imported-by`, `inherited-by`, `http-called-by` |
+
+```bash
+# Blast radius: everything connected to a function, either direction
+via -mg 'process_payment' -tf --via any-ref -mg '*'
+
+# Upstream only: what does this function depend on?
+via -mg 'process_payment' -tf --via upstream-ref -mg '*'
+
+# Downstream only: what would break if I changed this function?
+via -mg 'process_payment' -tf --via downstream-ref -mg '*'
+```
+
+**Note**: `declares`/`declared-in` are intentionally excluded from `any-ref`
+— container membership (a class *declaring* a method) is a structural
+relationship, not a call/data dependency, so including it would surface
+the containing file/class as noise in every blast-radius query.
 
 ### `--sans`: Negative Relationship (NOT EXISTS)
 

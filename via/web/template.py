@@ -427,6 +427,101 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .badge-filename { background: var(--chip-filename); }
     .badge-header   { background: var(--chip-header); }
 
+    /* ------------------------------------------------------------------ */
+    /* Coverage view (Sprint 27 Phase 2)                                    */
+    /* ------------------------------------------------------------------ */
+    #coverage-view { padding: 16px; }
+    #coverage-subnav { max-width: 280px; margin-bottom: 16px; }
+    #coverage-legend {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--md-sys-color-on-surface-variant);
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    #coverage-legend span:not(.legend-swatch):not(.legend-outlier-swatch) { margin-right: 12px; }
+    .legend-swatch {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      border: 1px solid var(--md-sys-color-outline);
+    }
+    #legend-low  { background: rgb(21, 101, 192); }
+    #legend-mid  { background: rgb(240, 240, 240); }
+    #legend-high { background: rgb(230, 81, 0); }
+    /* Outlier marker is a distinct border, independent of the fill color —
+       peer-relative outlier status and absolute intensity color can
+       disagree, so color alone can't be the only signal (Smith Gate re-confirm). */
+    .legend-outlier-swatch {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      background: rgb(240, 240, 240);
+      border: 2px dashed #202124;
+    }
+    #coverage-heatmap-svg { background: #fff; border-radius: 10px; padding: 8px; }
+    #coverage-heatmap-svg svg { width: 100%; height: auto; display: block; }
+    #coverage-heatmap-svg .node-outlier rect { stroke: #202124; stroke-width: 2px; stroke-dasharray: 3,2; }
+    #coverage-heatmap-fallback {
+      display: none;
+      background: var(--md-sys-color-surface-variant);
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    #coverage-symbol-detail {
+      display: none;
+      margin-top: 12px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: var(--md-elevation-1);
+    }
+    #coverage-symbol-detail .symbol-detail-name {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    #coverage-symbol-detail .symbol-detail-path {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+      color: var(--md-sys-color-on-surface-variant);
+      margin: 4px 0 12px;
+    }
+    #coverage-symbol-detail .symbol-detail-docstring {
+      font-size: 13px;
+      white-space: pre-wrap;
+      margin-bottom: 12px;
+    }
+    #coverage-symbol-detail .symbol-detail-empty {
+      color: var(--md-sys-color-on-surface-variant);
+      font-style: italic;
+    }
+    #coverage-efficiency-wrap { overflow-x: auto; }
+    #coverage-efficiency-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+    #coverage-efficiency-table thead { background: var(--md-sys-color-surface-variant); }
+    #coverage-efficiency-table th {
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface-variant);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    #coverage-efficiency-table th:hover { background: var(--md-sys-color-outline); }
+    #coverage-efficiency-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--md-sys-color-outline);
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+    }
+
     @media (max-width: 700px) {
       #app { flex-direction: column; height: auto; }
       #controls-panel { width: 100%; border-right: none; border-bottom: 1px solid var(--md-sys-color-outline); }
@@ -448,6 +543,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <span id="status-files">— files</span>
   <span id="status-symbols">— symbols</span>
   <span id="status-time">—</span>
+  <div class="btn-group" id="view-nav">
+    <button data-view="query" class="active">Query</button>
+    <button data-view="coverage">Coverage</button>
+  </div>
 </div>
 
 <div id="app">
@@ -633,6 +732,43 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
   </div><!-- /results-panel -->
 </div><!-- /app -->
+
+<!-- ---------------------------------------------------------------------- -->
+<!-- Coverage view (Sprint 27 Phase 2) — hidden unless "Coverage" nav clicked -->
+<!-- ---------------------------------------------------------------------- -->
+<div id="coverage-view" style="display:none">
+  <div class="btn-group" id="coverage-subnav">
+    <button data-covview="heatmap" class="active">Heatmap</button>
+    <button data-covview="efficiency">Efficiency</button>
+  </div>
+
+  <div id="coverage-heatmap-wrap">
+    <div id="coverage-legend">
+      <span class="legend-swatch" id="legend-low"></span><span>Gap (0%)</span>
+      <span class="legend-swatch" id="legend-mid"></span><span>Adequate (100%)</span>
+      <span class="legend-swatch" id="legend-high"></span><span>Hotspot (300%+)</span>
+      <span class="legend-outlier-swatch"></span><span>Outlier (unusual vs. peers)</span>
+    </div>
+    <div id="coverage-heatmap-svg"></div>
+    <pre id="coverage-heatmap-fallback" style="display:none"></pre>
+    <div id="coverage-symbol-detail" style="display:none"></div>
+  </div>
+
+  <div id="coverage-efficiency-wrap" style="display:none">
+    <table id="coverage-efficiency-table">
+      <thead>
+        <tr>
+          <th data-col="test_id">Test ▾</th>
+          <th data-col="status">Status</th>
+          <th data-col="duration_seconds">Duration (s)</th>
+          <th data-col="covered_symbol_count">Symbols Covered</th>
+          <th data-col="symbols_per_second">Symbols/sec</th>
+        </tr>
+      </thead>
+      <tbody id="coverage-efficiency-tbody"></tbody>
+    </table>
+  </div>
+</div>
 
 <div id="toast"></div>
 

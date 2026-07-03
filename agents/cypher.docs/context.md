@@ -1,6 +1,36 @@
 # Cypher Context - VIA Project
 
-**Last Updated**: 2026-06-20
+**Last Updated**: 2026-07-01
+
+## Session: 2026-07-01 — Sprint 27 Phase 2 story revision (post Gate 2)
+- User asked "cypher/morph what do you two think" then gave 3 clarifications
+  reframing the design: (1) redundancy = symbol-side test-fan-in outliers,
+  not test-to-test overlap, with constructors/expected-high symbols excluded
+  by peer-group comparison; (2) aggregate via package/module/class/method
+  hierarchy, arbitrary depth; (3) heatmap metric = intensity % (tested twice
+  = 200%), built with D3 (existing lib, standard example) not custom viz.
+- This merges the old Story 1 (binary coverage heatmap) + Story 2 (test
+  overlap grouping) into a single unified story — one mental model instead
+  of two, and removes the riskiest part of the original plan (Jaccard
+  bucketing for test-pair overlap).
+- Rewrote `agents/cypher.docs/SPRINT27_PHASE2_USER_STORIES.md`. Morpheus
+  rewrote the architecture in parallel. Handed to Smith for Gate 1+2
+  re-confirmation since this materially changes what she already approved
+  once.
+
+## Session: 2026-07-01 — Sprint 27 Phase 2 stories (test quality viz)
+- User asked Smith directly for an opinion on visualizing coverage data in
+  web mode (redundant tests, overly mocked tests, uncovered code); Smith
+  recommended a real requirements pass instead of jumping to `*impl`.
+- User invoked `*plan Sprint 27 Phase 2` — full planning chain.
+- Wrote `agents/cypher.docs/SPRINT27_PHASE2_USER_STORIES.md`: 4 stories.
+  3 high-confidence (coverage heatmap, redundancy view, efficiency table) all
+  buildable from existing Phase 1 data (`covered-by` + `test_runs`). 1 story
+  (mocking-heaviness signal) deliberately left unscoped — no schema captures
+  mocking; flagged 2 candidate approaches (static AST count vs. runtime
+  instrumentation) as open questions for Morpheus rather than guessing a
+  metric threshold.
+- Handed to Smith for Gate 1.
 
 ## Current Project
 Via - Python codebase indexing and querying CLI tool
