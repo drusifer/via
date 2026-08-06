@@ -17,7 +17,7 @@ VIA is a command-line tool for indexing and searching Python, JavaScript, TypeSc
 - **Per-Symbol Timestamps**: Watch mode tracks mtime per symbol, not just per file
 - **Full-Path Matching**: `-Q` flag enables path-based file queries (`via -mg 'via/core/*' -tF -Q`)
 - **Watch Mode**: Auto re-index on file changes (`via index . -w`)
-- **MCP Server**: Expose `via_query` to Claude Code and other MCP clients via JSON-RPC 2.0
+- **MCP Server**: Expose `via_query` and `via_ask` to Claude Code and other MCP clients via JSON-RPC 2.0
 - **Streaming Architecture**: O(1) memory usage for large result sets
 - **Result Cap Warning**: Notifies when results hit `--limit` with total match count
 
@@ -139,7 +139,9 @@ via index . -w     # Index then watch for file changes, auto re-indexing
 
 ### MCP Mode (AI Agent Integration)
 
-VIA can run as an MCP (Model Context Protocol) server, exposing the `via_query` tool to Claude Code and other MCP clients over JSON-RPC 2.0 via stdio.
+VIA can run as an MCP (Model Context Protocol) server, exposing `via_query`
+and `via_ask` to Claude Code and other MCP clients over JSON-RPC 2.0 via
+stdio. The server uses the MCP Python SDK 2.x `MCPServer` API.
 
 ```bash
 # Register via as an MCP server in the current project
@@ -158,10 +160,11 @@ via status mcp
 via uninstall mcp
 ```
 
-The server creates or refreshes the index on startup, auto-starts watch mode so the index stays current, and serves the web UI on `http://localhost:7891` by default. Claude Code can then call `via_query` with CLI args:
+The server creates or refreshes the index on startup, auto-starts watch mode so the index stays current, and serves the web UI on `http://localhost:7891` by default. Claude Code can then call `via_query` with CLI args or `via_ask` with an English query:
 
 ```json
 {"args": ["-mg", "*Parser*", "-tc"]}
+{"query": "find classes named Parser"}
 ```
 
 ## Python API
@@ -278,7 +281,7 @@ via/
 │   │   ├── json_renderer.py # JsonRenderer (-oJ, MCP)
 │   │   └── factory.py      # RendererFactory
 │   ├── mcp/                # MCP server (Sprint 7)
-│   │   ├── server.py       # FastMCP stdio server
+│   │   ├── server.py       # MCPServer stdio server (MCP SDK 2.x)
 │   │   └── schema.py       # via_query tool schema builder
 │   ├── commands/           # CLI command implementations
 │   │   ├── index.py        # Index command
@@ -314,8 +317,8 @@ via/
 │   Formatted, Diagram,     │                                  │
 │   JSON, Usage)            │  WatchService (watchdog)         │
 ├─────────────────────────────────────────────────────────────┤
-│  MCP Server (FastMCP / stdio JSON-RPC 2.0)                  │
-│  via_query tool → PipelineExecutor → JsonRenderer           │
+│  MCP Server (MCPServer / stdio JSON-RPC 2.0)               │
+│  via_query / via_ask → PipelineExecutor → JsonRenderer      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -343,11 +346,11 @@ via/
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.10+
 - SQLite 3.x (included with Python)
 - Pygments (for syntax highlighting)
 - watchdog (for watch mode)
-- mcp>=1.26 (for MCP server mode)
+- mcp>=2.0 (for MCP server mode)
 
 ## License
 

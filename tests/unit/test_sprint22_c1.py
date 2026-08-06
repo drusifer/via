@@ -1,12 +1,15 @@
 """Sprint 22 Cycle 1 tests for structured query errors."""
 from __future__ import annotations
 
+import asyncio
 import logging
+
+from mcp.server import MCPServer
 
 from via.__main__ import _run_pipeline_command
 from via.core.constants import EXIT_ERROR
 from via.db.store import DatabaseStore
-from via.mcp.server import _mcp_query_response
+from via.mcp.server import _build_mcp_app, _mcp_query_response
 from via.pipeline.errors import PipelineParseError, QueryError
 from via.pipeline.parser import PipelineParser
 
@@ -22,6 +25,14 @@ class _FailingRunner:
 class _EmptyRunner:
     def run_cli_args(self, _args):
         return []
+
+
+def test_mcp_v2_server_registers_via_tools():
+    server = _build_mcp_app(_EmptyRunner(), logging.getLogger(__name__))
+
+    assert isinstance(server, MCPServer)
+    tools = asyncio.run(server.list_tools())
+    assert {tool.name for tool in tools} == {"via_ask", "via_query"}
 
 
 def test_pipeline_parse_error_carries_structured_fields():

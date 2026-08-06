@@ -2,6 +2,13 @@
 
 This document consolidates all documentation for Sprint 7.
 
+> **Historical SDK note (2026-08-06):** Sprint 7 originally implemented
+> MCP mode with `mcp` 1.x and `FastMCP`. Current VIA requires Python 3.10+
+> and `mcp>=2.0`, and uses `mcp.server.MCPServer`. The FastMCP examples below
+> remain unchanged as a point-in-time sprint record; do not use them as
+> current installation or API guidance. See
+> [VIA Integrations](../specs/integrations.md) for the maintained guide.
+
 ## Table of Contents
 
 - [SPRINT_7_USER_STORIES.md](#sprint-7-user-storiesmd) (originally `agents/cypher.docs/SPRINT_7_USER_STORIES.md`)

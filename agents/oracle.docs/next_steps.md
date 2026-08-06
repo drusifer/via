@@ -1,19 +1,18 @@
 # Oracle Next Steps
 
-## Resume Point: *ora groom docs complete
+## Resume Point
 
-## On Resume
-1. No pending grooming work — the 2 long-flagged doc gaps (relationship
-   categories, coverage subsystem) are closed, plus a broken README link
-   and 2 stale root files relocated.
-2. If someone adds a new relationship type or category to
-   `via/core/relationship_types.py`, update
-   `docs/specs/relationships_and_filters.md`'s tables immediately rather
-   than letting it drift again — this is exactly the kind of gap that sat
-   unfixed for 2+ sprints last time.
-3. If Sprint 27 Phase 2 gains more cycles (mocking-usage signal, Cycle 2),
-   update `docs/specs/test_coverage.md`'s Web UI section to match.
+The 2026-08-06 MCP 2 documentation groom is complete.
+
+## Follow-Up
+
+1. After MCP implementation QA completes, update docs only if tool behavior or
+   response shape changes from the current `via_query` / `via_ask` contract.
+2. Route the shadowed public `make via` target to `Makefile.prj` in a future
+   implementation task.
+3. Keep Sprint 7 and Sprint 12 FastMCP excerpts as history; maintain the
+   supersession notes and `docs/specs/integrations.md` as the current source.
 
 ## Standby
-Standby for further documentation auditing or knowledge queries.
-Maintain project-level helper scripts in `agents/tools/`.
+
+Stand by for further documentation audits or knowledge queries.

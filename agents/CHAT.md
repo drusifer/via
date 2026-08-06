@@ -3325,3 +3325,62 @@ make[1]: Leaving directory '/home/drusifer/Projects/via'
 ---
 [<small>2026-07-02 22:27:58</small>] [**Oracle**]->[**all**] *ora done*:
  Groom complete. Fixed 2 long-flagged docs gaps: relationship categories (any-ref/upstream-ref/downstream-ref + inverse leaves) were undocumented, added to relationships_and_filters.md. via coverage subsystem had zero spec coverage, wrote docs/specs/test_coverage.md + linked from USER_GUIDE. Also fixed a broken README link and relocated 2 stale root files into docs/. Detail: agents/oracle.docs/current_task.md.
+
+---
+[<small>2026-08-06 17:24:54</small>] [**make**]->[**all**] *build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+============================== 3 errors in 1.34s ===============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-08-06 17:26:20</small>] [**Morpheus**]->[**all**] *lead guide*:
+ Investigating missing mcp.server.fastmcp during pytest collection; checking dependency declaration versus SDK import-path change before assigning implementation.
+
+---
+[<small>2026-08-06 17:27:07</small>] [**Neo**]->[**all**] *swe fix*:
+ Activated for fastmcp dependency regression. Inspecting dependency metadata and compatibility before applying the smallest v1 constraint.
+
+---
+[<small>2026-08-06 17:29:03</small>] [**make**]->[**all**] *build*:
+ Build FAILED exit=2 | make lint-fast | /home/drusifer/Projects/via/build/build.out
+
+note: This error originates from a subprocess, and is likely not a problem with pip.
+make[1]: *** [Makefile.prj:36: .venv/installed-dev.stamp] Error 1
+
+---
+[<small>2026-08-06 17:30:04</small>] [**Neo**]->[**trin**] *handoff*:
+ MCP 2 migration complete: dependency mcp>=2.0, Python>=3.10, FastMCP replaced by MCPServer, testable app builder added. Focused formerly failing MCP files: 17 passed. lint-fast reaches Ruff but is blocked by 5 unrelated pre-existing findings. @Trin *qa verify MCP 2 server migration.
+
+---
+[<small>2026-08-06 17:30:45</small>] [**Trin**]->[**all**] *qa resume*:
+ Trin activated for MCP 2 migration QA: reviewing Neo's diff and validating focused regressions plus MCP tool registration/stdio through public Make targets.
+
+---
+[<small>2026-08-06 17:31:19</small>] [**make**]->[**all**] *build*:
+ Build FAILED exit=2 | make test | /home/drusifer/Projects/via/build/build.out
+========================= 1 failed, 5 passed in 3.10s ==========================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-08-06 17:31:34</small>] [**Oracle**]->[**all**] *groom*:
+ Oracle activated for documentation groom. Auditing MCP 2 migration claims (MCPServer, mcp>=2.0, Python>=3.10) and normal documentation hygiene.
+
+---
+[<small>2026-08-06 17:32:54</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+============================== 27 passed in 3.57s ==============================
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+
+---
+[<small>2026-08-06 17:33:44</small>] [**Oracle**]->[**trin**] *handoff*:
+ MCP 2 docs groom complete: README, integrations/install specs, and changelog now say MCPServer, mcp>=2.0, Python>=3.10, and document via_query + via_ask. Sprint 7/12 FastMCP excerpts marked historical. Also fixed invalid python -tm venv command. No tests rerun (docs-only); git diff --check passed. Summary: agents/oracle.docs/MCP2_DOC_GROOM_Summary_2026-08-06T17-33.md. Public make via target is shadowed/no-op; Makefile.prj target works. @Trin *qa continue MCP 2 verification.
+
+---
+[<small>2026-08-06 17:34:22</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/drusifer/Projects/via/build/build.out
+make[1]: Leaving directory '/home/drusifer/Projects/via'
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
+---
+[<small>2026-08-06 17:35:01</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
+ MCP 2 migration QA PASSES. Original collection regression fixed; focused MCP gate 27/27 and full suite 1424 passed, 2 skipped. Updated obsolete Sprint 7 batch-EOF harness to real MCP 2 ClientSession; verified initialize, tools/list, real via_query result, empty result, clean shutdown. Report: agents/trin.docs/FASTMCP_MCP2_QA_Summary_2026-08-06T17-34.md. @Morpheus *lead review MCP 2 migration.

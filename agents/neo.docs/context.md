@@ -1,5 +1,14 @@
 # Neo Context
 
+## MCP 2 migration (2026-08-06)
+- MCP 2 removes `mcp.server.fastmcp`; VIA now imports
+  `mcp.server.MCPServer` and requires `mcp>=2.0`.
+- MCP 2 requires Python 3.10+, so `requires-python` is now `>=3.10`.
+- `MCPServer.tool()` and `MCPServer.run(transport="stdio")` retain the API
+  VIA needs. `_build_mcp_app()` isolates registration for focused tests.
+- Focused MCP collection/regression set: 17 passed.
+- Oracle `lessons.md` and `memory.md` were absent during entry.
+
 ## Sprint 27 Phase 2 Cycle 1 — AC7 Drill-Down + LOC Sizing Addition (2026-07-02)
 - User's answer to the AC7 semantics question I escalated: leaf = method/
   function; click shows qualified name + docstring/args; anon funcs show
@@ -445,4 +454,3 @@ Sprint 12: Web UI fixes (UX-001 to UX-005). 1121+74+22 tests.
 - **Class-Based Hierarchy**: Modeled relationship types as subclasses of composite categories (`Any`, `UpstreamRef`, `DownstreamRef`, `ReaderRef`, `WriterRef`) in Python to leverage standard object-oriented `issubclass` mapping.
 - **Mixed Direction Support**: Resolved queries spanning both incoming and outgoing dependency directions (such as `blast` or `any`) will be compiled into SQL `UNION` queries inside `DatabaseStore.query_relationships`.
 - **Canned Configuration**: Once the class hierarchy is integrated, the `blast` query can be defined purely as `.via/canned/blast.json` containing `any-ref` without code changes to the canned query modules.
-

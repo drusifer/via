@@ -13,11 +13,14 @@ TL;DR: Instructions for installing VIA, running basic index operations, tracking
 
 ## Installation
 
+VIA requires Python 3.10 or newer. MCP server mode uses the official
+`mcp>=2.0` Python SDK.
+
 ```bash
 # Clone and install
 git clone https://github.com/your-org/via.git
 cd via
-python -tm venv .venv
+python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 

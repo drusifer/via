@@ -1,6 +1,22 @@
 # Oracle Context
 
-**Last Updated**: 2026-07-02
+**Last Updated**: 2026-08-06
+
+## MCP 2 Doc Groom (2026-08-06)
+
+- Maintained MCP documentation now reflects the current implementation:
+  `mcp.server.MCPServer`, `mcp>=2.0`, Python 3.10+, and both `via_query` and
+  `via_ask` tools.
+- Sprint 7 and Sprint 12 retain FastMCP excerpts as point-in-time history but
+  carry prominent supersession notices linking to the maintained integration
+  spec.
+- `CHANGELOG.md` now records the MCP 2 migration under a true Unreleased
+  section; the released Sprint 12 section is no longer mislabeled Unreleased.
+- `docs/specs/installation_and_indexing.md` contained an invalid
+  `python -tm venv` command; corrected to `python -m venv`.
+- Automation debt: public `make via ARGS=...` is shadowed/no-op, while
+  `make -f Makefile.prj via ARGS=...` works. This requires a code/Makefile
+  task, not further doc grooming.
 
 ## *ora groom docs (2026-07-02)
 - Verified via `via/core/relationship_types.py` (not guessed) the exact

@@ -1,5 +1,20 @@
 # Neo Next Steps
 
+## Resume Point: MCP 2 migration complete
+
+1. No implementation remains for the dependency regression.
+2. Await Trin QA feedback on the MCP 2 migration.
+3. If QA finds a runtime protocol issue, reproduce with the focused MCP files
+   before changing code; tool registration and stdio API compatibility are
+   already covered.
+
+## Verification state
+- Focused MCP tests: 17 passed.
+- Fast lint is blocked by five unrelated, pre-existing findings documented in
+  `FASTMCP_MCP2_MIGRATION_Summary_2026-08-06T17-30.md`.
+
+---
+
 ## Resume Point: Sprint 27 Phase 2 Cycle 1 fully CLOSED (AC7 + LOC sizing added and verified)
 
 ## On Resume

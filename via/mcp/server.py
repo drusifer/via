@@ -1,11 +1,11 @@
 """
-VIA MCP server — FastMCP-based stdio server for codebase queries.
+VIA MCP server — MCPServer-based stdio server for codebase queries.
 
 TLDR:
-    run_mcp_server(root_dir, db_path) starts a FastMCP server over stdio.
+    run_mcp_server(root_dir, db_path) starts an MCPServer over stdio.
     Registers a single tool: via_query(args: list[str]) -> list[dict].
     WatchService runs in a background daemon thread (handle_signals=False)
-    so the FastMCP event loop owns stdin/stdout exclusively.
+    so the MCPServer event loop owns stdin/stdout exclusively.
     MCP-mode logging goes to ~/.via/mcp.log to keep stdio clean.
 
 Author: Drew Gutstein
@@ -19,7 +19,7 @@ import logging
 import threading
 from pathlib import Path
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from via.core.constants import EXIT_SUCCESS
 from via.core.utils import strip_ansi
@@ -151,13 +151,48 @@ def _mcp_query_response(runner: ViaRunner, args: list[str], logger: logging.Logg
         ))
 
 
+def _build_mcp_app(runner: ViaRunner, logger: logging.Logger) -> MCPServer:
+    """Build the MCP 2 server and register VIA's tools."""
+    mcp = MCPServer("via")
+    schema = build_tool_schema()
+
+    @mcp.tool(description=schema["description"])
+    def via_query(args: list[str]) -> dict:
+        return _mcp_query_response(runner, args, logger)
+
+    @mcp.tool(
+        description=(
+            "Query the codebase using a natural language English query. Translates "
+            "the query deterministically into a VIA pipeline command and executes it."
+        )
+    )
+    def via_ask(query: str) -> dict:
+        from via.pipeline.natural_query import LarkNaturalQueryParser
+
+        try:
+            parser = LarkNaturalQueryParser()
+            compiled_args = parser.parse(query)
+        except PipelineParseError as exc:
+            return _mcp_error_response(exc.to_query_error())
+        except Exception as exc:
+            logger.exception("via_ask internal error: %s", exc)
+            return _mcp_error_response(QueryError(
+                code="internal_error",
+                message="VIA natural query translation failed unexpectedly.",
+                hint="Check the MCP server log for details.",
+            ))
+        return _mcp_query_response(runner, compiled_args, logger)
+
+    return mcp
+
+
 def run_mcp_server(
     root_dir: str,
     db_path: str,
     port: int = 7891,
     no_web: bool = False,
 ) -> int:
-    """Start the FastMCP stdio server with WatchService in background thread.
+    """Start the MCPServer stdio server with WatchService in background thread.
 
     Args:
         root_dir: Root directory being served
@@ -205,32 +240,7 @@ def run_mcp_server(
         import sys as _sys
         print(f"Web UI: http://localhost:{web_server.port}", file=_sys.stderr)
 
-    mcp = FastMCP("via")
-
-    _schema = build_tool_schema()
-
-    @mcp.tool(description=_schema["description"])
-    def via_query(args: list[str]) -> dict:
-        return _mcp_query_response(runner, args, logger)
-
-    @mcp.tool(description="Query the codebase using a natural language English query. Translates the query deterministicly into a VIA pipeline command and executes it.")
-    def via_ask(query: str) -> dict:
-        from via.pipeline.natural_query import LarkNaturalQueryParser
-        from via.pipeline.errors import PipelineParseError
-        try:
-            parser = LarkNaturalQueryParser()
-            compiled_args = parser.parse(query)
-        except PipelineParseError as exc:
-            return _mcp_error_response(exc.to_query_error())
-        except Exception as exc:
-            logger.exception("via_ask internal error: %s", exc)
-            from via.pipeline.errors import QueryError
-            return _mcp_error_response(QueryError(
-                code="internal_error",
-                message="VIA natural query translation failed unexpectedly.",
-                hint="Check the MCP server log for details.",
-            ))
-        return _mcp_query_response(runner, compiled_args, logger)
+    mcp = _build_mcp_app(runner, logger)
 
     try:
         mcp.run(transport="stdio")

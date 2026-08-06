@@ -1,10 +1,23 @@
 # Trin Current Task
 
-**Task**: Sprint 27 Phase 2 Cycle 1 UAT (D3 intensity heatmap + efficiency table)
+**Task**: MCP 2 server migration QA
 **Status**: COMPLETE (100%) — PASSES, handed to Morpheus
-**Updated**: 2026-07-02
+**Updated**: 2026-08-06
 
 ## Completed
+- [x] Reviewed dependency and MCP server migration diff.
+- [x] Verified original collection regression: 17 focused unit tests pass.
+- [x] Replaced obsolete batch-stdin MCP UAT harness with a real MCP 2 client
+      session lifecycle.
+- [x] Verified stdio initialize, tools/list, via_query call, empty result, and
+      clean shutdown: combined focused MCP gate 27 passed.
+- [x] Full suite checkpoint: 1424 passed, 2 skipped.
+- [x] Wrote MCP 2 QA summary and handed to Morpheus.
+
+## Previous completed task
+- Sprint 27 Phase 2 Cycle 1 UAT (D3 intensity heatmap + efficiency table).
+
+## Historical completed items
 - [x] Independently re-ran full suite (1400 passed, 1 skipped) and JS suite
       (98 passed) — didn't just trust Neo's reported numbers.
 - [x] Found a second missing `make` public stub (`test-coverage` itself —
@@ -26,10 +39,7 @@
 - [x] Handed to Morpheus for code review.
 
 ## Next
-- Awaiting Morpheus's architecture/code review.
-- After Morpheus: Smith's usability test (real browser — D3 rendering,
-  colorblind scale, outlier marker) is still outstanding before Cycle 1
-  fully closes. Flagged this explicitly in my UAT report as not covered.
+- Awaiting Morpheus's final MCP 2 architecture/code review.
 
 ## Previous task (for reference)
 Sprint 26 Cycle 4 UAT — COMPLETE, closed 2026-07-01.

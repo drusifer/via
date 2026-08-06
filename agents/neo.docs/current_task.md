@@ -1,5 +1,22 @@
 # Neo Current Task
 
+**Task**: Migrate VIA MCP server to MCP SDK 2.0
+**Status**: COMPLETE (100%)
+**Updated**: 2026-08-06
+
+## Completed
+- [x] Changed dependency to `mcp>=2.0`.
+- [x] Raised Python floor to 3.10 to match MCP 2.
+- [x] Replaced removed FastMCP import with `MCPServer`.
+- [x] Extracted testable MCP app construction.
+- [x] Added MCP 2 tool-registration regression coverage.
+- [x] Verified the three formerly uncollectable MCP-related files: 17 passed.
+
+## Next
+- Trin QA verification; no Neo implementation work remains.
+
+---
+
 **Task**: Sprint 27 Phase 2 Cycle 1 — AC7 drill-down + LOC sizing (post-closure addition)
 **Status**: COMPLETE (100%) — Cycle 1 fully CLOSED
 **Updated**: 2026-07-02

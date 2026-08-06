@@ -6,7 +6,16 @@ All notable changes to **via** are documented here.
 
 ---
 
-## [Unreleased] — Sprint 12: Web UI + UX Polish
+## [Unreleased]
+
+### Changed
+
+- Migrated MCP server mode from the removed MCP 1.x `FastMCP` import to the
+  MCP 2.x `mcp.server.MCPServer` API.
+- Raised the runtime requirement to Python 3.10+ and the MCP dependency to
+  `mcp>=2.0`.
+
+## Sprint 12: Web UI + UX Polish
 
 **Released:** 2026-03-23
 

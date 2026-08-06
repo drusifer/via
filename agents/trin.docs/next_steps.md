@@ -1,20 +1,17 @@
 # Trin Next Steps
 
-## Resume Point: Sprint 27 Phase 2 Cycle 1 UAT complete (PASSES), handed to Morpheus
+## Resume Point: MCP 2 migration QA complete (PASSES), handed to Morpheus
 
 ## On Resume
-1. Check CHAT.md for Morpheus's code review verdict on Cycle 1.
-2. If Morpheus approves: next stop is Smith's usability test (real
-   browser) — I explicitly flagged that my UAT did not (couldn't) cover
-   real D3 rendering, the colorblind-safe scale, or the outlier visual
-   marker, since none of that is exercised by jsdom/CI.
-3. If Morpheus flags an issue: back to Neo for that specific fix, then
-   re-UAT just the changed part — don't re-run the whole cycle from scratch.
-4. Once Cycle 1 fully closes: Cycle 2 (mocking-usage signal) is next per
-   `agents/mouse.docs/SPRINT_27_PHASE2_TASKS.md`.
+1. Check CHAT.md for Morpheus's MCP 2 review verdict.
+2. If Morpheus flags implementation changes, return the exact scope to Neo and
+   re-run only the affected MCP tests before a final checkpoint.
+3. Preserve the real `ClientSession` stdio UAT; do not restore the obsolete
+   batch-stdin-plus-immediate-EOF protocol simulation.
 
 ## Remember
-- `make test FILE=<path>` for targeted runs; full suite at checkpoints.
+- Focused gate: `make test FILE='tests/subprocess/test_sprint7_uat.py tests/unit/test_sprint22_c1.py tests/unit/test_sprint23_c3.py tests/unit/test_sprint25_c1.py'`.
+- Full checkpoint on 2026-08-06: 1424 passed, 2 skipped.
 - `make via_index && make test-coverage` regenerates real coverage data
   against this project's own index — useful for any future ground-truth
   cross-check like the one I just did for Cycle 1. Both now have proper

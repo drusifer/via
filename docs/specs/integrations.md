@@ -11,7 +11,7 @@ TL;DR: How to register and run VIA as a Model Context Protocol (MCP) server for 
 
 ## MCP Mode (AI Agent Integration)
 
-VIA can run as an MCP (Model Context Protocol) server, exposing a `via_query` tool to Claude Code and other MCP clients over JSON-RPC 2.0 via stdio. The MCP process performs the initial index, starts watch mode, and serves the web UI, so one `via mcp serve` instance keeps everything current.
+VIA can run as an MCP (Model Context Protocol) server, exposing `via_query` and `via_ask` tools to Claude Code and other MCP clients over JSON-RPC 2.0 via stdio. It uses the official MCP Python SDK 2.x `MCPServer` API and requires Python 3.10 or newer. The MCP process performs the initial index, starts watch mode, and serves the web UI, so one `via mcp serve` instance keeps everything current.
 
 ### Setup
 
@@ -26,7 +26,7 @@ via status mcp
 via uninstall mcp
 ```
 
-`via install mcp` writes `.mcp.json` in the project root (next to `.via/`). Claude Code reads this at session startup and calls `tools/list` to discover the `via_query` tool.
+`via install mcp` writes `.mcp.json` in the project root (next to `.via/`). Claude Code reads this at session startup and calls `tools/list` to discover both tools.
 
 ### Starting the Server
 
@@ -37,7 +37,7 @@ via mcp serve /path/to/project   # Serve a specific project
 
 The server starts WatchService in a background thread, serves the web UI on `http://localhost:7891` by default, and listens for JSON-RPC 2.0 on stdin/stdout. Exit by closing stdin (Claude Code does this automatically on session end).
 
-### Calling via_query
+### Calling `via_query`
 
 Claude Code can call the tool with the same CLI args you would use on the command line:
 
@@ -49,10 +49,20 @@ Claude Code can call the tool with the same CLI args you would use on the comman
 
 Results are returned as a JSON array of symbol objects with fields: `symbol_name`, `symbol_type`, `file_path`, `line_number`, `byte_offset`, `byte_length`, `qualified_name`, `parent_name`.
 
+### Calling `via_ask`
+
+`via_ask` accepts a natural-language query, translates it deterministically into VIA pipeline arguments, and returns the same structured response as `via_query`:
+
+```json
+{"query": "find classes named Parser"}
+```
+
+Use `via_query` when exact CLI control matters and `via_ask` when a concise English query is more convenient.
+
 ### Inspecting the Schema
 
 ```bash
-via mcp schema             # Print the via_query tool schema as JSON
+via mcp schema             # Print the via_query CLI-argument schema as JSON
 ```
 
 This shows exactly what Claude Code sees when it calls `tools/list`.
@@ -112,4 +122,3 @@ The UI is split into two panels:
 **Error state** — shown when the database is unavailable (run `via index .` first):
 
 ![Error state](../tests/e2e/screenshots/ux-05-error-state.png)
-

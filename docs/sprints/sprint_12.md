@@ -1,5 +1,11 @@
 # Sprint 12 Consolidated Documentation
 
+> **Historical SDK note (2026-08-06):** Code excerpts in this sprint record
+> use the MCP 1.x `FastMCP` API. Current VIA requires Python 3.10+ and
+> `mcp>=2.0`, using `mcp.server.MCPServer`; see
+> [VIA Integrations](../specs/integrations.md). The excerpts are retained as
+> point-in-time design history.
+
 This document consolidates all documentation for Sprint 12.
 
 ## Table of Contents
