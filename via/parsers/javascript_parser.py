@@ -2,8 +2,8 @@
 JavaScript and TypeScript language parser using tree-sitter.
 
 TLDR:
-    Implements JavaScriptParser (a ParserABC subclass) that parses .js/.mjs/.cjs/.jsx
-    files as JavaScript and .ts/.tsx files as TypeScript using tree-sitter grammars.
+    Implements JavaScriptParser (a ParserABC subclass) that parses .js/.mjs/.cjs/.jsx/.es/.es6/.jsm
+    files as JavaScript and .ts/.tsx/.mts/.cts files as TypeScript using tree-sitter grammars.
     Extracts FunctionEntity (named functions and module-level arrow functions),
     ClassEntity (classes, TS interfaces, TS enums), ImportEntity (ES module imports),
     and GlobalEntity (module-level const/let/var). Partial parse is supported:
@@ -38,8 +38,8 @@ from ._js_body import (
 )
 
 # JS/TS extensions
-_JS_EXTENSIONS: Set[str] = {'.js', '.mjs', '.cjs', '.jsx'}
-_TS_EXTENSIONS: Set[str] = {'.ts', '.tsx'}
+_JS_EXTENSIONS: Set[str] = {'.js', '.mjs', '.cjs', '.jsx', '.es', '.es6', '.jsm'}
+_TS_EXTENSIONS: Set[str] = {'.ts', '.tsx', '.mts', '.cts'}
 _ALL_EXTENSIONS: Set[str] = _JS_EXTENSIONS | _TS_EXTENSIONS
 
 # Maximum file size: 10MB (matches project-wide limit)

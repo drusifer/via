@@ -3384,3 +3384,10 @@ ResourceWarning: Enable tracemalloc to get the object allocation traceback
 ---
 [<small>2026-08-06 17:35:01</small>] [**Trin**]->[**Morpheus**] *qa handoff*:
  MCP 2 migration QA PASSES. Original collection regression fixed; focused MCP gate 27/27 and full suite 1424 passed, 2 skipped. Updated obsolete Sprint 7 batch-EOF harness to real MCP 2 ClientSession; verified initialize, tools/list, real via_query result, empty result, clean shutdown. Report: agents/trin.docs/FASTMCP_MCP2_QA_Summary_2026-08-06T17-34.md. @Morpheus *lead review MCP 2 migration.
+
+---
+[<small>2026-10-02 04:08:50</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make test | /home/user/via/build/build.out
+make[1]: Leaving directory '/home/user/via'
+[notice] A new release of pip is available: 24.0 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip

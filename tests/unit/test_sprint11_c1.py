@@ -115,11 +115,13 @@ class TestJavaScriptParserExtensions:
         assert '.mjs' in exts
         assert '.cjs' in exts
         assert '.jsx' in exts
+        assert {'.es', '.es6', '.jsm'} <= exts
 
     def test_supported_extensions_ts(self):
         exts = self.parser.get_supported_extensions()
         assert '.ts' in exts
         assert '.tsx' in exts
+        assert {'.mts', '.cts'} <= exts
 
     def test_can_parse_js(self):
         assert self.parser.can_parse("index.js")
