@@ -1,6 +1,6 @@
 # Makefile for the VIA project
 
-.PHONY: all venv test coverage clean lint-fast lint lints lint-slow duplicates security dead-code analyze install-system via-watch via-mcp-serve via
+.PHONY: dist all venv test coverage clean lint-fast lint lints lint-slow duplicates security dead-code analyze install-system via-watch via-mcp-serve via
 
 # Variables
 PYTHON := python3
@@ -143,3 +143,8 @@ via-mcp-serve: install-dev
 # Install via as a package available globally via pipx
 install-system: ## Install via globally using pipx (makes 'via' command available system-wide)
 	pipx install --editable . --force
+
+# Build sdist + wheel and validate metadata (artifacts land in dist/)
+dist: install-dev
+	rm -rf dist
+	. ${VENV_ACTIVATE} && pip install --quiet build twine && python -m build && twine check dist/*
