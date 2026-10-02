@@ -123,7 +123,13 @@ class FormattedRenderer(Renderer):
         ext_map = {
             '.py': 'python',
             '.js': 'javascript',
+            '.mjs': 'javascript',
+            '.cjs': 'javascript',
+            '.jsx': 'jsx',
             '.ts': 'typescript',
+            '.mts': 'typescript',
+            '.cts': 'typescript',
+            '.tsx': 'tsx',
             '.java': 'java',
             '.c': 'c',
             '.cpp': 'cpp',

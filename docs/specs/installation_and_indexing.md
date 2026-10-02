@@ -74,8 +74,8 @@ via index . -vvv   # Even more detail
 | Language | Extensions | Symbols Extracted |
 |----------|-----------|-------------------|
 | Python | `.py`, `.pyx`, `.pyi` | classes, methods, functions, imports, globals |
-| JavaScript | `.js`, `.mjs`, `.cjs`, `.jsx` | classes, methods, functions, imports, globals |
-| TypeScript | `.ts`, `.tsx` | classes, interfaces, enums, methods, functions, imports, globals, type aliases |
+| JavaScript | `.js`, `.mjs`, `.cjs`, `.jsx`, `.es`, `.es6`, `.jsm` | classes, methods, functions, imports, globals |
+| TypeScript | `.ts`, `.tsx`, `.mts`, `.cts` | classes, interfaces, enums, methods, functions, imports, globals, type aliases |
 | Dart / Flutter | `.dart` | classes, mixins, enums, extensions, constructors, methods, functions, directives, globals |
 | Markdown | `.md`, `.markdown` | headers |
 
