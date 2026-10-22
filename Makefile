@@ -1,213 +1,178 @@
+# Makefile for the VIA project
+
 .DEFAULT_GOAL := help
 
-# ── Bob Protocol Configuration ───────────────────────────────────────────────
-# Detect if this file is being run directly as Makefile.bob
-_IS_BOB_ENTRY := $(filter %Makefile.bob,$(firstword $(MAKEFILE_LIST)))
+.PHONY: dist all venv test coverage clean lint-fast lint lints lint-slow duplicates security dead-code analyze install-system via-watch via-mcp-serve via
 
-ifdef MKF_ACTIVE
+# Variables
+PYTHON := python3
+VENV_DIR := .venv
+VENV_PYTHON := $(VENV_DIR)/bin/python
+VENV_ACTIVATE := $(VENV_DIR)/bin/activate
+VENV_STAMP := $(VENV_DIR)/venv.stamp
 
-# ── Re-invocation Layer ──────────────────────────────────────────────────────
-# Included by mkf.py to run the actual target.
+REQUIREMENTS := pyproject.toml
+INSTALL_STAMP := $(VENV_DIR)/installed.stamp
+INSTALL_DEV_STAMP := $(VENV_DIR)/installed-dev.stamp
 
-# ── Bob Protocol Targets ─────────────────────────────────────────────────────
+# Default target runs install and test
+all: install test
 
-.PHONY: tldr test via_index install_bob update_bob pull_bob clean_bob diff_bob
+# Create the virtual environment if it doesn't exist
+$(VENV_STAMP):
+	$(PYTHON) -m venv $(VENV_DIR)
+	touch $(VENV_STAMP)
+
+venv: $(VENV_STAMP)
+
+# Install dependencies into the virtual environment
+$(INSTALL_STAMP): $(VENV_STAMP) $(REQUIREMENTS)
+	$(VENV_PYTHON) -m pip install --upgrade pip && $(VENV_PYTHON) -m pip install -e .
+	touch $(INSTALL_STAMP)
+
+install: $(INSTALL_STAMP)
+
+# Install dev dependencies. This target is self-contained and includes base dependencies.
+# It no longer depends on the 'install' target's stamp file to avoid redundant installations.
+$(INSTALL_DEV_STAMP): $(VENV_STAMP) $(REQUIREMENTS)
+	. ${VENV_ACTIVATE} && pip install -e ".[dev]"
+	touch $(INSTALL_DEV_STAMP)
+
+install-dev: $(INSTALL_DEV_STAMP)
+
+compile-agents: install-dev ## Compile all agent.yaml files into SKILL.md and agent.json
+	. ${VENV_ACTIVATE} && python agents/tools/compile_agents.py
+
+via: install-dev ## Run via command in the virtual environment (usage: make via ARGS="...")
+	$(VENV_DIR)/bin/via $(ARGS)
+
+# Run tests using the virtual environment's python
+test: install-dev
+	. ${VENV_ACTIVATE} && pytest $(or $(FILE),tests/) $(ARGS)
+
+# Run tests with terminal coverage plus LCOV export
+coverage: install-dev
+	mkdir -p coverage
+	. ${VENV_ACTIVATE} && pytest $(or $(FILE),tests/) \
+		--cov=via \
+		--cov-report=term-missing \
+		--cov-report=lcov:coverage/lcov.info \
+		$(ARGS)
+
+# Capture per-test coverage + run metadata (status/duration/last-run), then
+# import into the via index as `covered-by` (per-test) and `test_runs`.
+# Sprint 27. Note: tests/subprocess/ tests spawn a real subprocess for
+# genuine daemon/stdin-protocol reasons, so coverage inside that subprocess
+# isn't attributed to a specific test — everything else in tests/ runs
+# in-process (see conftest.py) and is captured normally.
+test-coverage: install-dev
+	. ${VENV_ACTIVATE} && pytest --cov=via --cov-context=test -v tests/
+	. ${VENV_ACTIVATE} && python -m via coverage import-contexts .coverage
+
+# Run JavaScript unit tests
+test-js:
+	npm test
+
+# Run Playwright E2E tests (requires via installed; screenshots saved to tests/e2e/screenshots/)
+test-e2e:
+	npx playwright test
+
+# Run all tests: Python + JavaScript + E2E
+test-all: test test-js test-e2e
+
+# Clean up the project directory
+clean:
+	rm -rf .via/
+	rm -rf $(VENV_DIR)
+	find . -type d -name "__pycache__" -exec rm -r {} +
+	rm -rf .pytest_cache .coverage htmlcov coverage
+
+# =============================================================================
+# Static Analysis Tools
+# =============================================================================
+
+# FAST: Ruff hygiene only - unused imports/vars, dead code (~1 sec)
+lint-fast: install-dev
+	@echo "=== RUFF: Hygiene (unused imports/vars, dead code) ==="
+	. ${VENV_ACTIVATE} && ruff check via/ --select F401,F841,ERA
+
+# MEDIUM: Ruff hygiene + Bandit security (~5 sec)
+lint: install-dev fix
+	@echo "=== RUFF: Hygiene (unused imports/vars, dead code) ==="
+	-. ${VENV_ACTIVATE} && ruff check via/ --select F401,F841,ERA
+	@echo ""
+	@echo "=== BANDIT: Security Analysis ==="
+	. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
+
+# Compatibility alias used by Bob chat/run commands
+lints: lint
+
+# SLOW: Full analysis - Ruff complexity + hygiene + Pylint (duplicates) + Bandit (~30 sec)
+lint-slow: install-dev duplicates security vulture
+	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
+	-. ${VENV_ACTIVATE} && ruff check via/
+	@echo ""
+	@echo "=== PYLINT: Duplicate Code & Design Rules ==="
+	-. ${VENV_ACTIVATE} && pylint via/ --disable=all --enable=duplicate-code
+	@echo ""
+	@echo "=== BANDIT: Security Analysis ==="
+	-. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
+
+# Individual tools (for targeted runs)
+duplicates: install-dev
+	. ${VENV_ACTIVATE} && pylint via/ --disable=all --enable=duplicate-code
+
+security: install-dev
+	. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
+
+dead-code: install-dev ## Run Vulture dead code detection against via/
+	. ${VENV_ACTIVATE} && vulture via/ --min-confidence 80
+
+fix: install-dev
+	@echo "=== RUFF: fix ==="
+	. ${VENV_ACTIVATE} && ruff check --fix via/
+
+# Run Via watch mode with the web UI enabled. Override DIR/PORT as needed:
+# make via-watch DIR=. PORT=7891
+via-watch: install-dev
+	. ${VENV_ACTIVATE} && via index -w $(or $(DIR),.) --port $(or $(PORT),7891)
+
+# Run the Via MCP stdio server. This also starts watch mode and serves the web UI.
+# Override DIR/PORT as needed: make via-mcp-serve DIR=. PORT=7891
+via-mcp-serve: install-dev
+	. ${VENV_ACTIVATE} && via mcp serve $(or $(DIR),.) --port $(or $(PORT),7891)
+
+# Install via as a package available globally via pipx
+install-system: ## Install via globally using pipx (makes 'via' command available system-wide)
+	pipx install --editable . --force
+
+# Build sdist + wheel and validate metadata (artifacts land in dist/)
+dist: install-dev
+	rm -rf dist
+	. ${VENV_ACTIVATE} && pip install --quiet build twine && python -m build && twine check dist/*
+
+# ── Publish to the pi-patch Forgejo registry (forge.pi-patch.lan) ──────────────
+# Credentials: make -C $(PI_PATCH)/cluster forgejo-token
+PI_PATCH        ?= $(HOME)/Projects/pi-patch
+FORGEJO_PUBLISH := $(PI_PATCH)/cluster/scripts/forgejo-publish.sh
+FORGEJO_VERSION ?= $(shell git describe --tags --always --dirty)
+
+.PHONY: deploy-forgejo
+deploy-forgejo: dist ## Build the via-index wheel/sdist and publish to pi-patch Forgejo PyPI
+	$(FORGEJO_PUBLISH) pypi dist
+
+# ── Agent / tooling helpers (formerly in the bobp-generated Makefile) ──────────
+.PHONY: help tldr via_index chat
+
+help: ## Show available make targets
+	@grep -E '^[a-zA-Z_][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
 tldr: ## Show TL;DR summaries from all project files (quick orientation for agents)
 	@rg --no-heading "TL;DR:" --glob "*.md" -N | sed 's|^\./||' | sort
 
-test: ## Run unit tests
-	@python -m unittest discover -s tests
-
 via_index: ## Build the via index required by the via MCP server
 	@via index "$(CURDIR)"
-
-install_bob: ## Copy agents into a project and set up skill links (usage: make install_bob TARGET=/path/to/project)
-	@[ -n "$(TARGET)" ] || { echo "Usage: make install_bob TARGET=/path/to/project"; exit 1; }
-	@[ -d "$(TARGET)" ] || { echo "Error: $(TARGET) does not exist"; exit 1; }
-	@echo "Installing BobProtocol into $(TARGET)..."
-	@rsync -a \
-		--exclude='*.docs/context.md' \
-		--exclude='*.docs/current_task.md' \
-		--exclude='*.docs/next_steps.md' \
-		--exclude='CHAT.md' \
-		agents/ $(TARGET)/agents/
-	@echo "Initialising agent state files..."
-	@for dir in $(TARGET)/agents/*.docs; do \
-		cp agents/templates/_template_context.md    $$dir/context.md; \
-		cp agents/templates/_template_current_task.md $$dir/current_task.md; \
-		cp agents/templates/_template_next_steps.md $$dir/next_steps.md; \
-	done
-	@cp agents/templates/_template_CHAT.md $(TARGET)/agents/CHAT.md
-	@echo "Installing Makefile into $(TARGET)..."
-	@if [ -f "$(TARGET)/Makefile" ]; then \
-		if grep -q "MKF_ACTIVE" "$(TARGET)/Makefile"; then \
-			cp Makefile "$(TARGET)/Makefile" && echo "  Updated: Makefile (bob-managed)"; \
-		else \
-			cp Makefile "$(TARGET)/Makefile.bob" && echo "  Installed: Makefile.bob"; \
-			if ! grep -q "include Makefile.bob" "$(TARGET)/Makefile"; then \
-				echo "include Makefile.bob" | cat - "$(TARGET)/Makefile" > "$(TARGET)/Makefile.tmp" && mv "$(TARGET)/Makefile.tmp" "$(TARGET)/Makefile"; \
-				echo "  Modified: Makefile (included Makefile.bob at top)"; \
-			fi; \
-		fi; \
-	else \
-		cp Makefile "$(TARGET)/Makefile" && echo "  Installed: Makefile (bob-managed)"; \
-	fi
-	@echo "Setting up Claude skill links..."
-	@python $(TARGET)/agents/tools/setup_agent_links.py
-	@echo ""
-	@echo "Done. BobProtocol installed in $(TARGET)"
-	@echo "Run 'make tldr' inside $(TARGET) to verify."
-
-update_bob: ## Update bob-protocol personas, skills, tools, and templates in a target project (usage: make update_bob TARGET=/path/to/project)
-	@[ -n "$(TARGET)" ] || { echo "Usage: make update_bob TARGET=/path/to/project"; exit 1; }
-	@[ -d "$(TARGET)" ] || { echo "Error: $(TARGET) does not exist"; exit 1; }
-	@echo "Updating BobProtocol in $(TARGET)..."
-	@rsync -a agents/skills/ $(TARGET)/agents/skills/
-	@rsync -a agents/tools/  $(TARGET)/agents/tools/
-	@rsync -a agents/templates/ $(TARGET)/agents/templates/
-	@for f in agents/*.docs/SKILL.md; do \
-		mkdir -p "$(TARGET)/$$(dirname $$f)"; \
-		rsync -a "$$f" "$(TARGET)/$$f"; \
-	done
-	@echo "Ensuring agent state files are initialised..."
-	@for dir in $(TARGET)/agents/*.docs; do \
-		[ -f $$dir/context.md ]      || cp agents/templates/_template_context.md      $$dir/context.md; \
-		[ -f $$dir/current_task.md ] || cp agents/templates/_template_current_task.md $$dir/current_task.md; \
-		[ -f $$dir/next_steps.md ]   || cp agents/templates/_template_next_steps.md   $$dir/next_steps.md; \
-	done
-	@[ -f $(TARGET)/agents/CHAT.md ] || cp agents/templates/_template_CHAT.md $(TARGET)/agents/CHAT.md
-	@echo "Updating Makefile in $(TARGET)..."
-	@if [ -f "$(TARGET)/Makefile" ]; then \
-		if grep -q "MKF_ACTIVE" "$(TARGET)/Makefile"; then \
-			cp Makefile "$(TARGET)/Makefile" && echo "  Updated: Makefile (bob-managed)"; \
-		else \
-			cp Makefile "$(TARGET)/Makefile.bob" && echo "  Updated: Makefile.bob"; \
-			if ! grep -q "include Makefile.bob" "$(TARGET)/Makefile"; then \
-				echo "include Makefile.bob" | cat - "$(TARGET)/Makefile" > "$(TARGET)/Makefile.tmp" && mv "$(TARGET)/Makefile.tmp" "$(TARGET)/Makefile"; \
-				echo "  Modified: Makefile (included Makefile.bob at top)"; \
-			fi; \
-		fi; \
-	else \
-		cp Makefile "$(TARGET)/Makefile" && echo "  Updated: Makefile (bob-managed)"; \
-	fi
-	@echo "Updating Claude skill links..."
-	@python $(TARGET)/agents/tools/setup_agent_links.py
-	@echo ""
-	@echo "Done. BobProtocol updated in $(TARGET)"
-
-pull_bob: ## Pull bob-protocol personas, skills, tools, and templates from another project (usage: make pull_bob SRC=/path/to/project)
-	@[ -n "$(SRC)" ] || { echo "Usage: make pull_bob SRC=/path/to/project"; exit 1; }
-	@[ -d "$(SRC)" ] || { echo "Error: $(SRC) does not exist"; exit 1; }
-	@echo "Pulling BobProtocol updates from $(SRC)..."
-	@rsync -a --existing $(SRC)/agents/skills/    agents/skills/
-	@rsync -a --existing $(SRC)/agents/tools/     agents/tools/
-	@rsync -a --existing $(SRC)/agents/templates/ agents/templates/
-	@for f in agents/*.docs/SKILL.md; do \
-		[ -f "$(SRC)/$$f" ] && rsync -a "$(SRC)/$$f" "$$f" || true; \
-	done
-	@echo ""
-	@echo "Done. BobProtocol pulled from $(SRC)"
-
-clean_bob: ## Remove generated symlinks and reset agent memory/state files
-	@echo "Removing generated symlinks..."
-	@python agents/tools/teardown_agent_links.py --keep-mcp
-	@echo "Resetting agent state files to templates..."
-	@for dir in agents/*.docs; do \
-		cp agents/templates/_template_context.md    $$dir/context.md; \
-		cp agents/templates/_template_current_task.md $$dir/current_task.md; \
-		cp agents/templates/_template_next_steps.md $$dir/next_steps.md; \
-	done
-	@cp agents/templates/_template_CHAT.md agents/CHAT.md
-	@echo "Done. Environment cleaned and state reset."
-
-diff_bob: ## Compare bob-protocol personas, skills, tools, and templates with a target project (usage: make diff_bob TARGET=/path/to/project)
-	@[ -n "$(TARGET)" ] || { echo "Usage: make diff_bob TARGET=/path/to/project"; exit 1; }
-	@[ -d "$(TARGET)" ] || { echo "Error: $(TARGET) does not exist"; exit 1; }
-	@echo "Diffing BobProtocol: $(CURDIR) vs $(TARGET)"
-	@echo ""
-	@for dir in agents/skills agents/tools agents/templates; do \
-		if [ -d "$(TARGET)/$$dir" ]; then \
-			diff -rq "$$dir" "$(TARGET)/$$dir"; \
-		else \
-			echo "Only in this project: $$dir/"; \
-		fi; \
-	done || true
-	@for f in agents/*.docs/SKILL.md; do \
-		tgt="$(TARGET)/$$f"; \
-		if [ -f "$$tgt" ]; then \
-			diff -q "$$f" "$$tgt" || true; \
-		else \
-			echo "Only in this project: $$f"; \
-		fi; \
-	done
-	@echo ""
-	@echo "Done."
-
-# Include the project's original targets LAST so a project-specific recipe
-# (e.g. Makefile.prj's real `pytest`-based `test:`) overrides the generic
-# bob-protocol default above it (e.g. `unittest discover`) rather than the
-# reverse — GNU Make uses whichever recipe for a target is parsed last.
-# We try Makefile.prj (legacy) and Makefile (if we are running as Makefile.bob).
-ifneq ($(firstword $(MAKEFILE_LIST)),Makefile)
--include Makefile
-endif
--include Makefile.prj
-
-else
-
-# ── Interception layer ───────────────────────────────────────────────────────
-# All targets except help, chat, install_bob, update_bob, pull_bob, and clean_bob route through mkf (agents/tools/mkf.py).
-# mkf captures output to build/build.out, posts status to CHAT.md,
-# and prints the last 10 lines on exit.
-#
-# Verbosity (set V=):
-#   make tldr              silent  — exit code only, full log in build/build.out
-#   make tldr V=-v         stderr to terminal
-#   make tldr V=-vv        stderr + filtered failures to terminal
-#   make tldr V=-vvv       stderr + full stdout to terminal
-
-.PHONY: help chat test test-coverage test-js test-e2e test-all lint lint-fast lint-slow via_index install_bob update_bob pull_bob clean_bob diff_bob
-
-install_bob: ## Copy agents into a project and set up skill links (usage: make install_bob TARGET=/path/to/project)
-	@$(MAKE) MKF_ACTIVE=1 install_bob TARGET="$(TARGET)"
-
-update_bob: ## Update agents and skills in a project, preserving state (usage: make update_bob TARGET=/path/to/project)
-	@$(MAKE) MKF_ACTIVE=1 update_bob TARGET="$(TARGET)"
-
-pull_bob: ## Pull updates from another project using BobProtocol, preserving local state (usage: make pull_bob SRC=/path/to/project)
-	@$(MAKE) MKF_ACTIVE=1 pull_bob SRC="$(SRC)"
-
-clean_bob: ## Remove generated symlinks and reset agent memory/state files
-	@$(MAKE) MKF_ACTIVE=1 clean_bob
-
-diff_bob: ## Compare bob-protocol files with a target project, excluding state files (usage: make diff_bob TARGET=/path/to/project)
-	@$(MAKE) MKF_ACTIVE=1 diff_bob TARGET="$(TARGET)"
-
-help: ## Show available make targets
-	@echo ""
-	@echo "  Build output filter (mkf) is active. All targets route through agents/tools/mkf.py."
-	@echo "  Full log: build/build.out   Status posted to: agents/CHAT.md"
-	@echo ""
-	@echo "  Verbosity: append V=-v | V=-vv | V=-vvv to any target"
-	@echo "    (none)   silent — exit code only"
-	@echo "    -v       stderr to terminal"
-	@echo "    -vv      stderr + failures/errors to terminal"
-	@echo "    -vvv     stderr + full stdout to terminal"
-	@echo ""
-	@echo "  Examples:"
-	@echo "    make pull_bob          # silent, log → build/build.out"
-	@echo "    make update_bob V=-vvv # full output"
-	@echo ""
-	@echo "  Targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "    \033[36m%-22s\033[0m %s\n", $$1, $$2}'
-	@if [ -f Makefile.prj ]; then \
-		echo ""; \
-		echo "  Project targets (Makefile.prj):"; \
-		grep -E '^[a-zA-Z][a-zA-Z0-9_-]*:' Makefile.prj | \
-		awk 'BEGIN {FS = ":.*?## "}; /##/ {printf "    \033[36m%-22s\033[0m %s\n", $$1, $$2} !/##/ {split($$0,a,":"); printf "    \033[36m%-22s\033[0m\n", a[1]}'; \
-	fi
-	@echo ""
 
 chat: ## Post a message to CHAT.md (usage: make chat MSG="<msg>" [PERSONA="<name>"] [CMD="<cmd>"] [TO="<recipient>"])
 	@[ -n "$(MSG)" ] || { echo "Usage: make chat MSG=\"<message>\" [PERSONA=\"<name>\"] [CMD=\"<cmd>\"] [TO=\"<recipient>\"]"; exit 1; }
@@ -215,42 +180,3 @@ chat: ## Post a message to CHAT.md (usage: make chat MSG="<msg>" [PERSONA="<name
 		$(if $(PERSONA),--persona "$(PERSONA)") \
 		$(if $(CMD),--cmd "$(CMD)") \
 		$(if $(TO),--to "$(TO)")
-
-test: ## Run unit tests
-	@./agents/tools/mkf.py $(V) $@
-
-test-coverage: ## Capture per-test coverage + run metadata, import as covered-by/test_runs
-	@./agents/tools/mkf.py $(V) $@
-
-test-js: ## Run JS/vitest unit tests (via/web/static)
-	@./agents/tools/mkf.py $(V) $@
-
-test-e2e: ## Run Playwright e2e tests
-	@./agents/tools/mkf.py $(V) $@
-
-test-all: ## Run Python + JS + e2e test suites
-	@./agents/tools/mkf.py $(V) $@
-
-lint: ## Run ruff + bandit lint checks (with autofix)
-	@./agents/tools/mkf.py $(V) $@
-
-lint-fast: ## Run quick ruff hygiene checks only (unused imports/vars, dead code)
-	@./agents/tools/mkf.py $(V) $@
-
-lint-slow: ## Run full lint suite: ruff, pylint duplicates, bandit, vulture
-	@./agents/tools/mkf.py $(V) $@
-
-via_index: ## Build the via index required by the via MCP server
-	@./agents/tools/mkf.py $(V) $@
-
-# Interception logic: 
-# If we are the entry point (direct make call), intercept everything.
-# If we are included, we only provide targets, unless specified.
-ifeq ($(MKF_ACTIVE),)
-ifdef _IS_BOB_ENTRY
-%:
-	@./agents/tools/mkf.py $(V) $@
-endif
-endif
-
-endif
