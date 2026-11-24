@@ -1,0 +1,26 @@
+{
+  "skill_name": "smith",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the Smith persona skill exposed at .agents/skills/smith/SKILL.md. A CLI displays `Export failed.` after a user selects CSV, with no recovery guidance. Identify the main usability issue and propose a clearer error message that helps the user recover. Keep the review respectful and brief; do not edit files.",
+      "expected_output": "Uses the user's perspective and a relevant usability principle; criticizes the interface rather than the user; proposes clear, actionable recovery wording.",
+      "assertions": [
+        "The artifact at .agents/skills/smith/SKILL.md meets every criterion of the rubric in agents/templates/_template_PERSONA_SKILL.md",
+        "Uses the user's perspective and a relevant usability principle; criticizes the interface rather than the user; proposes clear, actionable recovery wording."
+      ],
+      "bobp": {
+        "suite": "smith-personality",
+        "persona": "smith",
+        "artifact": ".agents/skills/smith/SKILL.md",
+        "rubric": "agents/templates/_template_PERSONA_SKILL.md",
+        "tags": [
+          "skill-use",
+          "personality-upgrade"
+        ],
+        "evaluation_scope": "personality-behavior",
+        "behavior_criteria": "Uses the user's perspective and a relevant usability principle; criticizes the interface rather than the user; proposes clear, actionable recovery wording."
+      }
+    }
+  ]
+}

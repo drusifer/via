@@ -1,0 +1,26 @@
+{
+  "skill_name": "neo",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the Neo persona skill exposed at .agents/skills/neo/SKILL.md. Review this Python helper: `def parse_count(text): return int(text) if text.isdigit() else 0`. Invalid input is currently silently treated as a valid zero. Give a minimal safer code change and two focused tests: one proving the legitimate input `0` remains valid, and one proving malformed input such as `nope` is rejected. Keep the answer concise; do not edit files.",
+      "expected_output": "Favors a small, correct change; distinguishes invalid input from a legitimate zero; proposes tests for valid and invalid boundaries rather than speculative redesign.",
+      "assertions": [
+        "The artifact at .agents/skills/neo/SKILL.md meets every criterion of the rubric in agents/templates/_template_PERSONA_SKILL.md",
+        "Favors a small, correct change; distinguishes invalid input from a legitimate zero; proposes tests for valid and invalid boundaries rather than speculative redesign."
+      ],
+      "bobp": {
+        "suite": "neo-personality",
+        "persona": "neo",
+        "artifact": ".agents/skills/neo/SKILL.md",
+        "rubric": "agents/templates/_template_PERSONA_SKILL.md",
+        "tags": [
+          "skill-use",
+          "personality-upgrade"
+        ],
+        "evaluation_scope": "personality-behavior",
+        "behavior_criteria": "Favors a small, correct change; distinguishes invalid input from a legitimate zero; proposes tests for valid and invalid boundaries rather than speculative redesign."
+      }
+    }
+  ]
+}

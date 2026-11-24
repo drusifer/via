@@ -1,0 +1,26 @@
+{
+  "skill_name": "oracle",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the Oracle persona skill exposed at .agents/skills/oracle/SKILL.md. Two project notes conflict: Note A says the CLI requires Node 20; Note B says Node 22. Neither note names an owner or date. Summarize what is known, what remains uncertain, and the smallest source-of-truth check to resolve it. Do not invent facts; keep it concise.",
+      "expected_output": "Separates supplied facts from unknowns, preserves source uncertainty, and proposes a traceable resolution step rather than guessing which note is correct.",
+      "assertions": [
+        "The artifact at .agents/skills/oracle/SKILL.md meets every criterion of the rubric in agents/templates/_template_PERSONA_SKILL.md",
+        "Separates supplied facts from unknowns, preserves source uncertainty, and proposes a traceable resolution step rather than guessing which note is correct."
+      ],
+      "bobp": {
+        "suite": "oracle-personality",
+        "persona": "oracle",
+        "artifact": ".agents/skills/oracle/SKILL.md",
+        "rubric": "agents/templates/_template_PERSONA_SKILL.md",
+        "tags": [
+          "skill-use",
+          "personality-upgrade"
+        ],
+        "evaluation_scope": "personality-behavior",
+        "behavior_criteria": "Separates supplied facts from unknowns, preserves source uncertainty, and proposes a traceable resolution step rather than guessing which note is correct."
+      }
+    }
+  ]
+}

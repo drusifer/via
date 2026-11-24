@@ -12,8 +12,8 @@ Type `*help` for complete command reference with examples.
 
 ### Getting Started
 - **[START_HERE.md](../START_HERE.md)** - Minimal onboarding, quick start guide
-- **[HELP.md](bob.docs/HELP.md)** - Complete command reference (use `*help`)
-- **[BOB_SYSTEM_PROTOCOL.md](bob.docs/BOB_SYSTEM_PROTOCOL.md)** - Full protocol specification
+- **[HELP.md](bob/HELP.md)** - Complete command reference (use `*help`)
+- **[BOB_SYSTEM_PROTOCOL.md](bob/BOB_SYSTEM_PROTOCOL.md)** - Full protocol specification
 
 ### MCP Tools
 - **[MCP_INTEGRATION_SUMMARY.md](MCP_INTEGRATION_SUMMARY.md)** - MCP overview and mappings
@@ -33,20 +33,20 @@ Type `*help` for complete command reference with examples.
 
 | Persona | Role | File | Prefix |
 |---------|------|------|--------|
-| Bob | Prompt Engineering Expert | [Bob_PE_AGENT.md](bob.docs/Bob_PE_AGENT.md) | `*prompt` / `*reprompt` / `*learn` |
-| Cypher | Product Manager | [Cypher_PM_AGENT.md](cypher.docs/Cypher_PM_AGENT.md) | `*pm` |
-| Morpheus | Tech Lead / Architect | [Morpheus_SE_AGENT.md](morpheus.docs/Morpheus_SE_AGENT.md) | `*lead` |
-| Neo | Senior Software Engineer | [Neo_SWE_AGENT.md](neo.docs/Neo_SWE_AGENT.md) | `*swe` |
-| Oracle | Knowledge Officer | [Oracle_INFO_AGENT.md](oracle.docs/Oracle_INFO_AGENT.md) | `*ora` |
-| Trin | QA / Guardian | [Trin_QA_AGENT.md](trin.docs/Trin_QA_AGENT.md) | `*qa` |
-| Mouse | Scrum Master | [Mouse_SM_AGENT.md](mouse.docs/Mouse_SM_AGENT.md) | `*sm` |
+| Bob | Prompt Engineering Expert | [Bob_PE_AGENT.md](bob/Bob_PE_AGENT.md) | `*prompt` / `*reprompt` / `*learn` |
+| Cypher | Product Manager | [Cypher_PM_AGENT.md](cypher/Cypher_PM_AGENT.md) | `*pm` |
+| Morpheus | Tech Lead / Architect | [Morpheus_SE_AGENT.md](morpheus/Morpheus_SE_AGENT.md) | `*lead` |
+| Neo | Senior Software Engineer | [Neo_SWE_AGENT.md](neo/Neo_SWE_AGENT.md) | `*swe` |
+| Oracle | Knowledge Officer | [Oracle_INFO_AGENT.md](oracle/Oracle_INFO_AGENT.md) | `*ora` |
+| Trin | QA / Guardian | [Trin_QA_AGENT.md](trin/Trin_QA_AGENT.md) | `*qa` |
+| Mouse | Scrum Master | [Mouse_SM_AGENT.md](mouse/Mouse_SM_AGENT.md) | `*sm` |
 
 ---
 
 ## Team Communication
 
 - **[CHAT.md](CHAT.md)** - Team communication log (append-only)
-- Each persona maintains state in their `.docs/` folder:
+- Each persona maintains state in their `<name>/` folder:
   - `context.md` - Working memory
   - `current_task.md` - Active work
   - `next_steps.md` - Resume plan
@@ -114,10 +114,10 @@ Files prefixed with `.archive_` are historical and no longer active:
 - Archived: `.archive_*.md`
 
 ### Structure
-- All persona docs in `agents/[persona].docs/`
+- All persona docs in `agents/[persona]/`
 - All MCP tool docs in `agents/tools/`
 - Team communication in `agents/CHAT.md`
-- Primary references in `agents/bob.docs/`
+- Primary references in `agents/bob/`
 
 ### Maintenance
 - Update `*help` when adding commands
@@ -143,4 +143,4 @@ Files prefixed with `.archive_` are historical and no longer active:
 
 ---
 
-**For Help:** Type `*help` or read `agents/bob.docs/HELP.md`
+**For Help:** Type `*help` or read `agents/bob/HELP.md`

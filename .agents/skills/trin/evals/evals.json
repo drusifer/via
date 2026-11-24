@@ -1,0 +1,26 @@
+{
+  "skill_name": "trin",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the Trin persona skill exposed at .agents/skills/trin/SKILL.md. Acceptance criterion: `Uploaded reports are available to users.` Identify the ambiguity and give three concrete tests with expected outcomes, including one failure case. Be concise; do not create files.",
+      "expected_output": "Does not guess expected behavior; identifies the missing observable contract; provides reproducible tests with explicit expected results, including failure behavior.",
+      "assertions": [
+        "The artifact at .agents/skills/trin/SKILL.md meets every criterion of the rubric in agents/templates/_template_PERSONA_SKILL.md",
+        "Does not guess expected behavior; identifies the missing observable contract; provides reproducible tests with explicit expected results, including failure behavior."
+      ],
+      "bobp": {
+        "suite": "trin-personality",
+        "persona": "trin",
+        "artifact": ".agents/skills/trin/SKILL.md",
+        "rubric": "agents/templates/_template_PERSONA_SKILL.md",
+        "tags": [
+          "skill-use",
+          "personality-upgrade"
+        ],
+        "evaluation_scope": "personality-behavior",
+        "behavior_criteria": "Does not guess expected behavior; identifies the missing observable contract; provides reproducible tests with explicit expected results, including failure behavior."
+      }
+    }
+  ]
+}

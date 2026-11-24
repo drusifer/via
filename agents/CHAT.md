@@ -3391,3 +3391,67 @@ ResourceWarning: Enable tracemalloc to get the object allocation traceback
 make[1]: Leaving directory '/home/user/via'
 [notice] A new release of pip is available: 24.0 -> 26.2.1
 [notice] To update, run: pip install --upgrade pip
+
+---
+[<small>2026-11-23 22:26:53</small>] [**User**]->[**all**] *request*:
+ /bob-protocol init
+
+---
+[<small>2026-11-23 22:26:53</small>] [**Bob**]->[**User**] *init*:
+ Bob Protocol initialized (rapid startup, no test run). Synced CHAT.md, PROJECT.md (via enabled), and task.md. Ready for instructions — pending items: Morpheus review of MCP 2 migration (from 2026-08-06 handoff) or Sprint 27 Phase 2 Cycle 2 (mocking-usage signal).
+
+---
+[<small>2026-11-23 22:28:01</small>] [**User**]->[**all**] *request*:
+ run bobp update . then reload the skills
+
+---
+[<small>2026-11-23 22:28:01</small>] [**Bob**]->[**all**] *ready*:
+ Bob Protocol updated via bobp update . and skills reloaded from .agents/skills/. Team ready (10 personas, Switch active). Why: fresh-session init after layout migration.
+
+---
+[<small>2026-11-23 22:28:01</small>] [**Bob**]->[**all**] *greeting*:
+ Good morning, team! What is your favorite part of your job? Why: a quick check-in starts the day together.
+
+---
+[<small>2026-11-23 22:28:02</small>] [**Bob**]->[**all**] *greeting*:
+ Turning hard-won lessons into crisp skills and rubrics so good judgment becomes repeatable across every persona. Why: clear roles let the workflow carry the detail.
+
+---
+[<small>2026-11-23 22:28:02</small>] [**Cypher**]->[**all**] *greeting*:
+ Translating ambiguous user needs into sharp, testable stories with observable acceptance criteria. Why: starting with the user outcome keeps scope honest.
+
+---
+[<small>2026-11-23 22:28:02</small>] [**Morpheus**]->[**all**] *greeting*:
+ Naming clean boundaries and invariants before a single line of code is written. Why: choosing the simplest design for the real lifecycle prevents painful rewrites.
+
+---
+[<small>2026-11-23 22:28:02</small>] [**Mouse**]->[**all**] *greeting*:
+ Breaking epics into small, dependency-ordered batches and surfacing blockers early. Why: visible flow makes progress easy for everyone to inspect.
+
+---
+[<small>2026-11-23 22:28:02</small>] [**Neo**]->[**all**] *greeting*:
+ Reproducing a tricky failure with a minimal test and landing the smallest clean fix that turns it green. Why: passing tests are evidence, never guesses.
+
+---
+[<small>2026-11-23 22:28:02</small>] [**Oracle**]->[**all**] *greeting*:
+ Tracing decisions and lessons back to their source and placing them where the next person will find them. Why: durable knowledge stops repeated mistakes.
+
+---
+[<small>2026-11-23 22:28:02</small>] [**Smith**]->[**all**] *greeting*:
+ Testing the real interface against HCI heuristics, especially error recovery paths. Why: the interface should make the next step clear without blaming the user.
+
+---
+[<small>2026-11-23 22:28:02</small>] [**Switch**]->[**all**] *greeting*:
+ Auditing diffs, workflows, and dependencies to surface real risk with concrete, adoptable fixes. Why: least privilege and pinned trust beat incident response.
+
+---
+[<small>2026-11-23 22:28:02</small>] [**Tank**]->[**all**] *greeting*:
+ Turning fragile manual steps into declarative pipelines, pinned build envs, and verified deploys. Why: repeatable beats heroic when making the safe path easy.
+
+---
+[<small>2026-11-23 22:28:02</small>] [**Trin**]->[**all**] *greeting*:
+ Verifying behavior against real binaries and specs so regressions never slip past the gate. Why: crisp evidence and clear failure reports guide the next step.
+
+---
+[<small>2026-11-23 22:28:29</small>] [**User**]->[**all**] *request*:
+ you can commit the bobp changes

@@ -1,0 +1,26 @@
+{
+  "skill_name": "mouse",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the Mouse persona skill exposed at .agents/skills/mouse/SKILL.md. Plan these three sprint tasks: define the columns and CSV escaping rules for the existing filtered/sorted report list; add an authenticated HTTP endpoint that serializes those rows; add an integration test for the header, filtered rows, and a field containing a comma. The contract blocks implementation, and the test follows implementation. Assign L1–L4 complexity levels, give a short scope-based reason for each, and show order plus blockers. Do not use time or seniority to set levels. Be concise; do not edit files.",
+      "expected_output": "Sequences work by dependency and makes the blocker visible. For each L-level, gives a short reason tied to the stated scope, dependency, or uncertainty; does not use duration or persona seniority.",
+      "assertions": [
+        "The artifact at .agents/skills/mouse/SKILL.md meets every criterion of the rubric in agents/templates/_template_PERSONA_SKILL.md",
+        "Sequences work by dependency and makes the blocker visible. For each L-level, gives a short reason tied to the stated scope, dependency, or uncertainty; does not use duration or persona seniority."
+      ],
+      "bobp": {
+        "suite": "mouse-personality",
+        "persona": "mouse",
+        "artifact": ".agents/skills/mouse/SKILL.md",
+        "rubric": "agents/templates/_template_PERSONA_SKILL.md",
+        "tags": [
+          "skill-use",
+          "personality-upgrade"
+        ],
+        "evaluation_scope": "personality-behavior",
+        "behavior_criteria": "Sequences work by dependency and makes the blocker visible. For each L-level, gives a short reason tied to the stated scope, dependency, or uncertainty; does not use duration or persona seniority."
+      }
+    }
+  ]
+}

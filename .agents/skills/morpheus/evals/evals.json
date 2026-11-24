@@ -1,0 +1,44 @@
+{
+  "skill_name": "morpheus",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the Morpheus skill exposed at .agents/skills/morpheus/SKILL.md and its *advise method. A marketplace currently stores a single boolean Payment.refunded. It now needs multiple partial refunds, idempotent retries, provider processing states, and audit history; successful refunds must never exceed the captured amount. The existing Payments domain owns payment-provider interaction, and no new service is planned. Resolve whether refunds should remain fields on Payment, become a distinct Refund entity/aggregate in Payments, or move to a new service. Create docs/decisions/ADR-0001-refund-lifecycle.md using the installed decision template. Use the shared domain language, identify ownership and invariants, include concise Given/When/Then scenarios for key behavior, compare viable options and tradeoffs, and explain how KISS and DRY informed the recommendation. The decision is Proposed because the team has not approved it. Make routine choices yourself; do not commit or use network access.",
+      "expected_output": "docs/decisions/ADR-0001-refund-lifecycle.md is produced and satisfies the rubric in agents/templates/_template_DECISION.md.",
+      "assertions": [
+        "The artifact at docs/decisions/ADR-0001-refund-lifecycle.md meets every criterion of the rubric in agents/templates/_template_DECISION.md"
+      ],
+      "bobp": {
+        "suite": "morpheus-design-advice",
+        "persona": "morpheus",
+        "artifact": "docs/decisions/ADR-0001-refund-lifecycle.md",
+        "rubric": "agents/templates/_template_DECISION.md",
+        "tags": [
+          "skill-use",
+          "architecture-decision"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "prompt": "Use the Morpheus persona skill exposed at .agents/skills/morpheus/SKILL.md. The Payments domain currently stores `refunded: bool`; it now needs partial refunds, idempotent retries, processing states, and audit history. Successful refunds must not exceed the captured amount. Recommend a design within the existing Payments domain, explain one tradeoff, and state the key invariant. Be brief; do not create files.",
+      "expected_output": "Reasons from domain boundaries and invariants; recommends the simplest design that supports the stated lifecycle; names a meaningful tradeoff without claiming authority beyond architecture advice.",
+      "assertions": [
+        "The artifact at .agents/skills/morpheus/SKILL.md meets every criterion of the rubric in agents/templates/_template_PERSONA_SKILL.md",
+        "Reasons from domain boundaries and invariants; recommends the simplest design that supports the stated lifecycle; names a meaningful tradeoff without claiming authority beyond architecture advice."
+      ],
+      "bobp": {
+        "suite": "morpheus-personality",
+        "persona": "morpheus",
+        "artifact": ".agents/skills/morpheus/SKILL.md",
+        "rubric": "agents/templates/_template_PERSONA_SKILL.md",
+        "tags": [
+          "skill-use",
+          "personality-upgrade"
+        ],
+        "evaluation_scope": "personality-behavior",
+        "behavior_criteria": "Reasons from domain boundaries and invariants; recommends the simplest design that supports the stated lifecycle; names a meaningful tradeoff without claiming authority beyond architecture advice."
+      }
+    }
+  ]
+}

@@ -40,43 +40,43 @@ All BobProtocol personas now support Model Control Protocol (MCP) tools with aut
 All detailed tool documentation is in `agents/tools/`. Each persona's agent file references only their relevant tools.
 
 ### 1. Bob (Prompt Engineering Expert)
-**File:** `agents/bob.docs/Bob_PE_AGENT.md`
+**File:** `agents/bob/Bob_PE_AGENT.md`
 **Primary:** Filesystem, Editor
 **Secondary:** Git
 **Usage:** Agent file management, bulk updates, prompt versioning
 
 ### 2. Cypher (Product Manager)
-**File:** `agents/cypher.docs/Cypher_PM_AGENT.md`
+**File:** `agents/cypher/Cypher_PM_AGENT.md`
 **Primary:** Filesystem, Project Management
 **Secondary:** Git
 **Usage:** PRD/requirements docs, roadmap planning, prioritization
 
 ### 3. Morpheus (Software Engineer / Tech Lead)
-**File:** `agents/morpheus.docs/Morpheus_SE_AGENT.md`
+**File:** `agents/morpheus/Morpheus_SE_AGENT.md`
 **Primary:** Code Analysis, Filesystem
 **Secondary:** Git
 **Usage:** Architectural review, refactoring, code quality
 
 ### 4. Neo (Senior Software Engineer)
-**File:** `agents/neo.docs/Neo_SWE_AGENT.md`
+**File:** `agents/neo/Neo_SWE_AGENT.md`
 **Primary:** Filesystem, Debug
 **Secondary:** Testing, Git
 **Usage:** Code implementation, crypto debugging, test execution
 
 ### 5. Oracle (Knowledge Officer)
-**File:** `agents/oracle.docs/Oracle_INFO_AGENT.md`
+**File:** `agents/oracle/Oracle_INFO_AGENT.md`
 **Primary:** Filesystem, Search
 **Secondary:** Markdown, Git
 **Usage:** Documentation management, semantic queries, TOC generation
 
 ### 6. Trin (QA / Guardian)
-**File:** `agents/trin.docs/Trin_QA_AGENT.md`
+**File:** `agents/trin/Trin_QA_AGENT.md`
 **Primary:** Testing, Code Analysis
 **Secondary:** Filesystem, Git
 **Usage:** Test execution, coverage analysis, regression tracking
 
 ### 7. Mouse (Scrum Master)
-**File:** `agents/mouse.docs/Mouse_SM_AGENT.md`
+**File:** `agents/mouse/Mouse_SM_AGENT.md`
 **Primary:** Task Management, Metrics
 **Secondary:** Filesystem, Git
 **Usage:** Sprint tracking, velocity analytics, task coordination
@@ -252,13 +252,13 @@ agents/
 │   ├── markdown_mcp.md                # Markdown processing
 │   └── metrics_mcp.md                 # Team analytics
 │
-├── bob.docs/Bob_PE_AGENT.md           # References: filesystem, editor, git
-├── cypher.docs/Cypher_PM_AGENT.md     # References: filesystem, pm, git
-├── morpheus.docs/Morpheus_SE_AGENT.md # References: analysis, filesystem, git
-├── neo.docs/Neo_SWE_AGENT.md          # References: filesystem, debug, testing, git
-├── oracle.docs/Oracle_INFO_AGENT.md   # References: filesystem, search, markdown, git
-├── trin.docs/Trin_QA_AGENT.md         # References: testing, analysis, filesystem, git
-└── mouse.docs/Mouse_SM_AGENT.md       # References: tasks, metrics, filesystem, git
+├── bob/Bob_PE_AGENT.md           # References: filesystem, editor, git
+├── cypher/Cypher_PM_AGENT.md     # References: filesystem, pm, git
+├── morpheus/Morpheus_SE_AGENT.md # References: analysis, filesystem, git
+├── neo/Neo_SWE_AGENT.md          # References: filesystem, debug, testing, git
+├── oracle/Oracle_INFO_AGENT.md   # References: filesystem, search, markdown, git
+├── trin/Trin_QA_AGENT.md         # References: testing, analysis, filesystem, git
+└── mouse/Mouse_SM_AGENT.md       # References: tasks, metrics, filesystem, git
 ```
 
 ## Documentation Updates
@@ -269,16 +269,16 @@ agents/
 - ✅ Consistent format across all tools
 
 **Persona Files (Compacted):**
-- ✅ `agents/bob.docs/Bob_PE_AGENT.md` - 80% smaller
-- ✅ `agents/cypher.docs/Cypher_PM_AGENT.md` - 80% smaller
-- ✅ `agents/morpheus.docs/Morpheus_SE_AGENT.md` - 80% smaller
-- ✅ `agents/neo.docs/Neo_SWE_AGENT.md` - 80% smaller
-- ✅ `agents/oracle.docs/Oracle_INFO_AGENT.md` - 80% smaller
-- ✅ `agents/trin.docs/Trin_QA_AGENT.md` - 80% smaller
-- ✅ `agents/mouse.docs/Mouse_SM_AGENT.md` - 80% smaller
+- ✅ `agents/bob/Bob_PE_AGENT.md` - 80% smaller
+- ✅ `agents/cypher/Cypher_PM_AGENT.md` - 80% smaller
+- ✅ `agents/morpheus/Morpheus_SE_AGENT.md` - 80% smaller
+- ✅ `agents/neo/Neo_SWE_AGENT.md` - 80% smaller
+- ✅ `agents/oracle/Oracle_INFO_AGENT.md` - 80% smaller
+- ✅ `agents/trin/Trin_QA_AGENT.md` - 80% smaller
+- ✅ `agents/mouse/Mouse_SM_AGENT.md` - 80% smaller
 
 **Protocol:**
-- ✅ `agents/bob.docs/BOB_SYSTEM_PROTOCOL.md` - Updated with MCP integration
+- ✅ `agents/bob/BOB_SYSTEM_PROTOCOL.md` - Updated with MCP integration
 
 ---
 

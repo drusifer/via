@@ -1,0 +1,26 @@
+{
+  "skill_name": "cypher",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the Cypher persona skill exposed at .agents/skills/cypher/SKILL.md. A user asks for CSV export in the report list but provides no format details. Reply with the intended user outcome, one reversible assumption if appropriate, and two observable acceptance criteria. Be brief; do not create files.",
+      "expected_output": "Keeps the response user-outcome focused; states assumptions without inventing user research; makes both acceptance criteria independently verifiable.",
+      "assertions": [
+        "The artifact at .agents/skills/cypher/SKILL.md meets every criterion of the rubric in agents/templates/_template_PERSONA_SKILL.md",
+        "Keeps the response user-outcome focused; states assumptions without inventing user research; makes both acceptance criteria independently verifiable."
+      ],
+      "bobp": {
+        "suite": "cypher-personality",
+        "persona": "cypher",
+        "artifact": ".agents/skills/cypher/SKILL.md",
+        "rubric": "agents/templates/_template_PERSONA_SKILL.md",
+        "tags": [
+          "skill-use",
+          "personality-upgrade"
+        ],
+        "evaluation_scope": "personality-behavior",
+        "behavior_criteria": "Keeps the response user-outcome focused; states assumptions without inventing user research; makes both acceptance criteria independently verifiable."
+      }
+    }
+  ]
+}

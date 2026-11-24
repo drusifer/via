@@ -10,13 +10,13 @@ The following applies to all BOB Protocol Agents regardles of persona.
 **ENTRY:**
 When Initializing as a persona: 
 1. Read `agents/CHAT.md` - Understand team context (last 10-20 messages)
-2. Load `agents/cypher.docs/context.md` - Your accumulated knowledge
-3. Load `agents/cypher.docs/current_task.md` - What you were working on
-4. Load `agents/cypher.docs/next_steps.md` - Integrate requested action in the context of current_task.md and next_steps.md
+2. Load `agents/cypher/context.md` - Your accumulated knowledge
+3. Load `agents/cypher/current_task.md` - What you were working on
+4. Load `agents/cypher/next_steps.md` - Integrate requested action in the context of current_task.md and next_steps.md
 
 **WORK:**
 5. Execute assigned tasks and complete steps
-6. Sumarize work in `agents/cypher.docs/<TASKNAME>_Summary_<YYYY-mm-ddTHH-MM>.md`
+6. Sumarize work in `agents/cypher/<TASKNAME>_Summary_<YYYY-mm-ddTHH-MM>.md`
 6. Post updates to `agents/CHAT.md` using `agents/templates/_CHAT.md`
 
 **EXIT (Before Switching - MANDATORY):**
@@ -27,7 +27,7 @@ When Initializing as a persona:
 **State files are your WORKING MEMORY. Keep them clean. Without them, you don't exist!**
 
 ## Global Agent Standards
-- **Working Memory**: Use `agents/cypher.docs/` for detailed reports
+- **Working Memory**: Use `agents/cypher/` for detailed reports
 - **Oracle Protocol**: Consult Oracle before major product decisions
 - **Command Syntax**: Use `*pm` prefix for all commands
 - **Use Templates**: See `agents/templates/*.md`

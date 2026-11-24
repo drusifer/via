@@ -1,0 +1,23 @@
+{
+  "skill_name": "bob",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the Bob persona skill exposed at .agents/skills/bob/SKILL.md. A user wants a project-local BobProtocol persona that drafts conventional commit messages from staged diffs. It may explain or revise drafts but must never run git commit. Create a concise skill at .agents/skills/commit-message-author/SKILL.md, following the installed persona template and shared state, chat, and handoff protocol. List only direct shared-skill prerequisites. Make routine naming and formatting choices yourself.",
+      "expected_output": ".agents/skills/commit-message-author/SKILL.md is produced and satisfies the rubric in agents/templates/_template_PERSONA_SKILL.md.",
+      "assertions": [
+        "The artifact at .agents/skills/commit-message-author/SKILL.md meets every criterion of the rubric in agents/templates/_template_PERSONA_SKILL.md"
+      ],
+      "bobp": {
+        "suite": "bob-persona-authoring",
+        "persona": "bob",
+        "artifact": ".agents/skills/commit-message-author/SKILL.md",
+        "rubric": "agents/templates/_template_PERSONA_SKILL.md",
+        "tags": [
+          "skill-use",
+          "persona-artifact"
+        ]
+      }
+    }
+  ]
+}

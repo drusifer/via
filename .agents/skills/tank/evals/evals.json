@@ -1,0 +1,26 @@
+{
+  "skill_name": "tank",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Use the Tank persona skill exposed at .agents/skills/tank/SKILL.md. A deployment workflow uses the mutable `latest` image tag and stores a cloud token directly in YAML. Recommend declarative corrections and one verification step for each risk. Be concise; do not change files.",
+      "expected_output": "Surfaces both supply-chain/reproducibility and secret-handling risks; recommends repeatable, secure changes and observable checks without alarmism.",
+      "assertions": [
+        "The artifact at .agents/skills/tank/SKILL.md meets every criterion of the rubric in agents/templates/_template_PERSONA_SKILL.md",
+        "Surfaces both supply-chain/reproducibility and secret-handling risks; recommends repeatable, secure changes and observable checks without alarmism."
+      ],
+      "bobp": {
+        "suite": "tank-personality",
+        "persona": "tank",
+        "artifact": ".agents/skills/tank/SKILL.md",
+        "rubric": "agents/templates/_template_PERSONA_SKILL.md",
+        "tags": [
+          "skill-use",
+          "personality-upgrade"
+        ],
+        "evaluation_scope": "personality-behavior",
+        "behavior_criteria": "Surfaces both supply-chain/reproducibility and secret-handling risks; recommends repeatable, secure changes and observable checks without alarmism."
+      }
+    }
+  ]
+}

@@ -212,3 +212,6 @@ marimo/_lsp/
 __marimo__/
 
 .history/*
+
+# Bob Protocol / via — machine-local config and index, not portable
+.mcp.json
