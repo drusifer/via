@@ -3455,3 +3455,40 @@ make[1]: Leaving directory '/home/user/via'
 ---
 [<small>2026-11-23 22:28:29</small>] [**User**]->[**all**] *request*:
  you can commit the bobp changes
+
+---
+[<small>2026-11-23 22:30:38</small>] [**User**]->[**all**] *request*:
+ now you can rename the Makefile.prj to Makefile and remove the bobp targets/mkf logic if any. we use bobp make <target> now
+
+---
+[<small>2026-11-23 22:31:51</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make help | /home/drusifer/Projects/via/build/build.out
+deploy-forgejo       Build the via-index wheel/sdist and publish to pi-patch Forgejo PyPI
+help                 Show available make targets
+
+---
+[<small>2026-11-23 22:31:51</small>] [**Tank**]->[**User**] *devops env*:
+ Cleaned legacy bobp targets (compile-agents, lints, tldr, via_index, chat) from Makefile (Makefile.prj was already renamed in 22cd9ed with no mkf logic left) and updated docs/specs/test_coverage.md. Verified bobp make help. Why: project now uses bobp make <target>.
+
+---
+[<small>2026-11-23 22:31:51</small>] [**User**]->[**all**] *request*:
+ /tank package via for Pypi distribution with drew.gs.works
+
+---
+[<small>2026-11-23 22:35:57</small>] [**make**]->[**all**] *build*:
+ Build FAILED exit=2 | make security-scan-secrets | /home/drusifer/Projects/via/build/build.out
+10:35PM INF scanned ~14088034 bytes (14.09 MB) in 3.65s
+10:35PM WRN leaks found: 1
+make: *** [Makefile:172: security-scan-secrets] Error 1
+
+---
+[<small>2026-11-23 22:37:03</small>] [**Tank**]->[**Switch**] *devops ci*:
+ PyPI packaging for via-index (0.1.0, drew.gs.works) ready: updated pyproject.toml (drew@gs.works, build/twine, exclude .via/*.db), hardened publish.yml (SHA pins, least-priv, smoke test), added Makefile release+hooks, created GitHub pypi env, verified dist+isolated wheel install. @Switch *sec audit release pipeline. Why: Tank requires Switch audit before release.
+
+---
+[<small>2026-11-23 22:37:04</small>] [**Switch**]->[**User**] *sec audit*:
+ Release pipeline+dist/* audit clean (SHA pins, OIDC env reviewer, no leaked files). Pre-existing repo finding: gitleaks generic-api-key at .continue/agents/config.yaml:10 (commit 9817f24, still in HEAD; not in dist/*). Severity: High | Verdict: Blocked (repo secrets) / No blocking findings (PyPI pipeline) | Owner: Tank. Why: public repo secret check.
+
+---
+[<small>2026-11-24 16:12:28</small>] [**User**]->[**all**] *request*:
+ yup stick with via-index. also publisher is ready

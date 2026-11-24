@@ -2,7 +2,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: dist all venv test coverage clean lint-fast lint lints lint-slow duplicates security dead-code analyze install-system via-watch via-mcp-serve via
+.PHONY: dist release install-hooks security-scan-secrets all venv install install-dev test coverage test-coverage test-js test-e2e test-all clean lint-fast lint lint-slow duplicates security dead-code fix install-system via-watch via-mcp-serve via deploy-forgejo help
 
 # Variables
 PYTHON := python3
@@ -39,9 +39,6 @@ $(INSTALL_DEV_STAMP): $(VENV_STAMP) $(REQUIREMENTS)
 	touch $(INSTALL_DEV_STAMP)
 
 install-dev: $(INSTALL_DEV_STAMP)
-
-compile-agents: install-dev ## Compile all agent.yaml files into SKILL.md and agent.json
-	. ${VENV_ACTIVATE} && python agents/tools/compile_agents.py
 
 via: install-dev ## Run via command in the virtual environment (usage: make via ARGS="...")
 	$(VENV_DIR)/bin/via $(ARGS)
@@ -104,9 +101,6 @@ lint: install-dev fix
 	@echo "=== BANDIT: Security Analysis ==="
 	. ${VENV_ACTIVATE} && bandit -r via/ -c pyproject.toml
 
-# Compatibility alias used by Bob chat/run commands
-lints: lint
-
 # SLOW: Full analysis - Ruff complexity + hygiene + Pylint (duplicates) + Bandit (~30 sec)
 lint-slow: install-dev duplicates security vulture
 	@echo "=== RUFF: Complexity, Dead Code, Unused Imports ==="
@@ -147,9 +141,35 @@ install-system: ## Install via globally using pipx (makes 'via' command availabl
 	pipx install --editable . --force
 
 # Build sdist + wheel and validate metadata (artifacts land in dist/)
-dist: install-dev
+dist: install-dev ## Build sdist and wheel into dist/ and validate with twine
 	rm -rf dist
-	. ${VENV_ACTIVATE} && pip install --quiet build twine && python -m build && twine check dist/*
+	. ${VENV_ACTIVATE} && python -m build && twine check dist/*
+
+# ── Publish to public PyPI via GitHub trusted publishing (drew.gs.works) ───────
+# Creating a GitHub Release triggers .github/workflows/publish.yml, which builds
+# and publishes `via-index` to PyPI (OIDC; no token). Needs `gh` authenticated
+# with permission to create releases. Version comes from via/__init__.py.
+VERSION := $(shell sed -n 's/^__version__ = "\(.*\)"/\1/p' via/__init__.py)
+
+release: dist ## Tag v<version>, push, and create the GitHub Release that publishes via-index to PyPI
+	@test -n "$(VERSION)" || { echo "cannot read version from via/__init__.py"; exit 1; }
+	@test "$$(git rev-parse --abbrev-ref HEAD)" = main || { echo "release must run from main"; exit 1; }
+	@git diff --quiet HEAD -- pyproject.toml via || { echo "uncommitted changes in package files"; exit 1; }
+	@git fetch -q origin main && test "$$(git rev-parse HEAD)" = "$$(git rev-parse origin/main)" || { echo "HEAD must match origin/main (push first)"; exit 1; }
+	@git rev-parse -q --verify refs/tags/v$(VERSION) >/dev/null || git tag -a v$(VERSION) -m "via-index $(VERSION)"
+	git push origin v$(VERSION)
+	@gh release view v$(VERSION) >/dev/null 2>&1 && { echo "release v$(VERSION) already exists"; exit 1; } || true
+	gh release create v$(VERSION) --generate-notes --title "via-index $(VERSION)"
+
+# ── Secret scanning hooks (Tank / Switch standard) ─────────────────────────────
+install-hooks: ## Enable .githooks/pre-commit (gitleaks on staged changes) via core.hooksPath
+	@command -v gitleaks >/dev/null || { echo "gitleaks is not installed: https://github.com/gitleaks/gitleaks#installing"; exit 1; }
+	git config core.hooksPath .githooks
+	@echo "git hooks enabled: .githooks/pre-commit (gitleaks)"
+
+security-scan-secrets: ## Scan git history for committed secrets (gitleaks, git-aware)
+	@command -v gitleaks >/dev/null || { echo "gitleaks is not installed: https://github.com/gitleaks/gitleaks#installing"; exit 1; }
+	gitleaks detect --source . --no-banner
 
 # ── Publish to the pi-patch Forgejo registry (forge.pi-patch.lan) ──────────────
 # Credentials: make -C $(PI_PATCH)/cluster forgejo-token
@@ -157,26 +177,9 @@ PI_PATCH        ?= $(HOME)/Projects/pi-patch
 FORGEJO_PUBLISH := $(PI_PATCH)/cluster/scripts/forgejo-publish.sh
 FORGEJO_VERSION ?= $(shell git describe --tags --always --dirty)
 
-.PHONY: deploy-forgejo
 deploy-forgejo: dist ## Build the via-index wheel/sdist and publish to pi-patch Forgejo PyPI
 	$(FORGEJO_PUBLISH) pypi dist
-
-# ── Agent / tooling helpers (formerly in the bobp-generated Makefile) ──────────
-.PHONY: help tldr via_index chat
 
 help: ## Show available make targets
 	@grep -E '^[a-zA-Z_][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*## "}; {printf "  %-20s %s\n", $$1, $$2}'
-
-tldr: ## Show TL;DR summaries from all project files (quick orientation for agents)
-	@rg --no-heading "TL;DR:" --glob "*.md" -N | sed 's|^\./||' | sort
-
-via_index: ## Build the via index required by the via MCP server
-	@via index "$(CURDIR)"
-
-chat: ## Post a message to CHAT.md (usage: make chat MSG="<msg>" [PERSONA="<name>"] [CMD="<cmd>"] [TO="<recipient>"])
-	@[ -n "$(MSG)" ] || { echo "Usage: make chat MSG=\"<message>\" [PERSONA=\"<name>\"] [CMD=\"<cmd>\"] [TO=\"<recipient>\"]"; exit 1; }
-	@python agents/tools/chat.py "$(MSG)" \
-		$(if $(PERSONA),--persona "$(PERSONA)") \
-		$(if $(CMD),--cmd "$(CMD)") \
-		$(if $(TO),--to "$(TO)")

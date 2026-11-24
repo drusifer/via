@@ -1,21 +1,45 @@
 name: Publish to PyPI
 
+# Triggered by publishing a GitHub Release (tag it vX.Y.Z first, or run
+# `bobp make release`). Authentication is OIDC trusted publishing under the
+# `drew.gs.works` PyPI account for distribution `via-index`: PyPI trusts repo
+# `drusifer/via`, workflow `publish.yml`, environment `pypi` (with required
+# reviewer approval). No PyPI API token is stored. Actions are pinned to commit
+# SHAs.
 on:
   release:
     types: [published]
+
+# Least privilege: jobs get a read-only token unless they ask for more.
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
-      - run: python -m pip install build twine
-      - run: python -m build
-      - run: twine check dist/*
-      - uses: actions/upload-artifact@v4
+
+      - name: Install build and validation tooling
+        run: python -m pip install build twine
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Validate distribution metadata
+        run: twine check dist/*
+
+      - name: Smoke-test built wheel in isolated venv
+        run: |
+          python -m venv /tmp/verify-venv
+          /tmp/verify-venv/bin/pip install dist/*.whl
+          /tmp/verify-venv/bin/via --help >/dev/null
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dist
           path: dist/
@@ -27,8 +51,10 @@ jobs:
     permissions:
       id-token: write  # PyPI trusted publishing (OIDC); no API token needed
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: dist
           path: dist/
-      - uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3

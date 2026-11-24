@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Block commits that stage secrets. Installed by `bobp make install-hooks`.
+# Owned by Switch (security) under Tank's secret-scanning standards: git-aware
+# scan of staged changes only; never allowlist .env files.
+set -euo pipefail
+
+echo "🔒 gitleaks: scanning staged changes for secrets..."
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "gitleaks is not installed. Install it (https://github.com/gitleaks/gitleaks#installing) and retry." >&2
+    exit 1
+fi
+exec gitleaks git --pre-commit --staged --redact --no-banner

@@ -5,21 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "via-index"
 dynamic = ["version"]
-description = "Codebase indexing and querying CLI tool (Python, JavaScript, TypeScript)"
+description = "Codebase indexing and querying CLI tool (Python, JavaScript, TypeScript, Dart, Markdown)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
-authors = [{ name = "Drew Gutstein", email = "drusifer@gmail.com" }]
+authors = [{ name = "Drew Gutstein", email = "drew@gs.works" }]
 keywords = ["code-index", "static-analysis", "call-graph", "mcp", "tree-sitter"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development",
     "Topic :: Software Development :: Code Generators",
 ]
@@ -45,10 +47,13 @@ dev = [
     "pylint>=3.0.0",
     "bandit>=1.7.0",
     "vulture>=2.11",
+    "build>=1.2.0",
+    "twine>=5.0.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/drusifer/via"
+Repository = "https://github.com/drusifer/via"
 Issues = "https://github.com/drusifer/via/issues"
 Changelog = "https://github.com/drusifer/via/blob/main/CHANGELOG.md"
 
@@ -60,6 +65,9 @@ version = { attr = "via.__version__" }
 
 [tool.setuptools.package-data]
 "via.web" = ["static/*"]
+
+[tool.setuptools.exclude-package-data]
+"*" = [".via/*", "*.db"]
 
 [tool.setuptools.packages.find]
 where = ["."]

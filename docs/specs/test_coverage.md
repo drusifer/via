@@ -21,7 +21,7 @@ isolation is needed even for large suites.
 make test-coverage
 ```
 
-This is a two-step pipeline (see `Makefile.prj`):
+This is a two-step pipeline (see `Makefile`):
 
 ```bash
 pytest --cov=via --cov-context=test -v tests/

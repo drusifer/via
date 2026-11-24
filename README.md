@@ -24,10 +24,10 @@ VIA is a command-line tool for indexing and searching Python, JavaScript, TypeSc
 ## Quick Start
 
 ```bash
-# Install
-git clone https://github.com/your-org/via.git && cd via
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
+# Install from PyPI (pipx / uv tool / pip)
+pipx install via-index
+# or: uv tool install via-index
+# or: pip install via-index
 
 # Index current directory
 via index .
@@ -208,14 +208,14 @@ records = list(ViaRunner(db_store).run(query))
 ## Documentation
 
 - **[User Guide](docs/USER_GUIDE.md)** - Complete usage reference, web UI guide, and 20 real-world queries
-- **[Architecture](agents/morpheus.docs/VIA_ARCHITECTURE.md)** - System design
+- **[Architecture](agents/morpheus/VIA_ARCHITECTURE.md)** - System design
 
 ## Development
 
 ### Setup
 
 ```bash
-git clone https://github.com/your-org/via.git
+git clone https://github.com/drusifer/via.git
 cd via
 python -m venv .venv
 source .venv/bin/activate

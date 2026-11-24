@@ -1608,4 +1608,17 @@ sequenceDiagram
     Note right of Trin: "Verifying behavior<br/>against real binaries<br/>and specs so regressions<br/>never slip past the<br/>gate. Why: crisp<br/>evidence and clear<br/>failure reports g…"
     User->>All: "request"
     Note right of User: "you can commit the bobp<br/>changes"
+    User->>All: "request"
+    Note right of User: "now you can rename the<br/>Makefile.prj to Makefile<br/>and remove the bobp<br/>targets/mkf logic if<br/>any. we use bobp make<br/><target> now"
+    Tank->>User: "devops env"
+    Note right of Tank: "Cleaned legacy bobp<br/>targets (compile-agents,<br/>lints, tldr, via_index,<br/>chat) from Makefile<br/>(Makefile.prj was<br/>already renamed in<br/>22cd9ed with…"
+    User->>All: "request"
+    Note right of User: "/tank package via for<br/>Pypi distribution with<br/>drew.gs.works"
+    Tank->>Switch: "devops ci"
+    Note right of Tank: "PyPI packaging for via-<br/>index (0.1.0,<br/>drew.gs.works) ready:<br/>updated pyproject.toml<br/>(drew@gs.works,<br/>build/twine, exclude<br/>.via/*.db), hardened…"
+    Switch->>User: "sec audit"
+    Note right of Switch: "Release pipeline+dist/*<br/>audit clean (SHA pins,<br/>OIDC env reviewer, no<br/>leaked files). Pre-<br/>existing repo finding:<br/>gitleaks generic-api-key<br/>at…"
+    Note over Neo,Tank: 📅 2026-11-24
+    User->>All: "request"
+    Note right of User: "yup stick with via-<br/>index. also publisher is<br/>ready"
 ```
