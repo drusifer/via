@@ -46,6 +46,9 @@ test.describe('Coverage view', () => {
     await expect(page.locator('#coverage-efficiency-wrap')).toBeVisible();
     await expect(page.locator('#coverage-heatmap-wrap')).toBeHidden();
     await expect(page.locator('#coverage-efficiency-table th')).toContainText(['Test']);
+    await expect(page.locator('#coverage-efficiency-table th[data-col="imported_module_covered_count"]')).toHaveText('Imported Covered');
+    await expect(page.locator('#coverage-efficiency-table th[data-col="mock_call_count"]')).toHaveText('Mocks');
+    await expect(page.locator('#coverage-efficiency-table th[data-col="mock_call_count"]')).toHaveAttribute('title', /mocks only/i);
     await snap(page, '11-coverage-efficiency');
   });
 

@@ -108,7 +108,9 @@ function createFixture() {
               <th data-col="status">Status</th>
               <th data-col="duration_seconds">Duration (s)</th>
               <th data-col="covered_symbol_count">Symbols Covered</th>
+              <th data-col="imported_module_covered_count">Imported Covered</th>
               <th data-col="symbols_per_second">Symbols/sec</th>
+              <th data-col="mock_call_count">Mocks</th>
             </tr>
           </thead>
           <tbody id="coverage-efficiency-tbody"></tbody>

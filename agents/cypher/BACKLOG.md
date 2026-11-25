@@ -1,7 +1,7 @@
 # Product Backlog & Roadmap
 
 **Author**: Cypher (PM)
-**Last Updated**: 2026-07-01
+**Last Updated**: 2026-11-24 (post Sprint 27 launch & retro)
 
 ## Product Backlog
 
@@ -24,45 +24,29 @@
 6. **Additional languages**
    - *Description*: AST parsers for Go, Rust, Java/Kotlin, or Swift.
    - *Status*: Open backlog item.
-7. **Per-test coverage & test quality analysis**
-   - *Description*: Run tests one at a time, capture per-test coverage data plus
-     metadata (last run, status, duration), to enable measuring test quality and
-     efficiency (redundancy, coverage-per-second, uncovered symbols despite a
-     green suite). Phase 1 (capture) requirements: `agents/cypher/TEST_COVERAGE_QUALITY_REQUIREMENTS.md`.
-     Phase 2 (analysis) intentionally unscoped until Phase 1 data exists.
-   - *Status*: Open backlog item — candidate for Sprint 27, pending Morpheus feasibility (OQ-1..3).
-8. **Sankey view: test-suite-to-code-area flow**
-   - *Description*: A Sankey diagram showing flow from test directories/suites
-     to the code areas (package/module) they exercise, aggregated at
-     directory granularity (raw test-id/symbol granularity hairballs past
-     ~30 nodes — same problem flagged for the earlier redundancy-view idea).
-     Answers a different question than the Sprint 27 Phase 2 hierarchy
-     heatmap: not "how well is this code tested" but "which parts of the
-     test suite are entangled with which parts of the app" — useful before
-     reorganizing tests or splitting a module. Edge thickness should be
-     configurable/toggleable between two weightings: **by coverage** (count
-     of symbols in that code area exercised by that test group — shows
-     where test effort concentrates structurally) or **by time** (total
-     `test_runs.duration_seconds` for tests in that group flowing into that
-     code area — shows where test *cost* concentrates, which can surface a
-     different hotspot, e.g. a small module that's expensive to test only
-     because it shares a slow test directory).
-   - *Status*: Open backlog item — parked until after Sprint 27 Phase 2
-     (hierarchy heatmap) ships and is actually used; revisit if the
-     test-organization-vs-code-structure question comes up for real.
-
-### Technical Debt & Code Quality
-1. **Unified executor strategy & CLI parser replacement**
-   - *Description*: Refactor query executor and replace argparse with handler objects to unify CLI and programmatic interfaces.
-   - *Status*: Open backlog item (from Sprint 18).
-2. **Performance optimization**
-   - *Description*: Performance polish for very large chained relationship filters.
+7. **Sankey view: test-suite-to-code-area flow**
+   - *Description*: Directory-level Sankey diagram showing flow from test directories/suites to the code areas (package/module) they exercise, toggleable between **coverage weight** (symbol count) and **time weight** (`test_runs.duration_seconds`).
+   - *Status*: Open backlog item — parked after Sprint 27 until the hierarchy heatmap is used in practice.
+8. **Lambda / anonymous-function own-leaf coverage** *(from Sprint 27 Phase 2)*
+   - *Description*: Index Python lambdas as distinct symbols if standalone leaf visibility in the coverage heatmap is ever needed (currently rolled into the enclosing function/method).
    - *Status*: Open backlog item.
-3. **`_js_body` unit tests**
-   - *Description*: Add dedicated unit tests if body parsing logic continues to diverge from parser internals.
-   - *Status*: Open backlog item (from Sprint 21).
+
+### UX Polish & Hygiene (from Sprint 27 Retro)
+1. **Coverage Efficiency table empty-state hint** *(Smith retro, UX)*
+   - *Description*: Show a concise empty-state message in `#coverage-efficiency-wrap` when zero `test_runs` rows exist, guiding the user to run `make test-coverage` (matching Heatmap's empty state).
+   - *Status*: Open.
+2. **Coverage heatmap legend contrast** *(Smith Cycle 1 note)*
+   - *Description*: Increase contrast of the `"Adequate (100%)"` neutral-gray legend swatch so it is visually distinct against the light card background.
+   - *Status*: Open.
+3. **CI, security scans & lint hygiene** *(Tank / Switch / Neo retro)*
+   - *Description*: Add GitHub Actions push/PR CI workflow (`test`, `test-js`, `gitleaks`), add `security-scan-python` / `security-scan-npm` targets to `Makefile`, resolve the 5 pre-existing Ruff lint warnings, untrack `node_modules/.vite/vitest/.../results.json`, and resolve/rotate Switch's pre-existing gitleaks finding at `.continue/agents/config.yaml:10`.
+   - *Status*: Open.
+
+## Recently Shipped (Archived from Backlog)
+- **Sprint 26**: Unified CLI/executor registries, CTE chained relationship performance optimization, `FunctionBodyAnalyzer` unit tests, polymorphic relationship type hierarchy (`any-ref`/`upstream-ref`/`downstream-ref`, `blast`).
+- **Sprint 27 (Phase 1 & Phase 2)**: Per-test coverage capture (`via coverage import-contexts`, `test_runs`), D3 zoomable-icicle intensity heatmap (LOC sizing, outlier markers, leaf drill-down), test efficiency table + static AST `Mocks` count (`mock_call_count`), `docs/SDLC.md`, PyPI `via-index 0.1.0` trusted publishing.
 
 ## Next Sprint Recommendations
-- **Option A (HCI Focus)**: Boolean operators in queries (AND, OR, NOT) to enhance composability.
-- **Option B (QA Focus)**: Focused regression sprint to resolve the 3 failing tests from the current baseline.
-- **Option C (UX Focus)**: Basic Interactive TUI / browse results command.
+- **Option A (Hygiene / Tech Debt — Tier 2)**: Resolve Sprint 27 retro items (Efficiency empty-state, legend contrast, PR CI + security scans, 5 Ruff findings, `.continue/agents/config.yaml:10`).
+- **Option B (HCI Focus)**: Boolean operators in queries (`AND`, `OR`, `NOT`).
+- **Option C (Developer Productivity)**: Git history integration (`git blame` / commit ranges) or Cross-project queries.

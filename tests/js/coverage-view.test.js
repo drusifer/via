@@ -42,7 +42,9 @@ function createFixture() {
               <th data-col="status">Status</th>
               <th data-col="duration_seconds">Duration (s)</th>
               <th data-col="covered_symbol_count">Symbols Covered</th>
+              <th data-col="imported_module_covered_count">Imported Covered</th>
               <th data-col="symbols_per_second">Symbols/sec</th>
+              <th data-col="mock_call_count" title="Static AST count of mock/patch usages; 'mocks only' marks tests with mocks and 0 covered symbols in imported modules">Mocks</th>
             </tr>
           </thead>
           <tbody id="coverage-efficiency-tbody"></tbody>
@@ -153,8 +155,8 @@ describe('renderEfficiencyTable', () => {
   beforeEach(createFixture);
 
   const rows = [
-    { test_id: 'tests/a.py::test_1', status: 'pass', duration_seconds: 2.5, covered_symbol_count: 10, symbols_per_second: 4.0 },
-    { test_id: 'tests/b.py::test_2', status: 'fail', duration_seconds: 0.5, covered_symbol_count: 20, symbols_per_second: 40.0 },
+    { test_id: 'tests/a.py::test_1', status: 'pass', duration_seconds: 2.5, covered_symbol_count: 10, symbols_per_second: 4.0, mock_call_count: 3 },
+    { test_id: 'tests/b.py::test_2', status: 'fail', duration_seconds: 0.5, covered_symbol_count: 20, symbols_per_second: 40.0, mock_call_count: 0 },
   ];
 
   it('renders one row per test', async () => {
@@ -162,6 +164,32 @@ describe('renderEfficiencyTable', () => {
     renderEfficiencyTable(rows);
     const trs = document.querySelectorAll('#coverage-efficiency-tbody tr');
     expect(trs.length).toBe(2);
+  });
+
+  it('renders imported_module_covered_count, mock_call_count, and mocks_only badge', async () => {
+    const { renderEfficiencyTable } = await getModule();
+    renderEfficiencyTable([
+      { test_id: 't_hollow', status: 'pass', duration_seconds: 1, covered_symbol_count: 2, imported_module_covered_count: 0, symbols_per_second: 2, mock_call_count: 4, mocks_only: true },
+      { test_id: 't_healthy', status: 'pass', duration_seconds: 1, covered_symbol_count: 5, imported_module_covered_count: 3, symbols_per_second: 5, mock_call_count: 2, mocks_only: false },
+      { test_id: 't_unknown', status: 'pass', duration_seconds: 1, covered_symbol_count: 2, imported_module_covered_count: null, symbols_per_second: 2, mock_call_count: null, mocks_only: false },
+    ]);
+    const rowsById = Object.fromEntries(
+      Array.from(document.querySelectorAll('#coverage-efficiency-tbody tr')).map(tr => {
+        const tds = tr.querySelectorAll('td');
+        return [tds[0].textContent, { tr, imported: tds[4].textContent, mocks: tds[6].textContent }];
+      })
+    );
+    expect(rowsById.t_hollow.imported).toBe('0');
+    expect(rowsById.t_hollow.mocks).toContain('4');
+    expect(rowsById.t_hollow.mocks).toContain('mocks only');
+    expect(rowsById.t_hollow.tr.classList.contains('row-mocks-only')).toBe(true);
+
+    expect(rowsById.t_healthy.imported).toBe('3');
+    expect(rowsById.t_healthy.mocks).toBe('2');
+    expect(rowsById.t_healthy.tr.classList.contains('row-mocks-only')).toBe(false);
+
+    expect(rowsById.t_unknown.imported).toBe('—');
+    expect(rowsById.t_unknown.mocks).toBe('—');
   });
 
   it('renders a dash for null symbols_per_second (not "Infinity")', async () => {

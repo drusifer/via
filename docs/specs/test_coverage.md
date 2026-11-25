@@ -75,8 +75,13 @@ normal query builder, with two sub-views:
   clicking a leaf (method/function) drills down to show its qualified
   name, signature, and docstring (re-extracted from source on demand).
 - **Efficiency**: a sortable table of test duration vs. symbols covered
-  (symbols-per-second), for spotting slow tests that aren't pulling their
-  weight.
+  (symbols-per-second), plus **Imported Covered** (`imported_module_covered_count`
+  — how many `covered-by` symbols belong to project modules actually imported by
+  that test) and **Mocks** (`mock_call_count` — static AST count of
+  `unittest.mock.patch` / `Mock` / `MagicMock` / `AsyncMock` / `create_autospec`
+  / `@patch` usages per test function). Tests that use mocks while covering **0**
+  symbols in their imported project modules are flagged `mocks_only` (`mocks only`
+  badge) so hollow mock-only tests stand out from healthy isolated unit tests.
 
 Backing API: `GET /api/coverage/hierarchy`, `GET /api/coverage/test-efficiency`,
 `GET /api/coverage/symbol?id=<id>`.

@@ -5,33 +5,29 @@ State Management Protocol in `.agents/skills/bob-protocol/SKILL.md` for entry an
 
 ## Context
 - **Recent decisions:**
-  - Cleaned legacy bobp targets (`compile-agents`, `lints`, `tldr`, `via_index`, `chat`) from `Makefile`; kept `help` and all VIA project targets (`Makefile.prj` was already renamed in `22cd9ed`). Updated `docs/specs/test_coverage.md`.
-  - Packaged `via-index` (v0.1.0) for public PyPI under the `drew.gs.works` PyPI account using OIDC trusted publishing, mirroring `bob_protocol`.
-  - Updated `pyproject.toml`: author email `drew@gs.works`, Dart/Markdown in description, Python 3.13 + OS Independent classifiers, `Repository` URL, `build`/`twine` in `dev` extras, `exclude-package-data` for `.via/*` and `*.db`.
-  - Hardened `.github/workflows/publish.yml` with top-level `permissions: contents: read`, SHA-pinned actions, `twine check dist/*`, isolated wheel smoke test, and `environment: pypi` (`id-token: write`).
-  - Created GitHub `pypi` environment on `drusifer/via` with required reviewer `drusifer` (user ID `10341781`).
-  - Added `Makefile` `release`, `install-hooks`, and `security-scan-secrets` targets plus `.githooks/pre-commit` (gitleaks staged-changes hook enabled via `bobp make install-hooks`).
-  - Updated `README.md` Quick Start (`pipx`/`uv tool`/`pip install via-index`) and fixed `your-org` → `drusifer` URLs.
+  - Created `docs/SDLC.md` from `agents/templates/_template_SDLC.md` (template note and rubric block removed) and ran Sprint 27 close conformance check (`*devops sdlc-check`).
+  - Documented Python + JS toolchains, all 27 `Makefile` targets, dependency rules, quality gates, change classes, `via-index` PyPI trusted-publishing release process, and all known deviations honestly (no Python lockfile, no push/PR CI yet, pre-existing gitleaks history finding at `.continue/agents/config.yaml:10`, 5 pre-existing Ruff warnings, tracked vitest cache file).
 - **Key findings:**
-  - PyPI account `drew.gs.works` exists (HTTP 200); `via` is taken (HTTP 200); `via-index` is available (HTTP 404).
-  - `bobp make -vv dist` built `dist/via_index-0.1.0-py3-none-any.whl` (86 files) and `dist/via_index-0.1.0.tar.gz` (109 files); both passed `twine check`, include `via/web/static/{app,utils}.js`, and exclude `.via/`, `agents/`, `tests/`, `.mcp.json`, `.continue/`.
-  - Isolated wheel smoke test (`uv venv` + `via --help` + `via index` + `via -mg 'SmokeWidget' -tc`) PASSED.
-  - Switch gitleaks scan flagged 1 pre-existing repo history finding in `.continue/agents/config.yaml:10` (commit `9817f24`, not in PyPI artifacts).
-- **Important notes:** Do not commit or push until user directs; user must register the PyPI Pending Publisher under `drew.gs.works` before running `bobp make release`.
+  - Every target in `docs/SDLC.md` Section 3 verified present in `Makefile`.
+  - `.githooks/pre-commit` executable and `core.hooksPath = .githooks`.
+  - `.gitignore` excludes `.venv/`, `.mcp.json`, `.via/`, `dist/`, `build/`.
+  - `via-index 0.1.0` live on PyPI (`https://pypi.org/project/via-index/0.1.0/`) and verified via fresh install.
+  - All third-party runtime imports in `via/` match `pyproject.toml` `[project].dependencies`.
+- **Important notes:** Restored dirty tracked `node_modules/.vite/vitest/.../results.json` or flagged it as a known deviation in Section 9.
 
 ## Current Task
 - **Status:** Complete
 - **Assigned to:** Tank
-- **Started:** 2026-11-23
-- **Description:** Clean Makefile and package `via-index` for PyPI distribution under `drew.gs.works` with OIDC trusted publishing.
-- **Progress:** All config, workflow, Makefile, GitHub `pypi` environment, hook setup, `bobp make dist`, wheel/sdist content audit, and isolated wheel smoke test completed and verified.
-- **Blockers:** User manual step required on PyPI (`drew.gs.works`) to register the Pending Publisher for `via-index`; Switch flagged pre-existing `.continue/agents/config.yaml:10` gitleaks finding.
-- **Consultations:** Switch audited release workflow, wheel/sdist contents, and ran `bobp make security-scan-secrets`.
+- **Started:** 2026-11-24
+- **Description:** Author `docs/SDLC.md` and run Sprint 27 close `*devops sdlc-check`.
+- **Progress:** 100% — `docs/SDLC.md` created, self-checked against SDLC rubric (`TRUE`, `WHOLE`, `CLEAN`, `CLASS`, `CHECK`, `GAPS`), conformance checks verified; handed off to Oracle for `*ora groom`.
+- **Blockers:** None
+- **Consultations:** Handed off to Oracle for Sprint 27 close doc groom + SDLC rubric review.
 
 ## Next Steps
-- **Immediate next action:** Present summary, exact PyPI Pending Publisher fields for `drew.gs.works`, Switch's gitleaks finding, and wait for user approval to commit/push and run `bobp make release`.
-- **Waiting on:** User (PyPI pending publisher setup + commit/release direction)
-- **Planned work:** Commit packaging changes, push to `main`, then run `bobp make release` once Pending Publisher is registered on PyPI.
+- **Immediate next action:** Participate in Sprint 27 retrospective after Oracle and Smith complete close-out gates.
+- **Waiting on:** Oracle (`*ora groom`)
+- **Planned work:** Sprint 27 retro.
 
 ---
-*Last updated: 2026-11-23*
+*Last updated: 2026-11-24*

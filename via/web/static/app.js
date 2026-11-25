@@ -477,15 +477,23 @@ export function renderEfficiencyTableBody() {
     }
     return efficiencySortAsc ? an - bn : bn - an;
   });
-  $('coverage-efficiency-tbody').innerHTML = sorted.map(r => `
-    <tr>
+  const fmt = v => (v == null ? '—' : v);
+  $('coverage-efficiency-tbody').innerHTML = sorted.map(r => {
+    const badge = r.mocks_only
+      ? ' <span class="badge-mocks-only" title="Uses mocks with 0 covered symbols in imported project modules">mocks only</span>'
+      : '';
+    return `
+    <tr${r.mocks_only ? ' class="row-mocks-only"' : ''}>
       <td>${esc(r.test_id)}</td>
       <td>${esc(r.status)}</td>
       <td>${(r.duration_seconds ?? 0).toFixed(2)}</td>
       <td>${r.covered_symbol_count ?? 0}</td>
+      <td>${fmt(r.imported_module_covered_count)}</td>
       <td>${r.symbols_per_second == null ? '—' : r.symbols_per_second.toFixed(2)}</td>
+      <td>${fmt(r.mock_call_count)}${badge}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function initEfficiencySort() {

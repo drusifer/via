@@ -163,16 +163,18 @@ at sqrt(n-1)) and a real path bug (hierarchy rooting at the filesystem
 root, not project root) were found and fixed in Cycle 1's own new code via
 a real end-to-end smoke test, not just fixture-driven unit tests.
 
-### Cycle 2 - Mocking-usage signal (static AST count)
-- [ ] Static AST count of mock usage per test, added as a column on the Cycle 1 efficiency table
-- [ ] Trin UAT, Smith usability test, Morpheus review
+### Cycle 2 - Mocking-usage signal (static AST count) — CLOSED (2026-11-24)
+- [x] Neo: single-pass cached static AST analysis (`_analyze_test_file` in `via/web/api/coverage.py` + `DatabaseStore.get_test_covered_file_counts`) computing `mock_call_count`, `imported_module_covered_count` (covered symbols in project modules imported by the test), and `mocks_only` (`mock_call_count > 0` and `imported_module_covered_count == 0`), surfaced as sortable `Imported Covered` + `Mocks` (`mocks only` badge) columns on the Efficiency table (`via/web/template.py`, `via/web/static/app.js`)
+- [x] Trin UAT (1409 passed, 1 skipped; 101/101 documented UAT after removing obsolete `bobp`-migrated tool tests; 107 JS unit tests; real repo spot-check exact match count=3 on `test_start_runs_initial_index`): PASSES
+- [x] Switch security review (`security gate (phase 2): No blocking findings`): CLEARED
+- [x] Morpheus review (`rubric LOOP_IMPL: TFIRST=S VERIF=S MODUL=S REGRESS=A BUDGET=S`): APPROVED
+- [x] Tank SDLC creation & conformance check (`docs/SDLC.md` created & verified): PASSED
+- [x] Oracle documentation groom (`docs/specs/test_coverage.md`, `README.md`, `rubric SDLC: TRUE=S WHOLE=S CLEAN=S CLASS=S CHECK=S GAPS=S`): PASSED
+- [x] Smith E2E usability test (real Playwright Chromium: 27/27 passed, inspected `ux-11-coverage-efficiency.png`, `rubric UAT: COVER=S STEPS=S FAIL=A DATA=S EVID=S`): APPROVED
+- [x] Team retrospective + Cypher `*pm launch Sprint 27`: COMPLETE
 
 **Non-scope**: runtime mock-call instrumentation, automated test-deletion
 recommendations, test-suite-to-code-area Sankey view (parked in
-`agents/cypher.docs/BACKLOG.md` item 8).
+`agents/cypher/BACKLOG.md` item 7).
 
-**Status**: Cycle 1 CLOSED (2026-07-02) — AC7 drill-down resolved per user
-directive (qualified name + docstring + args for functions/methods),
-LOC-based leaf sizing added (schema v8), lambda coverage question answered
-(implicitly covered via enclosing function/method, not a new leaf type).
-Cycle 2 not started.
+**Status**: **Sprint 27 (Phase 1 + Phase 2): CLOSED & LAUNCHED (2026-11-24)** — all cycles complete, all gates signed off with real evidence.

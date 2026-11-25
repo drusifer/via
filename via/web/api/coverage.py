@@ -19,8 +19,9 @@ Author: Drew Gutstein
 License: GPL-3.0
 """
 import ast
+import os
 from statistics import mean, pstdev
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 if TYPE_CHECKING:
     from via.db.store import DatabaseStore
@@ -206,20 +207,208 @@ def get_coverage_hierarchy(db_store: "DatabaseStore") -> Dict[str, Any]:
     return build_coverage_hierarchy(rows)
 
 
-def get_test_efficiency(db_store: "DatabaseStore") -> List[Dict[str, Any]]:
-    """Return per-test efficiency rows with a computed symbols_per_second.
+_MOCK_CONSTRUCTORS = frozenset({
+    'Mock',
+    'MagicMock',
+    'AsyncMock',
+    'NonCallableMock',
+    'NonCallableMagicMock',
+    'PropertyMock',
+    'create_autospec',
+})
+_PATCH_ATTRS = frozenset({'object', 'dict', 'multiple'})
 
-    `symbols_per_second` is None for zero-duration tests (avoids a
-    divide-by-zero; the frontend renders this as a dash, not infinity).
+
+def _is_mock_call(node: ast.Call) -> bool:
+    """Return True if `node` is a static mock constructor or patch call."""
+    func = node.func
+    if isinstance(func, ast.Name):
+        return func.id in _MOCK_CONSTRUCTORS or func.id == 'patch'
+    if isinstance(func, ast.Attribute):
+        if func.attr in _MOCK_CONSTRUCTORS or func.attr == 'patch':
+            return True
+        if func.attr in _PATCH_ATTRS:
+            parent = func.value
+            return (isinstance(parent, ast.Name) and parent.id == 'patch') or (
+                isinstance(parent, ast.Attribute) and parent.attr == 'patch'
+            )
+    return False
+
+
+def _count_mock_calls(nodes: List[ast.AST]) -> int:
+    """Count AST Call nodes matching mock/patch patterns across `nodes`."""
+    total = 0
+    for root in nodes:
+        for child in ast.walk(root):
+            if isinstance(child, ast.Call) and _is_mock_call(child):
+                total += 1
+    return total
+
+
+def _parse_python_file(file_path: str) -> Optional[ast.Module]:
+    """Read and AST-parse a Python file, returning None on I/O or syntax errors."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return ast.parse(f.read())
+    except (IOError, OSError, SyntaxError, UnicodeDecodeError):
+        return None
+
+
+def _module_to_rel_candidates(dotted: str) -> List[str]:
+    base = dotted.replace('.', '/')
+    return [f'{base}.py', f'{base}/__init__.py']
+
+
+def _extract_import_candidates(nodes: List[ast.AST]) -> Set[str]:
+    """Extract candidate relative `.py` paths referenced by imports in `nodes`."""
+    candidates: Set[str] = set()
+    for root in nodes:
+        for child in ast.walk(root):
+            if isinstance(child, ast.Import):
+                for alias in child.names:
+                    candidates.update(_module_to_rel_candidates(alias.name))
+            elif isinstance(child, ast.ImportFrom) and child.module and child.level == 0:
+                candidates.update(_module_to_rel_candidates(child.module))
+                for alias in child.names:
+                    if alias.name != '*':
+                        candidates.update(_module_to_rel_candidates(f'{child.module}.{alias.name}'))
+    return candidates
+
+
+def _resolve_project_imports(
+    candidates: Set[str], index_root: Optional[str], exclude_file: str
+) -> Set[str]:
+    """Keep candidate paths that exist as non-test project files under `index_root`."""
+    if not index_root or not candidates:
+        return set()
+    excluded = os.path.realpath(exclude_file)
+    resolved_rels: Set[str] = set()
+    for rel in candidates:
+        parts = rel.split('/')
+        if parts[0] == 'tests' or parts[-1] == 'conftest.py':
+            continue
+        full = _resolve_under_root(index_root, rel)
+        if full and full != excluded and os.path.isfile(full):
+            resolved_rels.add(rel)
+    return resolved_rels
+
+
+def _analyze_test_file(
+    file_path: str, index_root: Optional[str] = None
+) -> Dict[Tuple[Optional[str], str], Tuple[int, Set[str]]]:
+    """Single-pass AST analysis returning `(mock_count, imported_project_files)` per test."""
+    tree = _parse_python_file(file_path)
+    if tree is None:
+        return {}
+
+    top_level_imports = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
+    module_imports = _resolve_project_imports(
+        _extract_import_candidates(top_level_imports), index_root, file_path
+    )
+
+    analyzed: Dict[Tuple[Optional[str], str], Tuple[int, Set[str]]] = {}
+    for stmt in tree.body:
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            local_imports = _resolve_project_imports(
+                _extract_import_candidates([stmt]), index_root, file_path
+            )
+            analyzed[(None, stmt.name)] = (_count_mock_calls([stmt]), module_imports | local_imports)
+        elif isinstance(stmt, ast.ClassDef):
+            class_mocks = _count_mock_calls(stmt.decorator_list)
+            for item in stmt.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    local_imports = _resolve_project_imports(
+                        _extract_import_candidates([item]), index_root, file_path
+                    )
+                    analyzed[(stmt.name, item.name)] = (
+                        class_mocks + _count_mock_calls([item]),
+                        module_imports | local_imports,
+                    )
+    return analyzed
+
+
+def count_mock_usages_in_file(file_path: str) -> Dict[Tuple[Optional[str], str], int]:
+    """Statically count unittest.mock / patch usages per function/method in a Python file."""
+    return {key: count for key, (count, _) in _analyze_test_file(file_path).items()}
+
+
+def _parse_test_nodeid(test_id: str) -> Optional[Tuple[str, Optional[str], str]]:
+    """Parse a pytest nodeid into `(rel_file_path, class_name_or_None, func_name)`."""
+    parts = test_id.split('::')
+    if len(parts) < 2:
+        return None
+    rel_path = parts[0]
+    func_name = parts[-1].split('[', 1)[0]
+    class_name = parts[1] if len(parts) >= 3 else None
+    return rel_path, class_name, func_name
+
+
+def _resolve_under_root(index_root: str, rel_path: str) -> Optional[str]:
+    """Resolve `rel_path` strictly inside `index_root`, rejecting path traversal."""
+    root_real = os.path.realpath(index_root)
+    candidate = os.path.realpath(os.path.join(root_real, rel_path))
+    try:
+        if os.path.commonpath([root_real, candidate]) != root_real:
+            return None
+    except ValueError:
+        return None
+    return candidate
+
+
+def get_test_efficiency(db_store: "DatabaseStore") -> List[Dict[str, Any]]:
+    """Return per-test efficiency rows with symbols_per_second, mock_call_count,
+    imported_module_covered_count, and mocks_only.
+
+    `imported_module_covered_count` sums `covered-by` symbols belonging to the
+    project modules imported by that test (None when no project module imports
+    can be resolved). `mocks_only` is True when a test uses mocks
+    (`mock_call_count > 0`) and covers 0 symbols in its imported project modules.
     """
     rows = db_store.get_test_efficiency_data()
+    covered_by_file = db_store.get_test_covered_file_counts()
+    file_cache: Dict[str, Dict[Tuple[Optional[str], str], Tuple[int, Set[str]]]] = {}
     results = []
     for row in rows:
         duration = row['duration_seconds']
         covered = row['covered_symbol_count']
         symbols_per_second = (covered / duration) if duration > 0 else None
-        results.append({**row, 'symbols_per_second': symbols_per_second})
+        mock_call_count, imported_covered = _lookup_test_mock_and_import_coverage(
+            row['test_id'], db_store.index_root, covered_by_file.get(row['test_id'], {}), file_cache
+        )
+        mocks_only = bool(mock_call_count and imported_covered == 0)
+        results.append({
+            **row,
+            'symbols_per_second': symbols_per_second,
+            'mock_call_count': mock_call_count,
+            'imported_module_covered_count': imported_covered,
+            'mocks_only': mocks_only,
+        })
     return results
+
+
+def _lookup_test_mock_and_import_coverage(
+    test_id: str,
+    index_root: str,
+    test_file_counts: Dict[str, int],
+    file_cache: Dict[str, Dict[Tuple[Optional[str], str], Tuple[int, Set[str]]]],
+) -> Tuple[Optional[int], Optional[int]]:
+    parsed = _parse_test_nodeid(test_id)
+    if parsed is None:
+        return None, None
+    rel_path, class_name, func_name = parsed
+    resolved = _resolve_under_root(index_root, rel_path)
+    if resolved is None:
+        return None, None
+    if resolved not in file_cache:
+        file_cache[resolved] = _analyze_test_file(resolved, index_root)
+    entry = file_cache[resolved].get((class_name, func_name))
+    if entry is None:
+        return None, None
+    mock_count, imported_files = entry
+    if not imported_files:
+        return mock_count, None
+    imported_covered = sum(test_file_counts.get(f, 0) for f in imported_files)
+    return mock_count, imported_covered
 
 
 def _extract_signature_and_docstring(
@@ -237,11 +426,8 @@ def _extract_signature_and_docstring(
         e.g. a non-Python symbol, an unreadable/unparseable file, or a
         match that couldn't be located).
     """
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            source = f.read()
-        tree = ast.parse(source)
-    except (IOError, OSError, SyntaxError, UnicodeDecodeError):
+    tree = _parse_python_file(file_path)
+    if tree is None:
         return {'signature': None, 'docstring': None}
 
     target_node = None

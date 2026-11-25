@@ -355,6 +355,190 @@ class TestGetTestEfficiencyWrapper:
 
 
 # ---------------------------------------------------------------------------
+# Sprint 27 Phase 2 Cycle 2 — static AST mock-usage count
+# ---------------------------------------------------------------------------
+
+class TestCountMockUsagesInFile:
+    def test_counts_mock_constructors_patch_calls_and_decorators(self, tmp_path):
+        from via.web.api.coverage import count_mock_usages_in_file
+
+        src = tmp_path / "test_sample.py"
+        src.write_text(
+            "from unittest.mock import Mock, MagicMock, AsyncMock, patch, create_autospec\n"
+            "import unittest.mock\n"
+            "\n"
+            "def test_no_mocks():\n"
+            "    text = 'Mock MagicMock patch'\n"
+            "    assert len(text) > 0\n"
+            "\n"
+            "@patch('os.path.exists')\n"
+            "@unittest.mock.patch.object(dict, 'get')\n"
+            "def test_decorators_and_calls(m1, m2):\n"
+            "    a = Mock()\n"
+            "    b = MagicMock()\n"
+            "    c = create_autospec(dict)\n"
+            "    with patch.dict('os.environ', {}):\n"
+            "        pass\n"
+            "\n"
+            "async def test_async_mock():\n"
+            "    fn = AsyncMock()\n"
+            "    await fn()\n"
+            "\n"
+            "@patch('sys.exit')\n"
+            "class TestGrouped:\n"
+            "    def test_inherits_class_patch(self, _m):\n"
+            "        x = unittest.mock.MagicMock()\n"
+            "        assert x is not None\n"
+            "\n"
+            "    def test_mocker_fixture(self, _m, mocker):\n"
+            "        mocker.patch('time.sleep')\n"
+        )
+
+        counts = count_mock_usages_in_file(str(src))
+        assert counts[(None, 'test_no_mocks')] == 0
+        # 2 decorators + Mock + MagicMock + create_autospec + patch.dict = 6
+        assert counts[(None, 'test_decorators_and_calls')] == 6
+        assert counts[(None, 'test_async_mock')] == 1
+        # 1 class @patch + 1 MagicMock = 2
+        assert counts[('TestGrouped', 'test_inherits_class_patch')] == 2
+        # 1 class @patch + 1 mocker.patch = 2
+        assert counts[('TestGrouped', 'test_mocker_fixture')] == 2
+
+    def test_missing_or_unparseable_file_returns_empty_dict(self, tmp_path):
+        from via.web.api.coverage import count_mock_usages_in_file
+
+        assert count_mock_usages_in_file(str(tmp_path / "missing.py")) == {}
+        broken = tmp_path / "broken.py"
+        broken.write_text("def test_bad(:\n    pass\n")
+        assert count_mock_usages_in_file(str(broken)) == {}
+
+
+class TestGetTestEfficiencyMockCount:
+    def test_populates_mock_call_count_for_real_and_parametrized_tests(self, tmp_path):
+        db_path = str(tmp_path / "test.db")
+        store = DatabaseStore(db_path, str(tmp_path))
+        store.connect()
+        store.initialize_schema()
+
+        pkg_dir = tmp_path / "pkg"
+        pkg_dir.mkdir()
+        (pkg_dir / "__init__.py").write_text("")
+        (pkg_dir / "service.py").write_text("def work():\n    return 1\n")
+        (pkg_dir / "other.py").write_text("def helper():\n    return 2\n")
+
+        svc_sym = _insert_code_symbol(store, 'work', 'function', 'pkg/service.py')
+        other_sym = _insert_code_symbol(store, 'helper', 'function', 'pkg/other.py')
+
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir()
+        (test_dir / "test_mod.py").write_text(
+            "from unittest.mock import Mock, patch\n"
+            "from pkg import service\n"
+            "\n"
+            "def test_clean():\n"
+            "    assert service.work() == 1\n"
+            "\n"
+            "class TestSuite:\n"
+            "    @patch('os.getcwd')\n"
+            "    def test_mocked_healthy(self, m):\n"
+            "        _ = Mock()\n"
+            "        assert service.work() == 1\n"
+            "\n"
+            "    @patch('pkg.service.work')\n"
+            "    def test_mocks_only_hollow(self, m):\n"
+            "        _ = Mock()\n"
+            "        assert m is not None\n"
+        )
+        (test_dir / "test_cli_only.py").write_text(
+            "from unittest.mock import Mock\n"
+            "import subprocess\n"
+            "def test_no_project_import():\n"
+            "    _ = Mock()\n"
+        )
+
+        t_clean = "tests/test_mod.py::test_clean"
+        t_healthy = "tests/test_mod.py::TestSuite::test_mocked_healthy[case-1]"
+        t_hollow = "tests/test_mod.py::TestSuite::test_mocks_only_hollow"
+        t_cli = "tests/test_cli_only.py::test_no_project_import"
+        t_missing = "tests/does_not_exist.py::test_missing"
+        t_escape = "../../etc/passwd::test_escape"
+        t_malformed = "malformed_nodeid_without_colons"
+
+        sym_clean = _insert_test_symbol(store, t_clean)
+        sym_healthy = _insert_test_symbol(store, t_healthy)
+        sym_hollow = _insert_test_symbol(store, t_hollow)
+        for tid in (t_cli, t_missing, t_escape, t_malformed):
+            _insert_test_symbol(store, tid)
+
+        # Clean & healthy tests actually execute pkg/service.py; hollow test
+        # only touches an unrelated helper module, NOT its imported pkg/service.py.
+        _cover(store, svc_sym, sym_clean)
+        _cover(store, svc_sym, sym_healthy)
+        _cover(store, other_sym, sym_hollow)
+
+        for tid in (t_clean, t_healthy, t_hollow, t_cli, t_missing, t_escape, t_malformed):
+            store.upsert_test_run(tid, 'pass', 0.5, '2026-07-02T00:00:00+00:00')
+
+        rows = {r['test_id']: r for r in get_test_efficiency(store)}
+        store.close()
+
+        assert rows[t_clean]['mock_call_count'] == 0
+        assert rows[t_clean]['imported_module_covered_count'] == 1
+        assert rows[t_clean]['mocks_only'] is False
+
+        assert rows[t_healthy]['mock_call_count'] == 2
+        assert rows[t_healthy]['imported_module_covered_count'] == 1
+        assert rows[t_healthy]['mocks_only'] is False
+
+        # Hollow test: uses mocks AND covers 0 symbols in imported pkg/service.py
+        assert rows[t_hollow]['mock_call_count'] == 2
+        assert rows[t_hollow]['covered_symbol_count'] == 1
+        assert rows[t_hollow]['imported_module_covered_count'] == 0
+        assert rows[t_hollow]['mocks_only'] is True
+
+        # No project modules imported -> cannot judge imported coverage -> not flagged
+        assert rows[t_cli]['mock_call_count'] == 1
+        assert rows[t_cli]['imported_module_covered_count'] is None
+        assert rows[t_cli]['mocks_only'] is False
+
+        for tid in (t_missing, t_escape, t_malformed):
+            assert rows[tid]['mock_call_count'] is None
+            assert rows[tid]['imported_module_covered_count'] is None
+            assert rows[tid]['mocks_only'] is False
+
+    def test_resolves_local_import_inside_test_function(self, tmp_path):
+        db_path = str(tmp_path / "test.db")
+        store = DatabaseStore(db_path, str(tmp_path))
+        store.connect()
+        store.initialize_schema()
+
+        pkg_dir = tmp_path / "pkg"
+        pkg_dir.mkdir()
+        (pkg_dir / "local_mod.py").write_text("def compute():\n    return 42\n")
+
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir()
+        (test_dir / "test_local.py").write_text(
+            "from unittest.mock import patch\n"
+            "def test_with_local_import():\n"
+            "    from pkg.local_mod import compute\n"
+            "    with patch('pkg.local_mod.compute'):\n"
+            "        assert compute is not None\n"
+        )
+
+        tid = "tests/test_local.py::test_with_local_import"
+        _insert_test_symbol(store, tid)
+        store.upsert_test_run(tid, 'pass', 0.1, '2026-07-02T00:00:00+00:00')
+
+        rows = get_test_efficiency(store)
+        store.close()
+
+        assert rows[0]['mock_call_count'] == 1
+        assert rows[0]['imported_module_covered_count'] == 0
+        assert rows[0]['mocks_only'] is True
+
+
+# ---------------------------------------------------------------------------
 # GET /api/coverage/hierarchy and GET /api/coverage/test-efficiency — real HTTP
 # ---------------------------------------------------------------------------
 
@@ -407,6 +591,9 @@ class TestCoverageEndpointsHTTP:
             assert resp.status == 200
             data = json.loads(resp.body)
             assert data['results'][0]['test_id'] == test_id
+            assert 'mock_call_count' in data['results'][0]
+            assert 'imported_module_covered_count' in data['results'][0]
+            assert 'mocks_only' in data['results'][0]
         finally:
             srv.stop()
 

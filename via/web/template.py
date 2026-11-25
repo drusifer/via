@@ -521,6 +521,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       font-family: 'Roboto Mono', monospace;
       font-size: 12px;
     }
+    #coverage-efficiency-table tr.row-mocks-only { background: #fff8e1; }
+    .badge-mocks-only {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      border: 1px solid #d97706;
+      background: #fef3c7;
+      color: #92400e;
+      font-family: 'Roboto', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+    }
 
     @media (max-width: 700px) {
       #app { flex-direction: column; height: auto; }
@@ -762,7 +775,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           <th data-col="status">Status</th>
           <th data-col="duration_seconds">Duration (s)</th>
           <th data-col="covered_symbol_count">Symbols Covered</th>
+          <th data-col="imported_module_covered_count" title="Covered symbols belonging to project modules imported by this test">Imported Covered</th>
           <th data-col="symbols_per_second">Symbols/sec</th>
+          <th data-col="mock_call_count" title="Static AST count of mock/patch usages; 'mocks only' marks tests with mocks and 0 covered symbols in imported modules">Mocks</th>
         </tr>
       </thead>
       <tbody id="coverage-efficiency-tbody"></tbody>

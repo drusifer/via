@@ -67,20 +67,15 @@ Cycle 2.
       just documented), confirm zoomable icicle navigation is discoverable
 - [ ] Morpheus: review Cycle 1 for architecture alignment
 
-## Cycle 2 — Mocking-usage signal (static AST count)
+## Cycle 2 — Mocking-usage signal (static AST count) — CLOSED (2026-11-24)
 
-- [ ] Neo: extend existing Python AST walk to count
-      `unittest.mock.patch`/`Mock(`/`MagicMock(`/`@patch` usages per test
-      function (additive to existing symbol extraction, not a new pass)
-- [ ] Neo: surface `mock_call_count` as an added column on the Cycle 1
-      efficiency table response/UI — no new view
-- [ ] Neo: explicitly no threshold/scoring — raw count only, per Cypher's
-      non-goal (no automated judgment)
-- [ ] Trin: UAT — spot-check mock counts against a few known test files
-- [ ] Smith: usability test — is a raw count useful/legible without a
-      threshold, or does it need a caveat/tooltip
-- [ ] Morpheus: review Cycle 2, confirm no scope crept into runtime
-      instrumentation (explicitly out per architecture doc)
+- [x] Neo: cached per-file Python AST walk (`count_mock_usages_in_file` in `via/web/api/coverage.py`) counting `unittest.mock.patch`/`Mock(`/`MagicMock(`/`AsyncMock(`/`create_autospec(`/`@patch`/`mocker.patch` usages per test function (including class-level `@patch` decorators, strict `index_root` path containment, zero schema bump)
+- [x] Neo: surfaced `mock_call_count` as a sortable `Mocks` column on the Cycle 1 efficiency table response/UI (`via/web/template.py`, `via/web/static/app.js`) — no new view
+- [x] Neo: explicitly no threshold/scoring — raw count only with neutral tooltip, per Cypher's non-goal (no automated judgment)
+- [x] Trin: UAT — spot-checked mock counts against all 109 real test files (verified exact count=3 on `tests/unit/test_watch_service.py::TestStartupShutdown::test_start_runs_initial_index`), 1409 passed + 107 JS tests green
+- [x] Switch: security review — `security gate (phase 2): No blocking findings`
+- [x] Morpheus: review Cycle 2 — APPROVED, confirmed zero runtime instrumentation scope creep (`rubric LOOP_IMPL: TFIRST=S VERIF=S MODUL=S REGRESS=A BUDGET=S`)
+- [x] Smith: usability test — real Playwright Chromium 27/27 passed, inspected `ux-11-coverage-efficiency.png`, confirmed `Mocks` column and neutral tooltip are legible; logged non-blocking retro note for empty-state hint on empty Efficiency table
 
 ## Non-scope (explicitly deferred)
 - Runtime mock-call instrumentation (architecture OQ-2: skip this sprint).

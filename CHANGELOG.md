@@ -8,12 +8,22 @@ All notable changes to **via** are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **Sprint 27 — Test Coverage & Quality Analysis (Phase 1 & Phase 2)**
+  - Per-test coverage capture (`via coverage import-contexts`, `make test-coverage`) storing per-test `covered-by` relationships and `test_runs` metadata (status, duration, last-run).
+  - Web UI **Coverage** view with D3 zoomable-icicle intensity heatmap (leaf size = lines of code via schema v8 `symbols.line_end`, color = coverage intensity % on a colorblind-safe blue→orange scale, peer-relative outlier marker, leaf drill-down with signature & docstring via `GET /api/coverage/symbol`).
+  - Web UI **Efficiency** sortable table (`GET /api/coverage/test-efficiency`) showing test duration, covered symbols, **Imported Covered** (`imported_module_covered_count`), symbols/sec, and static AST **Mocks** count (`mock_call_count`), flagging `mocks_only` tests that touch mocks while covering 0 symbols in their imported project modules.
+  - Project SDLC governance doc (`docs/SDLC.md`) and gitleaks pre-commit hook (`.githooks/pre-commit`, `make install-hooks`).
+  - PyPI trusted-publishing pipeline for `via-index` (`make release`, hardened `.github/workflows/publish.yml`).
+
 ### Changed
 
 - Migrated MCP server mode from the removed MCP 1.x `FastMCP` import to the
   MCP 2.x `mcp.server.MCPServer` API.
 - Raised the runtime requirement to Python 3.10+ and the MCP dependency to
   `mcp>=2.0`.
+- Dropped legacy BobProtocol targets from `Makefile` in favor of `bobp make <target>`.
 
 ## Sprint 12: Web UI + UX Polish
 

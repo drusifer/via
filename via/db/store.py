@@ -2215,3 +2215,28 @@ class DatabaseStore:
             }
             for row in rows
         ]
+
+    @require_connection
+    def get_test_covered_file_counts(self) -> Dict[str, Dict[str, int]]:
+        """Return `{test_id: {relative_file_path: covered_symbol_count}}`.
+
+        Reuses `_to_relative_path()` so keys match relative project module paths
+        resolved from test-file imports.
+        """
+        rows = self.conn.execute(
+            """
+            SELECT test_sym.symbol_name, src.file_path, COUNT(DISTINCT sr.from_symbol_id)
+            FROM symbol_references sr
+            JOIN symbols test_sym
+              ON test_sym.id = sr.to_symbol_id AND test_sym.symbol_type = 'test'
+            JOIN symbols src
+              ON src.id = sr.from_symbol_id
+            WHERE sr.reference_type = 'covered-by'
+            GROUP BY test_sym.symbol_name, src.file_path
+            """
+        ).fetchall()
+        by_test: Dict[str, Dict[str, int]] = {}
+        for test_id, file_path, count in rows:
+            rel = self._to_relative_path(file_path).replace('\\', '/')
+            by_test.setdefault(test_id, {})[rel] = count
+        return by_test
