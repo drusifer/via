@@ -446,11 +446,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       display: inline-block;
       width: 14px; height: 14px;
       border-radius: 3px;
-      border: 1px solid var(--md-sys-color-outline);
+      border: 1px solid rgba(32, 33, 36, 0.25);
     }
-    #legend-low  { background: rgb(21, 101, 192); }
-    #legend-mid  { background: rgb(240, 240, 240); }
-    #legend-high { background: rgb(230, 81, 0); }
+    #legend-low  { background: rgb(21, 101, 192); border-color: #0d47a1; }
+    #legend-mid  { background: #cbd5e1; border: 1px solid #64748b; }
+    #legend-high { background: rgb(230, 81, 0); border-color: #bf360c; }
     /* Outlier marker is a distinct border, independent of the fill color —
        peer-relative outlier status and absolute intensity color can
        disagree, so color alone can't be the only signal (Smith Gate re-confirm). */
@@ -522,6 +522,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       font-size: 12px;
     }
     #coverage-efficiency-table tr.row-mocks-only { background: #fff8e1; }
+    #coverage-efficiency-empty {
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--md-sys-color-on-surface-variant);
+      background: #fff;
+      border-top: 1px solid var(--md-sys-color-outline);
+      font-size: 13px;
+    }
+    #coverage-efficiency-empty code {
+      font-family: 'Roboto Mono', monospace;
+      background: var(--md-sys-color-surface-variant);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--md-sys-color-on-surface);
+    }
     .badge-mocks-only {
       display: inline-block;
       margin-left: 6px;
@@ -782,6 +797,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </thead>
       <tbody id="coverage-efficiency-tbody"></tbody>
     </table>
+    <div id="coverage-efficiency-empty" style="display:none">No test efficiency data captured yet. Run <code>make test-coverage</code> to populate per-test timing and coverage.</div>
   </div>
 </div>
 

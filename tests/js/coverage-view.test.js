@@ -49,6 +49,7 @@ function createFixture() {
           </thead>
           <tbody id="coverage-efficiency-tbody"></tbody>
         </table>
+        <div id="coverage-efficiency-empty" style="display:none"></div>
       </div>
     </div>
   `;
@@ -210,6 +211,23 @@ describe('renderEfficiencyTable', () => {
     const tbody = document.getElementById('coverage-efficiency-tbody');
     expect(tbody.innerHTML).not.toContain('<img');
     expect(tbody.innerHTML).toContain('&lt;img');
+  });
+
+  it('displays #coverage-efficiency-empty and empties tbody when given an empty array', async () => {
+    const { renderEfficiencyTable } = await getModule();
+    document.getElementById('coverage-efficiency-tbody').innerHTML = '<tr><td>stale</td></tr>';
+    renderEfficiencyTable([]);
+    expect(document.getElementById('coverage-efficiency-tbody').innerHTML).toBe('');
+    expect(document.getElementById('coverage-efficiency-empty').style.display).toBe('block');
+    expect(document.querySelectorAll('#coverage-efficiency-table th').length).toBe(7);
+  });
+
+  it('hides #coverage-efficiency-empty and renders rows when given non-empty results', async () => {
+    const { renderEfficiencyTable } = await getModule();
+    document.getElementById('coverage-efficiency-empty').style.display = 'block';
+    renderEfficiencyTable([rows[0]]);
+    expect(document.getElementById('coverage-efficiency-empty').style.display).toBe('none');
+    expect(document.querySelectorAll('#coverage-efficiency-tbody tr').length).toBe(1);
   });
 });
 

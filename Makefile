@@ -2,7 +2,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: dist release install-hooks security-scan-secrets all venv install install-dev test coverage test-coverage test-js test-e2e test-all clean lint-fast lint lint-slow duplicates security dead-code fix install-system via-watch via-mcp-serve via deploy-forgejo help
+.PHONY: dist release install-hooks security-scan-secrets security-scan-python security-scan-npm security-scan all venv install install-dev test coverage test-coverage test-js test-e2e test-all clean lint-fast lint lint-slow duplicates security dead-code fix install-system via-watch via-mcp-serve via deploy-forgejo help
 
 # Variables
 PYTHON := python3
@@ -170,6 +170,16 @@ install-hooks: ## Enable .githooks/pre-commit (gitleaks on staged changes) via c
 security-scan-secrets: ## Scan git history for committed secrets (gitleaks, git-aware)
 	@command -v gitleaks >/dev/null || { echo "gitleaks is not installed: https://github.com/gitleaks/gitleaks#installing"; exit 1; }
 	gitleaks detect --source . --no-banner
+
+security-scan-python: install-dev ## Audit installed Python dependencies with pip-audit
+	@test -x $(VENV_DIR)/bin/pip-audit || { echo "pip-audit is not installed in $(VENV_DIR): run 'make install-dev' (requires pip-audit>=2.7.0 in pyproject.toml)"; exit 1; }
+	. ${VENV_ACTIVATE} && pip-audit
+
+security-scan-npm: ## Audit JS dev dependencies (high and above) against package-lock.json
+	@command -v npm >/dev/null || { echo "npm is not installed: install Node.js/npm (https://nodejs.org/)"; exit 1; }
+	npm audit --audit-level=high
+
+security-scan: security-scan-secrets security-scan-python security-scan-npm ## Run all build-time security scans (secrets, Python deps, npm deps)
 
 # ── Publish to the pi-patch Forgejo registry (forge.pi-patch.lan) ──────────────
 # Credentials: make -C $(PI_PATCH)/cluster forgejo-token

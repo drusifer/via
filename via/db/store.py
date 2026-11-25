@@ -120,6 +120,99 @@ class DatabaseStore:
         """Context manager exit."""
         self.close()
 
+    @staticmethod
+    def _ensure_symbol_column(
+        cursor: sqlite3.Cursor,
+        column_name: str,
+        column_type: str,
+    ) -> bool:
+        """Add a column to symbols if missing; return True when ALTER ran."""
+        existing_cols = {
+            row[1] for row in cursor.execute("PRAGMA table_info(symbols)")
+        }
+        if column_name not in existing_cols:
+            cursor.execute(f"ALTER TABLE symbols ADD COLUMN {column_name} {column_type}")
+            return True
+        return False
+
+    @staticmethod
+    def _record_migration(cursor: sqlite3.Cursor, version: int, description: str) -> None:
+        """Record an applied schema migration idempotently."""
+        cursor.execute(
+            "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
+            " VALUES (?, ?, ?)",
+            (version, time.time(), description),
+        )
+
+    def _migrate_v4(self, cursor: sqlite3.Cursor) -> None:
+        cursor.execute(CREATE_LINE_OFFSETS_TABLE)
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_line_offsets_file ON line_offsets(file_id)"
+        )
+        self._record_migration(
+            cursor, 4, "Add line_offsets table for -mL line slice queries"
+        )
+
+    def _migrate_v5(self, cursor: sqlite3.Cursor) -> None:
+        # Only ALTER if symbols.mtime column doesn't already exist.
+        # Fresh DBs have it from CREATE_SYMBOLS_TABLE; old DBs need ALTER.
+        self._ensure_symbol_column(cursor, 'mtime', 'REAL')
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_symbols_mtime ON symbols(mtime)"
+        )
+        self._record_migration(
+            cursor, 5, "Add symbols.mtime for temporal query operators"
+        )
+
+    def _migrate_v6(self, cursor: sqlite3.Cursor) -> None:
+        if self._ensure_symbol_column(cursor, 'language', 'TEXT'):
+            # Backfill language from files table for existing rows
+            cursor.execute(
+                "UPDATE symbols SET language = ("
+                "  SELECT f.language FROM files f WHERE f.path = symbols.file_path"
+                ") WHERE language IS NULL"
+            )
+        self._ensure_symbol_column(cursor, 'symbol_subtype', 'TEXT')
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_symbols_language ON symbols(language)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_symbols_subtype ON symbols(symbol_subtype)"
+        )
+        self._record_migration(
+            cursor, 6, "Add symbols.language and symbols.symbol_subtype columns"
+        )
+
+    def _migrate_v7(self, cursor: sqlite3.Cursor) -> None:
+        # test_runs itself is already created unconditionally via ALL_TABLES
+        # (CREATE TABLE IF NOT EXISTS) — this just records the migration.
+        self._record_migration(
+            cursor, 7, "Add test_runs table for per-test coverage run metadata"
+        )
+
+    def _migrate_v8(self, cursor: sqlite3.Cursor) -> None:
+        self._ensure_symbol_column(cursor, 'line_end', 'INTEGER')
+        self._record_migration(
+            cursor, 8, "Add symbols.line_end for lines-of-code sizing (coverage heatmap)"
+        )
+
+    def _apply_schema_migrations(
+        self,
+        cursor: sqlite3.Cursor,
+        current_version: int,
+    ) -> None:
+        """Apply incremental schema migrations newer than current_version."""
+        migrations = (
+            (4, self._migrate_v4),
+            (5, self._migrate_v5),
+            (6, self._migrate_v6),
+            (7, self._migrate_v7),
+            (8, self._migrate_v8),
+        )
+        for target_version, migrate_fn in migrations:
+            if current_version < target_version:
+                migrate_fn(cursor)
+
     @require_connection
     def initialize_schema(self) -> None:
         """Create all tables and indexes if they don't exist, applying migrations as needed."""
@@ -144,80 +237,7 @@ class DatabaseStore:
             cursor.execute(index_sql)
 
         # Apply incremental migrations for existing databases
-        if current_version < 4:
-            cursor.execute(CREATE_LINE_OFFSETS_TABLE)
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_line_offsets_file ON line_offsets(file_id)"
-            )
-            cursor.execute(
-                "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
-                " VALUES (?, ?, ?)",
-                (4, time.time(), "Add line_offsets table for -mL line slice queries")
-            )
-
-        if current_version < 5:
-            # Only ALTER if symbols.mtime column doesn't already exist.
-            # Fresh DBs have it from CREATE_SYMBOLS_TABLE; old DBs need ALTER.
-            existing_cols = {
-                row[1] for row in cursor.execute("PRAGMA table_info(symbols)")
-            }
-            if 'mtime' not in existing_cols:
-                cursor.execute("ALTER TABLE symbols ADD COLUMN mtime REAL")
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_symbols_mtime ON symbols(mtime)"
-            )
-            cursor.execute(
-                "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
-                " VALUES (?, ?, ?)",
-                (5, time.time(), "Add symbols.mtime for temporal query operators")
-            )
-
-        if current_version < 6:
-            existing_cols = {
-                row[1] for row in cursor.execute("PRAGMA table_info(symbols)")
-            }
-            if 'language' not in existing_cols:
-                cursor.execute("ALTER TABLE symbols ADD COLUMN language TEXT")
-                # Backfill language from files table for existing rows
-                cursor.execute(
-                    "UPDATE symbols SET language = ("
-                    "  SELECT f.language FROM files f WHERE f.path = symbols.file_path"
-                    ") WHERE language IS NULL"
-                )
-            if 'symbol_subtype' not in existing_cols:
-                cursor.execute("ALTER TABLE symbols ADD COLUMN symbol_subtype TEXT")
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_symbols_language ON symbols(language)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_symbols_subtype ON symbols(symbol_subtype)"
-            )
-            cursor.execute(
-                "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
-                " VALUES (?, ?, ?)",
-                (6, time.time(), "Add symbols.language and symbols.symbol_subtype columns")
-            )
-
-        if current_version < 7:
-            # test_runs itself is already created unconditionally via ALL_TABLES
-            # (CREATE TABLE IF NOT EXISTS) — this just records the migration.
-            cursor.execute(
-                "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
-                " VALUES (?, ?, ?)",
-                (7, time.time(), "Add test_runs table for per-test coverage run metadata")
-            )
-
-        if current_version < 8:
-            existing_cols = {
-                row[1] for row in cursor.execute("PRAGMA table_info(symbols)")
-            }
-            if 'line_end' not in existing_cols:
-                cursor.execute("ALTER TABLE symbols ADD COLUMN line_end INTEGER")
-            cursor.execute(
-                "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)"
-                " VALUES (?, ?, ?)",
-                (8, time.time(), "Add symbols.line_end for lines-of-code sizing (coverage heatmap)")
-            )
+        self._apply_schema_migrations(cursor, current_version)
 
         # Store metadata
         cursor.execute(
@@ -230,13 +250,7 @@ class DatabaseStore:
         )
 
         # Record initial schema migration
-        cursor.execute(
-            """
-            INSERT OR IGNORE INTO schema_migrations (version, applied_at, description)
-            VALUES (?, ?, ?)
-            """,
-            (SCHEMA_VERSION, time.time(), "Initial schema")
-        )
+        self._record_migration(cursor, SCHEMA_VERSION, "Initial schema")
 
         self._commit_if_needed()
 
@@ -1238,6 +1252,380 @@ class DatabaseStore:
         where_parts.append(f"{not_prefix}{col} {match_op.sql_op} ?")
         params.append(pat)
 
+    @staticmethod
+    def _is_import_file_type(relationship_type: str, symbol_type: Optional[str]) -> bool:
+        """Return True when an imports query filters on filepath/filename symbols."""
+        return relationship_type == 'imports' and symbol_type in ('filepath', 'filename')
+
+    @staticmethod
+    def _normalize_declares_direction(
+        relationship_type: str,
+        subject_pattern: Optional[str],
+        object_pattern: Optional[str],
+        subject_type: Optional[str],
+        object_type: Optional[str],
+        subject_qualified: bool,
+        object_qualified: bool,
+        subject_negated: bool,
+        object_negated: bool,
+        invert: bool,
+    ) -> Tuple[
+        Optional[str],
+        Optional[str],
+        Optional[str],
+        Optional[str],
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+    ]:
+        """Swap subject/object parameters when a declares query puts container on subject side."""
+        if relationship_type == 'declares':
+            container_types = {'file', 'class', 'filepath', 'filename'}
+            subject_is_container = subject_type in container_types
+            object_is_container = object_type in container_types
+            if subject_is_container and not object_is_container:
+                return (
+                    object_pattern,
+                    subject_pattern,
+                    object_type,
+                    subject_type,
+                    object_qualified,
+                    subject_qualified,
+                    object_negated,
+                    subject_negated,
+                    not invert,
+                )
+        return (
+            subject_pattern,
+            object_pattern,
+            subject_type,
+            object_type,
+            subject_qualified,
+            object_qualified,
+            subject_negated,
+            object_negated,
+            invert,
+        )
+
+    @staticmethod
+    def _add_result_names_clause(
+        where_parts: List[str],
+        params: List[Any],
+        alias: str,
+        qualified: bool,
+        result_names: Optional[List[str]],
+    ) -> None:
+        """Append an IN (...) filter on the returned symbol name when result_names is given."""
+        if result_names is None:
+            return
+        result_col = f"{alias}.qualified_name" if qualified else f"{alias}.symbol_name"
+        if result_names:
+            placeholders = ", ".join("?" for _ in result_names)
+            where_parts.append(f"{result_col} IN ({placeholders})")
+            params.extend(result_names)
+        else:
+            where_parts.append("1=0")
+
+    @staticmethod
+    def _add_temporal_clauses(
+        where_parts: List[str],
+        params: List[Any],
+        alias: str,
+        newerthan_seconds: Optional[float],
+        olderthan_seconds: Optional[float],
+    ) -> None:
+        """Append mtime bounds on the returned symbol alias."""
+        now = time.time()
+        if newerthan_seconds is not None:
+            where_parts.append(f"{alias}.mtime > ?")
+            params.append(now - newerthan_seconds)
+        if olderthan_seconds is not None:
+            where_parts.append(f"{alias}.mtime < ?")
+            params.append(now - olderthan_seconds)
+
+    @staticmethod
+    def _add_object_type_clause(
+        where_parts: List[str],
+        params: List[Any],
+        relationship_type: str,
+        object_type: Optional[str],
+        object_alias: str,
+    ) -> None:
+        """Append the symbol_type filter clause for the object side of a relationship."""
+        if object_type == 'class':
+            where_parts.append("(t.symbol_type = ? OR t.symbol_type = 'external_class')")
+            params.append(object_type)
+        elif relationship_type == 'imports' and object_type == 'import':
+            where_parts.append("(t.symbol_type = 'import' OR t.symbol_type = 'module')")
+        elif object_type:
+            where_parts.append(f"{object_alias}.symbol_type = ?")
+            params.append(object_type)
+
+    @classmethod
+    def _resolve_positive_joins(
+        cls,
+        relationship_type: str,
+        subject_type: Optional[str],
+        object_type: Optional[str],
+        invert: bool,
+    ) -> Tuple[List[str], str, str, str, str]:
+        """Build JOIN clauses and resolve aliases for positive relationship queries."""
+        joins = [
+            "JOIN symbols s ON r.from_symbol_id = s.id",
+            "JOIN symbols t ON r.to_symbol_id = t.id",
+        ]
+        subject_alias = "s"
+        if cls._is_import_file_type(relationship_type, subject_type):
+            joins.append("JOIN symbol_references rs ON rs.from_symbol_id = s.id AND rs.reference_type = 'declares'")
+            joins.append("JOIN symbols fs ON rs.to_symbol_id = fs.id")
+            subject_alias = "fs"
+
+        object_alias = "t"
+        if cls._is_import_file_type(relationship_type, object_type):
+            joins.append("JOIN symbol_references rt ON rt.from_symbol_id = t.id AND rt.reference_type = 'declares'")
+            joins.append("JOIN symbols ft ON rt.to_symbol_id = ft.id")
+            object_alias = "ft"
+
+        select_from = object_alias if invert else subject_alias
+        anchor_alias = subject_alias if invert else object_alias
+        return joins, select_from, subject_alias, object_alias, anchor_alias
+
+    @staticmethod
+    def _format_relationship_select(
+        alias: str,
+        anchor_mtime_expr: str,
+        from_clause: str,
+        where_clause: str,
+        include_symbol_id: bool = False,
+        include_order_limit: bool = False,
+    ) -> str:
+        """Format the standard relationship SELECT query with base_names LEFT JOIN."""
+        symbol_id_col = f",\n                {alias}.id AS symbol_id" if include_symbol_id else ""
+        tail_clause = (
+            f"\n            ORDER BY {alias}.file_path, {alias}.line_number\n            LIMIT ?"
+            if include_order_limit
+            else ""
+        )
+        return f"""
+            SELECT
+                {alias}.symbol_name,
+                {alias}.symbol_type,
+                {alias}.file_path,
+                {alias}.line_number,
+                {alias}.byte_offset,
+                {alias}.byte_length,
+                {alias}.qualified_name,
+                {alias}.parent_name,
+                {alias}.mtime,
+                {anchor_mtime_expr} AS anchor_mtime,
+                b.base_names{symbol_id_col}
+            FROM {from_clause}
+            LEFT JOIN (
+                SELECT sr2.from_symbol_id,
+                       GROUP_CONCAT(s2.symbol_name, ',') as base_names
+                FROM symbol_references sr2
+                JOIN symbols s2 ON sr2.to_symbol_id = s2.id
+                WHERE sr2.reference_type = 'inherits-from'
+                GROUP BY sr2.from_symbol_id
+            ) b ON b.from_symbol_id = {alias}.id
+            WHERE {where_clause}{tail_clause}
+        """
+
+    def _yield_relationship_records(
+        self,
+        cursor: sqlite3.Cursor,
+    ) -> Iterator[MatchRecord]:
+        """Yield MatchRecord objects from standard relationship query rows."""
+        for row in cursor:
+            row_dict = {
+                'symbol_name': row[0],
+                'symbol_type': row[1],
+                'file_path': row[2],
+                'line_number': row[3],
+                'byte_offset': row[4],
+                'byte_length': row[5],
+                'qualified_name': row[6],
+                'parent_name': row[7],
+                'mtime': row[8],
+                'base_names': row[10],
+            }
+            record = self._record_factory.create_from_row(row_dict)
+            record.anchor_mtime = row[9]
+            yield record
+
+    def _build_positive_relationship_parts(
+        self,
+        relationship_type: str,
+        subject_pattern: Optional[str] = None,
+        object_pattern: Optional[str] = None,
+        subject_type: Optional[str] = None,
+        object_type: Optional[str] = None,
+        subject_parent_pattern: Optional[str] = None,
+        invert: bool = False,
+        match_op: MatchOp = MatchOp.GLOB,
+        case_sensitive: bool = True,
+        result_newerthan_seconds: Optional[float] = None,
+        result_olderthan_seconds: Optional[float] = None,
+        subject_negated: bool = False,
+        object_negated: bool = False,
+        subject_qualified: bool = False,
+        object_qualified: bool = False,
+        result_names: Optional[List[str]] = None,
+    ) -> Tuple[List[str], str, str, str, List[Any]]:
+        """Build JOINs, WHERE clause, aliases, and params for positive relationship queries."""
+        (
+            subject_pattern,
+            object_pattern,
+            subject_type,
+            object_type,
+            subject_qualified,
+            object_qualified,
+            subject_negated,
+            object_negated,
+            invert,
+        ) = self._normalize_declares_direction(
+            relationship_type,
+            subject_pattern,
+            object_pattern,
+            subject_type,
+            object_type,
+            subject_qualified,
+            object_qualified,
+            subject_negated,
+            object_negated,
+            invert,
+        )
+
+        where_parts = ["r.reference_type = ?"]
+        params: List[Any] = [relationship_type]
+
+        joins, select_from, subject_alias, object_alias, anchor_alias = (
+            self._resolve_positive_joins(
+                relationship_type, subject_type, object_type, invert
+            )
+        )
+
+        subject_col = f"{subject_alias}.qualified_name" if subject_qualified else f"{subject_alias}.symbol_name"
+        object_col = f"{object_alias}.qualified_name" if object_qualified else f"{object_alias}.symbol_name"
+        self._add_pattern_clause(where_parts, params, subject_col, subject_pattern, match_op, case_sensitive, subject_negated)
+        self._add_pattern_clause(where_parts, params, object_col, object_pattern, match_op, case_sensitive, object_negated)
+
+        result_qualified = object_qualified if invert else subject_qualified
+        self._add_result_names_clause(where_parts, params, select_from, result_qualified, result_names)
+
+        if subject_type:
+            where_parts.append(f"{subject_alias}.symbol_type = ?")
+            params.append(subject_type)
+
+        self._add_pattern_clause(where_parts, params, "s.parent_name", subject_parent_pattern, match_op, case_sensitive)
+        self._add_object_type_clause(where_parts, params, relationship_type, object_type, object_alias)
+        self._add_temporal_clauses(where_parts, params, select_from, result_newerthan_seconds, result_olderthan_seconds)
+
+        return joins, " AND ".join(where_parts), select_from, anchor_alias, params
+
+    def _build_negative_not_exists_clause(
+        self,
+        relationship_type: str,
+        object_pattern: Optional[str],
+        subject_type: Optional[str],
+        object_type: Optional[str],
+        match_op: MatchOp,
+        case_sensitive: bool,
+        invert_join: bool,
+        object_negated: bool,
+        object_qualified: bool,
+    ) -> Tuple[str, List[Any]]:
+        """Build the NOT EXISTS subquery clause and params for negative relationship queries."""
+        is_subject_file = self._is_import_file_type(relationship_type, subject_type)
+        is_object_file = self._is_import_file_type(relationship_type, object_type)
+
+        sub_joins: List[str] = []
+        sub_params: List[Any] = [relationship_type]
+        if is_subject_file:
+            sub_table = "symbol_references rs"
+            sub_joins.extend([
+                "JOIN symbols s_imp ON rs.from_symbol_id = s_imp.id AND s_imp.symbol_type = 'import'",
+                "JOIN symbol_references r ON r.from_symbol_id = s_imp.id AND r.reference_type = ?",
+                "JOIN symbols t ON r.to_symbol_id = t.id",
+            ])
+            sub_where = ["rs.to_symbol_id = s.id AND rs.reference_type = 'declares'"]
+        else:
+            sub_table = "symbol_references r"
+            if invert_join:
+                sub_anchor = "r.to_symbol_id = s.id"
+                sub_joins.append("JOIN symbols t ON r.from_symbol_id = t.id")
+            else:
+                sub_anchor = "r.from_symbol_id = s.id"
+                sub_joins.append("JOIN symbols t ON r.to_symbol_id = t.id")
+            sub_where = [sub_anchor, "r.reference_type = ?"]
+
+        object_alias = "t"
+        if is_object_file:
+            sub_joins.append("JOIN symbol_references rt ON rt.from_symbol_id = t.id AND rt.reference_type = 'declares'")
+            sub_joins.append("JOIN symbols ft ON rt.to_symbol_id = ft.id")
+            object_alias = "ft"
+
+        self._add_object_type_clause(sub_where, sub_params, relationship_type, object_type, object_alias)
+
+        object_col = f"{object_alias}.qualified_name" if object_qualified else f"{object_alias}.symbol_name"
+        self._add_pattern_clause(sub_where, sub_params, object_col, object_pattern, match_op, case_sensitive, object_negated)
+
+        not_exists_clause = (
+            f"NOT EXISTS (SELECT 1 FROM {sub_table} "
+            f"{' '.join(sub_joins)} "
+            f"WHERE {' AND '.join(sub_where)})"
+        )
+        return not_exists_clause, sub_params
+
+    def _build_negative_relationship_parts(
+        self,
+        relationship_type: str,
+        subject_pattern: Optional[str] = None,
+        object_pattern: Optional[str] = None,
+        subject_type: Optional[str] = None,
+        object_type: Optional[str] = None,
+        match_op: MatchOp = MatchOp.GLOB,
+        case_sensitive: bool = True,
+        result_newerthan_seconds: Optional[float] = None,
+        result_olderthan_seconds: Optional[float] = None,
+        invert_join: bool = False,
+        subject_negated: bool = False,
+        object_negated: bool = False,
+        subject_qualified: bool = False,
+        object_qualified: bool = False,
+        result_names: Optional[List[str]] = None,
+    ) -> Tuple[str, List[Any]]:
+        """Build outer WHERE clause and params for negative (--sans) relationship queries."""
+        outer_where: List[str] = []
+        outer_params: List[Any] = []
+
+        if subject_type:
+            outer_where.append("s.symbol_type = ?")
+            outer_params.append(subject_type)
+
+        subject_col = "s.qualified_name" if subject_qualified else "s.symbol_name"
+        self._add_pattern_clause(outer_where, outer_params, subject_col, subject_pattern, match_op, case_sensitive, subject_negated)
+        self._add_result_names_clause(outer_where, outer_params, "s", subject_qualified, result_names)
+        self._add_temporal_clauses(outer_where, outer_params, "s", result_newerthan_seconds, result_olderthan_seconds)
+
+        not_exists_clause, sub_params = self._build_negative_not_exists_clause(
+            relationship_type=relationship_type,
+            object_pattern=object_pattern,
+            subject_type=subject_type,
+            object_type=object_type,
+            match_op=match_op,
+            case_sensitive=case_sensitive,
+            invert_join=invert_join,
+            object_negated=object_negated,
+            object_qualified=object_qualified,
+        )
+        outer_where.append(not_exists_clause)
+
+        where_clause = " AND ".join(outer_where) if outer_where else "1=1"
+        return where_clause, outer_params + sub_params
+
     @require_connection
     def query_relationships(
         self,
@@ -1291,162 +1679,38 @@ class DatabaseStore:
         Yields:
             MatchRecord objects for matching symbols
         """
-        # For declares relationship, s is always member and t is always container in the DB.
-        # Check if the caller passed container on the subject side or object side.
-        if relationship_type == 'declares':
-            _DECLARES_CONTAINER_TYPES = {'file', 'class', 'filepath', 'filename'}
-            subject_is_container = subject_type in _DECLARES_CONTAINER_TYPES
-            object_is_container = object_type in _DECLARES_CONTAINER_TYPES
-
-            # If subject is container and object is not, swap subject and object parameters
-            if subject_is_container and not object_is_container:
-                subject_pattern, object_pattern = object_pattern, subject_pattern
-                subject_type, object_type = object_type, subject_type
-                subject_qualified, object_qualified = object_qualified, subject_qualified
-                subject_negated, object_negated = object_negated, subject_negated
-                invert = not invert
-
-        # Build the query
-        if not invert:
-            select_from = "s"  # source symbol
-        else:
-            select_from = "t"  # target symbol
-        join_source = "from_symbol_id"
-        join_target = "to_symbol_id"
-
-        # Build WHERE clauses
-        where_parts = ["r.reference_type = ?"]
-        params: List[Any] = [relationship_type]
-
-        # Determine joins and aliases
-        joins = [
-            f"JOIN symbols s ON r.{join_source} = s.id",
-            f"JOIN symbols t ON r.{join_target} = t.id"
-        ]
-
-        is_subject_file = relationship_type == 'imports' and subject_type in ('filepath', 'filename')
-        is_object_file = relationship_type == 'imports' and object_type in ('filepath', 'filename')
-
-        if is_subject_file:
-            joins.append("JOIN symbol_references rs ON rs.from_symbol_id = s.id AND rs.reference_type = 'declares'")
-            joins.append("JOIN symbols fs ON rs.to_symbol_id = fs.id")
-            subject_alias = "fs"
-            if select_from == "s":
-                select_from = "fs"
-        else:
-            subject_alias = "s"
-
-        if is_object_file:
-            joins.append("JOIN symbol_references rt ON rt.from_symbol_id = t.id AND rt.reference_type = 'declares'")
-            joins.append("JOIN symbols ft ON rt.to_symbol_id = ft.id")
-            object_alias = "ft"
-            if select_from == "t":
-                select_from = "ft"
-        else:
-            object_alias = "t"
-
-        subject_col = f"{subject_alias}.qualified_name" if subject_qualified else f"{subject_alias}.symbol_name"
-        object_col = f"{object_alias}.qualified_name" if object_qualified else f"{object_alias}.symbol_name"
-        self._add_pattern_clause(where_parts, params, subject_col, subject_pattern, match_op, case_sensitive, subject_negated)
-        self._add_pattern_clause(where_parts, params, object_col, object_pattern, match_op, case_sensitive, object_negated)
-
-        if result_names is not None:
-            result_qualified = object_qualified if invert else subject_qualified
-            result_col = f"{select_from}.qualified_name" if result_qualified else f"{select_from}.symbol_name"
-            if result_names:
-                placeholders = ", ".join("?" for _ in result_names)
-                where_parts.append(f"{result_col} IN ({placeholders})")
-                params.extend(result_names)
-            else:
-                where_parts.append("1=0")
-
-        if subject_type:
-            if is_subject_file:
-                where_parts.append("fs.symbol_type = ?")
-                params.append(subject_type)
-            else:
-                where_parts.append("s.symbol_type = ?")
-                params.append(subject_type)
-
-        self._add_pattern_clause(where_parts, params, "s.parent_name", subject_parent_pattern, match_op, case_sensitive)
-
-        if object_type == 'class':
-            where_parts.append("(t.symbol_type = ? OR t.symbol_type = 'external_class')")
-            params.append(object_type)
-        elif relationship_type == 'imports' and object_type == 'import':
-            where_parts.append("(t.symbol_type = 'import' OR t.symbol_type = 'module')")
-        elif object_type:
-            if is_object_file:
-                where_parts.append("ft.symbol_type = ?")
-                params.append(object_type)
-            else:
-                where_parts.append("t.symbol_type = ?")
-                params.append(object_type)
-
-        # Temporal filter on the returned symbol (select_from)
-        now = time.time()
-        if result_newerthan_seconds is not None:
-            where_parts.append(f"{select_from}.mtime > ?")
-            params.append(now - result_newerthan_seconds)
-        if result_olderthan_seconds is not None:
-            where_parts.append(f"{select_from}.mtime < ?")
-            params.append(now - result_olderthan_seconds)
-
-        # Anchor is the other symbol in the join (used for --stale)
-        if select_from in ("fs", "s"):
-            anchor_alias = object_alias
-        else:
-            anchor_alias = subject_alias
-
-        # Build query
-        where_clause = " AND ".join(where_parts)
-        query = f"""
-            SELECT
-                {select_from}.symbol_name,
-                {select_from}.symbol_type,
-                {select_from}.file_path,
-                {select_from}.line_number,
-                {select_from}.byte_offset,
-                {select_from}.byte_length,
-                {select_from}.qualified_name,
-                {select_from}.parent_name,
-                {select_from}.mtime,
-                {anchor_alias}.mtime AS anchor_mtime,
-                b.base_names
-            FROM symbol_references r
-            {" ".join(joins)}
-            LEFT JOIN (
-                SELECT sr2.from_symbol_id,
-                       GROUP_CONCAT(s2.symbol_name, ',') as base_names
-                FROM symbol_references sr2
-                JOIN symbols s2 ON sr2.to_symbol_id = s2.id
-                WHERE sr2.reference_type = 'inherits-from'
-                GROUP BY sr2.from_symbol_id
-            ) b ON b.from_symbol_id = {select_from}.id
-            WHERE {where_clause}
-            ORDER BY {select_from}.file_path, {select_from}.line_number
-            LIMIT ?
-        """
+        joins, where_clause, select_from, anchor_alias, params = (
+            self._build_positive_relationship_parts(
+                relationship_type=relationship_type,
+                subject_pattern=subject_pattern,
+                object_pattern=object_pattern,
+                subject_type=subject_type,
+                object_type=object_type,
+                subject_parent_pattern=subject_parent_pattern,
+                invert=invert,
+                match_op=match_op,
+                case_sensitive=case_sensitive,
+                result_newerthan_seconds=result_newerthan_seconds,
+                result_olderthan_seconds=result_olderthan_seconds,
+                subject_negated=subject_negated,
+                object_negated=object_negated,
+                subject_qualified=subject_qualified,
+                object_qualified=object_qualified,
+                result_names=result_names,
+            )
+        )
+        from_clause = f"symbol_references r\n            {' '.join(joins)}"
+        query = self._format_relationship_select(
+            alias=select_from,
+            anchor_mtime_expr=f"{anchor_alias}.mtime",
+            from_clause=from_clause,
+            where_clause=where_clause,
+            include_order_limit=True,
+        )
         params.append(limit)
 
-        # Execute and yield results
         cursor = self.conn.execute(query, params)
-        for row in cursor:
-            row_dict = {
-                'symbol_name': row[0],
-                'symbol_type': row[1],
-                'file_path': row[2],
-                'line_number': row[3],
-                'byte_offset': row[4],
-                'byte_length': row[5],
-                'qualified_name': row[6],
-                'parent_name': row[7],
-                'mtime': row[8],
-                'base_names': row[10],
-            }
-            record = self._record_factory.create_from_row(row_dict)
-            record.anchor_mtime = row[9]
-            yield record
+        yield from self._yield_relationship_records(cursor)
 
     @require_connection
     def query_negative_relationships(
@@ -1494,146 +1758,34 @@ class DatabaseStore:
         Yields:
             MatchRecord objects for matching symbols
         """
-        # Outer query: select subjects matching the subject filter
-        outer_where: List[Any] = []
-        outer_params: List[Any] = []
-
-        if subject_type:
-            outer_where.append("s.symbol_type = ?")
-            outer_params.append(subject_type)
-
-        subject_col = "s.qualified_name" if subject_qualified else "s.symbol_name"
-        self._add_pattern_clause(outer_where, outer_params, subject_col, subject_pattern, match_op, case_sensitive, subject_negated)
-
-        if result_names is not None:
-            result_col = "s.qualified_name" if subject_qualified else "s.symbol_name"
-            if result_names:
-                placeholders = ", ".join("?" for _ in result_names)
-                outer_where.append(f"{result_col} IN ({placeholders})")
-                outer_params.extend(result_names)
-            else:
-                outer_where.append("1=0")
-
-        # Temporal filters on the returned subject
-        now = time.time()
-        if result_newerthan_seconds is not None:
-            outer_where.append("s.mtime > ?")
-            outer_params.append(now - result_newerthan_seconds)
-        if result_olderthan_seconds is not None:
-            outer_where.append("s.mtime < ?")
-            outer_params.append(now - result_olderthan_seconds)
-
-
-        is_subject_file = relationship_type == 'imports' and subject_type in ('filepath', 'filename')
-        is_object_file = relationship_type == 'imports' and object_type in ('filepath', 'filename')
-
-        # NOT EXISTS subquery: no relationship of this type to any matching object.
-        # invert_join=True flips the join direction for relationships where the subject
-        # is the TO side (e.g. 'declares': container is to_symbol_id, member is from_symbol_id).
-        sub_joins = []
-        if is_subject_file:
-            # outer 's' is file, so sub_anchor connects 'rs' to 's'
-            sub_anchor = "rs.to_symbol_id = s.id AND rs.reference_type = 'declares'"
-            sub_joins.append("JOIN symbols s_imp ON rs.from_symbol_id = s_imp.id AND s_imp.symbol_type = 'import'")
-            sub_joins.append("JOIN symbol_references r ON r.from_symbol_id = s_imp.id AND r.reference_type = ?")
-            sub_joins.append("JOIN symbols t ON r.to_symbol_id = t.id")
-            sub_where = [sub_anchor]
-            sub_params: List[Any] = [relationship_type]
-        else:
-            if invert_join:
-                sub_anchor = "r.to_symbol_id = s.id"
-                sub_joins.append("JOIN symbols t ON r.from_symbol_id = t.id")
-            else:
-                sub_anchor = "r.from_symbol_id = s.id"
-                sub_joins.append("JOIN symbols t ON r.to_symbol_id = t.id")
-            sub_where = [sub_anchor, "r.reference_type = ?"]
-            sub_params: List[Any] = [relationship_type]
-
-        if is_object_file:
-            sub_joins.append("JOIN symbol_references rt ON rt.from_symbol_id = t.id AND rt.reference_type = 'declares'")
-            sub_joins.append("JOIN symbols ft ON rt.to_symbol_id = ft.id")
-            object_alias = "ft"
-            sub_where.append("ft.symbol_type = ?")
-            sub_params.append(object_type)
-        else:
-            object_alias = "t"
-            if object_type == 'class':
-                sub_where.append("(t.symbol_type = ? OR t.symbol_type = 'external_class')")
-                sub_params.append(object_type)
-            elif relationship_type == 'imports' and object_type == 'import':
-                sub_where.append("(t.symbol_type = 'import' OR t.symbol_type = 'module')")
-            elif object_type:
-                sub_where.append("t.symbol_type = ?")
-                sub_params.append(object_type)
-
-        object_col = f"{object_alias}.qualified_name" if object_qualified else f"{object_alias}.symbol_name"
-        self._add_pattern_clause(sub_where, sub_params, object_col, object_pattern, match_op, case_sensitive, object_negated)
-
-        if is_subject_file:
-            not_exists_clause = (
-                "NOT EXISTS ("
-                "SELECT 1 FROM symbol_references rs "
-                f"{' '.join(sub_joins)} "
-                f"WHERE {' AND '.join(sub_where)}"
-                ")"
-            )
-        else:
-            not_exists_clause = (
-                "NOT EXISTS ("
-                "SELECT 1 FROM symbol_references r "
-                f"{' '.join(sub_joins)} "
-                f"WHERE {' AND '.join(sub_where)}"
-                ")"
-            )
-        outer_where.append(not_exists_clause)
-
-        where_clause = " AND ".join(outer_where) if outer_where else "1=1"
-        all_params = outer_params + sub_params + [limit]
-
-        query = f"""
-            SELECT
-                s.symbol_name,
-                s.symbol_type,
-                s.file_path,
-                s.line_number,
-                s.byte_offset,
-                s.byte_length,
-                s.qualified_name,
-                s.parent_name,
-                s.mtime,
-                NULL as anchor_mtime,
-                b.base_names
-            FROM symbols s
-            LEFT JOIN (
-                SELECT sr2.from_symbol_id,
-                       GROUP_CONCAT(s2.symbol_name, ',') as base_names
-                FROM symbol_references sr2
-                JOIN symbols s2 ON sr2.to_symbol_id = s2.id
-                WHERE sr2.reference_type = 'inherits-from'
-                GROUP BY sr2.from_symbol_id
-            ) b ON b.from_symbol_id = s.id
-            WHERE {where_clause}
-            ORDER BY s.file_path, s.line_number
-            LIMIT ?
-        """
+        where_clause, params = self._build_negative_relationship_parts(
+            relationship_type=relationship_type,
+            subject_pattern=subject_pattern,
+            object_pattern=object_pattern,
+            subject_type=subject_type,
+            object_type=object_type,
+            match_op=match_op,
+            case_sensitive=case_sensitive,
+            result_newerthan_seconds=result_newerthan_seconds,
+            result_olderthan_seconds=result_olderthan_seconds,
+            invert_join=invert_join,
+            subject_negated=subject_negated,
+            object_negated=object_negated,
+            subject_qualified=subject_qualified,
+            object_qualified=object_qualified,
+            result_names=result_names,
+        )
+        query = self._format_relationship_select(
+            alias="s",
+            anchor_mtime_expr="NULL",
+            from_clause="symbols s",
+            where_clause=where_clause,
+            include_order_limit=True,
+        )
+        all_params = params + [limit]
 
         cursor = self.conn.execute(query, all_params)
-        for row in cursor:
-            row_dict = {
-                'symbol_name': row[0],
-                'symbol_type': row[1],
-                'file_path': row[2],
-                'line_number': row[3],
-                'byte_offset': row[4],
-                'byte_length': row[5],
-                'qualified_name': row[6],
-                'parent_name': row[7],
-                'mtime': row[8],
-                'base_names': row[10],
-            }
-            record = self._record_factory.create_from_row(row_dict)
-            record.anchor_mtime = row[9]
-            yield record
+        yield from self._yield_relationship_records(cursor)
 
     def _build_relationship_cte_sql(
         self,
@@ -1655,130 +1807,38 @@ class DatabaseStore:
         object_qualified: bool = False,
         is_first: bool = False,
     ) -> Tuple[str, List[Any]]:
-        # For declares relationship, s is always member and t is always container in the DB.
-        if relationship_type == 'declares':
-            _DECLARES_CONTAINER_TYPES = {'file', 'class', 'filepath', 'filename'}
-            subject_is_container = subject_type in _DECLARES_CONTAINER_TYPES
-            object_is_container = object_type in _DECLARES_CONTAINER_TYPES
-
-            if subject_is_container and not object_is_container:
-                subject_pattern, object_pattern = object_pattern, subject_pattern
-                subject_type, object_type = object_type, subject_type
-                subject_qualified, object_qualified = object_qualified, subject_qualified
-                subject_negated, object_negated = object_negated, subject_negated
-                invert = not invert
-
-        if not invert:
-            select_from = "s"
-        else:
-            select_from = "t"
-        join_source = "from_symbol_id"
-        join_target = "to_symbol_id"
-
-        where_parts = ["r.reference_type = ?"]
-        params: List[Any] = [relationship_type]
-
-        joins = [
-            f"JOIN symbols s ON r.{join_source} = s.id",
-            f"JOIN symbols t ON r.{join_target} = t.id"
-        ]
-
-        is_subject_file = relationship_type == 'imports' and subject_type in ('filepath', 'filename')
-        is_object_file = relationship_type == 'imports' and object_type in ('filepath', 'filename')
-
-        if is_subject_file:
-            joins.append("JOIN symbol_references rs ON rs.from_symbol_id = s.id AND rs.reference_type = 'declares'")
-            joins.append("JOIN symbols fs ON rs.to_symbol_id = fs.id")
-            subject_alias = "fs"
-            if select_from == "s":
-                select_from = "fs"
-        else:
-            subject_alias = "s"
-
-        if is_object_file:
-            joins.append("JOIN symbol_references rt ON rt.from_symbol_id = t.id AND rt.reference_type = 'declares'")
-            joins.append("JOIN symbols ft ON rt.to_symbol_id = ft.id")
-            object_alias = "ft"
-            if select_from == "t":
-                select_from = "ft"
-        else:
-            object_alias = "t"
-
-        subject_col = f"{subject_alias}.qualified_name" if subject_qualified else f"{subject_alias}.symbol_name"
-        object_col = f"{object_alias}.qualified_name" if object_qualified else f"{object_alias}.symbol_name"
-        self._add_pattern_clause(where_parts, params, subject_col, subject_pattern, match_op, case_sensitive, subject_negated)
-        self._add_pattern_clause(where_parts, params, object_col, object_pattern, match_op, case_sensitive, object_negated)
-
-        if subject_type:
-            if is_subject_file:
-                where_parts.append("fs.symbol_type = ?")
-                params.append(subject_type)
-            else:
-                where_parts.append("s.symbol_type = ?")
-                params.append(subject_type)
-
-        self._add_pattern_clause(where_parts, params, "s.parent_name", subject_parent_pattern, match_op, case_sensitive)
-
-        if object_type == 'class':
-            where_parts.append("(t.symbol_type = ? OR t.symbol_type = 'external_class')")
-            params.append(object_type)
-        elif relationship_type == 'imports' and object_type == 'import':
-            where_parts.append("(t.symbol_type = 'import' OR t.symbol_type = 'module')")
-        elif object_type:
-            if is_object_file:
-                where_parts.append("ft.symbol_type = ?")
-                params.append(object_type)
-            else:
-                where_parts.append("t.symbol_type = ?")
-                params.append(object_type)
-
-        now = time.time()
-        if result_newerthan_seconds is not None:
-            where_parts.append(f"{select_from}.mtime > ?")
-            params.append(now - result_newerthan_seconds)
-        if result_olderthan_seconds is not None:
-            where_parts.append(f"{select_from}.mtime < ?")
-            params.append(now - result_olderthan_seconds)
-
-        if select_from in ("fs", "s"):
-            anchor_alias = object_alias
-        else:
-            anchor_alias = subject_alias
-
-        where_clause = " AND ".join(where_parts)
-
+        joins, where_clause, select_from, anchor_alias, params = (
+            self._build_positive_relationship_parts(
+                relationship_type=relationship_type,
+                subject_pattern=subject_pattern,
+                object_pattern=object_pattern,
+                subject_type=subject_type,
+                object_type=object_type,
+                subject_parent_pattern=subject_parent_pattern,
+                invert=invert,
+                match_op=match_op,
+                case_sensitive=case_sensitive,
+                result_newerthan_seconds=result_newerthan_seconds,
+                result_olderthan_seconds=result_olderthan_seconds,
+                subject_negated=subject_negated,
+                object_negated=object_negated,
+                subject_qualified=subject_qualified,
+                object_qualified=object_qualified,
+            )
+        )
+        from_clause = f"symbol_references r\n                {' '.join(joins)}"
         if is_first:
-            sql = f"""
-                SELECT
-                    {select_from}.symbol_name,
-                    {select_from}.symbol_type,
-                    {select_from}.file_path,
-                    {select_from}.line_number,
-                    {select_from}.byte_offset,
-                    {select_from}.byte_length,
-                    {select_from}.qualified_name,
-                    {select_from}.parent_name,
-                    {select_from}.mtime,
-                    {anchor_alias}.mtime AS anchor_mtime,
-                    b.base_names,
-                    {select_from}.id AS symbol_id
-                FROM symbol_references r
-                {" ".join(joins)}
-                LEFT JOIN (
-                    SELECT sr2.from_symbol_id,
-                           GROUP_CONCAT(s2.symbol_name, ',') as base_names
-                    FROM symbol_references sr2
-                    JOIN symbols s2 ON sr2.to_symbol_id = s2.id
-                    WHERE sr2.reference_type = 'inherits-from'
-                    GROUP BY sr2.from_symbol_id
-                ) b ON b.from_symbol_id = {select_from}.id
-                WHERE {where_clause}
-            """
+            sql = self._format_relationship_select(
+                alias=select_from,
+                anchor_mtime_expr=f"{anchor_alias}.mtime",
+                from_clause=from_clause,
+                where_clause=where_clause,
+                include_symbol_id=True,
+            )
         else:
             sql = f"""
                 SELECT {select_from}.id AS symbol_id
-                FROM symbol_references r
-                {" ".join(joins)}
+                FROM {from_clause}
                 WHERE {where_clause}
             """
         return sql, params
@@ -1802,112 +1862,30 @@ class DatabaseStore:
         object_qualified: bool = False,
         is_first: bool = False,
     ) -> Tuple[str, List[Any]]:
-        outer_where: List[Any] = []
-        outer_params: List[Any] = []
-
-        if subject_type:
-            outer_where.append("s.symbol_type = ?")
-            outer_params.append(subject_type)
-
-        subject_col = "s.qualified_name" if subject_qualified else "s.symbol_name"
-        self._add_pattern_clause(outer_where, outer_params, subject_col, subject_pattern, match_op, case_sensitive, subject_negated)
-
-        now = time.time()
-        if result_newerthan_seconds is not None:
-            outer_where.append("s.mtime > ?")
-            outer_params.append(now - result_newerthan_seconds)
-        if result_olderthan_seconds is not None:
-            outer_where.append("s.mtime < ?")
-            outer_params.append(now - result_olderthan_seconds)
-
-        is_subject_file = relationship_type == 'imports' and subject_type in ('filepath', 'filename')
-        is_object_file = relationship_type == 'imports' and object_type in ('filepath', 'filename')
-
-        sub_joins = []
-        if is_subject_file:
-            sub_anchor = "rs.to_symbol_id = s.id AND rs.reference_type = 'declares'"
-            sub_joins.append("JOIN symbols s_imp ON rs.from_symbol_id = s_imp.id AND s_imp.symbol_type = 'import'")
-            sub_joins.append("JOIN symbol_references r ON r.from_symbol_id = s_imp.id AND r.reference_type = ?")
-            sub_joins.append("JOIN symbols t ON r.to_symbol_id = t.id")
-            sub_where = [sub_anchor]
-            sub_params = [relationship_type]
-        else:
-            if invert_join:
-                sub_anchor = "r.to_symbol_id = s.id"
-                sub_joins.append("JOIN symbols t ON r.from_symbol_id = t.id")
-            else:
-                sub_anchor = "r.from_symbol_id = s.id"
-                sub_joins.append("JOIN symbols t ON r.to_symbol_id = t.id")
-            sub_where = [sub_anchor, "r.reference_type = ?"]
-            sub_params = [relationship_type]
-
-        if is_object_file:
-            sub_joins.append("JOIN symbol_references rt ON rt.from_symbol_id = t.id AND rt.reference_type = 'declares'")
-            sub_joins.append("JOIN symbols ft ON rt.to_symbol_id = ft.id")
-            object_alias = "ft"
-            sub_where.append("ft.symbol_type = ?")
-            sub_params.append(object_type)
-        else:
-            object_alias = "t"
-            if object_type == 'class':
-                sub_where.append("(t.symbol_type = ? OR t.symbol_type = 'external_class')")
-                sub_params.append(object_type)
-            elif relationship_type == 'imports' and object_type == 'import':
-                sub_where.append("(t.symbol_type = 'import' OR t.symbol_type = 'module')")
-            elif object_type:
-                sub_where.append("t.symbol_type = ?")
-                sub_params.append(object_type)
-
-        object_col = f"{object_alias}.qualified_name" if object_qualified else f"{object_alias}.symbol_name"
-        self._add_pattern_clause(sub_where, sub_params, object_col, object_pattern, match_op, case_sensitive, object_negated)
-
-        if is_subject_file:
-            not_exists_clause = (
-                "NOT EXISTS ("
-                "SELECT 1 FROM symbol_references rs "
-                f"{' '.join(sub_joins)} "
-                f"WHERE {' AND '.join(sub_where)}"
-                ")"
-            )
-        else:
-            not_exists_clause = (
-                "NOT EXISTS ("
-                "SELECT 1 FROM symbol_references r "
-                f"{' '.join(sub_joins)} "
-                f"WHERE {' AND '.join(sub_where)}"
-                ")"
-            )
-        outer_where.append(not_exists_clause)
-
-        where_clause = " AND ".join(outer_where) if outer_where else "1=1"
-        params = outer_params + sub_params
-
+        where_clause, params = self._build_negative_relationship_parts(
+            relationship_type=relationship_type,
+            subject_pattern=subject_pattern,
+            object_pattern=object_pattern,
+            subject_type=subject_type,
+            object_type=object_type,
+            match_op=match_op,
+            case_sensitive=case_sensitive,
+            result_newerthan_seconds=result_newerthan_seconds,
+            result_olderthan_seconds=result_olderthan_seconds,
+            invert_join=invert_join,
+            subject_negated=subject_negated,
+            object_negated=object_negated,
+            subject_qualified=subject_qualified,
+            object_qualified=object_qualified,
+        )
         if is_first:
-            sql = f"""
-                SELECT
-                    s.symbol_name,
-                    s.symbol_type,
-                    s.file_path,
-                    s.line_number,
-                    s.byte_offset,
-                    s.byte_length,
-                    s.qualified_name,
-                    s.parent_name,
-                    s.mtime,
-                    NULL AS anchor_mtime,
-                    b.base_names,
-                    s.id AS symbol_id
-                FROM symbols s
-                LEFT JOIN (
-                    SELECT sr2.from_symbol_id,
-                           GROUP_CONCAT(s2.symbol_name, ',') as base_names
-                    FROM symbol_references sr2
-                    JOIN symbols s2 ON sr2.to_symbol_id = s2.id
-                    WHERE sr2.reference_type = 'inherits-from'
-                    GROUP BY sr2.from_symbol_id
-                ) b ON b.from_symbol_id = s.id
-                WHERE {where_clause}
-            """
+            sql = self._format_relationship_select(
+                alias="s",
+                anchor_mtime_expr="NULL",
+                from_clause="symbols s",
+                where_clause=where_clause,
+                include_symbol_id=True,
+            )
         else:
             sql = f"""
                 SELECT s.id AS symbol_id
@@ -2001,22 +1979,7 @@ class DatabaseStore:
         all_params.append(limit)
 
         cursor = self.conn.execute(query, all_params)
-        for row in cursor:
-            row_dict = {
-                'symbol_name': row[0],
-                'symbol_type': row[1],
-                'file_path': row[2],
-                'line_number': row[3],
-                'byte_offset': row[4],
-                'byte_length': row[5],
-                'qualified_name': row[6],
-                'parent_name': row[7],
-                'mtime': row[8],
-                'base_names': row[10],
-            }
-            record = self._record_factory.create_from_row(row_dict)
-            record.anchor_mtime = row[9]
-            yield record
+        yield from self._yield_relationship_records(cursor)
 
     @require_connection
     def get_counts(self) -> dict:

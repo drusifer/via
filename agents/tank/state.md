@@ -5,29 +5,27 @@ State Management Protocol in `.agents/skills/bob-protocol/SKILL.md` for entry an
 
 ## Context
 - **Recent decisions:**
-  - Created `docs/SDLC.md` from `agents/templates/_template_SDLC.md` (template note and rubric block removed) and ran Sprint 27 close conformance check (`*devops sdlc-check`).
-  - Documented Python + JS toolchains, all 27 `Makefile` targets, dependency rules, quality gates, change classes, `via-index` PyPI trusted-publishing release process, and all known deviations honestly (no Python lockfile, no push/PR CI yet, pre-existing gitleaks history finding at `.continue/agents/config.yaml:10`, 5 pre-existing Ruff warnings, tracked vitest cache file).
+  - Authored `.github/workflows/ci.yml` (`STORY-VIA-284`, `ADR-28-2`): top-level `permissions: { contents: read }`, verified 40-char commit SHA pins (`actions/checkout`, `actions/setup-python`, `actions/setup-node`), `test-python` (3.10, 3.12: `ruff check via/`, `pytest`, `via --help`), `test-js` (Node 22: `npm ci`, `npm test`), and `secrets` (SHA-256-verified `gitleaks` 8.26.0, env-bound commit-range `--log-opts`).
+  - Updated `docs/SDLC.md` Sections 1, 3, 5, 8, 9, 10 and *Last verified* line; cleared resolved Ruff and `node_modules/` deviations after Phase 1 untracked 1,041 vendored files into `.gitignore`.
+  - Passed Stage 3 `*devops sdlc-check` conformance gate including `bobp make dist` (`twine check dist/*` PASSED).
 - **Key findings:**
-  - Every target in `docs/SDLC.md` Section 3 verified present in `Makefile`.
-  - `.githooks/pre-commit` executable and `core.hooksPath = .githooks`.
-  - `.gitignore` excludes `.venv/`, `.mcp.json`, `.via/`, `dist/`, `build/`.
-  - `via-index 0.1.0` live on PyPI (`https://pypi.org/project/via-index/0.1.0/`) and verified via fresh install.
-  - All third-party runtime imports in `via/` match `pyproject.toml` `[project].dependencies`.
-- **Important notes:** Restored dirty tracked `node_modules/.vite/vitest/.../results.json` or flagged it as a known deviation in Section 9.
+  - All Section 3 targets exist in `Makefile`; `.githooks/pre-commit` is executable and `core.hooksPath = .githooks`; `.gitignore` excludes `.venv/`, `node_modules/`, `.mcp.json`, `.via/`, `dist/`, `build/`.
+  - `bobp make test` (1,410 passed), `bobp make test-js` (109 passed), `bobp make test-e2e` (27 passed), `bobp make security-scan-python` (0 vulns), `bobp make security-scan-npm` (0 vulns), and `bobp make dist` all pass.
+- **Important notes:** Once the owner clears commit `9817f24` (`.continue/agents/config.yaml:10`), upgrade CI `secrets` from commit-range to full-history scan.
 
 ## Current Task
 - **Status:** Complete
 - **Assigned to:** Tank
 - **Started:** 2026-11-24
-- **Description:** Author `docs/SDLC.md` and run Sprint 27 close `*devops sdlc-check`.
-- **Progress:** 100% — `docs/SDLC.md` created, self-checked against SDLC rubric (`TRUE`, `WHOLE`, `CLEAN`, `CLASS`, `CHECK`, `GAPS`), conformance checks verified; handed off to Oracle for `*ora groom`.
+- **Description:** Sprint 28 Phase 0 CI/SDLC mechanism (`STORY-VIA-284`) and Stage 3 `*devops sdlc-check`.
+- **Progress:** 100% — CI created, SDLC updated and verified, Sprint 28 launched.
 - **Blockers:** None
-- **Consultations:** Handed off to Oracle for Sprint 27 close doc groom + SDLC rubric review.
+- **Consultations:** Switch, Oracle, Mouse.
 
 ## Next Steps
-- **Immediate next action:** Participate in Sprint 27 retrospective after Oracle and Smith complete close-out gates.
-- **Waiting on:** Oracle (`*ora groom`)
-- **Planned work:** Sprint 27 retro.
+- **Immediate next action:** Await user authorization to commit/push Sprint 28 (which will trigger the first live GitHub Actions `CI` workflow run on `main`).
+- **Waiting on:** User direction
+- **Planned work:** Verify first GitHub Actions CI run after push.
 
 ---
 *Last updated: 2026-11-24*

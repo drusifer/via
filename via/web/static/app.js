@@ -465,6 +465,13 @@ export function renderEfficiencyTable(results) {
 }
 
 export function renderEfficiencyTableBody() {
+  const emptyEl = $('coverage-efficiency-empty');
+  if (efficiencyData.length === 0) {
+    $('coverage-efficiency-tbody').innerHTML = '';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
   const sorted = [...efficiencyData].sort((a, b) => {
     const av = a[efficiencySortCol];
     const bv = b[efficiencySortCol];

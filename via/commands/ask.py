@@ -12,7 +12,6 @@ License: GPL-3.0
 """
 import argparse
 import sys
-from pathlib import Path
 
 from .base import CommandHandlerABC
 from ..core.constants import EXIT_ERROR, EXIT_SUCCESS

@@ -492,6 +492,27 @@ def _run_stats_command(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
 
+def _print_pipeline_results(result, stages: list) -> None:
+    """Print streaming pipeline records and emit a warning if capped by limit."""
+    count = 0
+    total_matches = None
+    for record in result:
+        safe_print(str(record))
+        count += 1
+        if total_matches is None:
+            total_matches = record.total_matches
+
+    # Warn when results were capped by the limit
+    raw_limit = getattr(stages[-1].args, 'limit', None)
+    limit = raw_limit if raw_limit is not None else 10
+    if limit > 0 and total_matches is not None and total_matches > limit:
+        print(
+            f"results 1-{count} of {total_matches} matches returned "
+            f"(--limit={limit}) use --slice 0:{total_matches} or -n 0 for all results",
+            file=sys.stderr,
+        )
+
+
 def _run_pipeline_command(argv: list, directory: str = ".") -> int:
     """
     Execute a pipeline command.
@@ -532,23 +553,7 @@ def _run_pipeline_command(argv: list, directory: str = ".") -> int:
 
             # If executor returns iterator (no render stage), print results
             if result is not None:
-                count = 0
-                total_matches = None
-                for record in result:
-                    safe_print(str(record))
-                    count += 1
-                    if total_matches is None:
-                        total_matches = record.total_matches
-
-                # Warn when results were capped by the limit
-                raw_limit = getattr(stages[-1].args, 'limit', None)
-                limit = raw_limit if raw_limit is not None else 10
-                if limit > 0 and total_matches is not None and total_matches > limit:
-                    print(
-                        f"results 1-{count} of {total_matches} matches returned "
-                        f"(--limit={limit}) use --slice 0:{total_matches} or -n 0 for all results",
-                        file=sys.stderr,
-                    )
+                _print_pipeline_results(result, stages)
 
         return EXIT_SUCCESS
 

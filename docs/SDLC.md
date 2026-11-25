@@ -12,7 +12,7 @@ ask `@Tank *devops sdlc <what and why>` — the mechanism and this document chan
 | Manifest | `pyproject.toml` | `package.json` |
 | Lockfile | None — dependencies use minimum version pins in `pyproject.toml` | `package-lock.json` (committed) |
 | Package manager | `pip` inside `python3 -m venv` | `npm` |
-| Local environment | `.venv/` (gitignored) | `node_modules/` (gitignored; see Section 9 deviation) |
+| Local environment | `.venv/` (gitignored) | `node_modules/` (gitignored) |
 
 Other required tools:
 - `gitleaks` — secret scanning for `.githooks/pre-commit` and `make security-scan-secrets` (https://github.com/gitleaks/gitleaks#installing)
@@ -42,7 +42,7 @@ The [Makefile](../Makefile) is the contributor entry point; recipes call native 
 | `all` | `install` + `test` | installs runtime package and runs full pytest suite |
 | `venv` | `python3 -m venv .venv` | creates `.venv/` via `.venv/venv.stamp` |
 | `install` | `.venv/bin/python -m pip install -e .` | idempotent; installs runtime package |
-| `install-dev` | `pip install -e ".[dev]"` | installs runtime + dev/build/lint/test extras |
+| `install-dev` | `pip install -e ".[dev]"` | installs runtime + dev/build/lint/test/audit extras (including `pip-audit`) |
 | `install-hooks` | `git config core.hooksPath .githooks` | enables gitleaks pre-commit hook |
 | `install-system` | `pipx install --editable . --force` | optional global editable `via` CLI install |
 | `test` | `pytest $(or $(FILE),tests/) $(ARGS)` | full Python suite or targeted `FILE=... ARGS=...` |
@@ -58,6 +58,9 @@ The [Makefile](../Makefile) is the contributor entry point; recipes call native 
 | `duplicates` | `pylint via/ --disable=all --enable=duplicate-code` | duplicate code check |
 | `security` | `bandit -r via/ -c pyproject.toml` | Python Bandit static security scan |
 | `security-scan-secrets` | `gitleaks detect --source . --no-banner` | git-aware secret scan across history |
+| `security-scan-python` | `pip-audit` (in `.venv`) | audits installed Python dependencies; fails fast if `pip-audit` is missing |
+| `security-scan-npm` | `npm audit --audit-level=high` | audits JS dev dependencies against `package-lock.json`; fails fast if `npm` is missing |
+| `security-scan` | `security-scan-secrets` + `security-scan-python` + `security-scan-npm` | runs all build-time security scans (secrets, Python deps, npm deps) |
 | `dead-code` | `vulture via/ --min-confidence 80` | dead code detection |
 | `via` | `.venv/bin/via $(ARGS)` | run project `via` CLI in `.venv` |
 | `via-watch` | `via index -w $(DIR) --port $(PORT)` | watch mode + web UI (default port 7891) |
@@ -71,7 +74,6 @@ The [Makefile](../Makefile) is the contributor entry point; recipes call native 
 Standard targets deliberately absent:
 - `format` — formatting is handled through `make fix` (`ruff check --fix via/`).
 - `distclean` — `make clean` already removes `.venv/` alongside build/test caches.
-- `security-scan-python` / `security-scan-npm` / aggregate `security-scan` — not yet wired into `Makefile` (see Section 9).
 
 ## 4. Dependencies
 
@@ -92,6 +94,9 @@ Standard targets deliberately absent:
 | Fast lint | `bobp make lint-fast` | pre-handoff self-validation on touched files |
 | Static security (Bandit) | `bobp make security` | security-relevant Python changes |
 | Secret scan | `bobp make security-scan-secrets` (and `.githooks/pre-commit`) | every commit (staged) and before release (history) |
+| Python dependency audit | `bobp make security-scan-python` | Python dependency changes; before release; sprint close |
+| JS dependency audit | `bobp make security-scan-npm` | JS dependency changes; before release; sprint close |
+| Aggregate security scan | `bobp make security-scan` | before every PyPI / Forgejo release |
 | Package build & check | `bobp make dist` | every PyPI / Forgejo release |
 
 ## 6. Change management
@@ -136,17 +141,17 @@ is reported to Tank so one of them gets fixed.
 
 ## 8. CI / deploy
 
+- **`.github/workflows/ci.yml`** — runs on `push` to `main` and on `pull_request`. Uses least-privilege top-level `permissions: { contents: read }` and full commit-SHA-pinned actions (`actions/checkout`, `actions/setup-python`, `actions/setup-node`) across three parallel jobs:
+  - `test-python` (matrix Python `3.10`, `3.12`): `pip install -e ".[dev]"`, `ruff check via/`, `pytest tests/ -q`, and `via --help >/dev/null` CLI smoke check.
+  - `test-js` (Node `22`): `npm ci` and `npm test` (Vitest + jsdom unit tests).
+  - `secrets`: full-history checkout (`fetch-depth: 0`), pinned SHA-256-verified `gitleaks` `8.26.0`, scanning incoming PR/push commit ranges via `--log-opts` per `ADR-28-2` (no `.gitleaksignore` or allowlist; upgraded to full-history scan once pre-existing commit `9817f24` is cleared by the owner).
+  - Playwright browser E2E tests stay local (`bobp make test-e2e`) to keep CI fast and deterministic.
 - **`.github/workflows/publish.yml`** — runs on `release: [published]`. Uses least-privilege `permissions: { contents: read }` at top level, SHA-pinned actions, builds sdist + wheel, runs `twine check dist/*`, smoke-tests installing the wheel in a fresh venv (`via --help`), and publishes via `pypa/gh-action-pypi-publish` inside the `pypi` environment (`id-token: write`, required reviewer `drusifer`).
-- **PR / push CI:** None configured yet (Python/JS/E2E tests and secret scans run locally via `bobp make`).
 
 ## 9. Known deviations
 
-- **No Python lockfile:** `pyproject.toml` declares minimum version bounds without a committed `uv.lock` or `requirements.lock`; `make install-dev` resolves latest compatible versions with `pip`.
-- **No PR/push CI workflow yet:** only `.github/workflows/publish.yml` exists; tests and lints are gated locally.
-- **Incomplete `security-scan` aggregate target:** `security-scan-secrets` (gitleaks) and `security` (bandit) exist, while locked `pip-audit` (`security-scan-python`) and `npm audit` (`security-scan-npm`) targets are not yet added.
-- **Pre-existing gitleaks history finding:** `make security-scan-secrets` currently reports 1 pre-existing `generic-api-key` finding in `.continue/agents/config.yaml:10` (commit `9817f24`, 2026-02-07; not packaged in `dist/*`). Tracked in `agents/switch/state.md` for user verification/rotation.
-- **Pre-existing Ruff warnings:** 5 unrelated pre-existing Ruff lint warnings exist outside Sprint 27's touched files (`via/web/api/coverage.py` and `via/web/template.py` are Ruff-clean).
-- **Vitest cache file tracked in git:** `node_modules/.vite/vitest/da39a3ee5e6b4b0d3255bfef95601890afd80709/results.json` was previously tracked in git and updates on `npm test`; should be untracked (`git rm --cached`) in a cleanup commit.
+- **No Python lockfile:** `pyproject.toml` declares minimum version bounds without a committed `uv.lock` or `requirements.lock`; `make install-dev` resolves latest compatible versions with `pip`, and `make security-scan-python` (`pip-audit`) audits the installed `.venv` rather than an exported lockfile.
+- **Pre-existing gitleaks history finding:** `make security-scan-secrets` currently reports 1 pre-existing `generic-api-key` finding in `.continue/agents/config.yaml:10` (commit `9817f24`, 2026-02-07; not packaged in `dist/*`). Never allowlisted; `.github/workflows/ci.yml` scans incoming PR/push commit ranges (`--log-opts`, `ADR-28-2`) until the user verifies/rotates the key and decides on history remediation. Tracked in `agents/switch/state.md`.
 - **`make clean` removes `.venv/`:** there is no separate `distclean` target; `make clean` performs a full environment clean.
 
 ## 10. Conformance check
@@ -158,8 +163,8 @@ Run by Tank at sprint close (`*devops sdlc-check`):
 3. Inspect `pyproject.toml` `[project].dependencies` vs. runtime imports in `via/` — confirm every third-party import is declared.
 4. Confirm every target listed in Section 3 exists in `Makefile` (`grep -E '^[a-zA-Z_][a-zA-Z0-9_-]*:' Makefile`) and matches its documented behavior.
 5. Confirm `.githooks/pre-commit` is executable and `git config core.hooksPath` returns `.githooks`.
-6. Confirm `.venv/`, `.mcp.json`, `.via/`, `dist/`, and `build/` remain ignored in `.gitignore`.
+6. Confirm `.venv/`, `node_modules/`, `.mcp.json`, `.via/`, `dist/`, and `build/` remain ignored in `.gitignore`.
 7. Confirm Sprint changes followed Section 6 (proper gates, recorded in `task.md`, `agents/CHAT.md`, and docs).
 
 ---
-*Last verified: 2026-11-24 against Sprint 27 close (based on `88c1b2c` + Sprint 27 Phase 2 Cycle 2 changes) by Tank.*
+*Last verified: 2026-11-24 against Sprint 28 closeout (`Makefile`, `.github/workflows/ci.yml`, `pyproject.toml`, `package.json`, `.gitignore`, `.githooks/pre-commit`, `bobp make dist`) by Tank.*

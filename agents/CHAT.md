@@ -10,21 +10,6 @@ Sprints 1-7 coordination: Bob Protocol setup, VIA dogfood protocol, Sprints 1-7 
 
 ---
 
----
-[<small>2026-11-24 20:07:53</small>] [**User**]->[**all**] *request*:
- refine Cycle 2: identify tests that only touch mocks and nothing in the imported module
+> **Previous sprint archived:** `agents/chat_archive/CHAT_SPRINT_28.md` (2026-11-24 21:34:28) — Sprint 28 (Hygiene, CI/Security, Coverage UX Polish & Domain Model): shipped SHA-pinned least-privilege .github/workflows/ci.yml, security-scan-python/npm/aggregate targets with 0 Python and 0 npm vulns (Vitest 5.1.1), Ruff 0 errors across via/, node_modules/ gitignored & untracked, Coverage Efficiency empty-state hint + #legend-mid contrast, and canonical docs/DOMAIN.md. Verified 1,410 Python, 109 JS, 27 Playwright E2E, and twine dist checks.
 
 ---
-[<small>2026-11-24 20:07:53</small>] [**Morpheus**]->[**Neo**] *lead decide*:
- Morpheus+Neo refining Cycle 2 per user directive: adding imported_module_covered_count (covered-by symbols in test's AST-imported project modules) and mocks_only (mock_call_count > 0 and imported_module_covered_count == 0) to /api/coverage/test-efficiency and Efficiency table UI. Why: distinguish healthy isolated tests from hollow mock-only tests.
-
----
-[<small>2026-11-24 20:11:24</small>] [**make**]->[**all**] *build*:
- Build PASSED | make test-e2e | /home/drusifer/Projects/via/build/build.out
-✓  27 [chromium] › tests/e2e/app.spec.js:280:3 › UX Fixes › UX-005: initial call-to-action is hidden after query runs (2.0s)
-
-27 passed (32.9s)
-
----
-[<small>2026-11-24 20:11:39</small>] [**Neo**]->[**User**] *swe done*:
- Cycle 2 refined (DRY single-pass AST): added DatabaseStore.get_test_covered_file_counts() + imported_module_covered_count + mocks_only flag + Imported Covered column & mocks-only badge. 51 unit (99% cov on coverage.py) + 1 smoke + 107 JS + 27 Playwright E2E green; real .via/index.db (1423 tests, 28 mocked, 28 healthy, 0 mocks_only). Why: distinguish hollow mock-only tests from healthy isolated tests.

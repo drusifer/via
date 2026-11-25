@@ -133,6 +133,76 @@ class PipelineExecutor:
             )
         return language_filter
 
+    def _apply_contains_filter(
+        self, results: Iterator[MatchRecord], args: Any, case_sensitive: bool
+    ) -> Iterator[MatchRecord]:
+        """Apply optional --contains body filter to match records."""
+        contains_pattern = getattr(args, 'contains_pattern', None)
+        if contains_pattern:
+            return self._filter_records_by_body(results, contains_pattern, case_sensitive)
+        return results
+
+    @staticmethod
+    def _filter_stale_chained_results(
+        results: List[MatchRecord], relationships: List[RelationshipFilter]
+    ) -> List[MatchRecord]:
+        """Post-filter chained relationship records for any filter requesting --stale."""
+        for rel in relationships:
+            if rel.result_stale:
+                if results and all(r.mtime is None for r in results):
+                    raise ValueError(
+                        '--stale requires symbols.mtime — rebuild index with `via index --force`.'
+                    )
+                results = [
+                    r for r in results
+                    if r.anchor_mtime is not None and r.mtime is not None
+                    and r.mtime < r.anchor_mtime
+                ]
+        return results
+
+    def _execute_chained_relationships(
+        self, stage: PipelineStage, relationships: List[RelationshipFilter]
+    ) -> Iterator[MatchRecord]:
+        """Execute a chained multi-relationship match stage."""
+        args = stage.args
+        for rel in relationships:
+            if is_category(rel.relationship_type):
+                raise ValueError(
+                    "Relationship categories (e.g. 'upstream-ref') are not yet "
+                    "supported when chaining multiple --via/--sans filters in one "
+                    "query. Use a category as the only relationship filter, or use "
+                    "concrete relationship types when chaining."
+                )
+        compiled_stages = [
+            self._compile_relationship_params(stage, rel, is_first=(i == 0))
+            for i, rel in enumerate(relationships)
+        ]
+        limit = getattr(args, 'limit', None) or 10
+        case_sensitive = not args.case_insensitive
+        results = list(self.db.query_relationships_chained(
+            compiled_stages,
+            limit=limit,
+            case_sensitive=case_sensitive,
+        ))
+        results = self._filter_stale_chained_results(results, relationships)
+        return self._apply_contains_filter(iter(results), args, case_sensitive)
+
+    def _execute_relationship_match_stage(
+        self, stage: PipelineStage, relationship: RelationshipFilter
+    ) -> Iterator[MatchRecord]:
+        """Execute a match stage that includes one or more relationship filters."""
+        args = stage.args
+        relationships = getattr(args, 'relationships', None) or [relationship]
+        if len(relationships) > 1:
+            return self._execute_chained_relationships(stage, relationships)
+
+        primary_stage = self._stage_with_relationship(stage, relationships[0])
+        if relationships[0].is_negative:
+            results = self._execute_negative_relationship_query(primary_stage)
+        else:
+            results = self._execute_relationship_query(primary_stage)
+        return self._apply_contains_filter(results, args, not args.case_insensitive)
+
     def _execute_match_stage(self, stage: PipelineStage) -> Iterator[MatchRecord]:
         """Execute match stage against database.
 
@@ -147,56 +217,7 @@ class PipelineExecutor:
         # Check if this is a relationship query
         relationship = getattr(args, 'relationship', None)
         if relationship:
-            relationships = getattr(args, 'relationships', None) or [relationship]
-            if len(relationships) > 1:
-                for rel in relationships:
-                    if is_category(rel.relationship_type):
-                        raise ValueError(
-                            "Relationship categories (e.g. 'upstream-ref') are not yet "
-                            "supported when chaining multiple --via/--sans filters in one "
-                            "query. Use a category as the only relationship filter, or use "
-                            "concrete relationship types when chaining."
-                        )
-                compiled_stages = [
-                    self._compile_relationship_params(stage, rel, is_first=(i == 0))
-                    for i, rel in enumerate(relationships)
-                ]
-                limit = getattr(args, 'limit', None) or 10
-                case_sensitive = not args.case_insensitive
-                results = list(self.db.query_relationships_chained(
-                    compiled_stages,
-                    limit=limit,
-                    case_sensitive=case_sensitive,
-                ))
-                
-                # Post-filter for --stale for any relationship filter that requested it
-                for rel in relationships:
-                    if rel.result_stale:
-                        if results and all(r.mtime is None for r in results):
-                            raise ValueError(
-                                '--stale requires symbols.mtime — rebuild index with `via index --force`.'
-                            )
-                        results = [
-                            r for r in results
-                            if r.anchor_mtime is not None and r.mtime is not None
-                            and r.mtime < r.anchor_mtime
-                        ]
-                
-                # Contains filter
-                contains_pattern = getattr(args, 'contains_pattern', None)
-                if contains_pattern:
-                    return self._filter_records_by_body(iter(results), contains_pattern, case_sensitive)
-                return iter(results)
-
-            primary_stage = self._stage_with_relationship(stage, relationships[0])
-            if relationships[0].is_negative:
-                results = self._execute_negative_relationship_query(primary_stage)
-            else:
-                results = self._execute_relationship_query(primary_stage)
-            contains_pattern = getattr(args, 'contains_pattern', None)
-            if contains_pattern:
-                return self._filter_records_by_body(results, contains_pattern, not args.case_insensitive)
-            return results
+            return self._execute_relationship_match_stage(stage, relationship)
 
         # Extract arguments - check for symbol_types list (OR'd) or symbol_type (single)
         symbol_types = getattr(args, 'symbol_types', None) or []
@@ -226,10 +247,7 @@ class PipelineExecutor:
                 language=language_filter, subtype=subtype_filter,
                 offset=offset,
             )
-            contains_pattern = getattr(args, 'contains_pattern', None)
-            if contains_pattern:
-                return self._filter_records_by_body(results, contains_pattern, case_sensitive)
-            return results
+            return self._apply_contains_filter(results, args, case_sensitive)
 
         # Single type or all types
         st = SymbolType(symbol_type) if symbol_type else None
@@ -242,10 +260,7 @@ class PipelineExecutor:
             subtype=subtype_filter,
             offset=offset,
         )
-        contains_pattern = getattr(args, 'contains_pattern', None)
-        if contains_pattern:
-            return self._filter_records_by_body(results, contains_pattern, case_sensitive)
-        return results
+        return self._apply_contains_filter(results, args, case_sensitive)
 
     def _compile_relationship_params(self, stage: PipelineStage, rel: RelationshipFilter, is_first: bool) -> Dict[str, Any]:
         args = stage.args

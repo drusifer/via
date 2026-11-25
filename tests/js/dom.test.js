@@ -115,6 +115,7 @@ function createFixture() {
           </thead>
           <tbody id="coverage-efficiency-tbody"></tbody>
         </table>
+        <div id="coverage-efficiency-empty" style="display:none"></div>
       </div>
     </div>
     <div id="toast"></div>

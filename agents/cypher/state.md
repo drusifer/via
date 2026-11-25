@@ -5,26 +5,25 @@ State Management Protocol in `.agents/skills/bob-protocol/SKILL.md` for entry an
 
 ## Context
 - **Recent decisions:**
-  - Launched Sprint 27 (`*pm launch Sprint 27`) covering Phase 1 (per-test coverage capture) and Phase 2 (D3 intensity heatmap, leaf drill-down, LOC sizing, test efficiency table + static AST `Mocks` column).
-  - Updated `CHANGELOG.md` and groomed `agents/cypher/BACKLOG.md` (archived shipped Sprint 26/27 items and incorporated all Sprint 27 retro backlog items).
+  - Co-authored canonical `docs/DOMAIN.md` (`STORY-VIA-285`) with Morpheus and passed Smith's `DOMAIN` rubric review.
+  - Launched Sprint 28 (`*pm launch Sprint 28`): updated `CHANGELOG.md`, groomed `agents/cypher/BACKLOG.md` (moved Sprint 28 items to Recently Shipped; tracked gitleaks history follow-up & `docs/DOMAIN.md` §3 drift candidates), and closed `task.md`.
 - **Key findings:**
-  - All Sprint 27 gates passed with real evidence: 1409 Python tests, 107 JS tests, 27 Playwright E2E tests, Switch security gate clear, Tank SDLC check passed, Oracle docs groom & SDLC rubric S-across-the-board, Smith usability approved.
-  - `via-index 0.1.0` is live on PyPI (`drew.gs.works`).
-- **Important notes:** Next sprint candidates ready in `agents/cypher/BACKLOG.md`.
+  - All 5 Sprint 28 stories (`STORY-VIA-281`..`285`) shipped and verified green (1,410 Python, 109 JS, 27 Playwright E2E, 0 Python vulns, 0 npm vulns, 0 Ruff errors, `twine check` passed).
+- **Important notes:** Working tree is uncommitted awaiting explicit user authorization to commit and push per `docs/SDLC.md` §6.
 
 ## Current Task
 - **Status:** Complete
 - **Assigned to:** Cypher
 - **Started:** 2026-11-24
-- **Description:** Sprint 27 launch, changelog update, and backlog grooming.
-- **Progress:** 100% — Sprint 27 launched and closed.
+- **Description:** Sprint 28 `docs/DOMAIN.md` co-authorship and Stage 3 launch (`*pm launch Sprint 28`).
+- **Progress:** 100% — Sprint 28 CLOSED & LAUNCHED.
 - **Blockers:** None
-- **Consultations:** All personas submitted Sprint 27 retro inputs.
+- **Consultations:** Full team.
 
 ## Next Steps
-- **Immediate next action:** Await user direction on committing Sprint 27 close-out and selecting Sprint 28 scope (or bumping to `via-index 0.2.0` for PyPI).
+- **Immediate next action:** Present Sprint 28 launch summary to the user and await explicit commit/push authorization.
 - **Waiting on:** User direction
-- **Planned work:** Sprint 28 planning on user request.
+- **Planned work:** Plan Sprint 29 from `agents/cypher/BACKLOG.md` when requested.
 
 ---
 *Last updated: 2026-11-24*

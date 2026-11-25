@@ -1,180 +1,63 @@
-# Current Sprint Task Board
+# Sprint 28 Task Board: Hygiene, CI/Security & Coverage UX Polish
 
-## Sprint 26 - CLI/Executor Refactoring & Query Performance (Tech Debt)
+*   **Goal**: Establish automated GitHub Actions CI and build-time dependency security scans, clear all 5 pre-existing Ruff complexity errors and vitest cache git-tracking noise, and polish the Coverage web UI empty state and legend contrast.
+*   **Tier**: Tier 2 (Hygiene / Maintenance / UX Polish)
+*   **Branch**: `main` (per `docs/SDLC.md` Section 6)
+*   **Stories & Architecture**: `docs/sprints/USER_STORIES_SPRINT28.md`
+*   **Gates Passed**: Smith Gate 1 & Gate 2 APPROVED; Switch Gate 2b (`security gate (design): No blocking findings`); Morpheus Step 3a Plan Review APPROVED; Phase 0–3 & Closeout Gates PASSED
+*   **Status**: CLOSED & LAUNCHED (2026-11-24)
 
-**Status**: In Progress  
-**Stories**: `agents/cypher.docs/SPRINT_26_USER_STORIES.md`  
-**Architecture**: `agents/morpheus.docs/SPRINT_26_ARCHITECTURE.md`  
-**Task Plan**: `agents/mouse.docs/SPRINT_26_TASKS.md`  
+---
 
-### Cycle 1 - Baseline Stabilization & Unit Testing
+## Stage 0: SDLC Gate (Blocker)
 
-- [x] Neo: resolve `test_invalid_container_type_raises_error` baseline test failure
-- [x] Neo: resolve `test_query_filepath_imports_filepath` baseline test failure
-- [x] Neo: resolve `test_sans_declares_returns_empty_markdown` baseline test failure
-- [x] Neo: create dedicated unit tests for `FunctionBodyAnalyzer` in `tests/unit/test_js_body_analyzer.py`
-- [x] Trin: verify baseline and new unit tests are green
-- [x] Morpheus: review Cycle 1 implementation quality
+- [x] **Task 0.1:** Verify `docs/SDLC.md` exists and is current. (*Level: L1 | Owner: Mouse | Trace: N/A — sprint gate | Verification: `test -f docs/SDLC.md`*)
 
-### Cycle 2 - Unified Parser and Executor
+---
 
-- [x] Neo: refactor argparse and CLI routing in `via/__main__.py` to use command handler registry
-- [x] Neo: refactor stage execution in `via/pipeline/executor.py` to use pipeline stage handler registry
-- [x] Neo: unify CLI and programmatic `ViaRunner` execution paths
-- [x] Trin: verify CLI routing and runner regressions (2026-07-01 — see note below on `make test` fix)
-- [x] Smith: review UX/CLI flag consistency (2026-07-01 — ran `via --help`/`index --help`/`stats --help` for real, consistent)
-- [x] Morpheus: review Cycle 2 architecture alignment (2026-07-01 — COMMAND_REGISTRY dispatch table, clean)
+## Sprint Execution Phases
 
-### Cycle 3 - Performance Optimization
+### Phase 0: Security Scan Targets, GitHub Actions CI & SDLC Mechanism
+*Phase goal: Add Python/JS dependency security scan targets (`STORY-VIA-283`), least-privilege GitHub Actions CI (`STORY-VIA-284`), and update `docs/SDLC.md`.*
 
-- [x] Neo: implement nested CTE SQLite compiling for chained relationship pipeline stages in `DatabaseStore`
-- [x] Neo: optimize Python-side relationship query batching for non-CTE stages
-- [x] Trin: verify relationship queries and performance benchmarks (2026-07-01, full suite: 1346 passed, 1 skipped)
-- [x] Morpheus: final architecture review (2026-07-01 — CTE building properly isolated, approved)
+- [x] **Task 0.2:** Add `pip-audit>=2.7.0` to `pyproject.toml` `[project.optional-dependencies].dev`, wire `security-scan-python`, `security-scan-npm`, and aggregate `security-scan` targets in `Makefile`, and run both dependency scans (remediating or escalating any findings per `.agents/skills/security/SKILL.md`). (*Level: L2 | Owner: Switch | Trace: STORY-VIA-283 | Verification: `bobp make security-scan-python && bobp make security-scan-npm` — 0 Python vulns, 0 npm vulns after user-approved Vitest 5 upgrade*)
+- [x] **Task 0.3:** Create SHA-pinned, least-privilege `.github/workflows/ci.yml` (`test-python` 3.10/3.12 with `ruff check via/`, `pytest`, `via --help`; `test-js` with `npm ci && npm test`; `secrets` with SHA-256-verified `gitleaks`), review Switch's Makefile targets, and update `docs/SDLC.md` Sections 3, 5, 8, and 9. (*Level: L2 | Owner: Tank | Trace: STORY-VIA-283, STORY-VIA-284, ADR-28-2 | Verification: `yaml.safe_load` & `bobp make help` passed*)
+- [x] **Task 0.4:** Audit `.github/workflows/ci.yml` permissions, SHA pins, gitleaks checksum, and `Makefile` scan targets. (*Level: L1 | Owner: Switch | Trace: STORY-VIA-283, STORY-VIA-284 | Verification: `security gate (phase 0): No blocking findings` in `agents/CHAT.md`*)
 
-**2026-07-01 finding**: `make test` was silently broken (bob-protocol layer's generic
-`unittest discover` target was shadowing the project's real pytest recipe in
-`Makefile.prj` — "0 tests ran" every time it was invoked through `make`/mkf).
-Fixed by reordering the include in `Makefile` so project-specific recipes win.
-Re-ran for real: **1346 passed, 1 skipped, 4 warnings.** This was a shared-tooling
-bug, not a Sprint 26 code defect — but it means no prior `make test` run this
-sprint actually verified anything; this is the first real verification.
+### Phase 1: Ruff Complexity Refactor & Vitest Cache Cleanup
+*Phase goal: Bring `ruff check via/` to zero errors via pure helper extraction in `via/db/store.py` and stop `bobp make test-js` from dirtying `git status` (`STORY-VIA-282`).*
 
-### Cycle 4 - Class-Based Relationship Type Hierarchy (blast-radius queries)
+- [x] **Task 1.1:** Extract cohesive private helpers for all C901 methods in `via/db/store.py` and 6 other `via/` modules with zero behavioral change; add `node_modules/` to `.gitignore` and untrack all 1,041 vendored files (`git rm -r --cached node_modules/`). (*Level: L2 | Owner: Neo | Trace: STORY-VIA-282, ADR-28-1 | Verification: `.venv/bin/ruff check via/` & `bobp make lint-fast` exit 0*)
+- [x] **Task 1.2:** Run full Python and JS test suites and confirm zero regressions and clean `git status` under `node_modules/` after `bobp make test-js`. (*Level: L1 | Owner: Trin | Trace: STORY-VIA-282 AC 2-4 | Verification: `bobp make test` 1,410 passed / 0 failed; `bobp make test-js` 109 passed*)
+- [x] **Task 1.3:** Security review of Phase 1 diff (`via/db/store.py` SQL/query safety and gitleaks hook check). (*Level: L1 | Owner: Switch | Trace: STORY-VIA-282 | Verification: `security gate (phase 1): No blocking findings` in `agents/CHAT.md`*)
+- [x] **Task 1.4:** Code & architectural review of `DatabaseStore` helper decomposition. (*Level: L2 | Owner: Morpheus | Trace: STORY-VIA-282, ADR-28-1 | Verification: `rubric LOOP_IMPL:` verdict recorded in `agents/CHAT.md`*)
 
-**Design**: `docs/DESIGN_RELATIONSHIP_HIERARCHY.md` (user-approved directly, 2026-07-01, after sitting unreviewed through 3 pings)
+### Phase 2: Coverage UX Polish (Efficiency Empty-State & Legend Contrast)
+*Phase goal: Add a clear Efficiency empty-state hint (keeping column headers visible per Smith Gate 2) and improve `#legend-mid` swatch contrast (`STORY-VIA-281`).*
 
-- [x] Neo: real polymorphic hierarchy in `via/core/relationship_types.py` (`Relation`/`Any`/`UpstreamRef`/`DownstreamRef`/leaves), `issubclass`/`__subclasses__` resolution not a lookup table
-- [x] Neo: uniform `execute_relation()` entry point in the executor — no `is_category()` branching for query mechanics
-- [x] Neo: `blast` canned query added
-- [x] Neo: found+fixed a design-doc diagram/prose inconsistency (upstream/downstream direction was backwards in the diagram relative to its own stated definitions; verified empirically)
-- [x] Trin: 20 targeted tests + full suite UAT, real end-to-end blast queries verified
-- [x] Morpheus: architecture review — APPROVED
-- [x] Smith: usability read — recommended removing `declares`/`declared-in` from the categories (design doc's own prose never included them, only the diagram did); Neo applied the fix
-- [x] Full suite re-verified after the fix: 1372 passed, 1 skipped
+- [x] **Task 2.1:** Using TDD (JS + Playwright E2E tests first), add `#coverage-efficiency-empty` below `#coverage-efficiency-table` (shown when 0 rows, hidden when rows exist; table headers remain visible) and darken/border `#legend-mid` in `via/web/template.py` and `via/web/static/app.js`. (*Level: L2 | Owner: Neo | Trace: STORY-VIA-281 | Verification: `bobp make test-js` 109 passed & `bobp make test-e2e` 27 passed*)
+- [x] **Task 2.2:** Verify Coverage JS unit tests, Playwright E2E assertions, and error-fallback behavior. (*Level: L1 | Owner: Trin | Trace: STORY-VIA-281 AC 1-4 | Verification: `bobp make test-js && bobp make test-e2e`*)
+- [x] **Task 2.3:** Security review of Phase 2 diff (XSS safety on empty-state DOM and gitleaks hook check). (*Level: L1 | Owner: Switch | Trace: STORY-VIA-281 | Verification: `security gate (phase 2): No blocking findings` in `agents/CHAT.md`*)
+- [x] **Task 2.4:** Code review of Phase 2 template/JS changes. (*Level: L1 | Owner: Morpheus | Trace: STORY-VIA-281 | Verification: `rubric LOOP_IMPL:` verdict recorded in `agents/CHAT.md`*)
 
-### Verification
+### Phase 3: Canonical Domain Model (`docs/DOMAIN.md`)
+*Phase goal: Author and review `docs/DOMAIN.md` capturing VIA's bounded contexts, ubiquitous language, invariants, and documented drifts (`STORY-VIA-285`).*
 
-- [x] Cycle 1 baseline stabilization and body analyzer tests pass.
-- [x] Cycle 2 unified parser and executor routing passes.
-- [x] Cycle 3 chained query performance optimization passes.
-- [x] Cycle 4 relationship hierarchy / blast-radius queries pass.
-- [x] Full suite baseline is completely green (1372 passed, 1 skipped, 2026-07-01).
+- [x] **Task 3.1:** Co-author `docs/DOMAIN.md` from `agents/templates/_template_DOMAIN.md` (template notes and rubric block removed), grounded 1:1 in verified `via/` symbols and linked from `README.md`. (*Level: L2 | Owner: Cypher & Morpheus | Trace: STORY-VIA-285 | Verification: `test -f docs/DOMAIN.md && ! grep -q 'RUBRIC-START' docs/DOMAIN.md`*)
+- [x] **Task 3.2:** Review `docs/DOMAIN.md` against the `DOMAIN` rubric (`LANG`, `BOUND`, `INVAR`, `STATE`, `EVENT`) and post verdict line. (*Level: L1 | Owner: Smith | Trace: STORY-VIA-285 AC 1-4 | Verification: `rubric DOMAIN:` verdict in `agents/CHAT.md`*)
 
-**Sprint 26: CLOSED (2026-07-01)** — all cycles (including Cycle 4) complete, all gates signed off with real evidence.
+---
 
-## Sprint 27 - Test Coverage & Quality Analysis (Phase 1: Capture) — CLOSED (2026-07-01)
+## Stage 3: Sprint Closeout
 
-**Stories**: `agents/cypher.docs/TEST_COVERAGE_QUALITY_REQUIREMENTS.md`
-**Architecture**: `agents/morpheus.docs/TEST_COVERAGE_ARCHITECTURE.md`
-**Task Plan**: `agents/mouse.docs/SPRINT_27_TASKS.md`
-**Gates**: Smith Gate 1 APPROVED WITH NOTES, Gate 2 APPROVED
-**Final review**: `agents/morpheus.docs/SPRINT27_FINAL_REVIEW.md`
+- [x] **Task C.1:** Run SDLC conformance check and update `docs/SDLC.md` *Last verified* line. (*Level: L2 | Owner: Tank | Trace: N/A — closeout | Verification: `bobp make test && bobp make test-js && bobp make security-scan-python && bobp make security-scan-npm && bobp make dist`*)
+- [x] **Task C.2:** Groom docs (`README.md`, `docs/SDLC.md`), apply SDLC rubric to updated `docs/SDLC.md`, and archive Sprint 28 chat report. (*Level: L1 | Owner: Oracle | Trace: N/A — closeout | Verification: `bobp chat-report --moniker SPRINT_28 --summary "..."`*)
+- [x] **Task C.3:** End-to-end usability testing in real Chromium, inspecting `ux-10-coverage-heatmap.png` (`#legend-mid` contrast) and `ux-11-coverage-efficiency.png` (empty-state hint + visible headers). (*Level: L1 | Owner: Smith | Trace: STORY-VIA-281 AC 1-3 | Verification: `bobp make test-e2e` 27 passed & `rubric UAT:` verdict in `agents/CHAT.md`*)
+- [x] **Task C.4:** Coordinate team retrospective and feed backlog items to Cypher. (*Level: L1 | Owner: Mouse | Trace: N/A — closeout | Verification: Retro messages posted in `agents/CHAT.md`*)
+- [x] **Task C.5:** Update `CHANGELOG.md`, groom `agents/cypher/BACKLOG.md`, and post Sprint 28 launch announcement. (*Level: L1 | Owner: Cypher | Trace: N/A — release decision | Verification: `*pm launch Sprint 28` posted in `agents/CHAT.md`*)
 
-### Cycle 1 - Per-test coverage import (breaking, no back-compat)
+---
 
-- [x] Neo: retire blanket-symbol logic in `via/commands/coverage.py`, add `import-contexts` subcommand
-- [x] Neo: per-test synthetic symbols + `covered-by` edges (redefined in place, no new relationship type)
-- [x] Neo: clean up stale `<coverage>` symbols in the same import transaction
-- [x] Trin: verify per-test `-Vcovered-by` results and no stale data survives re-import
-- [x] Morpheus: review Cycle 1 — APPROVED
-
-**Cycle 1 UAT surfaced a critical finding**: 30/92 test files drove `via` via
-subprocess, invisible to `pytest --cov-context=test`. Resolved in Cycle 3 by
-converting the tests, not by building subprocess-coverage capture — see
-`agents/morpheus.docs/TEST_COVERAGE_ARCHITECTURE.md`.
-
-### Cycle 2 - Test run metadata
-
-- [x] Neo: `test_runs` table (status/duration/last_run_at, upsert-only), `SCHEMA_VERSION` 6→7
-- [x] Trin: verified upsert behavior and status capture for real against the project's own index
-- [x] Morpheus: review schema/migration — APPROVED
-
-### Cycle 3 - Capture entrypoint (scope revised: in-process test conversion, not subprocess capture)
-
-- [x] Neo: `tests/via_runner.py` + `conftest.py` redirect shim — 27/30 subprocess-spawning test files now run in-process, zero per-file edits
-- [x] Neo: moved the 3 genuine daemon/stdin-protocol tests to new `tests/subprocess/`
-- [x] Neo: fixed a real O(tests × files) performance bug in the import (was re-parsing every file per test)
-- [x] Neo: `make test-coverage` target + test_runs upsert wiring
-- [x] Neo: added a partial-import safety warning (Smith's Heuristic 5 finding)
-- [x] Trin: full UAT — 1352 passed/1 skipped, 49204 covered-by relationships across 1217 tests, 1352 test_runs rows, `make test` still clean after
-- [x] Smith: usability test — APPROVED
-- [x] Morpheus: final review — APPROVED, no dead cruft
-
-**Side benefit**: full suite runtime dropped from ~174s to ~81s (no more
-per-test interpreter-startup cost from the subprocess spawns).
-
-**Phase 1 (redundancy/efficiency analysis) is Phase 1 (capture) above; Phase 2
-below is now planned** (2026-07-01), seeded by a user request for web-mode
-coverage visualization.
-
-## Sprint 27 - Test Coverage & Quality Analysis (Phase 2: Visualization) — PLANNED (2026-07-01, REVISED same day)
-
-**Stories**: `agents/cypher.docs/SPRINT27_PHASE2_USER_STORIES.md` (revised — heatmap + redundancy merged)
-**Architecture**: `agents/morpheus.docs/SPRINT27_PHASE2_ARCHITECTURE.md` (revised)
-**Task Plan**: `agents/mouse.docs/SPRINT_27_PHASE2_TASKS.md` (revised)
-**Gates**: Smith Gate 1 APPROVED WITH NOTES, Gate 2 APPROVED, Gate
-re-confirmation APPROVED WITH 2 NEW NOTES (`agents/smith.docs/SPRINT27_PHASE2_GATE_RECONFIRM.md`)
-
-**Revision**: redundancy detection reframed from test-to-test overlap to
-symbol-side test-fan-in outliers, merged with the coverage heatmap into one
-hierarchical intensity view (package/module/class/method, D3 zoomable
-icicle). Old Cycle 2 (Jaccard-bucketing test-overlap) dissolved.
-
-### Cycle 1 - Hierarchical test-intensity heatmap (D3) + test efficiency table — CLOSED (2026-07-02)
-- [x] `/api/coverage/hierarchy` (nested tree: intensity_pct, outlier flag) + `/api/coverage/test-efficiency` endpoints
-- [x] D3 zoomable-icicle heatmap (blue/orange colorblind-safe scale, numeric % always shown, separate visual marker for outliers) + sortable efficiency table in web UI
-- [x] **Drill-down on a leaf (Cypher AC7), resolved per user directive 2026-07-02**:
-      clicking a leaf (method/function) shows qualified name, signature
-      (args, no defaults — matches `python_parser.py`'s `_extract_args`
-      convention), and docstring if available, re-extracted from source on
-      demand via a new `GET /api/coverage/symbol?id=` endpoint. Ancestor
-      nodes (package/module/class) still zoom on click; leaves drill down
-      instead. Non-Python symbols degrade gracefully (location only, no
-      docstring/signature). New `DatabaseStore.get_symbol_detail()`.
-- [x] **Leaf sizing changed to lines-of-code, color unchanged (coverage
-      intensity)** — per user directive. Required a schema migration
-      (v7→v8: `symbols.line_end`, threaded through from the parsers'
-      already-computed-but-previously-discarded `line_end` field, zero new
-      parsing work). `loc` computed as `line_end - line_number + 1`,
-      defaults to 1 for symbols indexed before the migration.
-- [x] Lambda/anonymous-function coverage — researched, not implemented as
-      a new leaf type (see chat / Neo's context.md for the full answer):
-      Python lambdas aren't indexed as symbols at all today, and their
-      covered lines already roll into whatever named function/method
-      contains them (coverage is line-range based, not symbol based) — so
-      lambda coverage is already implicitly reflected in the enclosing
-      leaf's intensity_pct with zero extra work. Making a lambda its *own*
-      leaf (separate signature/fully-qualified path) would need new Python
-      parser capability — scoped as a backlog candidate, not guessed at.
-- [x] Trin UAT (incl. hierarchy rollup + outlier-flag correctness, ground-truth cross-check vs. real CLI, plus fresh ground-truth checks for LOC + drill-down against the real re-indexed project): PASSES — `agents/trin.docs/SPRINT27_PHASE2_CYCLE1_UAT.md`
-- [x] Morpheus review: APPROVED — `agents/morpheus.docs/SPRINT27_PHASE2_CYCLE1_REVIEW.md`
-- [x] Smith usability test (real browser, Playwright e2e + screenshots): APPROVED WITH 1 MINOR NOTE — `agents/smith.docs/SPRINT27_PHASE2_CYCLE1_USABILITY.md`
-
-**Side findings fixed during Cycle 1** (all infra, none blocking): a regressed
-Makefile bug shadowing `make test` with a generic `unittest discover` recipe;
-`test-coverage`/`test-js`/`test-e2e`/`test-all`/`lint`/`lint-fast`/`lint-slow`
-had no public `make` stubs despite existing in `Makefile.prj`; 2 unrelated
-pre-existing JS test bugs (stale fixture gap, dead test for a removed
-checkbox); 2 pre-existing tests hardcoded `SCHEMA_VERSION == 7`/`"7"` (broke
-on the v8 bump — fixed to compare against `SCHEMA_VERSION` dynamically
-instead of a stale literal). A real statistical bug (z-score self-capping
-at sqrt(n-1)) and a real path bug (hierarchy rooting at the filesystem
-root, not project root) were found and fixed in Cycle 1's own new code via
-a real end-to-end smoke test, not just fixture-driven unit tests.
-
-### Cycle 2 - Mocking-usage signal (static AST count) — CLOSED (2026-11-24)
-- [x] Neo: single-pass cached static AST analysis (`_analyze_test_file` in `via/web/api/coverage.py` + `DatabaseStore.get_test_covered_file_counts`) computing `mock_call_count`, `imported_module_covered_count` (covered symbols in project modules imported by the test), and `mocks_only` (`mock_call_count > 0` and `imported_module_covered_count == 0`), surfaced as sortable `Imported Covered` + `Mocks` (`mocks only` badge) columns on the Efficiency table (`via/web/template.py`, `via/web/static/app.js`)
-- [x] Trin UAT (1409 passed, 1 skipped; 101/101 documented UAT after removing obsolete `bobp`-migrated tool tests; 107 JS unit tests; real repo spot-check exact match count=3 on `test_start_runs_initial_index`): PASSES
-- [x] Switch security review (`security gate (phase 2): No blocking findings`): CLEARED
-- [x] Morpheus review (`rubric LOOP_IMPL: TFIRST=S VERIF=S MODUL=S REGRESS=A BUDGET=S`): APPROVED
-- [x] Tank SDLC creation & conformance check (`docs/SDLC.md` created & verified): PASSED
-- [x] Oracle documentation groom (`docs/specs/test_coverage.md`, `README.md`, `rubric SDLC: TRUE=S WHOLE=S CLEAN=S CLASS=S CHECK=S GAPS=S`): PASSED
-- [x] Smith E2E usability test (real Playwright Chromium: 27/27 passed, inspected `ux-11-coverage-efficiency.png`, `rubric UAT: COVER=S STEPS=S FAIL=A DATA=S EVID=S`): APPROVED
-- [x] Team retrospective + Cypher `*pm launch Sprint 27`: COMPLETE
-
-**Non-scope**: runtime mock-call instrumentation, automated test-deletion
-recommendations, test-suite-to-code-area Sankey view (parked in
-`agents/cypher/BACKLOG.md` item 7).
-
-**Status**: **Sprint 27 (Phase 1 + Phase 2): CLOSED & LAUNCHED (2026-11-24)** — all cycles complete, all gates signed off with real evidence.
+## Prior Sprints (Completed)
+- **Sprint 27 (Phase 1 & Phase 2):** CLOSED & LAUNCHED (2026-11-24, commit `676952f`) — per-test coverage capture, D3 zoomable-icicle intensity heatmap (LOC sizing, outliers, leaf drill-down), efficiency table + imported-module coverage & `mocks_only` signal, `docs/SDLC.md`, `via-index 0.1.0` live on PyPI. Archive: `agents/chat_archive/CHAT_SPRINT_27.md`.
+- **Sprint 26:** CLOSED (2026-07-01) — CLI/executor registries, CTE query optimization, polymorphic relationship hierarchy (`blast`).

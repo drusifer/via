@@ -5,27 +5,27 @@ State Management Protocol in `.agents/skills/bob-protocol/SKILL.md` for entry an
 
 ## Context
 - **Recent decisions:**
-  - Approved Sprint 27 end-to-end usability gate (`*user approve`) after running the full Playwright Chromium E2E suite (27/27 passed) and inspecting `tests/e2e/screenshots/ux-11-coverage-efficiency.png`.
-  - Confirmed Cycle 2 `Mocks` column renders cleanly alongside `Test`, `Status`, `Duration (s)`, `Symbols Covered`, and `Symbols/sec`, with a clear neutral tooltip (`Static AST count of mock/patch usages in this test (raw count, not a score)`), honoring Cypher's non-goal of no judgmental thresholds.
+  - Reviewed and approved `docs/DOMAIN.md` (`STORY-VIA-285`) against the `DOMAIN` rubric (`rubric DOMAIN: LANG=S BOUND=S INVAR=S STATE=S EVENT=S`).
+  - Executed Stage 3 real-Chromium usability sign-off (`Task C.3`, `rubric UAT: E2E=S UX=S ACCESS=S REGR=S VERDICT=S`) inspecting `tests/e2e/screenshots/ux-10-coverage-heatmap.png` and `tests/e2e/screenshots/ux-11-coverage-efficiency.png`.
 - **Key findings:**
-  - Non-blocking HCI improvement logged for Sprint 27 retro: when the Efficiency table has zero rows (before `make test-coverage` is run), an inline empty-state message pointing to `make test-coverage` would match Heatmap's empty state (Heuristic #1 / #10).
-  - Cycle 1 non-blocking legend contrast note (`Adequate 100%` swatch) carried into Cypher's groomed backlog.
-  - `rubric UAT: COVER=S STEPS=S FAIL=A DATA=S EVID=S`.
-- **Important notes:** Sprint 27 closed and launched.
+  - `ux-10-coverage-heatmap.png`: `#legend-mid` (`Adequate (100%)`) is clearly distinct against the light background with `#cbd5e1` fill and `#64748b` border.
+  - `ux-11-coverage-efficiency.png`: `#coverage-efficiency-empty` renders cleanly centered below visible sortable column headers (`Test`, `Status`, `Duration (s)`, `Symbols Covered`, `Imported Covered`, `Symbols/sec`, `Mocks`) with actionable `make test-coverage` guidance.
+  - 27/27 Playwright Chromium E2E tests pass.
+- **Important notes:** Zero usability defects open from Sprint 28.
 
 ## Current Task
 - **Status:** Complete
 - **Assigned to:** Smith
 - **Started:** 2026-11-24
-- **Description:** Sprint 27 E2E usability verification and retrospective.
-- **Progress:** 100% — Playwright E2E 27/27 passed, screenshot inspected, approved, retro posted.
+- **Description:** Sprint 28 `DOMAIN` rubric review and Stage 3 Chromium E2E usability sign-off.
+- **Progress:** 100% approved; Sprint 28 launched.
 - **Blockers:** None
-- **Consultations:** Oracle, Cypher.
+- **Consultations:** Cypher, Morpheus, Neo, Trin, Mouse.
 
 ## Next Steps
-- **Immediate next action:** Ready for next sprint's Gate 1 story review.
-- **Waiting on:** User direction for Sprint 28
-- **Planned work:** None
+- **Immediate next action:** Await user direction for Sprint 29 planning gates.
+- **Waiting on:** User direction
+- **Planned work:** Sprint 29 HCI/UX review gates.
 
 ---
 *Last updated: 2026-11-24*

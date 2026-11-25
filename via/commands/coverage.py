@@ -12,7 +12,7 @@ TLDR:
 
 import json
 from pathlib import Path
-from typing import Dict, Iterable, Set
+from typing import Callable, Dict, Iterable, Set
 import argparse
 import sys
 
@@ -70,6 +70,35 @@ def _covered_lines_by_test(data_file: str) -> Dict[str, Dict[str, Set[int]]]:
     return by_test
 
 
+def _link_file_covered_symbols(
+    store: DatabaseStore,
+    registry: ParserRegistry,
+    file_path: str,
+    tests_lines: Dict[str, Set[int]],
+    get_test_symbol: Callable[[str], int],
+) -> int:
+    """Parse one file and insert `covered-by` edges for all covered symbols in it."""
+    abs_path = Path(file_path).resolve()
+    if not abs_path.exists():
+        print(f"Warning: coverage path not found in project: {file_path}")
+        return 0
+    parser = registry.get_parser(str(abs_path))
+    if parser is None:
+        return 0
+    parse_result = parser.parse(str(abs_path), abs_path.read_bytes())
+    imported = 0
+    for name, symbol_type, parent, start, end in _iter_symbol_ranges(parse_result):
+        symbol_id = store.get_symbol_id(name, symbol_type, str(abs_path), parent)
+        if symbol_id is None:
+            continue
+        for test_id, lines in tests_lines.items():
+            if not any(start <= line <= end for line in lines):
+                continue
+            store.insert_relationship(symbol_id, get_test_symbol(test_id), 'covered-by')
+            imported += 1
+    return imported
+
+
 def _link_covered_symbols(
     store: DatabaseStore,
     registry: ParserRegistry,
@@ -110,23 +139,9 @@ def _link_covered_symbols(
 
     imported = 0
     for file_path, tests_lines in lines_by_file_then_test.items():
-        abs_path = Path(file_path).resolve()
-        if not abs_path.exists():
-            print(f"Warning: coverage path not found in project: {file_path}")
-            continue
-        parser = registry.get_parser(str(abs_path))
-        if parser is None:
-            continue
-        parse_result = parser.parse(str(abs_path), abs_path.read_bytes())
-        for name, symbol_type, parent, start, end in _iter_symbol_ranges(parse_result):
-            symbol_id = store.get_symbol_id(name, symbol_type, str(abs_path), parent)
-            if symbol_id is None:
-                continue
-            for test_id, lines in tests_lines.items():
-                if not any(start <= line <= end for line in lines):
-                    continue
-                store.insert_relationship(symbol_id, _test_symbol(test_id), 'covered-by')
-                imported += 1
+        imported += _link_file_covered_symbols(
+            store, registry, file_path, tests_lines, _test_symbol
+        )
     return imported
 
 

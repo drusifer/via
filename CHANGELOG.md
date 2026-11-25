@@ -10,6 +10,13 @@ All notable changes to **via** are documented here.
 
 ### Added
 
+- **Sprint 28 — Hygiene, CI/Security, Coverage UX Polish & Domain Model**
+  - GitHub Actions push/PR CI workflow (`.github/workflows/ci.yml`) with least-privilege `permissions: { contents: read }`, SHA-pinned actions, Python 3.10/3.12 (`ruff check via/`, `pytest`, `via --help`), Node 22 (`npm ci`, `npm test`), and SHA-256-verified `gitleaks` commit-range secret scanning.
+  - Build-time dependency security scan Makefile targets (`security-scan-python` via `pip-audit`, `security-scan-npm` via `npm audit --audit-level=high`, and aggregate `security-scan`), with all Python (0 vulns) and npm (0 vulns; Vitest upgraded to `^5.1.1`) advisories remediated.
+  - Canonical Domain Model document (`docs/DOMAIN.md`, linked from `README.md`) capturing VIA's four bounded contexts, ubiquitous language glossary, Mermaid context map and lifecycle diagram, aggregate invariants, domain events, and documented architectural drifts.
+  - Web UI Coverage **Efficiency** empty-state hint (`#coverage-efficiency-empty`) guiding users to run `make test-coverage` while keeping sortable column headers visible, plus higher-contrast `"Adequate (100%)"` legend swatch (`#legend-mid`).
+  - Refactored all Ruff complexity/hygiene findings across `via/` (`via/db/store.py` and 6 CLI/pipeline modules) so `ruff check via/` and `make lint-fast` exit 0 cleanly; added `node_modules/` to `.gitignore` and untracked 1,041 vendored files from git.
+
 - **Sprint 27 — Test Coverage & Quality Analysis (Phase 1 & Phase 2)**
   - Per-test coverage capture (`via coverage import-contexts`, `make test-coverage`) storing per-test `covered-by` relationships and `test_runs` metadata (status, duration, last-run).
   - Web UI **Coverage** view with D3 zoomable-icicle intensity heatmap (leaf size = lines of code via schema v8 `symbols.line_end`, color = coverage intensity % on a colorblind-safe blue→orange scale, peer-relative outlier marker, leaf drill-down with signature & docstring via `GET /api/coverage/symbol`).

@@ -1,7 +1,7 @@
 # Product Backlog & Roadmap
 
 **Author**: Cypher (PM)
-**Last Updated**: 2026-11-24 (post Sprint 27 launch & retro)
+**Last Updated**: 2026-11-24 (post Sprint 28 launch & retro)
 
 ## Product Backlog
 
@@ -31,22 +31,20 @@
    - *Description*: Index Python lambdas as distinct symbols if standalone leaf visibility in the coverage heatmap is ever needed (currently rolled into the enclosing function/method).
    - *Status*: Open backlog item.
 
-### UX Polish & Hygiene (from Sprint 27 Retro)
-1. **Coverage Efficiency table empty-state hint** *(Smith retro, UX)*
-   - *Description*: Show a concise empty-state message in `#coverage-efficiency-wrap` when zero `test_runs` rows exist, guiding the user to run `make test-coverage` (matching Heatmap's empty state).
-   - *Status*: Open.
-2. **Coverage heatmap legend contrast** *(Smith Cycle 1 note)*
-   - *Description*: Increase contrast of the `"Adequate (100%)"` neutral-gray legend swatch so it is visually distinct against the light card background.
-   - *Status*: Open.
-3. **CI, security scans & lint hygiene** *(Tank / Switch / Neo retro)*
-   - *Description*: Add GitHub Actions push/PR CI workflow (`test`, `test-js`, `gitleaks`), add `security-scan-python` / `security-scan-npm` targets to `Makefile`, resolve the 5 pre-existing Ruff lint warnings, untrack `node_modules/.vite/vitest/.../results.json`, and resolve/rotate Switch's pre-existing gitleaks finding at `.continue/agents/config.yaml:10`.
-   - *Status*: Open.
+### Security & Architecture Tech Debt (from Sprint 28 Retro & `docs/DOMAIN.md`)
+1. **Resolve pre-existing gitleaks history finding & upgrade CI to full-history scan** *(Switch / Tank — owner action)*
+   - *Description*: Verify/rotate the key in `.continue/agents/config.yaml:10` (commit `9817f24`), decide on git history remediation, and upgrade `.github/workflows/ci.yml` `secrets` job from commit-range (`--log-opts`, `ADR-28-2`) to full-history scan.
+   - *Status*: Open — awaits repo owner action.
+2. **Domain drift remediation (optional Architecture Sprint)** *(Morpheus — tracked in `docs/DOMAIN.md` §3)*
+   - *Description*: Split `DatabaseStore` (~2,240 lines) by bounded context (`Indexing` / `Querying` / `Test Quality`), align `SymbolType` enum with DB-stored `'test'`/`'external_class'`/`'module'` kinds, decouple CLI/rendering mixins from `MatchRecord`, and unify `Relation` vs `ReferenceType` in `ViaQueryBuilder` & Web API.
+   - *Status*: Open backlog item (captured in `docs/DOMAIN.md`).
 
 ## Recently Shipped (Archived from Backlog)
 - **Sprint 26**: Unified CLI/executor registries, CTE chained relationship performance optimization, `FunctionBodyAnalyzer` unit tests, polymorphic relationship type hierarchy (`any-ref`/`upstream-ref`/`downstream-ref`, `blast`).
-- **Sprint 27 (Phase 1 & Phase 2)**: Per-test coverage capture (`via coverage import-contexts`, `test_runs`), D3 zoomable-icicle intensity heatmap (LOC sizing, outlier markers, leaf drill-down), test efficiency table + static AST `Mocks` count (`mock_call_count`), `docs/SDLC.md`, PyPI `via-index 0.1.0` trusted publishing.
+- **Sprint 27 (Phase 1 & Phase 2)**: Per-test coverage capture (`via coverage import-contexts`, `test_runs`), D3 zoomable-icicle intensity heatmap (LOC sizing, outlier markers, leaf drill-down), test efficiency table + imported-module coverage & `mocks_only` signal, `docs/SDLC.md`, PyPI `via-index 0.1.0` trusted publishing.
+- **Sprint 28**: GitHub Actions push/PR CI (`.github/workflows/ci.yml`), `security-scan-python` / `security-scan-npm` / `security-scan` targets + 0 Python & 0 npm advisories (Vitest 5), `ruff check via/` at 0 errors, `node_modules/` gitignored & untracked, Coverage Efficiency empty-state hint & `#legend-mid` contrast, canonical `docs/DOMAIN.md`.
 
 ## Next Sprint Recommendations
-- **Option A (Hygiene / Tech Debt — Tier 2)**: Resolve Sprint 27 retro items (Efficiency empty-state, legend contrast, PR CI + security scans, 5 Ruff findings, `.continue/agents/config.yaml:10`).
-- **Option B (HCI Focus)**: Boolean operators in queries (`AND`, `OR`, `NOT`).
+- **Option A (HCI Focus)**: Boolean operators in queries (`AND`, `OR`, `NOT`).
+- **Option B (Architecture Tech Debt — Tier 2)**: Address `docs/DOMAIN.md` §3 drifts (`DatabaseStore` split, `SymbolType` alignment, `MatchRecord` decoupling, unified `Relation` API).
 - **Option C (Developer Productivity)**: Git history integration (`git blame` / commit ranges) or Cross-project queries.

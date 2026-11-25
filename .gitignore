@@ -215,3 +215,6 @@ __marimo__/
 
 # Bob Protocol / via — machine-local config and index, not portable
 .mcp.json
+
+# Node dependencies (rebuilt via npm ci from package-lock.json)
+node_modules/

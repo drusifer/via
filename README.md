@@ -208,6 +208,7 @@ records = list(ViaRunner(db_store).run(query))
 ## Documentation
 
 - **[User Guide](docs/USER_GUIDE.md)** - Complete usage reference, web UI guide, and 20 real-world queries
+- **[Domain Model](docs/DOMAIN.md)** - Bounded contexts, ubiquitous language glossary, aggregates, invariants, lifecycle, and domain events
 - **[SDLC & Release Guide](docs/SDLC.md)** - Toolchain, Makefile targets, quality gates, change management, and PyPI release process
 - **[Architecture](agents/morpheus/VIA_ARCHITECTURE.md)** - System design
 

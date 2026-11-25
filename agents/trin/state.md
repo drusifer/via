@@ -5,27 +5,27 @@ State Management Protocol in `.agents/skills/bob-protocol/SKILL.md` for entry an
 
 ## Context
 - **Recent decisions:**
-  - Verified Sprint 27 Phase 2 Cycle 2 (static AST mock-usage count column on coverage efficiency table).
-  - Removed obsolete `bobp`-migrated tool tests (`tests/unit/test_prep_tldr.py`, `tests/unit/test_session_trace.py`, and `TestS10_3_PrepTldrIncremental` in `tests/uat/test_documented_queries_uat.py`) whose target scripts moved into `bobp` during `bobp update .`.
+  - Verified Sprint 28 Phase 1 (`STORY-VIA-282`) and Phase 2 (`STORY-VIA-281`) via full `bobp make` test suites.
 - **Key findings:**
-  - Real repo spot-check: scanned all 109 test files in `tests/`, found 30 test functions with mock usages; verified `tests/unit/test_watch_service.py::TestStartupShutdown::test_start_runs_initial_index` has exact count `3` (`patch`, `MagicMock`, `patch.object`).
-  - Full Python suite: 1409 passed, 1 skipped (0 regressions; 84% total coverage; `via/web/api/coverage.py` 98%, `via/web/template.py` 100%).
-  - JS unit tests: 107 passed (3 files).
-- **Important notes:** `tests/uat/test_sprint27_phase2_cycle1_uat.py` skips when `.via/index.db` lacks captured coverage; Cycle 1 + Cycle 2 unit/smoke/JS/E2E tests all pass cleanly.
+  - `bobp make test`: 1,410 passed, 1 skipped, 0 failed (85% total coverage; `via/web/api/coverage.py` 99%, `via/web/template.py` 100%).
+  - `bobp make test-js`: 109 passed (3 files, Vitest 5.1.1), clean git status under `node_modules/`.
+  - `bobp make test-e2e`: 27 passed (Playwright Chromium, including `#coverage-efficiency-empty` and `#legend-mid`).
+  - `bobp make lint-fast` and `.venv/bin/ruff check via/`: exit 0 (`All checks passed!`).
+- **Important notes:** Zero regressions across the entire `via/db/store.py` and 6-module Ruff refactor and Vitest 3→5 upgrade.
 
 ## Current Task
 - **Status:** Complete
 - **Assigned to:** Trin
 - **Started:** 2026-11-24
-- **Description:** Sprint 27 Phase 2 Cycle 2 UAT verification and obsolete bobp-tool test cleanup.
-- **Progress:** 100% passed; handed off to Switch for Cycle 2 security review.
+- **Description:** Sprint 28 Phase 1 & Phase 2 UAT verification.
+- **Progress:** 100% passed; Sprint 28 retro and launch complete.
 - **Blockers:** None
-- **Consultations:** None
+- **Consultations:** Neo, Switch, Morpheus, Smith.
 
 ## Next Steps
-- **Immediate next action:** Await Switch security review, Morpheus review, and Sprint 27 close-out.
-- **Waiting on:** Switch (`*sec review`)
-- **Planned work:** Participate in Sprint 27 retrospective.
+- **Immediate next action:** Await user direction for committing Sprint 28 or starting Sprint 29.
+- **Waiting on:** User direction
+- **Planned work:** Sprint 29 QA gates.
 
 ---
 *Last updated: 2026-11-24*

@@ -45,7 +45,7 @@ NOUN_MAP = {
 
 # Relation verbs mapping to standard relationship type strings and flags
 RELATION_MAP = {
-    # Positive (via)
+    # Positive relationship verbs
     "calls": ("--via", "calls"),
     "call": ("--via", "calls"),
     "calling": ("--via", "calls"),
@@ -97,7 +97,7 @@ RELATION_MAP = {
     
     "http called by": ("--via", "http-called-by"),
     
-    # Negated (sans)
+    # Negated relationship verbs
     "do not call": ("--sans", "calls"),
     "not calling": ("--sans", "calls"),
     
@@ -225,6 +225,16 @@ class QueryTransformer(Transformer):
             "stage": stage_val,
         }
 
+    @staticmethod
+    def _append_stage_args(cli_args: list[str], stage_info: dict) -> None:
+        if stage_info["matcher"]:
+            cli_args.extend(list(stage_info["matcher"]))
+        else:
+            cli_args.extend(["-mg", "*"])
+
+        if stage_info["target_noun"]:
+            cli_args.append(stage_info["target_noun"])
+
     def query(self, args):
         primary_stage = None
         relational_stages = []
@@ -239,30 +249,15 @@ class QueryTransformer(Transformer):
 
         cli_args = []
 
-        # 1. Primary stage matcher
-        if primary_stage["matcher"]:
-            cli_args.extend(list(primary_stage["matcher"]))
-        else:
-            cli_args.extend(["-mg", "*"])
-            
-        # Primary stage target noun
-        if primary_stage["target_noun"]:
-            cli_args.append(primary_stage["target_noun"])
+        # 1. Primary stage matcher and target noun
+        self._append_stage_args(cli_args, primary_stage)
 
         # 2. Relational chaining stages
         for rel in relational_stages:
             rel_flag, rel_name = rel["relation"]
             cli_args.append(rel_flag)
             cli_args.append(rel_name)
-
-            stage_info = rel["stage"]
-            if stage_info["matcher"]:
-                cli_args.extend(list(stage_info["matcher"]))
-            else:
-                cli_args.extend(["-mg", "*"])
-
-            if stage_info["target_noun"]:
-                cli_args.append(stage_info["target_noun"])
+            self._append_stage_args(cli_args, rel["stage"])
 
         # 3. Append Markdown output default
         cli_args.append("-fm")
@@ -414,6 +409,35 @@ class LarkNaturalQueryParser(NaturalQueryParserBase):
         self._lark = Lark(GRAMMAR, parser="lalr", start="query")
         self._transformer = QueryTransformer()
 
+    @staticmethod
+    def _raise_unexpected_input_error(e: UnexpectedInput, clean_query: str) -> None:
+        """Raise an informative PipelineParseError for a Lark UnexpectedInput."""
+        import re
+        token_val = None
+        if hasattr(e, 'token') and e.token:
+            token_val = str(e.token)
+        elif hasattr(e, 'pos_in_stream') and e.pos_in_stream is not None:
+            remaining = clean_query[e.pos_in_stream:]
+            m = re.match(r'^[a-zA-Z0-9_*-]+', remaining)
+            if m:
+                token_val = m.group(0)
+
+        if token_val and token_val.lower() not in NOUN_MAP:
+            # If it's a simple word/identifier, treat it as unknown target noun
+            # e.g. "widgets" or "controllers"
+            if re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', token_val):
+                valid_str = "classes, functions, methods, files, globals, variables, constants, imports, headers, sections"
+                raise PipelineParseError(
+                    f"Unknown symbol target '{token_val}'. Valid options are: {valid_str}.",
+                    code="unknown_target_symbol"
+                )
+
+        # Informative token location feedback
+        raise PipelineParseError(
+            f"Syntax error in natural query: {str(e)}",
+            code="invalid_query_syntax"
+        ) from e
+
     def parse(self, query: str) -> list[str]:
         """Translate natural query by compiling to AST and transforming stages.
 
@@ -437,32 +461,7 @@ class LarkNaturalQueryParser(NaturalQueryParserBase):
             # Walk AST via Transformer to yield argument segments list
             return self._transformer.transform(tree)
         except UnexpectedInput as e:
-            # Check if this unexpected token/character is an unknown target noun
-            import re
-            token_val = None
-            if hasattr(e, 'token') and e.token:
-                token_val = str(e.token)
-            elif hasattr(e, 'pos_in_stream') and e.pos_in_stream is not None:
-                remaining = clean_query[e.pos_in_stream:]
-                m = re.match(r'^[a-zA-Z0-9_*-]+', remaining)
-                if m:
-                    token_val = m.group(0)
-
-            if token_val and token_val.lower() not in NOUN_MAP:
-                # If it's a simple word/identifier, treat it as unknown target noun
-                # e.g. "widgets" or "controllers"
-                if re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', token_val):
-                    valid_str = "classes, functions, methods, files, globals, variables, constants, imports, headers, sections"
-                    raise PipelineParseError(
-                        f"Unknown symbol target '{token_val}'. Valid options are: {valid_str}.",
-                        code="unknown_target_symbol"
-                    )
-
-            # Informative token location feedback
-            raise PipelineParseError(
-                f"Syntax error in natural query: {str(e)}",
-                code="invalid_query_syntax"
-            ) from e
+            self._raise_unexpected_input_error(e, clean_query)
         except LarkError as e:
             raise PipelineParseError(
                 f"Failed to parse natural query: {str(e)}",
