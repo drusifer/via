@@ -32,8 +32,8 @@
    - *Status*: Open backlog item.
 
 ### Security & Architecture Tech Debt (from Sprint 28 Retro & `docs/DOMAIN.md`)
-1. **Resolve pre-existing gitleaks history finding & upgrade CI to full-history scan** *(Switch / Tank — owner action)*
-   - *Description*: Verify/rotate the key in `.continue/agents/config.yaml:10` (commit `9817f24`), decide on git history remediation, and upgrade `.github/workflows/ci.yml` `secrets` job from commit-range (`--log-opts`, `ADR-28-2`) to full-history scan.
+1. **Resolve pre-existing gitleaks history finding** *(Switch / Tank — owner action)*
+   - *Description*: Verify/rotate the key in `.continue/agents/config.yaml:10` (commit `9817f24`) and decide on git history remediation so `make security-scan-secrets` exits 0 cleanly.
    - *Status*: Open — awaits repo owner action.
 2. **Domain drift remediation (optional Architecture Sprint)** *(Morpheus — tracked in `docs/DOMAIN.md` §3)*
    - *Description*: Split `DatabaseStore` (~2,240 lines) by bounded context (`Indexing` / `Querying` / `Test Quality`), align `SymbolType` enum with DB-stored `'test'`/`'external_class'`/`'module'` kinds, decouple CLI/rendering mixins from `MatchRecord`, and unify `Relation` vs `ReferenceType` in `ViaQueryBuilder` & Web API.
@@ -42,7 +42,7 @@
 ## Recently Shipped (Archived from Backlog)
 - **Sprint 26**: Unified CLI/executor registries, CTE chained relationship performance optimization, `FunctionBodyAnalyzer` unit tests, polymorphic relationship type hierarchy (`any-ref`/`upstream-ref`/`downstream-ref`, `blast`).
 - **Sprint 27 (Phase 1 & Phase 2)**: Per-test coverage capture (`via coverage import-contexts`, `test_runs`), D3 zoomable-icicle intensity heatmap (LOC sizing, outlier markers, leaf drill-down), test efficiency table + imported-module coverage & `mocks_only` signal, `docs/SDLC.md`, PyPI `via-index 0.1.0` trusted publishing.
-- **Sprint 28**: GitHub Actions push/PR CI (`.github/workflows/ci.yml`), `security-scan-python` / `security-scan-npm` / `security-scan` targets + 0 Python & 0 npm advisories (Vitest 5), `ruff check via/` at 0 errors, `node_modules/` gitignored & untracked, Coverage Efficiency empty-state hint & `#legend-mid` contrast, canonical `docs/DOMAIN.md`.
+- **Sprint 28**: `security-scan-python` / `security-scan-npm` / `security-scan` targets + 0 Python & 0 npm advisories (Vitest 5), `ruff check via/` at 0 errors, `node_modules/` gitignored & untracked, Coverage Efficiency empty-state hint & `#legend-mid` contrast, canonical `docs/DOMAIN.md`.
 
 ## Next Sprint Recommendations
 - **Option A (HCI Focus)**: Boolean operators in queries (`AND`, `OR`, `NOT`).

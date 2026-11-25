@@ -10,8 +10,7 @@ All notable changes to **via** are documented here.
 
 ### Added
 
-- **Sprint 28 — Hygiene, CI/Security, Coverage UX Polish & Domain Model**
-  - GitHub Actions push/PR CI workflow (`.github/workflows/ci.yml`) with least-privilege `permissions: { contents: read }`, SHA-pinned actions, Python 3.10/3.12 (`ruff check via/`, `pytest`, `via --help`), Node 22 (`npm ci`, `npm test`), and SHA-256-verified `gitleaks` commit-range secret scanning.
+- **Sprint 28 — Hygiene, Security Scans, Coverage UX Polish & Domain Model**
   - Build-time dependency security scan Makefile targets (`security-scan-python` via `pip-audit`, `security-scan-npm` via `npm audit --audit-level=high`, and aggregate `security-scan`), with all Python (0 vulns) and npm (0 vulns; Vitest upgraded to `^5.1.1`) advisories remediated.
   - Canonical Domain Model document (`docs/DOMAIN.md`, linked from `README.md`) capturing VIA's four bounded contexts, ubiquitous language glossary, Mermaid context map and lifecycle diagram, aggregate invariants, domain events, and documented architectural drifts.
   - Web UI Coverage **Efficiency** empty-state hint (`#coverage-efficiency-empty`) guiding users to run `make test-coverage` while keeping sortable column headers visible, plus higher-contrast `"Adequate (100%)"` legend swatch (`#legend-mid`).

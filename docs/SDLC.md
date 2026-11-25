@@ -141,17 +141,13 @@ is reported to Tank so one of them gets fixed.
 
 ## 8. CI / deploy
 
-- **`.github/workflows/ci.yml`** — runs on `push` to `main` and on `pull_request`. Uses least-privilege top-level `permissions: { contents: read }` and full commit-SHA-pinned actions (`actions/checkout`, `actions/setup-python`, `actions/setup-node`) across three parallel jobs:
-  - `test-python` (matrix Python `3.10`, `3.12`): `pip install -e ".[dev]"`, `ruff check via/`, `pytest tests/ -q`, and `via --help >/dev/null` CLI smoke check.
-  - `test-js` (Node `22`): `npm ci` and `npm test` (Vitest + jsdom unit tests).
-  - `secrets`: full-history checkout (`fetch-depth: 0`), pinned SHA-256-verified `gitleaks` `8.26.0`, scanning incoming PR/push commit ranges via `--log-opts` per `ADR-28-2` (no `.gitleaksignore` or allowlist; upgraded to full-history scan once pre-existing commit `9817f24` is cleared by the owner).
-  - Playwright browser E2E tests stay local (`bobp make test-e2e`) to keep CI fast and deterministic.
+- **Local-only verification (no push/PR CI workflow):** Tests, linting, and security scans run locally via `bobp make` before committing (plus `.githooks/pre-commit` for staged secrets). There is no push/PR GitHub Actions CI workflow.
 - **`.github/workflows/publish.yml`** — runs on `release: [published]`. Uses least-privilege `permissions: { contents: read }` at top level, SHA-pinned actions, builds sdist + wheel, runs `twine check dist/*`, smoke-tests installing the wheel in a fresh venv (`via --help`), and publishes via `pypa/gh-action-pypi-publish` inside the `pypi` environment (`id-token: write`, required reviewer `drusifer`).
 
 ## 9. Known deviations
 
 - **No Python lockfile:** `pyproject.toml` declares minimum version bounds without a committed `uv.lock` or `requirements.lock`; `make install-dev` resolves latest compatible versions with `pip`, and `make security-scan-python` (`pip-audit`) audits the installed `.venv` rather than an exported lockfile.
-- **Pre-existing gitleaks history finding:** `make security-scan-secrets` currently reports 1 pre-existing `generic-api-key` finding in `.continue/agents/config.yaml:10` (commit `9817f24`, 2026-02-07; not packaged in `dist/*`). Never allowlisted; `.github/workflows/ci.yml` scans incoming PR/push commit ranges (`--log-opts`, `ADR-28-2`) until the user verifies/rotates the key and decides on history remediation. Tracked in `agents/switch/state.md`.
+- **Pre-existing gitleaks history finding:** `make security-scan-secrets` currently reports 1 pre-existing `generic-api-key` finding in `.continue/agents/config.yaml:10` (commit `9817f24`, 2026-02-07; not packaged in `dist/*`). Never allowlisted; awaits user verification/rotation and history remediation decision. Tracked in `agents/switch/state.md`.
 - **`make clean` removes `.venv/`:** there is no separate `distclean` target; `make clean` performs a full environment clean.
 
 ## 10. Conformance check
@@ -167,4 +163,4 @@ Run by Tank at sprint close (`*devops sdlc-check`):
 7. Confirm Sprint changes followed Section 6 (proper gates, recorded in `task.md`, `agents/CHAT.md`, and docs).
 
 ---
-*Last verified: 2026-11-24 against Sprint 28 closeout (`Makefile`, `.github/workflows/ci.yml`, `pyproject.toml`, `package.json`, `.gitignore`, `.githooks/pre-commit`, `bobp make dist`) by Tank.*
+*Last verified: 2026-11-24 after removing `.github/workflows/ci.yml` per user direction (local-only verification + `publish.yml` release workflow) by Tank.*
