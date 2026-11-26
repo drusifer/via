@@ -118,12 +118,14 @@ class TestWebServerPortSelection:
 # ---------------------------------------------------------------------------
 
 class TestHealthEndpoint:
-    def setup_method(self):
-        self.srv = WebServer(port=0)
-        self.srv.start()
+    @classmethod
+    def setup_class(cls):
+        cls.srv = WebServer(port=0)
+        cls.srv.start()
 
-    def teardown_method(self):
-        self.srv.stop()
+    @classmethod
+    def teardown_class(cls):
+        cls.srv.stop()
 
     def test_returns_200(self):
         resp = _get(self.srv.port, "/api/health")
@@ -148,12 +150,14 @@ class TestHealthEndpoint:
 # ---------------------------------------------------------------------------
 
 class TestCORSHeaders:
-    def setup_method(self):
-        self.srv = WebServer(port=0)
-        self.srv.start()
+    @classmethod
+    def setup_class(cls):
+        cls.srv = WebServer(port=0)
+        cls.srv.start()
 
-    def teardown_method(self):
-        self.srv.stop()
+    @classmethod
+    def teardown_class(cls):
+        cls.srv.stop()
 
     def test_cors_header_present_on_health(self):
         resp = _get(self.srv.port, "/api/health")

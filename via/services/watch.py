@@ -109,13 +109,12 @@ class WatchService:
         self._schedule_dir_watches()
         self._observer.start()
 
-        logger.info("Watching %s for changes... (Ctrl-C to stop)", self.root_dir)
-
         if self.handle_signals:
             original_sigint = signal.getsignal(signal.SIGINT)
             signal.signal(signal.SIGINT, self._handle_sigint)
 
         try:
+            logger.info("Watching %s for changes... (Ctrl-C to stop)", self.root_dir)
             while not self._stop_event.is_set():
                 self._stop_event.wait(timeout=0.1)
         finally:

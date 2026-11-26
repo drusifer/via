@@ -30,53 +30,46 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
-@pytest.fixture
-def indexed_project(tmp_path):
-    """A tmp_path with a Python file, indexed by via."""
-    (tmp_path / "mymod.py").write_text(
+@pytest.fixture(scope="module")
+def indexed_project(tmp_path_factory):
+    """A module-scoped temp directory with a Python file, indexed once by via."""
+    project = tmp_path_factory.mktemp("sprint7_mcp")
+    (project / "mymod.py").write_text(
         "class MyClass:\n    def my_method(self): pass\n\ndef my_func(): pass\n"
     )
     result = subprocess.run(
-        [sys.executable, '-m', 'via', 'index', str(tmp_path)],
+        [sys.executable, '-m', 'via', 'index', str(project)],
         capture_output=True, text=True, timeout=30,
     )
     assert result.returncode == 0, f"Index failed: {result.stderr}"
-    return tmp_path
+    return project
 
 
-def _jsonrpc(method, params=None, id=1):
-    msg = {"jsonrpc": "2.0", "method": method, "id": id}
-    if params is not None:
-        msg["params"] = params
-    return json.dumps(msg)
+@pytest.fixture(scope="module")
+def mcp_session_snapshot(indexed_project):
+    """Run all read-only MCP stdio operations in one server session, then close stdin."""
+    async def _collect():
+        params = StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "via", "mcp", "serve", str(indexed_project), "--no-web"],
+        )
+        async with stdio_client(params) as (read_stream, write_stream):
+            async with ClientSession(read_stream, write_stream) as session:
+                init_result = await session.initialize()
+                tools_result = await session.list_tools()
+                classes_res = await session.call_tool("via_query", {"args": ["-mg", "*", "-tc"]})
+                empty_res = await session.call_tool(
+                    "via_query", {"args": ["-mg", "NONEXISTENT_XXXXXXXXX", "-tc"]}
+                )
+                return {
+                    "server_info": init_result.server_info,
+                    "tools": tools_result.tools,
+                    "classes_res": classes_res,
+                    "empty_res": empty_res,
+                    "exited_cleanly": True,
+                }
 
-
-def _mcp_conversation(*extra_messages):
-    """Build a complete MCP conversation: init + initialized + extra messages."""
-    msgs = [
-        _jsonrpc("initialize", {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "uat-test", "version": "0"},
-        }),
-        json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}),
-    ]
-    msgs.extend(extra_messages)
-    return "\n".join(msgs) + "\n"
-
-
-async def _run_mcp_client(indexed_project, operation):
-    """Run an operation against a live MCP stdio session."""
-    params = StdioServerParameters(
-        command=sys.executable,
-        args=[
-            "-m", "via", "mcp", "serve", str(indexed_project), "--no-web",
-        ],
-    )
-    async with stdio_client(params) as (read_stream, write_stream):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
-            return await operation(session)
+    return asyncio.run(_collect())
 
 
 # ── P7-2: via install mcp creates .mcp.json ──────────────────────────────
@@ -114,49 +107,29 @@ class TestUAT72_InstallMcp:
 # ── P7-3: via mcp serve starts and handles initialize ─────────────────────
 
 class TestUAT73_McpServeStarts:
-    def test_serve_handles_initialize(self, indexed_project):
-        async def initialize(session):
-            return session.server_info
+    def test_serve_handles_initialize(self, mcp_session_snapshot):
+        assert mcp_session_snapshot["server_info"].name == "via"
 
-        server_info = asyncio.run(_run_mcp_client(indexed_project, initialize))
-        assert server_info.name == "via"
-
-    def test_serve_exits_cleanly_on_stdin_eof(self, indexed_project):
-        async def initialize(session):
-            return session.server_info
-
-        server_info = asyncio.run(_run_mcp_client(indexed_project, initialize))
-        assert server_info.name == "via"
+    def test_serve_exits_cleanly_on_stdin_eof(self, mcp_session_snapshot):
+        # stdio_client closes stdin and awaits clean server shutdown on context exit
+        assert mcp_session_snapshot["exited_cleanly"] is True
 
 
 # ── P7-4: mock tools/call returns valid JSON ─────────────────────────────
 
 class TestUAT74_McpToolsCall:
-    def test_tools_call_returns_json_array(self, indexed_project):
-        async def call_tool(session):
-            return await session.call_tool(
-                "via_query", {"args": ["-mg", "*", "-tc"]}
-            )
+    def test_tools_call_returns_json_array(self, mcp_session_snapshot):
+        assert "MyClass" in str(mcp_session_snapshot["classes_res"])
 
-        result = asyncio.run(_run_mcp_client(indexed_project, call_tool))
-        assert "MyClass" in str(result)
-
-    def test_tools_call_empty_query_returns_empty_array(self, indexed_project):
-        async def call_tool(session):
-            return await session.call_tool(
-                "via_query",
-                {"args": ["-mg", "NONEXISTENT_XXXXXXXXX", "-tc"]},
-            )
-
-        result = asyncio.run(_run_mcp_client(indexed_project, call_tool))
-        payload = json.loads(result.content[0].text)
+    def test_tools_call_empty_query_returns_empty_array(self, mcp_session_snapshot):
+        payload = json.loads(mcp_session_snapshot["empty_res"].content[0].text)
         assert payload["result"] == []
 
 
 # ── P7-5: via mcp schema tool name matches tools/list ────────────────────
 
 class TestUAT75_SchemaMatchesToolsList:
-    def test_schema_name_matches_tools_list(self, indexed_project):
+    def test_schema_name_matches_tools_list(self, mcp_session_snapshot):
         schema_result = subprocess.run(
             [sys.executable, '-m', 'via', 'mcp', 'schema'],
             capture_output=True, text=True,
@@ -164,12 +137,7 @@ class TestUAT75_SchemaMatchesToolsList:
         assert schema_result.returncode == 0
         schema = json.loads(schema_result.stdout)
         tool_name = schema["name"]
-
-        async def list_tools(session):
-            return await session.list_tools()
-
-        result = asyncio.run(_run_mcp_client(indexed_project, list_tools))
-        assert tool_name in {tool.name for tool in result.tools}
+        assert tool_name in {tool.name for tool in mcp_session_snapshot["tools"]}
 
 
 # ── P7-7: via uninstall mcp removes config ────────────────────────────────

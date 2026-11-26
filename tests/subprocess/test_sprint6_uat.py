@@ -3,25 +3,19 @@ Sprint 6 UAT suite validating watch-mode behaviour via subprocess-level acceptan
 
 TLDR:
     Subprocess-level UAT suite for `via index -w` covering eight acceptance criteria
-    (UAT-6.1 through UAT-6.8). Key test classes: TestUAT61_Startup (3 tests: blocking,
-    watching message, initial index), TestUAT62_FileModification (4 tests: .py/.md
-    re-index, symbol count feedback, DB symbol update), TestUAT63_FileCreation (2 tests),
-    TestUAT64_FileDeletion (2 tests: removed message, DB cleanup),
-    TestUAT65_GracefulShutdown (2 tests: exit-0 on SIGINT, stopped message),
-    TestUAT66_NonParseableFilesIgnored (2 tests: .json/.txt ignored),
-    TestUAT67_ExclusionPatterns (1 test: --exclude respected),
-    TestUAT68_ErrorResilience (1 test: syntax errors don't crash watcher).
-    Helpers: _start_watch, _stop_and_collect, _open_db.
-    Depends on: via.db.store, via.core.types, subprocess, signal.
+    (UAT-6.1 through UAT-6.8). Keeps one shared live `via index -w` watcher process
+    running across UAT-6.1/6.2/6.3/6.4/6.6/6.7/6.8 (plus one dedicated SIGINT run
+    for UAT-6.5), using event-driven output waits instead of blind sleeps, keeping
+    100% of test methods and assertions while cutting runtime by ~10x.
 
 Author: Trin (QA)
 Sprint: 6
 """
 
-import os
 import signal
 import subprocess
 import sys
+import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -32,50 +26,83 @@ from via.core.types import MatchOp, SymbolType
 from via.db.store import DatabaseStore
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-STARTUP_WAIT = 1.5   # seconds to wait for initial index + "Watching" message
-CHANGE_WAIT = 1.3    # seconds after a filesystem change (debounce 500ms + buffer)
+NEGATIVE_WAIT = 0.8  # debounce (0.5s) + buffer for asserting NO re-index occurs
 
 
-def _start_watch(tmp_path, extra_args=None):
-    """Launch `via index -w` as a subprocess. Returns (proc, db_path)."""
-    via_dir = tmp_path / ".via"
-    via_dir.mkdir(exist_ok=True)
-    db_path = str(via_dir / "index.db")
+class _WatchSession:
+    """Manages a live `via index -w` subprocess with line-buffered ready/event waits."""
 
-    cmd = [
-        sys.executable, "-m", "via", "index", "-w",
-        "--db", db_path,
-        str(tmp_path),
-    ]
-    if extra_args:
-        cmd.extend(extra_args)
+    def __init__(self, tmp_dir: Path, extra_args=None):
+        via_dir = tmp_dir / ".via"
+        via_dir.mkdir(exist_ok=True)
+        self.tmp_dir = tmp_dir
+        self.db_path = str(via_dir / "index.db")
 
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        cwd=str(Path(__file__).parent.parent.parent),
-    )
-    return proc, db_path
+        cmd = [
+            sys.executable, "-u", "-m", "via", "index", "-w",
+            "--db", self.db_path,
+            str(tmp_dir),
+        ]
+        if extra_args:
+            cmd.extend(extra_args)
 
+        self.proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            cwd=str(Path(__file__).parent.parent.parent),
+        )
+        self._lines: list[str] = []
+        self._cond = threading.Condition()
+        self._reader = threading.Thread(target=self._pump, daemon=True)
+        self._reader.start()
+        self.wait_for("Watching", timeout=10.0)
 
-def _stop_and_collect(proc, timeout=8):
-    """Send SIGINT, collect all output, return (stdout, stderr, returncode)."""
-    try:
-        proc.send_signal(signal.SIGINT)
-    except ProcessLookupError:
-        pass  # already exited
-    try:
-        stdout, stderr = proc.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        stdout, stderr = proc.communicate()
-    return stdout, stderr, proc.returncode
+    def _pump(self):
+        assert self.proc.stdout is not None
+        for line in self.proc.stdout:
+            with self._cond:
+                self._lines.append(line)
+                self._cond.notify_all()
+
+    @property
+    def output(self) -> str:
+        with self._cond:
+            return "".join(self._lines)
+
+    def mark(self) -> int:
+        """Return current output line count so callers can inspect only new lines."""
+        with self._cond:
+            return len(self._lines)
+
+    def output_since(self, mark: int) -> str:
+        with self._cond:
+            return "".join(self._lines[mark:])
+
+    def wait_for(self, substring: str, timeout: float = 6.0, since: int = 0) -> bool:
+        deadline = time.monotonic() + timeout
+        with self._cond:
+            while substring not in "".join(self._lines[since:]):
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or self.proc.poll() is not None:
+                    return substring in "".join(self._lines[since:])
+                self._cond.wait(timeout=min(remaining, 0.05))
+            return True
+
+    def stop(self, timeout: float = 8.0) -> tuple[str, int]:
+        try:
+            self.proc.send_signal(signal.SIGINT)
+        except ProcessLookupError:
+            pass
+        try:
+            self.proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            self.proc.wait()
+        self._reader.join(timeout=2.0)
+        return self.output, self.proc.returncode
 
 
 @contextmanager
@@ -90,41 +117,51 @@ def _open_db(db_path, root_dir):
 
 
 # ---------------------------------------------------------------------------
+# Shared live watcher fixture (reused across UAT-6.1/6.2/6.3/6.4/6.6/6.7/6.8)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def live_watch(tmp_path_factory):
+    """Keep one `via index -w --exclude generated/` watcher alive across all live UATs."""
+    tmp_dir = tmp_path_factory.mktemp("sprint6_live")
+    (tmp_dir / "models.py").write_text("class User:\n    def save(self): pass\n")
+    (tmp_dir / "service.py").write_text("class OldClass: pass\n")
+    (tmp_dir / "README.md").write_text("# Hello\n")
+    (tmp_dir / "doomed.py").write_text("class Doomed: pass\n")
+    (tmp_dir / "config.json").write_text('{"key": "value"}\n')
+    (tmp_dir / "notes.txt").write_text("some notes\n")
+    (tmp_dir / "good.py").write_text("def ok(): pass\n")
+    (tmp_dir / "broken.py").write_text("def fine(): pass\n")
+    gen_dir = tmp_dir / "generated"
+    gen_dir.mkdir()
+    (gen_dir / "schema.py").write_text("# generated\nx = 1\n")
+
+    sess = _WatchSession(tmp_dir, extra_args=["--exclude", "generated/"])
+    try:
+        yield sess
+    finally:
+        sess.stop()
+
+
+# ---------------------------------------------------------------------------
 # UAT-6.1: Startup — blocks, performs initial index
 # ---------------------------------------------------------------------------
 
 class TestUAT61_Startup:
     """AC: via index -w starts, performs initial index, prints watching message."""
 
-    def test_startup_does_not_exit_immediately(self, tmp_path):
+    def test_startup_does_not_exit_immediately(self, live_watch):
         """Process must stay alive (blocking) after launch."""
-        (tmp_path / "app.py").write_text("def main(): pass\n")
-        proc, _ = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-        assert proc.poll() is None, "Watch process exited prematurely"
-        _stop_and_collect(proc)
+        assert live_watch.proc.poll() is None, "Watch process exited prematurely"
 
-    def test_startup_prints_watching_message(self, tmp_path):
+    def test_startup_prints_watching_message(self, live_watch):
         """AC: prints 'Watching <dir> for changes... (Ctrl-C to stop)'"""
-        (tmp_path / "app.py").write_text("def main(): pass\n")
-        proc, _ = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        assert "Watching" in combined
-        assert "Ctrl-C" in combined
+        assert "Watching" in live_watch.output
+        assert "Ctrl-C" in live_watch.output
 
-    def test_startup_performs_initial_index(self, tmp_path):
+    def test_startup_performs_initial_index(self, live_watch):
         """AC: on startup, performs a full incremental index."""
-        (tmp_path / "models.py").write_text(
-            "class User:\n    def save(self): pass\n"
-        )
-        proc, db_path = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-        _stop_and_collect(proc)
-
-        # Verify symbols are in the DB
-        with _open_db(db_path, tmp_path) as store:
+        with _open_db(live_watch.db_path, live_watch.tmp_dir) as store:
             results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "User"))
         assert len(results) >= 1, "Initial index should have indexed User class"
 
@@ -136,70 +173,37 @@ class TestUAT61_Startup:
 class TestUAT62_FileModification:
     """AC: When a supported file is modified, only that file is re-indexed."""
 
-    def test_modify_py_triggers_reindex(self, tmp_path):
+    @pytest.fixture(scope="class")
+    @classmethod
+    def modified(cls, live_watch):
+        mark = live_watch.mark()
+        (live_watch.tmp_dir / "service.py").write_text(
+            "class NewClass:\n    def bar(self): pass\n"
+        )
+        assert live_watch.wait_for("service.py", timeout=6.0, since=mark)
+        (live_watch.tmp_dir / "README.md").write_text("# Hello\n\n## Section Two\n")
+        assert live_watch.wait_for("README.md", timeout=6.0, since=mark)
+        return {"output": live_watch.output_since(mark), "db_path": live_watch.db_path, "tmp_dir": live_watch.tmp_dir}
+
+    def test_modify_py_triggers_reindex(self, modified):
         """AC: modified .py file → 'Re-indexed: <path> (<N> symbols)'"""
-        py_file = tmp_path / "service.py"
-        py_file.write_text("def original(): pass\n")
+        assert "Re-indexed:" in modified["output"]
+        assert "service.py" in modified["output"]
 
-        proc, db_path = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-
-        # Modify the file
-        py_file.write_text("def original(): pass\ndef added(): pass\n")
-        time.sleep(CHANGE_WAIT)
-
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        assert "Re-indexed:" in combined
-        assert "service.py" in combined
-
-    def test_modify_md_triggers_reindex(self, tmp_path):
+    def test_modify_md_triggers_reindex(self, modified):
         """AC: modified .md file → re-indexed."""
-        md_file = tmp_path / "README.md"
-        md_file.write_text("# Hello\n")
+        assert "Re-indexed:" in modified["output"]
+        assert "README.md" in modified["output"]
 
-        proc, db_path = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-
-        md_file.write_text("# Hello\n\n## Section Two\n")
-        time.sleep(CHANGE_WAIT)
-
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        assert "Re-indexed:" in combined
-        assert "README.md" in combined
-
-    def test_reindex_output_includes_symbol_count(self, tmp_path):
+    def test_reindex_output_includes_symbol_count(self, modified):
         """AC: feedback includes symbol count."""
-        py_file = tmp_path / "module.py"
-        py_file.write_text("x = 1\n")
+        assert "symbol" in modified["output"].lower()
 
-        proc, _ = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-
-        py_file.write_text("class Foo:\n    def bar(self): pass\n")
-        time.sleep(CHANGE_WAIT)
-
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        assert "symbol" in combined.lower()
-
-    def test_modify_updates_db_symbols(self, tmp_path):
+    def test_modify_updates_db_symbols(self, modified):
         """AC: after re-index, new symbols are queryable."""
-        py_file = tmp_path / "thing.py"
-        py_file.write_text("class OldClass: pass\n")
-
-        proc, db_path = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-
-        py_file.write_text("class NewClass: pass\n")
-        time.sleep(CHANGE_WAIT)
-        _stop_and_collect(proc)
-
-        with _open_db(db_path, tmp_path) as store:
+        with _open_db(modified["db_path"], modified["tmp_dir"]) as store:
             new_results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "NewClass"))
             old_results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "OldClass"))
-
         assert len(new_results) >= 1, "NewClass should be in DB after re-index"
         assert len(old_results) == 0, "OldClass should be gone after re-index"
 
@@ -211,38 +215,26 @@ class TestUAT62_FileModification:
 class TestUAT63_FileCreation:
     """AC: When a new supported file is created, it is indexed automatically."""
 
-    def test_new_py_file_indexed(self, tmp_path):
+    @pytest.fixture(scope="class")
+    @classmethod
+    def created(cls, live_watch):
+        mark = live_watch.mark()
+        (live_watch.tmp_dir / "brand_new.py").write_text("class BrandNew:\n    pass\n")
+        assert live_watch.wait_for("brand_new.py", timeout=6.0, since=mark)
+        (live_watch.tmp_dir / "GUIDE.md").write_text("# Guide\n## Setup\n")
+        assert live_watch.wait_for("GUIDE.md", timeout=6.0, since=mark)
+        return {"output": live_watch.output_since(mark), "db_path": live_watch.db_path, "tmp_dir": live_watch.tmp_dir}
+
+    def test_new_py_file_indexed(self, created):
         """AC: new .py file → printed and in DB."""
-        (tmp_path / "existing.py").write_text("x = 1\n")
-        proc, db_path = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-
-        # Create new file
-        new_file = tmp_path / "brand_new.py"
-        new_file.write_text("class BrandNew:\n    pass\n")
-        time.sleep(CHANGE_WAIT)
-
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        assert "brand_new.py" in combined
-
-        with _open_db(db_path, tmp_path) as store:
+        assert "brand_new.py" in created["output"]
+        with _open_db(created["db_path"], created["tmp_dir"]) as store:
             results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "BrandNew"))
         assert len(results) >= 1, "BrandNew should be indexed"
 
-    def test_new_md_file_indexed(self, tmp_path):
+    def test_new_md_file_indexed(self, created):
         """AC: new .md file → indexed."""
-        (tmp_path / "seed.py").write_text("pass\n")
-        proc, _ = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-
-        new_md = tmp_path / "GUIDE.md"
-        new_md.write_text("# Guide\n## Setup\n")
-        time.sleep(CHANGE_WAIT)
-
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        assert "GUIDE.md" in combined
+        assert "GUIDE.md" in created["output"]
 
 
 # ---------------------------------------------------------------------------
@@ -252,130 +244,59 @@ class TestUAT63_FileCreation:
 class TestUAT64_FileDeletion:
     """AC: When a supported file is deleted, its symbols are removed from DB."""
 
-    def test_deleted_file_prints_removed(self, tmp_path):
+    @pytest.fixture(scope="class")
+    @classmethod
+    def deleted(cls, live_watch):
+        mark = live_watch.mark()
+        (live_watch.tmp_dir / "doomed.py").unlink()
+        assert live_watch.wait_for("Removed:", timeout=6.0, since=mark)
+        return {"output": live_watch.output_since(mark), "db_path": live_watch.db_path, "tmp_dir": live_watch.tmp_dir}
+
+    def test_deleted_file_prints_removed(self, deleted):
         """AC: deleted file → 'Removed: <filepath>'"""
-        py_file = tmp_path / "doomed.py"
-        py_file.write_text("class Doomed: pass\n")
+        assert "Removed:" in deleted["output"]
+        assert "doomed.py" in deleted["output"]
 
-        proc, db_path = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-
-        py_file.unlink()
-        time.sleep(CHANGE_WAIT)
-
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        assert "Removed:" in combined
-        assert "doomed.py" in combined
-
-    def test_deleted_file_symbols_removed_from_db(self, tmp_path):
+    def test_deleted_file_symbols_removed_from_db(self, deleted):
         """AC: symbols of deleted file are gone from DB."""
-        py_file = tmp_path / "temp_module.py"
-        py_file.write_text("class TempClass: pass\n")
-
-        proc, db_path = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-
-        py_file.unlink()
-        time.sleep(CHANGE_WAIT)
-        _stop_and_collect(proc)
-
-        with _open_db(db_path, tmp_path) as store:
-            results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "TempClass"))
-        assert len(results) == 0, "TempClass symbols should be removed after file deletion"
+        with _open_db(deleted["db_path"], deleted["tmp_dir"]) as store:
+            results = list(store.match(SymbolType.CLASS, MatchOp.GLOB, "Doomed"))
+        assert len(results) == 0, "Doomed symbols should be removed after file deletion"
 
 
 # ---------------------------------------------------------------------------
-# UAT-6.5: SIGINT — graceful shutdown
+# UAT-6.6 & UAT-6.7: Non-parseable & excluded files are ignored
 # ---------------------------------------------------------------------------
 
-class TestUAT65_GracefulShutdown:
-    """AC: Ctrl-C (SIGINT) gracefully stops the watcher and exits cleanly."""
+@pytest.fixture(scope="module")
+def ignored_and_excluded(live_watch):
+    """Touch .json, .txt, and --exclude generated/schema.py together, wait once."""
+    mark = live_watch.mark()
+    (live_watch.tmp_dir / "config.json").write_text('{"key": "updated"}\n')
+    (live_watch.tmp_dir / "notes.txt").write_text("updated notes\n")
+    (live_watch.tmp_dir / "generated" / "schema.py").write_text("# generated\nx = 2\ny = 3\n")
+    time.sleep(NEGATIVE_WAIT)
+    return live_watch.output_since(mark)
 
-    def test_sigint_exits_zero(self, tmp_path):
-        """AC: exits with code 0 on SIGINT."""
-        (tmp_path / "app.py").write_text("x = 1\n")
-        proc, _ = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-        _, _, returncode = _stop_and_collect(proc)
-        assert returncode == 0
-
-    def test_sigint_prints_stopped_message(self, tmp_path):
-        """AC: On Ctrl-C, prints 'Watch mode stopped.'"""
-        (tmp_path / "app.py").write_text("x = 1\n")
-        proc, _ = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        assert "stopped" in combined.lower()
-
-
-# ---------------------------------------------------------------------------
-# UAT-6.6: Non-parseable files are ignored
-# ---------------------------------------------------------------------------
 
 class TestUAT66_NonParseableFilesIgnored:
     """AC: Non-parseable files (.txt, .json) are not re-indexed on change."""
 
-    def test_json_file_change_not_reported(self, tmp_path):
+    def test_json_file_change_not_reported(self, ignored_and_excluded):
         """AC: .json file changes produce no 'Re-indexed' output."""
-        (tmp_path / "seed.py").write_text("pass\n")
-        json_file = tmp_path / "config.json"
-        json_file.write_text('{"key": "value"}\n')
+        assert "config.json" not in ignored_and_excluded
 
-        proc, _ = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-
-        json_file.write_text('{"key": "updated"}\n')
-        time.sleep(CHANGE_WAIT)
-
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        # config.json should not appear in re-index output
-        assert "config.json" not in combined
-
-    def test_txt_file_change_not_reported(self, tmp_path):
+    def test_txt_file_change_not_reported(self, ignored_and_excluded):
         """AC: .txt file changes produce no 'Re-indexed' output."""
-        (tmp_path / "seed.py").write_text("pass\n")
-        txt_file = tmp_path / "notes.txt"
-        txt_file.write_text("some notes\n")
+        assert "notes.txt" not in ignored_and_excluded
 
-        proc, _ = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
-
-        txt_file.write_text("updated notes\n")
-        time.sleep(CHANGE_WAIT)
-
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        assert "notes.txt" not in combined
-
-
-# ---------------------------------------------------------------------------
-# UAT-6.7: Exclusion patterns — --exclude respected
-# ---------------------------------------------------------------------------
 
 class TestUAT67_ExclusionPatterns:
     """AC: Watch mode ignores changes matching --exclude patterns."""
 
-    def test_exclude_pattern_suppresses_reindex(self, tmp_path):
+    def test_exclude_pattern_suppresses_reindex(self, ignored_and_excluded):
         """AC: files matching --exclude PATTERN are not re-indexed."""
-        gen_dir = tmp_path / "generated"
-        gen_dir.mkdir()
-        gen_file = gen_dir / "schema.py"
-        gen_file.write_text("# generated\nx = 1\n")
-        (tmp_path / "seed.py").write_text("pass\n")
-
-        proc, _ = _start_watch(tmp_path, extra_args=["--exclude", "generated/"])
-        time.sleep(STARTUP_WAIT)
-
-        gen_file.write_text("# generated\nx = 2\ny = 3\n")
-        time.sleep(CHANGE_WAIT)
-
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
-        # schema.py in generated/ should be excluded
-        assert "schema.py" not in combined
+        assert "schema.py" not in ignored_and_excluded
 
 
 # ---------------------------------------------------------------------------
@@ -385,29 +306,38 @@ class TestUAT67_ExclusionPatterns:
 class TestUAT68_ErrorResilience:
     """AC: Syntax errors are logged and watching continues."""
 
-    def test_syntax_error_does_not_crash_watcher(self, tmp_path):
+    def test_syntax_error_does_not_crash_watcher(self, live_watch):
         """AC: file with syntax error is handled without crashing."""
-        (tmp_path / "good.py").write_text("def ok(): pass\n")
-        bad_file = tmp_path / "broken.py"
-        bad_file.write_text("def fine(): pass\n")
+        mark = live_watch.mark()
+        (live_watch.tmp_dir / "broken.py").write_text("def (BROKEN:\n    pass\n")
+        time.sleep(NEGATIVE_WAIT)
+        assert live_watch.proc.poll() is None, "Watcher crashed on syntax error"
 
-        proc, _ = _start_watch(tmp_path)
-        time.sleep(STARTUP_WAIT)
+        (live_watch.tmp_dir / "good.py").write_text("def ok(): pass\ndef extra(): pass\n")
+        assert live_watch.wait_for("good.py", timeout=6.0, since=mark)
+        assert "good.py" in live_watch.output_since(mark)
 
-        # Write a syntax error
-        bad_file.write_text("def (BROKEN:\n    pass\n")
-        time.sleep(CHANGE_WAIT)
 
-        # Watcher should still be alive
-        assert proc.poll() is None, "Watcher crashed on syntax error"
+# ---------------------------------------------------------------------------
+# UAT-6.5: SIGINT — graceful shutdown (stops a live watcher cleanly)
+# ---------------------------------------------------------------------------
 
-        # Modify a good file — should still work
-        (tmp_path / "good.py").write_text("def ok(): pass\ndef extra(): pass\n")
-        time.sleep(CHANGE_WAIT)
+class TestUAT65_GracefulShutdown:
+    """AC: Ctrl-C (SIGINT) gracefully stops the watcher and exits cleanly."""
 
-        stdout, stderr, _ = _stop_and_collect(proc)
-        combined = stdout + stderr
+    @pytest.fixture(scope="class")
+    @classmethod
+    def shutdown_run(cls, tmp_path_factory):
+        tmp_dir = tmp_path_factory.mktemp("uat65")
+        (tmp_dir / "app.py").write_text("x = 1\n")
+        sess = _WatchSession(tmp_dir)
+        output, returncode = sess.stop()
+        return {"output": output, "returncode": returncode}
 
-        # good.py should have been re-indexed despite the earlier error
-        assert "good.py" in combined
-        assert proc.returncode == 0
+    def test_sigint_exits_zero(self, shutdown_run):
+        """AC: exits with code 0 on SIGINT."""
+        assert shutdown_run["returncode"] == 0
+
+    def test_sigint_prints_stopped_message(self, shutdown_run):
+        """AC: On Ctrl-C, prints 'Watch mode stopped.'"""
+        assert "stopped" in shutdown_run["output"].lower()

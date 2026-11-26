@@ -69,6 +69,7 @@ class WebServer:
 
         self._thread = threading.Thread(
             target=self._httpd.serve_forever,
+            kwargs={"poll_interval": 0.02},
             daemon=True,
             name="via-web-server",
         )

@@ -197,9 +197,68 @@ def test_cli_coverage_report_writes_standalone_html(tmp_path):
     content = out_file.read_text(encoding="utf-8")
     assert "VIA Test Quality Report" in content
     assert "test_fast_alpha" in content
+    assert "Agent Instructions" in content
+    assert "Prevent shared-resource flakiness" in content
+    assert "Coverage Safety Net" in content
 
     # Also exercise CLI subcommand dispatch via `via coverage report`
     cli_out = tmp_path / "out" / "cli_quality.html"
     res = _run(tmp_path, "coverage", "report", "-o", str(cli_out))
     assert res.returncode == 0, res.stderr
     assert cli_out.is_file()
+
+
+def test_coverage_safety_net_detects_newly_uncovered_regression_and_is_idempotent(tmp_path):
+    src = _seed_project(tmp_path)
+    data_file = tmp_path / ".coverage"
+
+    # Run 1: both `alpha` (lines 2-4) and `beta` (line 7) are covered
+    cov1 = coverage.CoverageData(basename=str(data_file))
+    cov1.set_context("tests/test_app.py::test_fast_alpha")
+    cov1.add_arcs({str(src): {(1, 2), (2, 3), (2, 4), (6, 7)}})
+    cov1.write()
+    (tmp_path / ".via" / "test_runs.json").write_text(json.dumps({
+        "tests/test_app.py::test_fast_alpha": {
+            "status": "pass", "duration_seconds": 0.01, "last_run_at": "2026-11-25T00:00:00",
+        },
+    }))
+    assert import_contexts(str(tmp_path), str(data_file)) == 0
+
+    with DatabaseStore(str(tmp_path / ".via" / "index.db"), str(tmp_path)) as store:
+        run1 = build_test_quality_data(store, branch_data_file=str(data_file))
+    assert run1["coverage"]["has_previous"] is False
+    assert run1["coverage"]["newly_uncovered"] == []
+    assert run1["coverage"]["covered_symbols"] == 2
+
+    # Run 2: `beta` loses coverage
+    data_file.unlink()
+    cov2 = coverage.CoverageData(basename=str(data_file))
+    cov2.set_context("tests/test_app.py::test_fast_alpha")
+    cov2.add_arcs({str(src): {(1, 2), (2, 3), (2, 4)}})
+    cov2.write()
+    assert import_contexts(str(tmp_path), str(data_file)) == 0
+
+    with DatabaseStore(str(tmp_path / ".via" / "index.db"), str(tmp_path)) as store:
+        run2 = build_test_quality_data(store, branch_data_file=str(data_file))
+        # Re-running on the same .coverage must stay idempotent and preserve the regression diff
+        run2_repeat = build_test_quality_data(store, branch_data_file=str(data_file))
+
+    assert run2["coverage"]["has_previous"] is True
+    assert any(sym.endswith(":beta") for sym in run2["coverage"]["newly_uncovered"])
+    assert run2_repeat["coverage"]["newly_uncovered"] == run2["coverage"]["newly_uncovered"]
+    assert any(u["symbol"].endswith(":beta") for u in run2["coverage"]["uncovered_top"])
+    cmp = run2["coverage"]["comparison"]
+    assert cmp is not None
+    assert len(cmp["prev_scatter"]) == 1
+    assert cmp["prev_scatter"][0][0] == "tests/test_app.py::test_fast_alpha"
+    html = render_test_quality_html(run2)
+    assert "scatter-mode-toggle" in html
+    assert "before-after-card" in html
+    assert "kpi-delta" in html
+    assert "symbol-lookup-card" in html
+    syms_by_key = {entry[0]: entry[2] for entry in run2["symbols"]}
+    alpha_key = next(k for k in syms_by_key if k.endswith(":alpha"))
+    beta_key = next(k for k in syms_by_key if k.endswith(":beta"))
+    assert len(syms_by_key[alpha_key]) == 1
+    assert run2["tests"][syms_by_key[alpha_key][0]]["test_id"] == "tests/test_app.py::test_fast_alpha"
+    assert syms_by_key[beta_key] == []

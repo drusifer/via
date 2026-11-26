@@ -119,12 +119,14 @@ class TestHTMLTemplate:
 # ---------------------------------------------------------------------------
 
 class TestHandlerServesTemplate:
-    def setup_method(self):
-        self.srv = WebServer(port=0)
-        self.srv.start()
+    @classmethod
+    def setup_class(cls):
+        cls.srv = WebServer(port=0)
+        cls.srv.start()
 
-    def teardown_method(self):
-        self.srv.stop()
+    @classmethod
+    def teardown_class(cls):
+        cls.srv.stop()
 
     def test_root_returns_200(self):
         resp = _get(self.srv.port, "/")

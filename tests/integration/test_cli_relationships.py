@@ -29,10 +29,10 @@ from via.parsers.registry import ParserRegistry
 from via.services.indexing import IndexingService
 
 
-@pytest.fixture
-def indexed_project_with_relationships(tmp_path):
-    """Create a temporary indexed project with relationships for testing."""
-    project_dir = tmp_path / "test_project"
+@pytest.fixture(scope="module")
+def indexed_project_with_relationships(tmp_path_factory):
+    """Create a module-scoped read-only indexed project with relationships."""
+    project_dir = tmp_path_factory.mktemp("cli_rels") / "test_project"
     project_dir.mkdir()
 
     # Create test Python file with inheritance, calls, and imports

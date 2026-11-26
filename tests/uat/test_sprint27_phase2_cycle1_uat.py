@@ -50,12 +50,10 @@ def _real_covering_test_count(symbol_name: str) -> int:
     reason="requires a real .via/index.db (run `make via_index && make test-coverage` first)",
 )
 class TestCycle1RealIndexCrossCheck:
-    def test_intensity_pct_matches_real_covering_test_count(self):
-        symbol_name = "get_symbol_coverage_counts"
-        expected_count = _real_covering_test_count(symbol_name)
-        if expected_count == 0:
-            pytest.skip(f"{symbol_name} not found or uncovered in the real index right now")
-
+    @pytest.fixture(scope="class")
+    @classmethod
+    def real_server_and_tree(cls):
+        """Start one WebServer and fetch /api/coverage/hierarchy once for all 4 read-only checks."""
         srv = WebServer(port=0, db_path=DB_PATH, index_root=INDEX_ROOT)
         srv.start()
         try:
@@ -63,15 +61,23 @@ class TestCycle1RealIndexCrossCheck:
                 f"http://localhost:{srv.port}/api/coverage/hierarchy", timeout=30
             ) as r:
                 tree = json.loads(r.read())
+            yield srv, tree
         finally:
             srv.stop()
 
+    def test_intensity_pct_matches_real_covering_test_count(self, real_server_and_tree):
+        symbol_name = "get_symbol_coverage_counts"
+        expected_count = _real_covering_test_count(symbol_name)
+        if expected_count == 0:
+            pytest.skip(f"{symbol_name} not found or uncovered in the real index right now")
+
+        _, tree = real_server_and_tree
         leaf = _find_leaf(tree, symbol_name)
         assert leaf is not None, f"{symbol_name} not found in the hierarchy response"
         assert leaf["covering_test_count"] == expected_count
         assert leaf["intensity_pct"] == expected_count * 100
 
-    def test_leaf_loc_matches_real_line_span(self):
+    def test_leaf_loc_matches_real_line_span(self, real_server_and_tree):
         """Ground-truth check for the LOC-sizing feature (user directive,
         2026-07-02): compare the hierarchy leaf's `loc` against a direct
         line_end - line_number + 1 computation from the real DB, for a real,
@@ -90,65 +96,38 @@ class TestCycle1RealIndexCrossCheck:
             pytest.skip(f"{symbol_name} not found or missing line_end in the real index right now")
         expected_loc = row[1] - row[0] + 1
 
-        srv = WebServer(port=0, db_path=DB_PATH, index_root=INDEX_ROOT)
-        srv.start()
-        try:
-            with urllib.request.urlopen(
-                f"http://localhost:{srv.port}/api/coverage/hierarchy", timeout=30
-            ) as r:
-                tree = json.loads(r.read())
-        finally:
-            srv.stop()
-
+        _, tree = real_server_and_tree
         leaf = _find_leaf(tree, symbol_name)
         assert leaf is not None
         assert leaf["loc"] == expected_loc
         assert leaf["loc"] > 1, "expected a real multi-line method, not a degenerate 1-line span"
 
-    def test_drill_down_returns_real_docstring_for_documented_method(self):
+    def test_drill_down_returns_real_docstring_for_documented_method(self, real_server_and_tree):
         """Ground-truth check for the leaf drill-down feature (Cypher AC7,
         user directive 2026-07-02): the real /api/coverage/symbol endpoint
         must return the actual docstring text of a known-documented method,
         re-extracted from the real source file on disk."""
         symbol_name = "get_symbol_coverage_counts"
+        srv, tree = real_server_and_tree
+        leaf = _find_leaf(tree, symbol_name)
+        assert leaf is not None, f"{symbol_name} not found in the hierarchy response"
 
-        srv = WebServer(port=0, db_path=DB_PATH, index_root=INDEX_ROOT)
-        srv.start()
-        try:
-            with urllib.request.urlopen(
-                f"http://localhost:{srv.port}/api/coverage/hierarchy", timeout=30
-            ) as r:
-                tree = json.loads(r.read())
-            leaf = _find_leaf(tree, symbol_name)
-            assert leaf is not None, f"{symbol_name} not found in the hierarchy response"
-
-            with urllib.request.urlopen(
-                f"http://localhost:{srv.port}/api/coverage/symbol?id={leaf['id']}", timeout=30
-            ) as r:
-                detail = json.loads(r.read())
-        finally:
-            srv.stop()
+        with urllib.request.urlopen(
+            f"http://localhost:{srv.port}/api/coverage/symbol?id={leaf['id']}", timeout=30
+        ) as r:
+            detail = json.loads(r.read())
 
         assert detail["qualified_name"].endswith("get_symbol_coverage_counts")
         assert detail["signature"] == "get_symbol_coverage_counts(self)"
         assert "covering_test_count" in detail["docstring"]
 
-    def test_tree_is_rooted_at_project_not_filesystem_root(self):
+    def test_tree_is_rooted_at_project_not_filesystem_root(self, real_server_and_tree):
         """Regression check for the absolute-vs-relative file_path bug this
         cycle's smoke test already caught on a synthetic temp project — this
         confirms the fix also holds on the real, much deeper `via` project
         tree (many more directory levels than the smoke test's 1-level
         `pkg/`), not just the minimal synthetic case."""
-        srv = WebServer(port=0, db_path=DB_PATH, index_root=INDEX_ROOT)
-        srv.start()
-        try:
-            with urllib.request.urlopen(
-                f"http://localhost:{srv.port}/api/coverage/hierarchy", timeout=30
-            ) as r:
-                tree = json.loads(r.read())
-        finally:
-            srv.stop()
-
+        _, tree = real_server_and_tree
         top_level_names = {c["name"] for c in tree.get("children", [])}
         assert "via" in top_level_names, (
             f"expected 'via' as a top-level package, got {top_level_names} — "

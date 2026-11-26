@@ -2,107 +2,79 @@
 Integration tests for via index -w (Watch Mode, Sprint 6).
 
 TLDR:
-    Launches the via CLI as a subprocess with the -w flag and sends SIGINT to
-    verify watch mode starts correctly. Checks that the process does not print
-    "not implemented", prints a "Watching" startup message, and exits with
-    return code 0 on SIGINT.
-    Key helper: _run_via (subprocess wrapper with cwd set to project root).
-    Key class: TestWatchCLI — tests that -w no longer prints "not implemented",
-    that a "Watching" message appears on startup, and that SIGINT triggers a clean
-    exit (return code 0).
-    Consumed by: pytest integration suite; depends on via CLI (-w flag), signal/os.
-
+    Launches the via CLI as a subprocess with the -w flag, waits until the
+    "Watching" ready message appears (event-driven instead of blind sleeps),
+    and sends SIGINT to verify watch mode starts cleanly, prints the expected
+    message, and exits with return code 0.
 """
 
 import os
 import signal
 import subprocess
 import sys
-import tempfile
+import threading
 import time
 from pathlib import Path
 
+import pytest
 
-def _run_via(*args, input=None, timeout=10):
-    result = subprocess.run(
-        [sys.executable, "-m", "via"] + list(args),
-        capture_output=True,
+
+def _run_watch_once(tmp_dir: Path):
+    """Start `via index -w`, wait for the 'Watching' line, stop via SIGINT."""
+    db_path = str(tmp_dir / ".via" / "index.db")
+    os.makedirs(str(tmp_dir / ".via"), exist_ok=True)
+    (tmp_dir / "sample.py").write_text("def foo(): pass\n")
+
+    proc = subprocess.Popen(
+        [sys.executable, "-u", "-m", "via", "index", "-w", "--db", db_path, str(tmp_dir)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
-        timeout=timeout,
-        input=input,
-        cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        bufsize=1,
     )
-    return result
+    lines: list[str] = []
+    ready = threading.Event()
+
+    def _reader():
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            lines.append(line)
+            if "Watching" in line:
+                ready.set()
+
+    t = threading.Thread(target=_reader, daemon=True)
+    t.start()
+    ready.wait(timeout=8.0)
+
+    proc.send_signal(signal.SIGINT)
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+    t.join(timeout=2)
+    return "".join(lines), proc.returncode
 
 
 class TestWatchCLI:
-    """CLI integration tests for watch mode."""
+    """CLI integration tests for watch mode sharing one event-driven subprocess run."""
 
-    def test_watch_flag_no_longer_says_not_implemented(self, tmp_path):
+    @pytest.fixture(scope="class")
+    @classmethod
+    def watch_run(cls, tmp_path_factory):
+        return _run_watch_once(tmp_path_factory.mktemp("cli_watch"))
+
+    def test_watch_flag_no_longer_says_not_implemented(self, watch_run):
         """via index -w should start watch mode, not print an error."""
-        db_path = str(tmp_path / ".via" / "index.db")
-        os.makedirs(str(tmp_path / ".via"), exist_ok=True)
-        Path(tmp_path / "sample.py").write_text("def foo(): pass\n")
-
-        # Launch watch mode and immediately send SIGINT
-        proc = subprocess.Popen(
-            [sys.executable, "-m", "via", "index", "-w", "--db", db_path, str(tmp_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        time.sleep(0.5)  # Let it start up
-        proc.send_signal(signal.SIGINT)
-        try:
-            stdout, stderr = proc.communicate(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            stdout, stderr = proc.communicate()
-
-        combined = stdout + stderr
+        combined, _ = watch_run
         assert "not implemented" not in combined.lower()
 
-    def test_watch_prints_watching_message(self, tmp_path):
+    def test_watch_prints_watching_message(self, watch_run):
         """via index -w should print 'Watching ... for changes'."""
-        db_path = str(tmp_path / ".via" / "index.db")
-        os.makedirs(str(tmp_path / ".via"), exist_ok=True)
-        Path(tmp_path / "sample.py").write_text("def bar(): pass\n")
-
-        proc = subprocess.Popen(
-            [sys.executable, "-m", "via", "index", "-w", "--db", db_path, str(tmp_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        time.sleep(1.0)  # Give it time to print the watching message
-        proc.send_signal(signal.SIGINT)
-        try:
-            stdout, stderr = proc.communicate(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            stdout, stderr = proc.communicate()
-
-        combined = stdout + stderr
+        combined, _ = watch_run
         assert "Watching" in combined
 
-    def test_watch_exits_cleanly_on_sigint(self, tmp_path):
+    def test_watch_exits_cleanly_on_sigint(self, watch_run):
         """via index -w should exit with code 0 on SIGINT."""
-        db_path = str(tmp_path / ".via" / "index.db")
-        os.makedirs(str(tmp_path / ".via"), exist_ok=True)
-        Path(tmp_path / "sample.py").write_text("x = 1\n")
-
-        proc = subprocess.Popen(
-            [sys.executable, "-m", "via", "index", "-w", "--db", db_path, str(tmp_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        time.sleep(0.8)
-        proc.send_signal(signal.SIGINT)
-        try:
-            proc.communicate(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.communicate()
-
-        assert proc.returncode == 0
+        _, returncode = watch_run
+        assert returncode == 0

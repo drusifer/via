@@ -17,10 +17,10 @@ from via.pipeline.parser import PipelineParser
 from via.services.indexing import IndexingService
 
 
-@pytest.fixture
-def relationship_project(tmp_path):
-    """Create and index a project with inheritance, calls, and imports."""
-    project_dir = tmp_path / "project"
+@pytest.fixture(scope="module")
+def relationship_project(tmp_path_factory):
+    """Create and index a module-scoped read-only project with inheritance, calls, and imports."""
+    project_dir = tmp_path_factory.mktemp("rel_pipe") / "project"
     project_dir.mkdir()
 
     (project_dir / "fileA.py").write_text('''
@@ -155,9 +155,10 @@ class TestRelationshipPipelineExecution:
 class TestRelationshipResolutionOrder:
     """Regression tests: relationship resolution must prefer definitions over imports."""
 
-    @pytest.fixture
-    def reverse_indexed_project(self, tmp_path):
-        project_dir = tmp_path / "reverse"
+    @pytest.fixture(scope="class")
+    @classmethod
+    def reverse_indexed_project(cls, tmp_path_factory):
+        project_dir = tmp_path_factory.mktemp("rel_pipe_rev") / "reverse"
         project_dir.mkdir()
 
         (project_dir / "fileA.py").write_text('''

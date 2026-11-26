@@ -20,9 +20,8 @@ from via.db.store import DatabaseStore
 
 @pytest.fixture
 def test_db(tmp_path):
-    """Create a test database with sample symbols."""
-    db_path = tmp_path / "test.db"
-    db = DatabaseStore(str(db_path), str(tmp_path))
+    """Create an isolated in-memory test database with sample symbols (fast, zero disk I/O)."""
+    db = DatabaseStore(":memory:", str(tmp_path))
     db.connect()
     db.initialize_schema()
 
