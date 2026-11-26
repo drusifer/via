@@ -8,7 +8,15 @@ All notable changes to **via** are documented here.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-25
+
 ### Added
+
+- **Branch-Aware Test Quality Report (`via coverage report`)**
+  - Standalone interactive HTML report (`coverage/via-test-quality-report.html`) powered by branch-arc contexts (`--cov-branch --cov-context=test`, subprocess coverage via `coverage.py` `patch = ["subprocess"]`) and VIA's `covered-by` graph.
+  - Headline KPIs with prominent Before/After deltas, smooth animated `Before` / `After` scatter transition, Before vs. After metrics and biggest per-file runtime changes.
+  - Ranked Test Quality Audit with branch-arc overlap detection (`SUB` strict subsets & Jaccard similarity), static AST assertion smelliness (`tautology`, `swallowed-assert`, `broad-raises`, `conditional-only`, `no-asserts`, `mock-only-asserts`), and static shared-fixture coverage attribution.
+  - Interactive **Symbol → Covering Tests Lookup** across all indexed production symbols with one-click `Copy via CLI` (`via -mg '*' --via covers -mg '<symbol>' -n 0`), Coverage Safety Net (idempotent `.via/coverage_history.json` regression alerts, `<85%` modules, top uncovered symbols by LOC), and copyable Agent Instructions playbook.
 
 - **Sprint 28 — Hygiene, Security Scans, Coverage UX Polish & Domain Model**
   - Build-time dependency security scan Makefile targets (`security-scan-python` via `pip-audit`, `security-scan-npm` via `npm audit --audit-level=high`, and aggregate `security-scan`), with all Python (0 vulns) and npm (0 vulns; Vitest upgraded to `^5.1.1`) advisories remediated.

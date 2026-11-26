@@ -15,6 +15,8 @@ Sprints 1-7 coordination: Bob Protocol setup, VIA dogfood protocol, Sprints 1-7 
 ---
 
 ---
-[<small>2026-11-25 23:52:48</small>] [**make**]->[**all**] *build*:
- Build PASSED | make test-coverage | /home/drusifer/Projects/via/build/build.out
-Wrote test quality report: /home/drusifer/Projects/via/coverage/via-test-quality-report.html (1422 tests, 8 flagged, overlap=branches)
+[<small>2026-11-25 23:55:48</small>] [**make**]->[**all**] *build*:
+ Build PASSED | make dist | /home/drusifer/Projects/via/build/build.out
+Successfully built via_index-0.2.0.tar.gz and via_index-0.2.0-py3-none-any.whl
+Checking dist/via_index-0.2.0-py3-none-any.whl: PASSED
+Checking dist/via_index-0.2.0.tar.gz: PASSED

@@ -16,7 +16,7 @@ License: GPL-3.0
 """
 
 # Version
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 # File size limits
 DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
