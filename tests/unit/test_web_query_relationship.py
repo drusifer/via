@@ -82,7 +82,7 @@ class TestRelationshipQuery:
         assert "results" in result
 
     def test_unknown_relationship_raises(self, rel_db):
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="not-a-real-relationship|Unknown|Invalid"):
             run_query(rel_db, {
                 "match_type": "glob",
                 "pattern": "*",
@@ -162,6 +162,7 @@ class TestBuildRelationshipFilter:
 
     def test_all_relationship_types_map(self):
         from via.web.api.query import _REL_MAP
+        assert len(_REL_MAP) > 0
         for name, value in _REL_MAP.items():
             body = {
                 "relationship": name,

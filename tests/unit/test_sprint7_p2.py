@@ -118,6 +118,7 @@ class TestDeleteFileCompletely:
     def test_delete_nonexistent_path_is_safe(self, db_store, temp_dir):
         abs_path = os.path.join(temp_dir, "nonexistent.py")
         db_store.delete_file_completely(abs_path)  # must not raise
+        assert db_store.get_all_files() == []
 
 
 # ── P2-3: IndexingService.reindex_file ────────────────────────────────────

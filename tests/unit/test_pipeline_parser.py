@@ -323,8 +323,7 @@ class TestViaFlag:
     def test_V_all_five_types(self):
         """All five valid forward relationship types parse without error via -V."""
         parser = PipelineParser()
-        valid_types = ['inherits-from', 'calls', 'imports', 'references', 'declares']
-        for rt in valid_types:
+        for rt in ('inherits-from', 'calls', 'imports', 'references', 'declares'):
             stage = parser._parse_stage(['-mg', '*', '-tc', '-V', rt, '-mg', 'Anchor'])
             assert stage.args.relationship.relationship_type.value == rt
 

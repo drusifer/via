@@ -180,8 +180,8 @@ class TestUAT62_FileModification:
         (live_watch.tmp_dir / "service.py").write_text(
             "class NewClass:\n    def bar(self): pass\n"
         )
-        assert live_watch.wait_for("service.py", timeout=6.0, since=mark)
         (live_watch.tmp_dir / "README.md").write_text("# Hello\n\n## Section Two\n")
+        assert live_watch.wait_for("service.py", timeout=6.0, since=mark)
         assert live_watch.wait_for("README.md", timeout=6.0, since=mark)
         return {"output": live_watch.output_since(mark), "db_path": live_watch.db_path, "tmp_dir": live_watch.tmp_dir}
 
@@ -220,8 +220,8 @@ class TestUAT63_FileCreation:
     def created(cls, live_watch):
         mark = live_watch.mark()
         (live_watch.tmp_dir / "brand_new.py").write_text("class BrandNew:\n    pass\n")
-        assert live_watch.wait_for("brand_new.py", timeout=6.0, since=mark)
         (live_watch.tmp_dir / "GUIDE.md").write_text("# Guide\n## Setup\n")
+        assert live_watch.wait_for("brand_new.py", timeout=6.0, since=mark)
         assert live_watch.wait_for("GUIDE.md", timeout=6.0, since=mark)
         return {"output": live_watch.output_since(mark), "db_path": live_watch.db_path, "tmp_dir": live_watch.tmp_dir}
 
@@ -310,11 +310,9 @@ class TestUAT68_ErrorResilience:
         """AC: file with syntax error is handled without crashing."""
         mark = live_watch.mark()
         (live_watch.tmp_dir / "broken.py").write_text("def (BROKEN:\n    pass\n")
-        time.sleep(NEGATIVE_WAIT)
-        assert live_watch.proc.poll() is None, "Watcher crashed on syntax error"
-
         (live_watch.tmp_dir / "good.py").write_text("def ok(): pass\ndef extra(): pass\n")
         assert live_watch.wait_for("good.py", timeout=6.0, since=mark)
+        assert live_watch.proc.poll() is None, "Watcher crashed on syntax error"
         assert "good.py" in live_watch.output_since(mark)
 
 

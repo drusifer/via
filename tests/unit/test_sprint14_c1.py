@@ -248,16 +248,19 @@ class TestJSInheritance:
 class TestCallEntityFields:
 
     def test_call_entity_has_line_number(self, js_calls_result):
+        assert len(js_calls_result.calls) > 0
         for call in js_calls_result.calls:
             assert isinstance(call.line_number, int)
             assert call.line_number > 0
 
     def test_call_entity_has_byte_offset(self, js_calls_result):
+        assert len(js_calls_result.calls) > 0
         for call in js_calls_result.calls:
             assert isinstance(call.byte_offset, int)
             assert call.byte_offset >= 0
 
     def test_call_entity_has_byte_length(self, js_calls_result):
+        assert len(js_calls_result.calls) > 0
         for call in js_calls_result.calls:
             assert isinstance(call.byte_length, int)
             assert call.byte_length > 0

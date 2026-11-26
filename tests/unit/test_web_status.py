@@ -24,10 +24,8 @@ from via.web.api.status import get_status
 
 @pytest.fixture
 def tmp_db(tmp_path):
-    """DatabaseStore backed by a temp file, schema initialised."""
-    db_path = str(tmp_path / "test.db")
-    root = str(tmp_path)
-    store = DatabaseStore(db_path, root)
+    """DatabaseStore backed by an in-memory SQLite DB, schema initialised."""
+    store = DatabaseStore(":memory:", str(tmp_path))
     store.connect()
     store.initialize_schema()
     yield store

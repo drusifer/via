@@ -108,7 +108,9 @@ class TestSupportsRenderTypeRefactor:
         ]
 
     def test_all_subclasses_support_json(self):
-        for record in self._all_record_types():
+        records = self._all_record_types()
+        assert len(records) == 7
+        for record in records:
             assert record.supports_render_type(RenderType.JSON), \
                 f"{type(record).__name__} should support JSON"
 

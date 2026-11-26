@@ -277,13 +277,16 @@ def test_ast_assertion_smell_detection_catches_false_greens_without_flagging_hel
         "    return 42\n\n"
         "def test_clean_with_helper():\n"
         "    _check_positive(1)\n\n"
+        "def test_clean_literal_loop():\n"
+        "    for v in (1, 2, 3):\n"
+        "        assert v > 0\n\n"
         "def test_tautology():\n"
         "    assert True\n\n"
         "def test_broad_raises():\n"
         "    with pytest.raises(Exception):\n"
         "        raise ValueError('boom')\n\n"
-        "def test_conditional_only():\n"
-        "    for x in []:\n"
+        "def test_conditional_only(items):\n"
+        "    for x in items:\n"
         "        assert x > 0\n\n"
         "def test_swallowed_assert():\n"
         "    try:\n"
@@ -291,13 +294,70 @@ def test_ast_assertion_smell_detection_catches_false_greens_without_flagging_hel
         "    except Exception:\n"
         "        pass\n\n"
         "def test_no_asserts():\n"
-        "    x = 1 + 1\n"
+        "    x = 1 + 1\n\n"
+        "def test_mock_only_asserts(m):\n"
+        "    m.assert_called_once_with(1)\n\n"
+        "def test_mock_plus_value_assert(m):\n"
+        "    m.assert_called_once()\n"
+        "    assert m.return_value == 1\n"
     )
     info = _analyze_test_file_ast(str(tf))
     assert info[(None, "test_fixture_named_like_test")][1] == []
     assert info[(None, "test_clean_with_helper")][1] == []
+    assert info[(None, "test_clean_literal_loop")][1] == []
+    assert info[(None, "test_mock_plus_value_assert")][1] == []
     assert "tautology" in info[(None, "test_tautology")][1]
     assert "broad-raises" in info[(None, "test_broad_raises")][1]
     assert "conditional-only" in info[(None, "test_conditional_only")][1]
     assert "swallowed-assert" in info[(None, "test_swallowed_assert")][1]
     assert "no-asserts" in info[(None, "test_no_asserts")][1]
+    assert "mock-only-asserts" in info[(None, "test_mock_only_asserts")][1]
+
+
+def test_shared_fixture_attribution_suppresses_false_slow_zero(tmp_path):
+    src = _seed_project(tmp_path)
+    (tmp_path / "tests" / "test_shared.py").write_text(
+        "import pytest\n"
+        "from app import alpha\n\n"
+        "@pytest.fixture(scope='module')\n"
+        "def live_daemon():\n"
+        "    return alpha(True)\n\n"
+        "@pytest.fixture(scope='class')\n"
+        "def step_result(live_daemon):\n"
+        "    return live_daemon\n\n"
+        "class TestShared:\n"
+        "    def test_first(self, live_daemon):\n"
+        "        assert live_daemon == 1\n\n"
+        "    def test_second(self, step_result):\n"
+        "        assert step_result == 1\n"
+    )
+    assert _run(tmp_path, "index", str(tmp_path)).returncode == 0
+
+    data_file = tmp_path / ".coverage"
+    cov_data = coverage.CoverageData(basename=str(data_file))
+    # Only test_first gets coverage attributed (simulating a shared module daemon)
+    cov_data.set_context("tests/test_shared.py::TestShared::test_first")
+    cov_data.add_arcs({str(src): {(1, 2), (2, 3)}})
+    cov_data.write()
+
+    (tmp_path / ".via" / "test_runs.json").write_text(json.dumps({
+        "tests/test_shared.py::TestShared::test_first": {
+            "status": "pass", "duration_seconds": 0.2, "last_run_at": "2026-11-25T00:00:00",
+        },
+        "tests/test_shared.py::TestShared::test_second": {
+            "status": "pass", "duration_seconds": 0.8, "last_run_at": "2026-11-25T00:00:00",
+        },
+    }))
+    assert import_contexts(str(tmp_path), str(data_file)) == 0
+
+    with DatabaseStore(str(tmp_path / ".via" / "index.db"), str(tmp_path)) as store:
+        payload = build_test_quality_data(store, branch_data_file=str(data_file), slow_threshold=0.5)
+
+    by_id = {t["test_id"]: t for t in payload["tests"]}
+    second = by_id["tests/test_shared.py::TestShared::test_second"]
+    assert second["flag"] == "ok"
+    assert second["shared_fixture"] is not None
+    assert "live_daemon" in second["shared_fixture"]
+    assert payload["kpis"]["slow_zero_count"] == 0
+    file_row = next(f for f in payload["files"] if f["file"] == "tests/test_shared.py")
+    assert file_row["zero_cov"] == 0

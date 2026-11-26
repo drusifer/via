@@ -122,6 +122,8 @@ class TestFileDiscovery:
         )
 
         files = discovery.discover()
+        assert len(files) > 0
+        assert any(f.path.endswith('.py') for f in files)
 
         # Python files should be parseable
         for f in files:
@@ -226,6 +228,7 @@ class TestFileDiscovery:
         )
 
         files = discovery.discover()
+        assert len(files) > 0
 
         for f in files:
             assert os.path.isabs(f.path)

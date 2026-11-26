@@ -108,9 +108,7 @@ class TestMcpUninstall:
         target.install()
         target.uninstall()
         mcp_json = tmp_project / ".mcp.json"
-        if mcp_json.exists():
-            data = json.loads(mcp_json.read_text())
-            assert "via" not in data.get("mcpServers", {})
+        assert not mcp_json.exists() or "via" not in json.loads(mcp_json.read_text()).get("mcpServers", {})
 
     def test_uninstall_with_other_entries_keeps_file(self, tmp_project):
         from via.commands.install import McpInstallTarget
@@ -131,6 +129,7 @@ class TestMcpUninstall:
         from via.commands.install import McpInstallTarget
         target = McpInstallTarget(project_root=str(tmp_project))
         target.uninstall()  # Must not raise
+        assert not (tmp_project / ".mcp.json").exists()
 
 
 class TestMcpStatus:
@@ -143,10 +142,9 @@ class TestMcpStatus:
     def test_status_not_installed_returns_nonzero_or_reports(self, tmp_project, capsys):
         from via.commands.install import McpInstallTarget
         target = McpInstallTarget(project_root=str(tmp_project))
-        target.status()
-        # Should print something about status
+        rc = target.status()
         captured = capsys.readouterr()
-        assert len(captured.out) > 0 or len(captured.err) > 0 or True  # lenient
+        assert rc != 0 or bool(captured.out or captured.err)
 
     def test_status_installed_shows_installed(self, tmp_project, capsys):
         from via.commands.install import McpInstallTarget

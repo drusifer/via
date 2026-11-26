@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+import pytest
 from mcp.server import MCPServer
 
 from via.__main__ import _run_pipeline_command
@@ -53,13 +54,10 @@ def test_pipeline_parse_error_carries_structured_fields():
 
 
 def test_parser_relationship_error_has_code_and_hint():
-    try:
+    with pytest.raises(PipelineParseError) as exc_info:
         PipelineParser().parse(["-mg", "*", "-tf", "-V", "bogus", "-mg", "*"])
-    except PipelineParseError as exc:
-        assert exc.code == "invalid_relationship"
-        assert "Valid relationship types" in (exc.hint or "")
-    else:
-        raise AssertionError("expected PipelineParseError")
+    assert exc_info.value.code == "invalid_relationship"
+    assert "Valid relationship types" in (exc_info.value.hint or "")
 
 
 def test_mcp_pipeline_parse_error_returns_error_output_type():

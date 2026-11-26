@@ -40,13 +40,20 @@ _LOW_COV_SYMBOL_FLOOR = 15
 _LOW_COV_SPS_FLOOR = 25.0
 _HIGH_OVERLAP_PCT = 85.0
 _ASSERT_CALL_NAMES = frozenset({'raises', 'warns', 'fail'})
+_MOCK_ASSERT_PREFIXES = (
+    'assert_called',
+    'assert_not_called',
+    'assert_any_call',
+    'assert_has_calls',
+)
 _FLAG_RANK = {
     'slow-zero': 0,
     'slow-low': 1,
     'slow-overlap': 2,
     'slow-0uniq': 3,
     'mocks-only': 4,
-    'ok': 5,
+    'smelly-assert': 5,
+    'ok': 6,
 }
 
 
@@ -59,15 +66,75 @@ def _call_name(call: ast.Call) -> str:
     return ''
 
 
-def _is_fixture_func(fn: ast.AST) -> bool:
+_SHARED_FIXTURE_SCOPES = frozenset({'class', 'module', 'package', 'session'})
+
+
+def _fixture_scope(fn: ast.AST) -> Optional[str]:
+    """Return pytest fixture scope (`'function'`, `'class'`, `'module'`, ...) or None."""
     for dec in getattr(fn, 'decorator_list', ()):
         if isinstance(dec, ast.Name) and dec.id == 'fixture':
-            return True
+            return 'function'
         if isinstance(dec, ast.Attribute) and dec.attr == 'fixture':
-            return True
+            return 'function'
         if isinstance(dec, ast.Call) and _call_name(dec) == 'fixture':
-            return True
-    return False
+            for kw in dec.keywords:
+                if kw.arg == 'scope' and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+                    return kw.value.value
+            if dec.args and isinstance(dec.args[0], ast.Constant) and isinstance(dec.args[0].value, str):
+                return dec.args[0].value
+            return 'function'
+    return None
+
+
+def _is_fixture_func(fn: ast.AST) -> bool:
+    return _fixture_scope(fn) is not None
+
+
+def _param_names(fn: ast.AST) -> Set[str]:
+    args = getattr(fn, 'args', None)
+    if args is None:
+        return set()
+    names = {a.arg for a in args.args + args.kwonlyargs}
+    return names - {'self', 'cls'}
+
+
+def _collect_fixture_graph(
+    tree: ast.Module,
+) -> Tuple[Dict[str, Tuple[str, Set[str]]], Dict[str, Dict[str, Tuple[str, Set[str]]]]]:
+    """Map fixture names -> `(scope, param_names)` at module and class levels."""
+    mod_fx: Dict[str, Tuple[str, Set[str]]] = {}
+    cls_fx: Dict[str, Dict[str, Tuple[str, Set[str]]]] = defaultdict(dict)
+    for stmt in tree.body:
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            sc = _fixture_scope(stmt)
+            if sc is not None:
+                mod_fx[stmt.name] = (sc, _param_names(stmt))
+        elif isinstance(stmt, ast.ClassDef):
+            for item in stmt.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    sc = _fixture_scope(item)
+                    if sc is not None:
+                        cls_fx[stmt.name][item.name] = (sc, _param_names(item))
+    return mod_fx, cls_fx
+
+
+def _resolve_shared_fixtures(
+    params: Set[str], fixtures: Dict[str, Tuple[str, Set[str]]]
+) -> Set[str]:
+    """Return all transitive class/module/package/session fixture names used by `params`."""
+    shared: Set[str] = set()
+    seen: Set[str] = set()
+    stack = list(params)
+    while stack:
+        name = stack.pop()
+        if name in seen or name not in fixtures:
+            continue
+        seen.add(name)
+        scope, deps = fixtures[name]
+        if scope in _SHARED_FIXTURE_SCOPES:
+            shared.add(name)
+        stack.extend(deps - seen)
+    return shared
 
 
 def _detect_tautology(expr: ast.expr) -> Optional[str]:
@@ -163,6 +230,8 @@ def _record_call_check(
         state['total'] += 1
         if not in_cf:
             state['top'] += 1
+        if name.startswith(_MOCK_ASSERT_PREFIXES):
+            state['mock_asserts'] += 1
         if _is_broad_raises(node):
             state['smells'].append(('broad-raises', ast.unparse(node)[:60]))
 
@@ -180,6 +249,14 @@ def _walk_try_node(
         _walk_test_checks(s, helpers, state, in_cf=in_cf, in_swallow=in_swallow)
 
 
+def _is_nonempty_literal_iter(expr: ast.expr) -> bool:
+    if isinstance(expr, (ast.List, ast.Tuple, ast.Set)):
+        return len(expr.elts) > 0
+    if isinstance(expr, ast.Dict):
+        return len(expr.keys) > 0
+    return False
+
+
 def _walk_test_checks(
     node: ast.AST,
     helpers: Set[str],
@@ -192,7 +269,12 @@ def _walk_test_checks(
         return
     if isinstance(node, ast.Call):
         _record_call_check(node, helpers, state, in_cf)
-    if isinstance(node, (ast.If, ast.For, ast.AsyncFor, ast.While)):
+    if isinstance(node, (ast.For, ast.AsyncFor)):
+        child_cf = in_cf or not _is_nonempty_literal_iter(node.iter)
+        for ch in ast.iter_child_nodes(node):
+            _walk_test_checks(ch, helpers, state, in_cf=child_cf, in_swallow=in_swallow)
+        return
+    if isinstance(node, (ast.If, ast.While)):
         for ch in ast.iter_child_nodes(node):
             _walk_test_checks(ch, helpers, state, in_cf=True, in_swallow=in_swallow)
         return
@@ -205,17 +287,22 @@ def _walk_test_checks(
 
 def _inspect_test_ast(fn: ast.AST, helpers: Set[str]) -> Tuple[int, List[str], str]:
     """Return `(assert_count, smell_codes, concise_detail)` for one test function."""
-    state: Dict[str, Any] = {'total': 0, 'top': 0, 'smells': []}
+    state: Dict[str, Any] = {'total': 0, 'top': 0, 'mock_asserts': 0, 'smells': []}
     for stmt in getattr(fn, 'body', ()):
         _walk_test_checks(stmt, helpers, state)
 
     smell_pairs: List[Tuple[str, str]] = list(state['smells'])
     if state['total'] == 0 and not _is_fixture_func(fn):
         smell_pairs.append(('no-asserts', '0 assertions, raises, or assert helpers'))
-    elif state['total'] > 0 and state['top'] == 0:
-        smell_pairs.append(
-            ('conditional-only', f"all {state['total']} assertion(s) inside if/for/except")
-        )
+    elif state['total'] > 0:
+        if state['top'] == 0:
+            smell_pairs.append(
+                ('conditional-only', f"all {state['total']} assertion(s) inside if/for/except")
+            )
+        if state['mock_asserts'] == state['total']:
+            smell_pairs.append(
+                ('mock-only-asserts', f"{state['mock_asserts']} mock assert(s) only (no value checks)")
+            )
 
     codes: List[str] = []
     details: List[str] = []
@@ -228,42 +315,85 @@ def _inspect_test_ast(fn: ast.AST, helpers: Set[str]) -> Tuple[int, List[str], s
 
 def _analyze_test_file_ast(
     file_path: str,
-) -> Dict[Tuple[Optional[str], str], Tuple[int, List[str], str]]:
-    """Map `(class_name_or_None, func_name)` -> `(asserts, smells, detail)` for one file."""
+) -> Dict[Tuple[Optional[str], str], Tuple[int, List[str], str, Set[str]]]:
+    """Map `(class_name_or_None, func_name)` -> `(asserts, smells, detail, shared_fixtures)`."""
     tree = _parse_python_file(file_path)
     if tree is None:
         return {}
     file_helpers, class_helpers = _collect_assert_helpers(tree)
-    info: Dict[Tuple[Optional[str], str], Tuple[int, List[str], str]] = {}
+    mod_fx, cls_fx = _collect_fixture_graph(tree)
+    info: Dict[Tuple[Optional[str], str], Tuple[int, List[str], str, Set[str]]] = {}
     for stmt in tree.body:
         if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            info[(None, stmt.name)] = _inspect_test_ast(stmt, file_helpers)
+            cnt, smells, detail = _inspect_test_ast(stmt, file_helpers)
+            shared = _resolve_shared_fixtures(_param_names(stmt), mod_fx)
+            info[(None, stmt.name)] = (cnt, smells, detail, shared)
         elif isinstance(stmt, ast.ClassDef):
             helpers = file_helpers | class_helpers[stmt.name]
+            fixtures = {**mod_fx, **cls_fx[stmt.name]}
             for item in stmt.body:
                 if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    info[(stmt.name, item.name)] = _inspect_test_ast(item, helpers)
+                    cnt, smells, detail = _inspect_test_ast(item, helpers)
+                    shared = _resolve_shared_fixtures(_param_names(item), fixtures)
+                    info[(stmt.name, item.name)] = (cnt, smells, detail, shared)
     return info
 
 
 def _lookup_test_ast_info(
     test_id: str,
     index_root: str,
-    cache: Dict[str, Dict[Tuple[Optional[str], str], Tuple[int, List[str], str]]],
-) -> Tuple[Optional[int], List[str], str]:
+    cache: Dict[str, Dict[Tuple[Optional[str], str], Tuple[int, List[str], str, Set[str]]]],
+) -> Tuple[Optional[int], List[str], str, Set[str]]:
     parsed = _parse_test_nodeid(test_id)
     if parsed is None:
-        return None, [], ''
+        return None, [], '', set()
     rel_path, class_name, func_name = parsed
     resolved = _resolve_under_root(index_root, rel_path)
     if resolved is None or not os.path.isfile(resolved):
-        return None, [], ''
+        return None, [], '', set()
     if resolved not in cache:
         cache[resolved] = _analyze_test_file_ast(resolved)
     found = cache[resolved].get((class_name, func_name))
     if found is None:
-        return None, [], ''
+        return None, [], '', set()
     return found
+
+
+def _resolve_shared_fixture_attribution(
+    eff: List[Dict[str, Any]],
+    ast_by_tid: Dict[str, Tuple[Optional[int], List[str], str, Set[str]]],
+) -> Dict[str, str]:
+    """Map `cov == 0` tests sharing a module/class fixture with a `cov > 0` sibling to provenance."""
+    best_owner: Dict[Tuple[str, str], Tuple[str, int]] = {}
+    for row in eff:
+        tid = row['test_id']
+        cov = int(row['covered_symbol_count'] or 0)
+        if cov <= 0:
+            continue
+        tfile = tid.split('::', 1)[0]
+        for fx in ast_by_tid[tid][3]:
+            prev = best_owner.get((tfile, fx))
+            if prev is None or cov > prev[1]:
+                best_owner[(tfile, fx)] = (tid, cov)
+
+    attributed: Dict[str, str] = {}
+    for row in eff:
+        tid = row['test_id']
+        cov = int(row['covered_symbol_count'] or 0)
+        asserts, smells, _, shared_fx = ast_by_tid[tid]
+        if cov > 0 or smells or not asserts or not shared_fx:
+            continue
+        tfile = tid.split('::', 1)[0]
+        matches = [
+            (fx, best_owner[(tfile, fx)])
+            for fx in sorted(shared_fx)
+            if (tfile, fx) in best_owner
+        ]
+        if matches:
+            fx, (owner_tid, owner_cov) = max(matches, key=lambda item: item[1][1])
+            owner_short = owner_tid.split('::', 1)[-1]
+            attributed[tid] = f"{fx} → {owner_short} ({owner_cov} syms)"
+    return attributed
 
 
 def _load_branch_arc_sets(data_file: str) -> Dict[str, Set[Tuple[int, int, int]]]:
@@ -337,9 +467,13 @@ def _classify_test(
     overlap_pct: float,
     mocks_only: bool,
     slow_threshold: float,
+    has_smell: bool = False,
+    shared_fixture_cov: bool = False,
 ) -> str:
     """Assign a quality signal flag to one test row."""
     if dur >= slow_threshold and cov == 0:
+        if shared_fixture_cov:
+            return 'smelly-assert' if has_smell else 'ok'
         return 'slow-zero'
     if dur >= slow_threshold and (
         cov <= _LOW_COV_SYMBOL_FLOOR or (sps is not None and sps < _LOW_COV_SPS_FLOOR)
@@ -351,6 +485,8 @@ def _classify_test(
         return 'slow-0uniq'
     if mocks_only:
         return 'mocks-only'
+    if has_smell:
+        return 'smelly-assert'
     return 'ok'
 
 
@@ -403,6 +539,8 @@ def _summarize_kpis(tests: List[Dict[str, Any]], slow_threshold: float) -> Dict[
         'slow_0uniq_count': su_n,
         'slow_0uniq_dur': su_d,
         'mocks_only_count': sum(1 for t in tests if t['mocks_only']),
+        'smelly_flag_count': sum(1 for t in tests if t['flag'] == 'smelly-assert'),
+        'flagged_count': sum(1 for t in tests if t['flag'] != 'ok'),
         'smelly_count': smelly_count,
         'smell_counts': dict(smell_counts),
     }
@@ -601,12 +739,16 @@ def _update_coverage_history(
         except (OSError, json.JSONDecodeError):
             state = {}
 
-    flagged_count = (
-        kpis['slow_zero_count']
-        + kpis['slow_low_count']
-        + kpis['slow_overlap_count']
-        + kpis['slow_0uniq_count']
-        + kpis['mocks_only_count']
+    flagged_count = int(
+        kpis.get(
+            'flagged_count',
+            kpis['slow_zero_count']
+            + kpis['slow_low_count']
+            + kpis['slow_overlap_count']
+            + kpis['slow_0uniq_count']
+            + kpis['mocks_only_count']
+            + kpis.get('smelly_flag_count', 0),
+        )
     )
     file_durs = {f['file']: round(float(f['dur']), 2) for f in files}
     scatter_pts = [[t['test_id'], t['dur'], t['cov'], t['flag']] for t in tests]
@@ -623,14 +765,19 @@ def _update_coverage_history(
         'scatter_points': scatter_pts,
     }
     prev = state.get('previous')
+    cur = state.get('current')
     if state.get('current_hash') != fingerprint:
-        if state.get('current'):
-            prev = state['current']
+        if cur:
+            prev = cur
         state = {
             'current_hash': fingerprint,
             'current': snapshot,
             'previous': prev,
         }
+        hist_path.parent.mkdir(parents=True, exist_ok=True)
+        hist_path.write_text(json.dumps(state), encoding='utf-8')
+    elif not (cur and cur.get('scatter_points') and cur.get('file_durations')):
+        state['current'] = snapshot
         hist_path.parent.mkdir(parents=True, exist_ok=True)
         hist_path.write_text(json.dumps(state), encoding='utf-8')
 
@@ -669,7 +816,12 @@ def build_test_quality_data(
         if s and tid in dur_by_id
     ]
 
-    assert_cache: Dict[str, Dict[Tuple[Optional[str], str], Tuple[int, List[str], str]]] = {}
+    assert_cache: Dict[str, Dict[Tuple[Optional[str], str], Tuple[int, List[str], str, Set[str]]]] = {}
+    ast_by_tid = {
+        row['test_id']: _lookup_test_ast_info(row['test_id'], store.index_root, assert_cache)
+        for row in eff
+    }
+    shared_attr = _resolve_shared_fixture_attribution(eff, ast_by_tid)
     file_rollup: Dict[str, Dict[str, Any]] = {}
     tests: List[Dict[str, Any]] = []
 
@@ -680,7 +832,8 @@ def build_test_quality_data(
         sps = (cov / dur) if dur > 0 else None
         uniq = int(unique_by_test.get(tid, 0))
         mocks_only = bool(row['mocks_only'])
-        asserts, smells, smell_detail = _lookup_test_ast_info(tid, store.index_root, assert_cache)
+        asserts, smells, smell_detail, _ = ast_by_tid[tid]
+        shared_fixture = shared_attr.get(tid)
         tfile = tid.split('::', 1)[0]
 
         if dur >= slow_threshold and cov > 0:
@@ -689,7 +842,16 @@ def build_test_quality_data(
             peer, overlap_pct, subsumed = None, 0.0, False
 
         flag = _classify_test(
-            dur, cov, sps, uniq, subsumed, overlap_pct, mocks_only, slow_threshold
+            dur,
+            cov,
+            sps,
+            uniq,
+            subsumed,
+            overlap_pct,
+            mocks_only,
+            slow_threshold,
+            has_smell=bool(smells),
+            shared_fixture_cov=bool(shared_fixture),
         )
         tests.append({
             'test_id': tid,
@@ -703,6 +865,7 @@ def build_test_quality_data(
             'asserts': asserts,
             'smells': smells,
             'smell_detail': smell_detail,
+            'shared_fixture': shared_fixture,
             'mocks': row['mock_call_count'],
             'mocks_only': mocks_only,
             'overlap_pct': overlap_pct,
@@ -726,9 +889,9 @@ def build_test_quality_data(
         fr['dur'] += dur
         fr['cov_sum'] += cov
         fr['unique_sum'] += uniq
-        if cov == 0:
+        if cov == 0 and not shared_fixture:
             fr['zero_cov'] += 1
-        if flag in ('slow-zero', 'slow-low', 'slow-overlap'):
+        if flag != 'ok':
             fr['slow_low'] += 1
 
     tests.sort(key=lambda r: (_FLAG_RANK[r['flag']], -r['dur'], r['cov']))
@@ -1016,6 +1179,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
   .b-low { background: rgba(234,88,12,0.18); color: var(--warning, #ea580c); }
   .b-ov { background: rgba(168,85,247,0.18); color: #a855f7; }
   .b-red { background: rgba(202,138,4,0.18); color: var(--warning, #ca8a04); }
+  .b-smell { background: rgba(236,72,153,0.18); color: #ec4899; }
   .b-ok { background: rgba(22,163,74,0.15); color: var(--success, #16a34a); }
   .note { font-size: 11px; color: var(--muted-foreground, #64748b); margin-top: 6px; }
   .playbook ol { margin: 6px 0 10px 18px; padding: 0; }
@@ -1109,6 +1273,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
       <span class="legend-item"><span class="dot" style="background:#f97316"></span>Slow + Low cov</span>
       <span class="legend-item"><span class="dot" style="background:#a855f7"></span>Slow + High overlap</span>
       <span class="legend-item"><span class="dot" style="background:#eab308"></span>Slow + 0 unique</span>
+      <span class="legend-item"><span class="dot" style="background:#ec4899"></span>Smelly assert</span>
       <span class="legend-item"><span class="dot" style="background:#3b82f6"></span>Healthy</span>
     </div>
     <div class="scatter-box" id="scatter-box">
@@ -1325,21 +1490,24 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
       <li><strong><code>SLOW + LOW</code></strong> — Inspect for blind <code>time.sleep()</code> calls, slow server shutdown loops (e.g. <code>serve_forever(poll_interval=0.5)</code>), repeated heavy DB/index/HTTP setup, or unnecessary disk SQLite I/O.</li>
       <li><strong><code>SLOW + OVERLAP</code> / <code>SLOW + 0 UNIQ</code></strong> — Compare against the named faster neighbor and <strong>Asserts</strong> column. <em>Never delete a test solely because <code>Unique = 0</code></em>; different assertions on the same branches still validate distinct contracts.</li>
       <li><strong><code>MOCKS ONLY</code></strong> — Tests using mocks while covering <code>0</code> symbols in their imported project modules; check for hollow tests asserting only mock wiring.</li>
-      <li><strong><code>Smelly Asserts</code></strong> — Static AST checks for false-green tests: <code>TAUTOLOGY</code> (<code>assert True</code> / <code>x == x</code>), <code>BROAD RAISES</code> (<code>pytest.raises(Exception)</code> without <code>match=</code>), <code>SWALLOWED ASSERT</code> (assert inside broad <code>try/except</code>), <code>CONDITIONAL ONLY</code> (all assertions inside <code>for</code>/<code>if</code> with no non-empty guard), and <code>NO ASSERTS</code> (0 assertions).</li>
+      <li><strong><code>Smelly Asserts</code></strong> — Static AST checks for false-green tests: <code>TAUTOLOGY</code> (<code>assert True</code> / <code>x == x</code>), <code>BROAD RAISES</code> (<code>pytest.raises(Exception)</code> without <code>match=</code>), <code>SWALLOWED ASSERT</code> (assert inside broad <code>try/except</code>), <code>CONDITIONAL ONLY</code> (all assertions inside <code>for</code>/<code>if</code> with no non-empty guard), <code>NO ASSERTS</code> (0 assertions), and <code>MOCK ASSERTS</code> (only <code>mock.assert_called*</code> with zero value checks).</li>
     </ol>
     <h3>2. Apply Fixes in Order of Preference</h3>
     <ol>
+      <li><strong>Check symbol coverage before touching a test:</strong> Use the <em>Symbol &rarr; Covering Tests Lookup</em> above (or <code>via -mg '*' --via covers -mg '&lt;symbol&gt;' -n 0</code> / <code>--via covered-by -mg '*&lt;test&gt;*'</code>) to verify what another fast test already guards.</li>
+      <li><strong>Harden smelly assertions (don't silence them):</strong> Add <code>assert len(items) &gt; 0</code> before dynamic loops (<code>LOOP/IF ONLY</code>); use <code>with pytest.raises(ConcreteError, match=...)</code> instead of <code>try/except</code> or bare <code>Exception</code> (<code>BROAD RAISES</code>); assert an observable post-condition (DB state, <code>caplog</code>, flag, or spy) even on <code>*_is_safe</code> / <code>*_does_not_raise</code> tests (<code>NO ASSERTS</code>); pair <code>assert_called*</code> with a real behavioral assertion (<code>MOCK ASSERTS</code>).</li>
       <li><strong>Prefer lower-resource equivalents:</strong> Test pure logic in-process with <code>:memory:</code> SQLite or direct function calls instead of booting HTTP servers or OS subprocesses when process boundaries are not under test.</li>
       <li><strong>Replace blind sleeps with event-driven waits:</strong> Launch subprocesses unbuffered (<code>python -u</code>) and wait on a condition/log line (e.g. <code>"Watching"</code>, <code>"Re-indexed:"</code>) rather than fixed delays. If faster signaling exposes a startup race (such as logging ready before installing signal handlers), fix the production race rather than re-adding sleeps.</li>
       <li><strong>Reuse expensive resources safely (prefer live sessions over pre-fetched snapshots):</strong> Share one <code>scope="class"</code> or <code>scope="module"</code> live server, session, indexed project, or daemon while keeping each test's actual request/operation inside the test body. Avoid pre-fetching multiple test responses into one snapshot dict in a fixture &mdash; snapshot fixtures attribute all coverage and setup failures to the first test and leave sibling tests with <code>0</code> covered symbols.</li>
       <li><strong>Prevent shared-resource flakiness (mandatory):</strong> Only share fixtures across strictly read-only tests, OR isolate side effects using disjoint target files plus output-buffer slicing (<code>mark()</code> / <code>output_since(mark)</code>) so no test can pass on an earlier test's output. Keep mutating, lifecycle, and shutdown tests isolated per test.</li>
+      <li><strong>Don't mock away real production bottlenecks:</strong> If a single shared-fixture call stays slow (e.g. a multi-second query against a real index), profile the production code rather than faking it out.</li>
       <li><strong>Delete only proven duplicates:</strong> Remove a test only when a faster test already covers the same branch arcs <em>and</em> checks the same assertions (confirm via AST review or targeted mutation testing on the covered functions).</li>
     </ol>
-    <h3>3. Verify Idempotently &amp; Measure Before/After</h3>
+    <h3>3. Verify Idempotently &amp; Know When to Stop</h3>
     <ol>
       <li>Run targeted modified files with <code>--durations=15</code> and confirm zero failures and zero pytest deprecation warnings (use <code>@classmethod</code> under <code>@pytest.fixture(scope="class")</code>).</li>
       <li>Re-run the full self-contained, idempotent coverage pipeline (<code>make test-coverage</code>: clean <code>.coverage*</code> shards &rarr; <code>via index .</code> &rarr; <code>pytest --cov-branch --cov-context=test</code> &rarr; <code>via coverage import-contexts</code> &rarr; <code>via coverage report</code>).</li>
-      <li>Confirm wall-clock time and flagged test counts dropped with <strong>0% coverage loss</strong> and <strong>0 regressions</strong>.</li>
+      <li>Confirm wall-clock time and flagged test counts dropped with <strong>0% coverage loss</strong> and <strong>0 regressions</strong>. Once <code>Smelly Asserts = 0</code>, <code>Slow + 0 Cov = 0</code>, and the remaining slow tests are irreducible single-instance E2E boundaries (one daemon startup, one debounce window, one stdio handshake), stop optimizing and preserve E2E realism.</li>
     </ol>
   </div>
 </div>
@@ -1351,7 +1519,8 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 
 document.getElementById('gen-meta').textContent = `Generated ${DATA.generated_at} • ${k.total_tests.toLocaleString()} tests • ${k.total_dur}s total • overlap: ${DATA.overlap_mode}`;
 document.getElementById('overlap-note').innerHTML = `<strong>Overlap (${esc(DATA.overlap_mode)})</strong> = highest Jaccard similarity (or strict subset <code>SUB</code>) against a <em>faster</em> test. Check <strong>Asserts</strong> &amp; the named faster neighbor before deleting — high overlap with distinct assertions is a fixture-sharing candidate.`;
-document.getElementById('c-flagged').textContent = k.slow_zero_count + k.slow_low_count + k.slow_overlap_count + k.slow_0uniq_count + k.mocks_only_count;
+const flaggedNow = k.flagged_count ?? (k.slow_zero_count + k.slow_low_count + k.slow_overlap_count + k.slow_0uniq_count + k.mocks_only_count + (k.smelly_flag_count || 0));
+document.getElementById('c-flagged').textContent = flaggedNow;
 document.getElementById('c-smell').textContent = k.smelly_count || 0;
 document.getElementById('c-sl').textContent = k.slow_low_count;
 document.getElementById('c-so').textContent = k.slow_overlap_count;
@@ -1368,7 +1537,6 @@ if (regs.length > 0) {
 }
 const cmp = cov.comparison;
 const fmtDelta = (n, unit = '') => `${n > 0 ? '+' : ''}${n}${unit}`;
-const flaggedNow = k.slow_zero_count + k.slow_low_count + k.slow_overlap_count + k.slow_0uniq_count + k.mocks_only_count;
 const durPctDelta = cmp && cmp.total_dur.before > 0
   ? Math.round((cmp.total_dur.delta / cmp.total_dur.before) * 100)
   : null;
@@ -1426,6 +1594,7 @@ const FLAG_META = {
   'slow-overlap': { label: 'SLOW + OVERLAP', cls: 'b-ov', color: '#a855f7' },
   'slow-0uniq': { label: 'SLOW + 0 UNIQ', cls: 'b-red', color: '#eab308' },
   'mocks-only': { label: 'MOCKS ONLY', cls: 'b-low', color: '#f97316' },
+  'smelly-assert': { label: 'SMELLY ASSERT', cls: 'b-smell', color: '#ec4899' },
   'ok': { label: 'OK', cls: 'b-ok', color: '#3b82f6' },
 };
 
@@ -1620,13 +1789,14 @@ const FLAG_META = {
 
 let activeFilter = 'flagged';
 let sortState = { col: 'dur', dir: -1 };
-const flagRank = { 'slow-zero': 0, 'slow-low': 1, 'slow-overlap': 2, 'slow-0uniq': 3, 'mocks-only': 4, 'ok': 5 };
+const flagRank = { 'slow-zero': 0, 'slow-low': 1, 'slow-overlap': 2, 'slow-0uniq': 3, 'mocks-only': 4, 'smelly-assert': 5, 'ok': 6 };
 const SMELL_META = {
   'tautology': { label: 'TAUTOLOGY', cls: 'b-zero', rank: 0 },
   'swallowed-assert': { label: 'SWALLOWED', cls: 'b-zero', rank: 1 },
   'broad-raises': { label: 'BROAD RAISES', cls: 'b-low', rank: 2 },
   'no-asserts': { label: 'NO ASSERTS', cls: 'b-low', rank: 3 },
   'conditional-only': { label: 'LOOP/IF ONLY', cls: 'b-red', rank: 4 },
+  'mock-only-asserts': { label: 'MOCK ASSERTS', cls: 'b-smell', rank: 5 },
 };
 const bestSmellRank = t => {
   const sm = t.smells || [];
@@ -1660,17 +1830,23 @@ function renderTests() {
     ? `Showing top ${limit} of ${rows.length} matching tests`
     : `${rows.length} matching tests`;
   document.getElementById('tests-tbody').innerHTML = rows.slice(0, limit).map(t => {
-    const fm = FLAG_META[t.flag];
+    const fm = FLAG_META[t.flag] || FLAG_META.ok;
     const ov = t.overlap_pct ? `${t.subsumed ? 'SUB ' : ''}${Math.round(t.overlap_pct)}%` : '—';
-    const smellBadges = (t.smells || []).map(s => {
-      const sm = SMELL_META[s] || { label: s.toUpperCase(), cls: 'b-low' };
-      return `<div style="margin-top:3px"><span class="badge ${sm.cls}">${sm.label}</span></div>`;
+    const smells = t.smells || [];
+    const primaryBadge = (t.flag === 'smelly-assert' && smells.length)
+      ? ''
+      : `<span class="badge ${fm.cls}">${fm.label}</span>`;
+    const smellBadges = smells.map((s, idx) => {
+      const sm = SMELL_META[s] || { label: s.toUpperCase(), cls: 'b-smell' };
+      const top = primaryBadge || idx > 0 ? ' style="margin-top:3px"' : '';
+      return `<div${top}><span class="badge ${sm.cls}">${sm.label}</span></div>`;
     }).join('');
     const smellHint = t.smell_detail ? `<div class="peer-hint">smell: ${esc(t.smell_detail)}</div>` : '';
+    const sharedHint = t.shared_fixture ? `<div class="peer-hint">cov via shared fixture: ${esc(t.shared_fixture)}</div>` : '';
     const peerHtml = t.peer ? `<div class="peer-hint">&approx; ${esc(t.peer)}</div>` : '';
     return `<tr>
-      <td><span class="badge ${fm.cls}">${fm.label}</span>${smellBadges}</td>
-      <td><div class="mono">${esc(t.test_id)}</div>${smellHint}${peerHtml}</td>
+      <td>${primaryBadge}${smellBadges}</td>
+      <td><div class="mono">${esc(t.test_id)}</div>${smellHint}${sharedHint}${peerHtml}</td>
       <td class="num"><strong>${t.dur.toFixed(3)}</strong></td>
       <td class="num">${t.cov}</td>
       <td class="num">${t.uniq}</td>
@@ -1924,13 +2100,7 @@ def generate_coverage_report(
     out.write_text(render_test_quality_html(payload), encoding='utf-8')
 
     k = payload['kpis']
-    flagged = (
-        k['slow_zero_count']
-        + k['slow_low_count']
-        + k['slow_overlap_count']
-        + k['slow_0uniq_count']
-        + k['mocks_only_count']
-    )
+    flagged = int(k.get('flagged_count', 0))
     print(
         f"Wrote test quality report: {out} "
         f"({k['total_tests']} tests, {flagged} flagged, overlap={payload['overlap_mode']})"

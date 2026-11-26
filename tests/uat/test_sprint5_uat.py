@@ -531,15 +531,13 @@ class TestUATReferences:
         # Run CLI query
         result = run_via(uat_project, "-mg", "*", "-V", "references", "-mg", "CONFIG_KEY", "-tg")
 
-        if result.returncode == 0 and result.stdout.strip():
-            # CLI works - validate results
-            assert True, "Short form flag query succeeded"
-        elif len(db_results) == 0:
-            # No references to CONFIG_KEY in code - that's valid
-            assert result.returncode == 0, f"Command should succeed: {result.stderr}"
-        else:
-            # CLI rendering issue - DB verification passed
-            pytest.skip(f"CLI rendering returns empty but database has: {db_names}")
+        assert result.returncode == 0, f"Command failed: {result.stderr}"
+        if db_results:
+            if not result.stdout.strip():
+                pytest.skip(f"CLI rendering returns empty but database has: {db_names}")
+            assert "CONFIG_KEY" in result.stdout or any(name in result.stdout for name in db_names), (
+                f"Expected CONFIG_KEY or one of {db_names} in output: {result.stdout}"
+            )
 
     def test_uat_4_3_find_what_function_references_inverted(self, uat_project):
         """UAT-4.3: Find what shared_logic references (inverted query).

@@ -54,12 +54,14 @@ class TestWebServerLifecycle:
     def test_stop_before_start_is_safe(self):
         srv = WebServer(port=0)
         srv.stop()  # must not raise
+        assert srv._httpd is None
 
     def test_double_stop_is_safe(self):
         srv = WebServer(port=0)
         srv.start()
         srv.stop()
         srv.stop()  # must not raise
+        assert srv._httpd is None
 
     def test_port_property_before_start_returns_configured_value(self):
         srv = WebServer(port=7891)

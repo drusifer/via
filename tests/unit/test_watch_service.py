@@ -152,13 +152,15 @@ class TestReindexFile:
     def test_reindex_parse_error_does_not_raise(self, watch_service, temp_dir):
         bad_file = os.path.join(temp_dir, "broken.py")
         Path(bad_file).write_text("def (:\n    pass\n")  # Syntax error
-        # Should not raise
+        # Should not raise or stop watcher
         watch_service._reindex_file(bad_file)
+        assert not watch_service._stop_event.is_set()
 
-    def test_reindex_missing_file_does_not_raise(self, watch_service, temp_dir):
+    def test_reindex_missing_file_does_not_raise(self, watch_service, temp_dir, db_store):
         ghost = os.path.join(temp_dir, "ghost.py")
         # File doesn't exist — should remove instead, not crash
         watch_service._reindex_file(ghost)
+        assert db_store.get_file_by_path(ghost) is None
 
 
 class TestRemoveFile:
@@ -179,9 +181,10 @@ class TestRemoveFile:
         watch_service._remove_file(path)
         assert db_store.get_file_by_path(path) is None
 
-    def test_remove_nonexistent_file_does_not_raise(self, watch_service, temp_dir):
+    def test_remove_nonexistent_file_does_not_raise(self, watch_service, temp_dir, db_store):
         ghost = os.path.join(temp_dir, "ghost.py")
         watch_service._remove_file(ghost)  # Should not raise
+        assert db_store.get_file_by_path(ghost) is None
 
 
 # ---------------------------------------------------------------------------
@@ -214,10 +217,11 @@ class TestDebounce:
 
     def test_debounce_ignored_for_unwatched_extension(self, watch_service, temp_dir):
         json_path = os.path.join(temp_dir, "config.json")
-        # Should silently do nothing
+        reindex_calls = []
+        watch_service._reindex_file = reindex_calls.append
         watch_service._schedule(json_path, 'modified')
         time.sleep(watch_service.debounce_seconds * 3)
-        # No assertion needed — just must not raise
+        assert reindex_calls == []
 
 
 # ---------------------------------------------------------------------------
@@ -253,19 +257,22 @@ class TestExclusionPatterns:
 class TestErrorResilience:
     """WatchService must survive errors without crashing."""
 
-    def test_db_error_during_reindex_does_not_crash(self, watch_service, temp_dir):
+    def test_db_error_during_reindex_does_not_crash(self, watch_service, temp_dir, caplog):
         path = os.path.join(temp_dir, "hello.py")
         # Break reindex_file (public method, used by _reindex_file)
         watch_service.indexing_service.reindex_file = MagicMock(
             side_effect=RuntimeError("DB locked")
         )
-        # Must not raise
-        watch_service._reindex_file(path)
+        with caplog.at_level(logging.ERROR, logger='via.services.watch'):
+            watch_service._reindex_file(path)
+        assert not watch_service._stop_event.is_set()
+        assert any("DB locked" in r.message or "Error" in r.message for r in caplog.records)
 
     def test_stop_is_idempotent(self, watch_service):
         """Calling stop() before start() must not raise."""
         watch_service.stop()
         watch_service.stop()
+        assert watch_service._stop_event.is_set()
 
 
 # ---------------------------------------------------------------------------

@@ -233,8 +233,8 @@ class TestTableRenderer:
         lines = output.strip().split('\n')
         # All data rows should have same length (proper padding)
         data_lines = [l for l in lines if 'TestClass' in l]
-        if len(data_lines) > 1:
-            assert len(data_lines[0]) == len(data_lines[1])
+        assert len(data_lines) >= 2
+        assert len(data_lines[0]) == len(data_lines[1])
 
     def test_table_renderer_more_indicator(self):
         """Test TableRenderer shows '... N more' in footer."""

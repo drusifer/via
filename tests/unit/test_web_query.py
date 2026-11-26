@@ -76,6 +76,7 @@ class TestRunQueryBasic:
             "match_type": "glob", "pattern": "*",
             "symbol_types": ["class"],
         })
+        assert len(result["results"]) > 0
         for r in result["results"]:
             assert r["symbol_type"] == "class"
 
@@ -84,6 +85,7 @@ class TestRunQueryBasic:
             "match_type": "glob", "pattern": "*",
             "symbol_types": ["function"],
         })
+        assert len(result["results"]) > 0
         for r in result["results"]:
             assert r["symbol_type"] == "function"
 

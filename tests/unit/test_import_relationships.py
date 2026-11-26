@@ -26,9 +26,8 @@ from via.services.indexing import IndexingService
 
 @pytest.fixture
 def db_store(tmp_path):
-    """Create a test database."""
-    db_path = tmp_path / "test.db"
-    store = DatabaseStore(str(db_path), str(tmp_path))
+    """Create an isolated in-memory test database."""
+    store = DatabaseStore(":memory:", str(tmp_path))
     store.connect()
     store.initialize_schema()
     yield store

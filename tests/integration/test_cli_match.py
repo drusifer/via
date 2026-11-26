@@ -217,10 +217,10 @@ class TestOutputFormat:
     def test_match_output_format_without_byte_position(self, indexed_project):
         """Test output for files doesn't include byte position."""
         project_dir, _ = indexed_project
-        # Use filename type filter
-        result = run_via_pipeline(['-mg', '*', '-d', str(indexed_project[0])], indexed_project[0])
-        # Note: Need to add filename type filter when available
-        # For now, just verify the pipeline works
+        result = run_via_pipeline(['-mg', '*', '-tF'], project_dir)
+        assert result.returncode == 0
+        assert result.stdout.strip()
+        assert '@' not in result.stdout
 
 
 class TestErrorHandling:

@@ -168,6 +168,7 @@ class TestJSImports:
         assert lodash.alias == 'lodash'
 
     def test_import_line_number_set(self, js_result):
+        assert len(js_result.imports) > 0
         for imp in js_result.imports:
             assert imp.line_number > 0
 
