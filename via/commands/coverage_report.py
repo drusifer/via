@@ -50,55 +50,220 @@ _FLAG_RANK = {
 }
 
 
-def _count_ast_assertions(node: ast.AST) -> int:
-    """Count `assert` statements and pytest/unittest assertion calls in an AST subtree."""
-    count = 0
+def _call_name(call: ast.Call) -> str:
+    fn = call.func
+    if isinstance(fn, ast.Attribute):
+        return fn.attr
+    if isinstance(fn, ast.Name):
+        return fn.id
+    return ''
+
+
+def _is_fixture_func(fn: ast.AST) -> bool:
+    for dec in getattr(fn, 'decorator_list', ()):
+        if isinstance(dec, ast.Name) and dec.id == 'fixture':
+            return True
+        if isinstance(dec, ast.Attribute) and dec.attr == 'fixture':
+            return True
+        if isinstance(dec, ast.Call) and _call_name(dec) == 'fixture':
+            return True
+    return False
+
+
+def _detect_tautology(expr: ast.expr) -> Optional[str]:
+    if isinstance(expr, ast.Constant) and bool(expr.value):
+        return f"assert {expr.value!r}"
+    if isinstance(expr, ast.Compare) and len(expr.ops) == 1 and len(expr.comparators) == 1:
+        op, left, right = expr.ops[0], expr.left, expr.comparators[0]
+        if isinstance(op, (ast.Eq, ast.Is, ast.LtE, ast.GtE)) and ast.dump(left) == ast.dump(right):
+            return f"self-compare ({ast.unparse(expr)})"
+        is_len_ge_zero = (
+            isinstance(op, ast.GtE)
+            and isinstance(left, ast.Call)
+            and isinstance(left.func, ast.Name)
+            and left.func.id == 'len'
+            and isinstance(right, ast.Constant)
+            and right.value == 0
+        )
+        if is_len_ge_zero:
+            return f"always-true ({ast.unparse(expr)})"
+    return None
+
+
+def _is_broad_raises(call: ast.Call) -> bool:
+    if _call_name(call) != 'raises' or not call.args:
+        return False
+    arg0 = call.args[0]
+    if not (isinstance(arg0, ast.Name) and arg0.id in ('Exception', 'BaseException')):
+        return False
+    return not any(kw.arg == 'match' for kw in call.keywords)
+
+
+def _try_swallows_assert(node: ast.Try) -> bool:
+    for handler in node.handlers:
+        catches_broad = handler.type is None or (
+            isinstance(handler.type, ast.Name)
+            and handler.type.id in ('Exception', 'BaseException', 'AssertionError')
+        )
+        if catches_broad and not any(isinstance(x, ast.Raise) for x in ast.walk(handler)):
+            return True
+    return False
+
+
+def _has_direct_assertion(node: ast.AST) -> bool:
     for child in ast.walk(node):
         if isinstance(child, ast.Assert):
-            count += 1
-        elif isinstance(child, ast.Call):
-            fn = child.func
-            name = (
-                fn.attr
-                if isinstance(fn, ast.Attribute)
-                else (fn.id if isinstance(fn, ast.Name) else '')
-            )
-            if name in _ASSERT_CALL_NAMES or name.startswith('assert_'):
-                count += 1
-    return count
+            return True
+        if isinstance(child, ast.Call):
+            name = _call_name(child)
+            if name in _ASSERT_CALLS_OR_PREFIX or name.startswith('assert'):
+                return True
+    return False
 
 
-def _analyze_assertions_in_file(file_path: str) -> Dict[Tuple[Optional[str], str], int]:
-    """Map `(class_name_or_None, func_name)` -> assertion count for one Python test file."""
+_ASSERT_CALLS_OR_PREFIX = _ASSERT_CALL_NAMES
+
+
+def _collect_assert_helpers(tree: ast.Module) -> Tuple[Set[str], Dict[str, Set[str]]]:
+    file_helpers: Set[str] = set()
+    class_helpers: Dict[str, Set[str]] = defaultdict(set)
+    for stmt in tree.body:
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if not stmt.name.startswith('test_') and _has_direct_assertion(stmt):
+                file_helpers.add(stmt.name)
+        elif isinstance(stmt, ast.ClassDef):
+            for item in stmt.body:
+                if (
+                    isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and not item.name.startswith('test_')
+                    and _has_direct_assertion(item)
+                ):
+                    class_helpers[stmt.name].add(item.name)
+    return file_helpers, class_helpers
+
+
+def _record_assert(
+    node: ast.Assert, state: Dict[str, Any], in_cf: bool, in_swallow: bool
+) -> None:
+    state['total'] += 1
+    if not in_cf:
+        state['top'] += 1
+    taut = _detect_tautology(node.test)
+    if taut:
+        state['smells'].append(('tautology', taut))
+    if in_swallow:
+        state['smells'].append(('swallowed-assert', ast.unparse(node)[:60]))
+
+
+def _record_call_check(
+    node: ast.Call, helpers: Set[str], state: Dict[str, Any], in_cf: bool
+) -> None:
+    name = _call_name(node)
+    if name in _ASSERT_CALL_NAMES or name.startswith('assert_') or name in helpers:
+        state['total'] += 1
+        if not in_cf:
+            state['top'] += 1
+        if _is_broad_raises(node):
+            state['smells'].append(('broad-raises', ast.unparse(node)[:60]))
+
+
+def _walk_try_node(
+    node: ast.Try, helpers: Set[str], state: Dict[str, Any], in_cf: bool, in_swallow: bool
+) -> None:
+    swallows = in_swallow or _try_swallows_assert(node)
+    for s in node.body:
+        _walk_test_checks(s, helpers, state, in_cf=in_cf, in_swallow=swallows)
+    for h in node.handlers:
+        for s in h.body:
+            _walk_test_checks(s, helpers, state, in_cf=True, in_swallow=in_swallow)
+    for s in node.orelse + node.finalbody:
+        _walk_test_checks(s, helpers, state, in_cf=in_cf, in_swallow=in_swallow)
+
+
+def _walk_test_checks(
+    node: ast.AST,
+    helpers: Set[str],
+    state: Dict[str, Any],
+    in_cf: bool = False,
+    in_swallow: bool = False,
+) -> None:
+    if isinstance(node, ast.Assert):
+        _record_assert(node, state, in_cf, in_swallow)
+        return
+    if isinstance(node, ast.Call):
+        _record_call_check(node, helpers, state, in_cf)
+    if isinstance(node, (ast.If, ast.For, ast.AsyncFor, ast.While)):
+        for ch in ast.iter_child_nodes(node):
+            _walk_test_checks(ch, helpers, state, in_cf=True, in_swallow=in_swallow)
+        return
+    if isinstance(node, ast.Try):
+        _walk_try_node(node, helpers, state, in_cf, in_swallow)
+        return
+    for ch in ast.iter_child_nodes(node):
+        _walk_test_checks(ch, helpers, state, in_cf=in_cf, in_swallow=in_swallow)
+
+
+def _inspect_test_ast(fn: ast.AST, helpers: Set[str]) -> Tuple[int, List[str], str]:
+    """Return `(assert_count, smell_codes, concise_detail)` for one test function."""
+    state: Dict[str, Any] = {'total': 0, 'top': 0, 'smells': []}
+    for stmt in getattr(fn, 'body', ()):
+        _walk_test_checks(stmt, helpers, state)
+
+    smell_pairs: List[Tuple[str, str]] = list(state['smells'])
+    if state['total'] == 0 and not _is_fixture_func(fn):
+        smell_pairs.append(('no-asserts', '0 assertions, raises, or assert helpers'))
+    elif state['total'] > 0 and state['top'] == 0:
+        smell_pairs.append(
+            ('conditional-only', f"all {state['total']} assertion(s) inside if/for/except")
+        )
+
+    codes: List[str] = []
+    details: List[str] = []
+    for code, detail in smell_pairs:
+        if code not in codes:
+            codes.append(code)
+            details.append(detail)
+    return state['total'], codes, '; '.join(details)
+
+
+def _analyze_test_file_ast(
+    file_path: str,
+) -> Dict[Tuple[Optional[str], str], Tuple[int, List[str], str]]:
+    """Map `(class_name_or_None, func_name)` -> `(asserts, smells, detail)` for one file."""
     tree = _parse_python_file(file_path)
     if tree is None:
         return {}
-    counts: Dict[Tuple[Optional[str], str], int] = {}
+    file_helpers, class_helpers = _collect_assert_helpers(tree)
+    info: Dict[Tuple[Optional[str], str], Tuple[int, List[str], str]] = {}
     for stmt in tree.body:
         if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            counts[(None, stmt.name)] = _count_ast_assertions(stmt)
+            info[(None, stmt.name)] = _inspect_test_ast(stmt, file_helpers)
         elif isinstance(stmt, ast.ClassDef):
+            helpers = file_helpers | class_helpers[stmt.name]
             for item in stmt.body:
                 if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    counts[(stmt.name, item.name)] = _count_ast_assertions(item)
-    return counts
+                    info[(stmt.name, item.name)] = _inspect_test_ast(item, helpers)
+    return info
 
 
-def _lookup_assertion_count(
+def _lookup_test_ast_info(
     test_id: str,
     index_root: str,
-    cache: Dict[str, Dict[Tuple[Optional[str], str], int]],
-) -> Optional[int]:
+    cache: Dict[str, Dict[Tuple[Optional[str], str], Tuple[int, List[str], str]]],
+) -> Tuple[Optional[int], List[str], str]:
     parsed = _parse_test_nodeid(test_id)
     if parsed is None:
-        return None
+        return None, [], ''
     rel_path, class_name, func_name = parsed
     resolved = _resolve_under_root(index_root, rel_path)
     if resolved is None or not os.path.isfile(resolved):
-        return None
+        return None, [], ''
     if resolved not in cache:
-        cache[resolved] = _analyze_assertions_in_file(resolved)
-    return cache[resolved].get((class_name, func_name))
+        cache[resolved] = _analyze_test_file_ast(resolved)
+    found = cache[resolved].get((class_name, func_name))
+    if found is None:
+        return None, [], ''
+    return found
 
 
 def _load_branch_arc_sets(data_file: str) -> Dict[str, Set[Tuple[int, int, int]]]:
@@ -214,6 +379,14 @@ def _summarize_kpis(tests: List[Dict[str, Any]], slow_threshold: float) -> Dict[
     sl_n, sl_d = _bucket('slow-low')
     so_n, so_d = _bucket('slow-overlap')
     su_n, su_d = _bucket('slow-0uniq')
+    smell_counts: Dict[str, int] = defaultdict(int)
+    smelly_count = 0
+    for t in tests:
+        sm = t.get('smells') or ()
+        if sm:
+            smelly_count += 1
+            for code in sm:
+                smell_counts[code] += 1
     return {
         'total_tests': len(tests),
         'total_dur': round(total_dur, 1),
@@ -230,6 +403,8 @@ def _summarize_kpis(tests: List[Dict[str, Any]], slow_threshold: float) -> Dict[
         'slow_0uniq_count': su_n,
         'slow_0uniq_dur': su_d,
         'mocks_only_count': sum(1 for t in tests if t['mocks_only']),
+        'smelly_count': smelly_count,
+        'smell_counts': dict(smell_counts),
     }
 
 
@@ -494,7 +669,7 @@ def build_test_quality_data(
         if s and tid in dur_by_id
     ]
 
-    assert_cache: Dict[str, Dict[Tuple[Optional[str], str], int]] = {}
+    assert_cache: Dict[str, Dict[Tuple[Optional[str], str], Tuple[int, List[str], str]]] = {}
     file_rollup: Dict[str, Dict[str, Any]] = {}
     tests: List[Dict[str, Any]] = []
 
@@ -505,7 +680,7 @@ def build_test_quality_data(
         sps = (cov / dur) if dur > 0 else None
         uniq = int(unique_by_test.get(tid, 0))
         mocks_only = bool(row['mocks_only'])
-        asserts = _lookup_assertion_count(tid, store.index_root, assert_cache)
+        asserts, smells, smell_detail = _lookup_test_ast_info(tid, store.index_root, assert_cache)
         tfile = tid.split('::', 1)[0]
 
         if dur >= slow_threshold and cov > 0:
@@ -526,6 +701,8 @@ def build_test_quality_data(
             'uniq': uniq,
             'sps': round(sps, 1) if sps is not None else None,
             'asserts': asserts,
+            'smells': smells,
+            'smell_detail': smell_detail,
             'mocks': row['mock_call_count'],
             'mocks_only': mocks_only,
             'overlap_pct': overlap_pct,
@@ -991,6 +1168,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="controls">
       <input type="search" id="search-input" placeholder="Filter by test name or file...">
       <button class="chip active" data-filter="flagged">Flagged (<span id="c-flagged">0</span>)</button>
+      <button class="chip" data-filter="smelly">Smelly Asserts (<span id="c-smell">0</span>)</button>
       <button class="chip" data-filter="slow-low">Slow + Low Cov (<span id="c-sl">0</span>)</button>
       <button class="chip" data-filter="slow-overlap">Slow + High Overlap (<span id="c-so">0</span>)</button>
       <button class="chip" data-filter="slow-0uniq">Slow + 0 Unique (<span id="c-su">0</span>)</button>
@@ -1147,12 +1325,13 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
       <li><strong><code>SLOW + LOW</code></strong> — Inspect for blind <code>time.sleep()</code> calls, slow server shutdown loops (e.g. <code>serve_forever(poll_interval=0.5)</code>), repeated heavy DB/index/HTTP setup, or unnecessary disk SQLite I/O.</li>
       <li><strong><code>SLOW + OVERLAP</code> / <code>SLOW + 0 UNIQ</code></strong> — Compare against the named faster neighbor and <strong>Asserts</strong> column. <em>Never delete a test solely because <code>Unique = 0</code></em>; different assertions on the same branches still validate distinct contracts.</li>
       <li><strong><code>MOCKS ONLY</code></strong> — Tests using mocks while covering <code>0</code> symbols in their imported project modules; check for hollow tests asserting only mock wiring.</li>
+      <li><strong><code>Smelly Asserts</code></strong> — Static AST checks for false-green tests: <code>TAUTOLOGY</code> (<code>assert True</code> / <code>x == x</code>), <code>BROAD RAISES</code> (<code>pytest.raises(Exception)</code> without <code>match=</code>), <code>SWALLOWED ASSERT</code> (assert inside broad <code>try/except</code>), <code>CONDITIONAL ONLY</code> (all assertions inside <code>for</code>/<code>if</code> with no non-empty guard), and <code>NO ASSERTS</code> (0 assertions).</li>
     </ol>
     <h3>2. Apply Fixes in Order of Preference</h3>
     <ol>
       <li><strong>Prefer lower-resource equivalents:</strong> Test pure logic in-process with <code>:memory:</code> SQLite or direct function calls instead of booting HTTP servers or OS subprocesses when process boundaries are not under test.</li>
       <li><strong>Replace blind sleeps with event-driven waits:</strong> Launch subprocesses unbuffered (<code>python -u</code>) and wait on a condition/log line (e.g. <code>"Watching"</code>, <code>"Re-indexed:"</code>) rather than fixed delays. If faster signaling exposes a startup race (such as logging ready before installing signal handlers), fix the production race rather than re-adding sleeps.</li>
-      <li><strong>Reuse expensive resources safely:</strong> Share one <code>scope="class"</code> or <code>scope="module"</code> server, indexed project, or live daemon across tests that make independent read-only or disjoint-file assertions.</li>
+      <li><strong>Reuse expensive resources safely (prefer live sessions over pre-fetched snapshots):</strong> Share one <code>scope="class"</code> or <code>scope="module"</code> live server, session, indexed project, or daemon while keeping each test's actual request/operation inside the test body. Avoid pre-fetching multiple test responses into one snapshot dict in a fixture &mdash; snapshot fixtures attribute all coverage and setup failures to the first test and leave sibling tests with <code>0</code> covered symbols.</li>
       <li><strong>Prevent shared-resource flakiness (mandatory):</strong> Only share fixtures across strictly read-only tests, OR isolate side effects using disjoint target files plus output-buffer slicing (<code>mark()</code> / <code>output_since(mark)</code>) so no test can pass on an earlier test's output. Keep mutating, lifecycle, and shutdown tests isolated per test.</li>
       <li><strong>Delete only proven duplicates:</strong> Remove a test only when a faster test already covers the same branch arcs <em>and</em> checks the same assertions (confirm via AST review or targeted mutation testing on the covered functions).</li>
     </ol>
@@ -1173,6 +1352,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 document.getElementById('gen-meta').textContent = `Generated ${DATA.generated_at} • ${k.total_tests.toLocaleString()} tests • ${k.total_dur}s total • overlap: ${DATA.overlap_mode}`;
 document.getElementById('overlap-note').innerHTML = `<strong>Overlap (${esc(DATA.overlap_mode)})</strong> = highest Jaccard similarity (or strict subset <code>SUB</code>) against a <em>faster</em> test. Check <strong>Asserts</strong> &amp; the named faster neighbor before deleting — high overlap with distinct assertions is a fixture-sharing candidate.`;
 document.getElementById('c-flagged').textContent = k.slow_zero_count + k.slow_low_count + k.slow_overlap_count + k.slow_0uniq_count + k.mocks_only_count;
+document.getElementById('c-smell').textContent = k.smelly_count || 0;
 document.getElementById('c-sl').textContent = k.slow_low_count;
 document.getElementById('c-so').textContent = k.slow_overlap_count;
 document.getElementById('c-su').textContent = k.slow_0uniq_count;
@@ -1219,7 +1399,7 @@ const kpis = [
     cls: k.slow_zero_count ? 'danger' : flaggedNow ? 'warn' : 'ok',
     delta: cmp ? fmtDelta(cmp.flagged_count.delta) : null,
     deltaCls: cmp ? (cmp.flagged_count.delta < 0 ? 'b-ok' : cmp.flagged_count.delta > 0 ? 'b-zero' : 'b-neutral') : '',
-    sub: `${k.slow_zero_count} zero • ${k.slow_low_count} low • ${k.slow_overlap_count} overlap`,
+    sub: `${k.slow_zero_count} zero • ${k.slow_low_count} low • ${k.slow_overlap_count} overlap${k.smelly_count ? ` • ${k.smelly_count} smelly` : ''}`,
   },
   {
     label: 'Coverage Safety Net',
@@ -1441,17 +1621,32 @@ const FLAG_META = {
 let activeFilter = 'flagged';
 let sortState = { col: 'dur', dir: -1 };
 const flagRank = { 'slow-zero': 0, 'slow-low': 1, 'slow-overlap': 2, 'slow-0uniq': 3, 'mocks-only': 4, 'ok': 5 };
+const SMELL_META = {
+  'tautology': { label: 'TAUTOLOGY', cls: 'b-zero', rank: 0 },
+  'swallowed-assert': { label: 'SWALLOWED', cls: 'b-zero', rank: 1 },
+  'broad-raises': { label: 'BROAD RAISES', cls: 'b-low', rank: 2 },
+  'no-asserts': { label: 'NO ASSERTS', cls: 'b-low', rank: 3 },
+  'conditional-only': { label: 'LOOP/IF ONLY', cls: 'b-red', rank: 4 },
+};
+const bestSmellRank = t => {
+  const sm = t.smells || [];
+  return sm.length ? Math.min(...sm.map(s => (SMELL_META[s] ? SMELL_META[s].rank : 9))) : 9;
+};
 
 function renderTests() {
   const q = (document.getElementById('search-input').value || '').toLowerCase();
   let rows = DATA.tests.filter(t => {
-    if (q && !t.test_id.toLowerCase().includes(q)) return false;
+    if (q && !t.test_id.toLowerCase().includes(q) && !(t.smell_detail || '').toLowerCase().includes(q)) return false;
     if (activeFilter === 'flagged') return t.flag !== 'ok';
+    if (activeFilter === 'smelly') return (t.smells || []).length > 0;
     if (activeFilter === 'slow-all') return t.dur >= k.slow_threshold;
     if (activeFilter === 'all') return true;
     return t.flag === activeFilter;
   });
   rows.sort((a, b) => {
+    if (activeFilter === 'smelly' && sortState.col === 'dur') {
+      return (bestSmellRank(a) - bestSmellRank(b)) || (b.dur - a.dur);
+    }
     if (sortState.col === 'flag') return (flagRank[a.flag] - flagRank[b.flag]) * sortState.dir || (b.dur - a.dur);
     const av = a[sortState.col], bv = b[sortState.col];
     if (av == null && bv == null) return 0;
@@ -1467,10 +1662,15 @@ function renderTests() {
   document.getElementById('tests-tbody').innerHTML = rows.slice(0, limit).map(t => {
     const fm = FLAG_META[t.flag];
     const ov = t.overlap_pct ? `${t.subsumed ? 'SUB ' : ''}${Math.round(t.overlap_pct)}%` : '—';
+    const smellBadges = (t.smells || []).map(s => {
+      const sm = SMELL_META[s] || { label: s.toUpperCase(), cls: 'b-low' };
+      return `<div style="margin-top:3px"><span class="badge ${sm.cls}">${sm.label}</span></div>`;
+    }).join('');
+    const smellHint = t.smell_detail ? `<div class="peer-hint">smell: ${esc(t.smell_detail)}</div>` : '';
     const peerHtml = t.peer ? `<div class="peer-hint">&approx; ${esc(t.peer)}</div>` : '';
     return `<tr>
-      <td><span class="badge ${fm.cls}">${fm.label}</span></td>
-      <td><div class="mono">${esc(t.test_id)}</div>${peerHtml}</td>
+      <td><span class="badge ${fm.cls}">${fm.label}</span>${smellBadges}</td>
+      <td><div class="mono">${esc(t.test_id)}</div>${smellHint}${peerHtml}</td>
       <td class="num"><strong>${t.dur.toFixed(3)}</strong></td>
       <td class="num">${t.cov}</td>
       <td class="num">${t.uniq}</td>

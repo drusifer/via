@@ -262,3 +262,42 @@ def test_coverage_safety_net_detects_newly_uncovered_regression_and_is_idempoten
     assert len(syms_by_key[alpha_key]) == 1
     assert run2["tests"][syms_by_key[alpha_key][0]]["test_id"] == "tests/test_app.py::test_fast_alpha"
     assert syms_by_key[beta_key] == []
+
+
+def test_ast_assertion_smell_detection_catches_false_greens_without_flagging_helpers(tmp_path):
+    from via.commands.coverage_report import _analyze_test_file_ast
+
+    tf = tmp_path / "test_smells.py"
+    tf.write_text(
+        "import pytest\n\n"
+        "def _check_positive(val):\n"
+        "    assert val > 0\n\n"
+        "@pytest.fixture\n"
+        "def test_fixture_named_like_test():\n"
+        "    return 42\n\n"
+        "def test_clean_with_helper():\n"
+        "    _check_positive(1)\n\n"
+        "def test_tautology():\n"
+        "    assert True\n\n"
+        "def test_broad_raises():\n"
+        "    with pytest.raises(Exception):\n"
+        "        raise ValueError('boom')\n\n"
+        "def test_conditional_only():\n"
+        "    for x in []:\n"
+        "        assert x > 0\n\n"
+        "def test_swallowed_assert():\n"
+        "    try:\n"
+        "        assert 1 == 2\n"
+        "    except Exception:\n"
+        "        pass\n\n"
+        "def test_no_asserts():\n"
+        "    x = 1 + 1\n"
+    )
+    info = _analyze_test_file_ast(str(tf))
+    assert info[(None, "test_fixture_named_like_test")][1] == []
+    assert info[(None, "test_clean_with_helper")][1] == []
+    assert "tautology" in info[(None, "test_tautology")][1]
+    assert "broad-raises" in info[(None, "test_broad_raises")][1]
+    assert "conditional-only" in info[(None, "test_conditional_only")][1]
+    assert "swallowed-assert" in info[(None, "test_swallowed_assert")][1]
+    assert "no-asserts" in info[(None, "test_no_asserts")][1]
