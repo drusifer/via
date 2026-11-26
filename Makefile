@@ -45,10 +45,12 @@ via: install-dev ## Run via command in the virtual environment (usage: make via 
 
 # Run tests using the virtual environment's python
 test: install-dev
+	rm -f .coverage .coverage.*
 	. ${VENV_ACTIVATE} && pytest $(or $(FILE),tests/) $(ARGS)
 
 # Run tests with terminal coverage plus LCOV export
 coverage: install-dev
+	rm -f .coverage .coverage.*
 	mkdir -p coverage
 	. ${VENV_ACTIVATE} && pytest $(or $(FILE),tests/) \
 		--cov=via \
@@ -58,13 +60,14 @@ coverage: install-dev
 
 # Capture per-test coverage + run metadata (status/duration/last-run), then
 # import into the via index as `covered-by` (per-test) and `test_runs`.
-# Sprint 27. Note: tests/subprocess/ tests spawn a real subprocess for
-# genuine daemon/stdin-protocol reasons, so coverage inside that subprocess
-# isn't attributed to a specific test — everything else in tests/ runs
-# in-process (see conftest.py) and is captured normally.
+# Subprocess tests (e.g. tests/subprocess/) are also attributed per-test via
+# coverage.py's `patch = ["subprocess"]` and conftest.py context propagation.
 test-coverage: install-dev
-	. ${VENV_ACTIVATE} && pytest --cov=via --cov-context=test -v tests/
+	rm -f .coverage .coverage.*
+	. ${VENV_ACTIVATE} && python -m via index .
+	. ${VENV_ACTIVATE} && pytest --cov=via --cov-branch --cov-context=test -v tests/
 	. ${VENV_ACTIVATE} && python -m via coverage import-contexts .coverage
+	. ${VENV_ACTIVATE} && python -m via coverage report -o coverage/via-test-quality-report.html
 
 # Run JavaScript unit tests
 test-js:

@@ -82,7 +82,7 @@ def test_coverage_import_contexts_cleans_up_stale_data_on_reimport(tmp_path):
 
     # Re-importing (e.g. after a suite re-run) must not accumulate duplicate
     # covered-by edges or leave stale per-test symbols behind.
-    write_context("tests/test_app.py::test_bravo", {4})
+    write_context("tests/test_app.py::test_bravo", {4, 5})
     second = _run(tmp_path, "coverage", "import-contexts", str(data_file))
     assert second.returncode == 0, second.stderr
 
@@ -103,7 +103,7 @@ def test_coverage_import_contexts_warns_on_dramatic_test_count_drop(tmp_path):
         cov_data = coverage.CoverageData(basename=str(data_file))
         for i, name in enumerate(test_names):
             cov_data.set_context(name)
-            cov_data.add_lines({str(src): {1}})
+            cov_data.add_lines({str(src): {1, 2}})
         cov_data.write()
 
     index = _run(tmp_path, "index", str(tmp_path))

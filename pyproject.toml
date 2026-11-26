@@ -82,6 +82,13 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --cov=via --cov-report=term-missing"
 
+[tool.coverage.run]
+source = ["via"]
+branch = true
+parallel = true
+sigterm = true
+patch = ["subprocess"]
+
 # =============================================================================
 # RUFF - Fast Python linter (complexity, dead code, unused imports)
 # =============================================================================

@@ -2039,6 +2039,12 @@ class DatabaseStore:
         self._commit_if_needed()
 
     @require_connection
+    def clear_test_runs(self) -> None:
+        """Delete all recorded test run metadata rows."""
+        self.conn.execute("DELETE FROM test_runs")
+        self._commit_if_needed()
+
+    @require_connection
     def get_test_run(self, test_id: str) -> Optional[dict]:
         """Return the latest recorded run for a test, or None if never recorded.
 
@@ -2203,3 +2209,20 @@ class DatabaseStore:
             rel = self._to_relative_path(file_path).replace('\\', '/')
             by_test.setdefault(test_id, {})[rel] = count
         return by_test
+
+    @require_connection
+    def get_test_covered_symbol_ids(self) -> Dict[str, set]:
+        """Return `{test_id: {covered_symbol_id, ...}}` for all `covered-by` edges."""
+        rows = self.conn.execute(
+            """
+            SELECT test_sym.symbol_name, sr.from_symbol_id
+            FROM symbol_references sr
+            JOIN symbols test_sym
+              ON test_sym.id = sr.to_symbol_id AND test_sym.symbol_type = 'test'
+            WHERE sr.reference_type = 'covered-by'
+            """
+        ).fetchall()
+        result: Dict[str, set] = {}
+        for test_id, symbol_id in rows:
+            result.setdefault(test_id, set()).add(symbol_id)
+        return result

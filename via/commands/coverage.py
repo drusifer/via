@@ -10,6 +10,7 @@ TLDR:
     not "covered by the suite as a whole".
 """
 
+import ast
 import json
 from pathlib import Path
 from typing import Callable, Dict, Iterable, Set
@@ -19,6 +20,11 @@ import sys
 import coverage
 
 from .base import CommandHandlerABC
+from .coverage_report import (
+    DEFAULT_REPORT_PATH,
+    DEFAULT_SLOW_THRESHOLD,
+    generate_coverage_report,
+)
 from via.core.constants import EXIT_ERROR, EXIT_SUCCESS
 from via.db.store import DatabaseStore
 from via.parsers.dart_parser import DartParser
@@ -70,6 +76,62 @@ def _covered_lines_by_test(data_file: str) -> Dict[str, Dict[str, Set[int]]]:
     return by_test
 
 
+def _func_body_range(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[int, int]:
+    """Return (start, end) executable body line range, skipping def header & docstring."""
+    body = node.body
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        body = body[1:]
+    end = node.end_lineno or node.lineno
+    if not body:
+        return (node.lineno, end)
+    return (body[0].lineno, end)
+
+
+def _python_body_ranges(abs_path: Path) -> Dict[tuple[str, str, str | None], tuple[int, int]]:
+    """Map Python (name, symbol_type, parent) -> executable body (start, end) lines.
+
+    Prevents import-time `def` header execution (e.g. inside subprocesses or
+    lazy imports) from falsely marking uncalled functions/methods as covered.
+    """
+    if abs_path.suffix not in ('.py', '.pyi'):
+        return {}
+    try:
+        tree = ast.parse(abs_path.read_text(encoding='utf-8'))
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return {}
+    ranges: Dict[tuple[str, str, str | None], tuple[int, int]] = {}
+    for stmt in tree.body:
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            ranges[(stmt.name, 'function', None)] = _func_body_range(stmt)
+        elif isinstance(stmt, ast.ClassDef):
+            for item in stmt.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    ranges[(item.name, 'method', stmt.name)] = _func_body_range(item)
+    return ranges
+
+
+def _link_symbol_tests(
+    store: DatabaseStore,
+    symbol_id: int,
+    start: int,
+    end: int,
+    tests_lines: Dict[str, Set[int]],
+    get_test_symbol: Callable[[str], int],
+) -> Set[str]:
+    """Insert `covered-by` edges for tests hitting [start, end]; return covering test IDs."""
+    covering: Set[str] = set()
+    for test_id, lines in tests_lines.items():
+        if any(start <= line <= end for line in lines):
+            store.insert_relationship(symbol_id, get_test_symbol(test_id), 'covered-by')
+            covering.add(test_id)
+    return covering
+
+
 def _link_file_covered_symbols(
     store: DatabaseStore,
     registry: ParserRegistry,
@@ -86,14 +148,29 @@ def _link_file_covered_symbols(
     if parser is None:
         return 0
     parse_result = parser.parse(str(abs_path), abs_path.read_bytes())
+    body_ranges = _python_body_ranges(abs_path)
+    classes_with_methods = {cls.name for cls in parse_result.classes if cls.methods}
+    class_covered_by: Dict[str, Set[str]] = {}
+    deferred_classes: list[tuple[str, int]] = []
     imported = 0
+
     for name, symbol_type, parent, start, end in _iter_symbol_ranges(parse_result):
         symbol_id = store.get_symbol_id(name, symbol_type, str(abs_path), parent)
         if symbol_id is None:
             continue
-        for test_id, lines in tests_lines.items():
-            if not any(start <= line <= end for line in lines):
-                continue
+        if symbol_type == 'class' and name in classes_with_methods and body_ranges:
+            deferred_classes.append((name, symbol_id))
+            continue
+        match_start, match_end = body_ranges.get((name, symbol_type, parent), (start, end))
+        covering = _link_symbol_tests(
+            store, symbol_id, match_start, match_end, tests_lines, get_test_symbol
+        )
+        imported += len(covering)
+        if symbol_type == 'method' and parent:
+            class_covered_by.setdefault(parent, set()).update(covering)
+
+    for cls_name, symbol_id in deferred_classes:
+        for test_id in class_covered_by.get(cls_name, ()):
             store.insert_relationship(symbol_id, get_test_symbol(test_id), 'covered-by')
             imported += 1
     return imported
@@ -216,6 +293,7 @@ def import_contexts(project_root: str, data_path: str) -> int:
         # `covered-by` edges via the existing symbol_references FK).
         store.delete_symbols_by_file(COVERAGE_ARTIFACT_FILE_PATH)
         store.delete_symbols_by_file(TEST_SYMBOL_FILE_PATH)
+        store.clear_test_runs()
 
         imported = _link_covered_symbols(store, registry, covered_lines_by_test)
 
@@ -240,13 +318,37 @@ class CoverageCommandHandler(CommandHandlerABC):
             "path", nargs="?", default=".coverage",
             help="Path to coverage.py data file (default: .coverage)",
         )
+        coverage_report = coverage_sub.add_parser(
+            "report",
+            help="Generate a standalone HTML test quality report (slow, low-coverage, and overlapping tests)",
+        )
+        coverage_report.add_argument(
+            "-o", "--output", default=DEFAULT_REPORT_PATH,
+            help=f"Output HTML file path (default: {DEFAULT_REPORT_PATH})",
+        )
+        coverage_report.add_argument(
+            "--slow-threshold", type=float, default=DEFAULT_SLOW_THRESHOLD,
+            help=f"Duration threshold in seconds for slow tests (default: {DEFAULT_SLOW_THRESHOLD})",
+        )
+        coverage_report.add_argument(
+            "--coverage-file", default=".coverage",
+            help="Optional coverage.py file for branch-arc overlap analysis (default: .coverage)",
+        )
 
     @classmethod
     def get_help(cls) -> str:
-        return "Import per-test coverage data"
+        return "Import per-test coverage data and generate test quality HTML reports"
 
     def run(self, args: argparse.Namespace) -> int:
-        if getattr(args, 'coverage_command', None) == 'import-contexts':
+        cmd = getattr(args, 'coverage_command', None)
+        if cmd == 'import-contexts':
             return import_contexts(str(Path('.').resolve()), args.path)
+        if cmd == 'report':
+            return generate_coverage_report(
+                str(Path('.').resolve()),
+                output_path=args.output,
+                slow_threshold=args.slow_threshold,
+                coverage_file=args.coverage_file,
+            )
         print("Error: coverage requires a subcommand", file=sys.stderr)
         return EXIT_ERROR

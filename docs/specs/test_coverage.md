@@ -21,12 +21,16 @@ isolation is needed even for large suites.
 make test-coverage
 ```
 
-This is a two-step pipeline (see `Makefile`):
+This is a three-step pipeline (see `Makefile`):
 
 ```bash
-pytest --cov=via --cov-context=test -v tests/
+pytest --cov=via --cov-branch --cov-context=test -v tests/
 via coverage import-contexts .coverage
+via coverage report -o coverage/via-test-quality-report.html
 ```
+
+- `import-contexts` reads `.coverage` (including per-test subprocess coverage via `coverage.py`'s `patch = ["subprocess"]` and `conftest.py` context propagation), replaces stale `covered-by` edges and `test_runs` rows cleanly, and matches only executable body lines (skipping import-time `def`/`class` headers).
+- `via coverage report` requires branch coverage (`--cov-branch` / `branch = true` in `.coverage`; fails loudly otherwise) and writes a self-contained HTML **Test Quality Report** (`coverage/via-test-quality-report.html` by default, configurable via `-o`, `--slow-threshold`, and `--coverage-file`) with a duration-vs-coverage scatter plot, ranked slow/low-coverage/high-overlap audit table (branch-arc Jaccard/subset overlap), static AST assertion counts, and slowest test-file rollup.
 
 `import-contexts` reads the coverage.py data file (`.coverage` by default)
 and:

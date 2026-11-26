@@ -47,7 +47,7 @@ The [Makefile](../Makefile) is the contributor entry point; recipes call native 
 | `install-system` | `pipx install --editable . --force` | optional global editable `via` CLI install |
 | `test` | `pytest $(or $(FILE),tests/) $(ARGS)` | full Python suite or targeted `FILE=... ARGS=...` |
 | `coverage` | `pytest --cov=via --cov-report=lcov:coverage/lcov.info` | terminal + LCOV export |
-| `test-coverage` | `pytest --cov=via --cov-context=test` + `via coverage import-contexts` | captures per-test `covered-by` + `test_runs` into `.via/index.db` |
+| `test-coverage` | clean `.coverage*` + `via index .` + `pytest --cov=via --cov-branch --cov-context=test` + `via coverage import-contexts` + `via coverage report` | captures branch-aware per-test `covered-by` + `test_runs` and writes `coverage/via-test-quality-report.html` |
 | `test-js` | `npm test` | Vitest + jsdom unit tests for `via/web/static/` |
 | `test-e2e` | `npx playwright test` | Playwright browser E2E suite for the web UI |
 | `test-all` | `test` + `test-js` + `test-e2e` | runs all three suites sequentially |

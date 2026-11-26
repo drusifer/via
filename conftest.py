@@ -15,6 +15,7 @@ TLDR:
        populate the test_runs table alongside per-test coverage attribution.
 """
 
+import base64
 import json
 import os
 import subprocess
@@ -52,6 +53,36 @@ def _patched_subprocess_run(cmd, *args, **kwargs):
 subprocess.run = _patched_subprocess_run
 
 _TEST_RUNS: dict = {}
+_BASE_COV_PROCESS_CONFIG: str | None = None
+
+
+def _set_subprocess_coverage_context(context: str | None) -> None:
+    """Update coverage.py's serialized subprocess config with the active test context."""
+    global _BASE_COV_PROCESS_CONFIG
+    raw = os.environ.get('COVERAGE_PROCESS_CONFIG')
+    if not raw:
+        return
+    if _BASE_COV_PROCESS_CONFIG is None:
+        _BASE_COV_PROCESS_CONFIG = raw
+    if context is None:
+        os.environ['COVERAGE_PROCESS_CONFIG'] = _BASE_COV_PROCESS_CONFIG
+        return
+    try:
+        data = json.loads(base64.b64decode(_BASE_COV_PROCESS_CONFIG))
+        data['context'] = context
+        os.environ['COVERAGE_PROCESS_CONFIG'] = base64.b64encode(
+            json.dumps(data).encode()
+        ).decode()
+    except Exception:
+        pass
+
+
+def pytest_runtest_setup(item):
+    _set_subprocess_coverage_context(f'{item.nodeid}|run')
+
+
+def pytest_runtest_teardown(item, nextitem):
+    _set_subprocess_coverage_context(None)
 
 _STATUS_BY_OUTCOME = {
     'passed': 'pass',
